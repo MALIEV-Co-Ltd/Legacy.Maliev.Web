@@ -24,6 +24,8 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
     [InlineData("th", 820)]
     [InlineData("en", 992)]
     [InlineData("th", 992)]
+    [InlineData("en", 1024)]
+    [InlineData("th", 1024)]
     [InlineData("en", 1280)]
     [InlineData("th", 1280)]
     public async Task RealPartsRailExposesLongNamesAndKeyboardActions(string culture, int width)
@@ -209,7 +211,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         Assert.False(string.IsNullOrWhiteSpace(await page.TitleAsync()));
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
-        if (width < 992)
+        if (width < 1024)
             Assert.True(await rail.EvaluateAsync<bool>("rail => rail.scrollWidth <= rail.clientWidth + 1"),
                 "A narrow parts rail must expose names and actions without nested horizontal clipping.");
         foreach (var name in names)

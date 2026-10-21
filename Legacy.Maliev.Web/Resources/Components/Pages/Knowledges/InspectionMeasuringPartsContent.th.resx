@@ -1,0 +1,152 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+  <data name="Measuring manufactured parts | MALIEV" xml:space="preserve">
+    <value>การวัดตรวจชิ้นงานผลิต | MALIEV</value>
+  </data>
+  <data name="Choose dimensional inspection methods, control temperature and fixturing, understand measurement uncertainty, and agree useful inspection reports." xml:space="preserve">
+    <value>เลือกวิธีตรวจวัดมิติ ควบคุมอุณหภูมิและการจับยึด เข้าใจความไม่แน่นอน และตกลงรายงานตรวจสอบที่ใช้ตัดสินงานได้</value>
+  </data>
+  <data name="Measure the requirement, not just the number" xml:space="preserve">
+    <value>วัดให้ตรงข้อกำหนด ไม่ใช่แค่อ่านตัวเลข</value>
+  </data>
+  <data name="An inspection result depends on the feature definition, instrument, setup, environment, and decision rule. Agree these before production so a supplier and customer can reproduce the same check and understand a result close to a tolerance limit." xml:space="preserve">
+    <value>ผลตรวจขึ้นกับนิยามลักษณะที่วัด เครื่องมือ การจัดวาง สภาพแวดล้อม และเกณฑ์ตัดสิน ตกลงสิ่งเหล่านี้ก่อนผลิตเพื่อให้ผู้ผลิตและลูกค้าวัดซ้ำด้วยวิธีเดียวกัน และตีความผลใกล้ขอบพิกัดได้ตรงกัน</value>
+  </data>
+  <data name="On this page" xml:space="preserve">
+    <value>เนื้อหาในหน้านี้</value>
+  </data>
+  <data name="Choose an instrument for the feature" xml:space="preserve">
+    <value>เลือกเครื่องมือให้ตรงลักษณะที่ตรวจ</value>
+  </data>
+  <data name="Resolution is not measurement uncertainty" xml:space="preserve">
+    <value>ความละเอียดไม่ใช่ความไม่แน่นอนของการวัด</value>
+  </data>
+  <data name="Control datums, contact, and restraint" xml:space="preserve">
+    <value>ควบคุมดาตัม การสัมผัส และการยึดรั้ง</value>
+  </data>
+  <data name="Example: temperature changes the dimension" xml:space="preserve">
+    <value>ตัวอย่าง: อุณหภูมิเปลี่ยนมิติ</value>
+  </data>
+  <data name="Agree a report that supports acceptance" xml:space="preserve">
+    <value>ตกลงรายงานที่ใช้ตัดสินรับงานได้</value>
+  </data>
+  <data name="Dimensional inspection instrument comparison" xml:space="preserve">
+    <value>ตารางเปรียบเทียบเครื่องมือตรวจมิติ</value>
+  </data>
+  <data name="Instrument" xml:space="preserve">
+    <value>เครื่องมือ</value>
+  </data>
+  <data name="Typical use" xml:space="preserve">
+    <value>การใช้งานทั่วไป</value>
+  </data>
+  <data name="Check before using" xml:space="preserve">
+    <value>สิ่งที่ต้องตรวจก่อนใช้</value>
+  </data>
+  <data name="Caliper" xml:space="preserve">
+    <value>คาลิเปอร์</value>
+  </data>
+  <data name="Accessible external, internal, step, and depth dimensions." xml:space="preserve">
+    <value>มิติภายนอก ภายใน บ่า และความลึกที่เข้าถึงได้</value>
+  </data>
+  <data name="Jaw condition, alignment, contact force, and whether the method suits the tolerance." xml:space="preserve">
+    <value>สภาพปากวัด แนวสัมผัส แรงกด และความเหมาะสมกับพิกัด</value>
+  </data>
+  <data name="Micrometer" xml:space="preserve">
+    <value>ไมโครมิเตอร์</value>
+  </data>
+  <data name="A defined size measured between appropriate contacts." xml:space="preserve">
+    <value>ขนาดที่กำหนด วัดระหว่างหน้าสัมผัสที่เหมาะสม</value>
+  </data>
+  <data name="Range, anvil shape, consistent force, and access to the intended measurement location." xml:space="preserve">
+    <value>ช่วงวัด รูปทรงหน้าสัมผัส แรงกดสม่ำเสมอ และการเข้าถึงตำแหน่งวัด</value>
+  </data>
+  <data name="Coordinate measuring machine (CMM)" xml:space="preserve">
+    <value>เครื่องวัดพิกัดสามมิติ (CMM)</value>
+  </data>
+  <data name="Feature positions, geometric relationships, and profiles evaluated in a coordinate system." xml:space="preserve">
+    <value>ตำแหน่งลักษณะ ความสัมพันธ์ทางเรขาคณิต และรูปโพรไฟล์ในระบบพิกัด</value>
+  </data>
+  <data name="Datum alignment, probe access, sampling strategy, software evaluation, and task uncertainty." xml:space="preserve">
+    <value>การจัดแนวตามดาตัม การเข้าถึงของหัววัด แผนเก็บจุด วิธีคำนวณ และความไม่แน่นอนของงาน</value>
+  </data>
+  <data name="Limit or functional gauge" xml:space="preserve">
+    <value>เกจขีดจำกัดหรือเกจตรวจการประกอบ</value>
+  </data>
+  <data name="An agreed go/no-go check of a defined acceptance condition." xml:space="preserve">
+    <value>การตรวจผ่านหรือไม่ผ่านตามเงื่อนไขรับงานที่กำหนด</value>
+  </data>
+  <data name="Gauge specification, calibration, wear, operating force, and what the check does not measure." xml:space="preserve">
+    <value>ข้อกำหนดเกจ การสอบเทียบ การสึก แรงใช้งาน และลักษณะที่เกจไม่ได้ตรวจ</value>
+  </data>
+  <data name="A caliper reading across a hole does not by itself establish roundness, and one micrometer reading does not describe a shaft along its full length. Define the locations and orientations needed to reveal the relevant variation. A specialized bore gauge, height instrument, thread gauge, or surface instrument may be the better tool for a particular requirement." xml:space="preserve">
+    <value>การใช้คาลิเปอร์วัดรูเพียงครั้งเดียวไม่ได้ยืนยันความกลม และค่าไมโครมิเตอร์ค่าเดียวไม่ได้บอกสภาพเพลาตลอดความยาว กำหนดตำแหน่งและทิศทางให้พบความแปรผันที่เกี่ยวข้อง เกจวัดรู เครื่องวัดความสูง เกจเกลียว หรือเครื่องวัดผิวอาจเหมาะกว่าสำหรับข้อกำหนดบางอย่าง</value>
+  </data>
+  <data name="Source: NPL guide to calipers and micrometers" xml:space="preserve">
+    <value>แหล่งข้อมูล: คู่มือคาลิเปอร์และไมโครมิเตอร์ของ NPL</value>
+  </data>
+  <data name="Source: Mitutoyo CMM and GD&amp;T measurement planning" xml:space="preserve">
+    <value>แหล่งข้อมูล: การวางแผนวัด CMM และ GD&amp;T ของ Mitutoyo</value>
+  </data>
+  <data name="Instrument resolution describes the smallest change in the measured quantity that produces a perceptible change in the indication. Accuracy concerns closeness to the true value of that quantity; suitable reference values are used in practice to assess measurement error. Repeatability compares results over a short period using the same procedure, operators, measuring system, location and operating conditions. Measurement uncertainty is a non-negative parameter describing the dispersion of values attributed to the quantity being measured. It is not simply the span between the largest and smallest repeat readings. State whether a reported uncertainty is standard or expanded, and give the coverage factor or coverage probability as applicable. More displayed digits do not remove errors from contact, alignment, temperature or calibration." xml:space="preserve">
+    <value>ความละเอียดของเครื่องมืออธิบายการเปลี่ยนแปลงน้อยที่สุดของปริมาณที่วัดซึ่งทำให้ค่าบ่งชี้เปลี่ยนอย่างสังเกตได้ ความถูกต้องเกี่ยวข้องกับความใกล้เคียงค่าจริงของปริมาณนั้น โดยในทางปฏิบัติใช้ค่าอ้างอิงที่เหมาะสมเพื่อประเมินความคลาดเคลื่อนของการวัด ความสามารถทำซ้ำเปรียบเทียบผลในช่วงเวลาสั้น โดยใช้วิธี ผู้ปฏิบัติงาน ระบบวัด สถานที่ และสภาวะการทำงานเดิม ความไม่แน่นอนของการวัดเป็นพารามิเตอร์ที่ไม่ติดลบซึ่งอธิบายการกระจายของค่าที่กำหนดให้ปริมาณที่วัด ไม่ใช่เพียงผลต่างระหว่างค่ามากที่สุดกับน้อยที่สุดจากการวัดซ้ำ ระบุว่าความไม่แน่นอนที่รายงานเป็นแบบมาตรฐานหรือแบบขยาย พร้อมตัวประกอบครอบคลุมหรือความน่าจะเป็นครอบคลุมตามที่ใช้ จำนวนหลักบนจอที่มากขึ้นไม่ได้ขจัดความคลาดเคลื่อนจากการสัมผัส การจัดแนว อุณหภูมิ หรือการสอบเทียบ</value>
+  </data>
+  <data name="Reference: NPL Good Practice Guide 40, terminology and uncertainty" xml:space="preserve">
+    <value>อ้างอิง: คู่มือปฏิบัติที่ดี NPL ฉบับ 40 คำศัพท์และความไม่แน่นอน</value>
+  </data>
+  <data name="Ask whether the complete measurement method is suitable for the tolerance, especially near an acceptance boundary. Agree how uncertainty affects the pass/fail decision and how disputed results will be rechecked. Record the instrument identity and calibration status; a calibration certificate supports traceability but does not validate every future setup or operator technique." xml:space="preserve">
+    <value>ถามว่าวิธีวัดทั้งระบบเหมาะกับพิกัดหรือไม่ โดยเฉพาะใกล้ขอบรับงาน ตกลงว่าจะใช้ความไม่แน่นอนประกอบการตัดสินผ่านหรือไม่ผ่านอย่างไร และตรวจซ้ำกรณีโต้แย้งอย่างไร บันทึกรหัสเครื่องมือและสถานะสอบเทียบ ใบสอบเทียบช่วยเรื่องการสอบกลับ แต่ไม่ได้รับรองการจัดวางหรือวิธีปฏิบัติทุกครั้งในอนาคต</value>
+  </data>
+  <data name="Reference: Mitutoyo understanding CMM specifications and calibration" xml:space="preserve">
+    <value>อ้างอิง: ข้อกำหนดและการสอบเทียบ CMM ของ Mitutoyo</value>
+  </data>
+  <data name="Use the drawing's datum system and stated standard. Measuring a hole from an arbitrary outside edge can produce a different result from evaluating its position relative to the specified datum features. For CMM work, agree alignment and feature evaluation, along with sufficient point coverage for the feature being inspected. A convenient best fit may answer a different question." xml:space="preserve">
+    <value>ใช้ระบบดาตัมและมาตรฐานที่แบบระบุ การวัดรูจากขอบนอกที่เลือกเองอาจให้ผลต่างจากการประเมินตำแหน่งเทียบลักษณะดาตัมที่กำหนด สำหรับ CMM ให้ตกลงการจัดแนว วิธีประเมินลักษณะ และการกระจายจุดให้เหมาะกับงาน การจัดแนวแบบ best fit ที่สะดวกอาจตอบคนละคำถาม</value>
+  </data>
+  <data name="Remove loose contamination and confirm whether burr removal is permitted before inspection. Burrs, roughness, coatings, and contact-tip geometry can affect the surface actually sampled. Do not silently polish a nonconforming feature into compliance. Record whether dimensions apply before or after finishing and retain the specified surface condition during acceptance checks." xml:space="preserve">
+    <value>ขจัดสิ่งสกปรกที่หลุดง่าย และยืนยันว่าอนุญาตให้ลบครีบก่อนตรวจหรือไม่ ครีบ ความหยาบ ชั้นเคลือบ และรูปทรงปลายสัมผัสมีผลต่อผิวที่ถูกวัดจริง อย่าขัดลักษณะที่ไม่ผ่านให้ผ่านโดยไม่แจ้ง บันทึกว่ามิติใช้ก่อนหรือหลังเก็บผิว และรักษาสภาพผิวตามข้อกำหนดขณะตรวจรับ</value>
+  </data>
+  <data name="Thin parts can change shape under clamp or probe force. Specify free-state inspection or the required restrained condition, including support locations and clamping method. A fixture should locate the part reproducibly with only the necessary holding force. If the component is accepted in its assembled condition, define that condition rather than improvising it at inspection." xml:space="preserve">
+    <value>ชิ้นงานบางอาจเปลี่ยนรูปจากแรงจับยึดหรือแรงหัววัด ระบุว่าจะตรวจในสภาพอิสระหรือสภาพยึดรั้ง พร้อมตำแหน่งรองรับและวิธีจับ ฟิกซ์เจอร์ควรวางตำแหน่งซ้ำได้และใช้แรงยึดเท่าที่จำเป็น หากตรวจรับในสภาพประกอบ ให้กำหนดสภาพนั้นแทนการคิดวิธีขึ้นเองตอนตรวจ</value>
+  </data>
+  <data name="Source: Renishaw metrology fixturing technical specification" xml:space="preserve">
+    <value>แหล่งข้อมูล: ข้อกำหนดฟิกซ์เจอร์มาตรวิทยาของ Renishaw</value>
+  </data>
+  <data name="The standard reference temperature for dimensional measurement is 20 °C. Away from that temperature, expansion corrections and their uncertainty can matter. Allow the workpiece and equipment to stabilize; a part brought directly from machining, sunlight, or transport may not represent the inspection environment. Measuring room air alone does not establish the part's temperature." xml:space="preserve">
+    <value>อุณหภูมิอ้างอิงมาตรฐานสำหรับการวัดมิติคือ 20 °C เมื่อวัดที่อุณหภูมิอื่น ค่าชดเชยการขยายตัวและความไม่แน่นอนอาจมีนัยสำคัญ ให้ชิ้นงานและเครื่องมือปรับสภาพก่อน ชิ้นงานที่เพิ่งออกจากเครื่อง โดนแดด หรือขนส่งมาอาจยังไม่สมดุลกับห้องวัด การวัดอากาศในห้องอย่างเดียวไม่ยืนยันอุณหภูมิชิ้นงาน</value>
+  </data>
+  <data name="Illustrative calculation, not a material specification" xml:space="preserve">
+    <value>ตัวอย่างคำนวณ ไม่ใช่ข้อกำหนดวัสดุ</value>
+  </data>
+  <data name="Assume a 100 mm length at 20 °C, a uniform 10 °C rise, and a constant expansion coefficient of 12 × 10⁻⁶ /°C. Then ΔL = αLΔT = 0.012 mm, so the predicted length is 100.012 mm. The assumed coefficient must be replaced by suitable material data in a real correction; temperature gradients and instrument expansion also need consideration." xml:space="preserve">
+    <value>สมมติความยาว 100 mm ที่ 20 °C อุณหภูมิสูงขึ้นสม่ำเสมอ 10 °C และสัมประสิทธิ์การขยายตัวคงที่ 12 × 10⁻⁶ /°C จะได้ ΔL = αLΔT = 0.012 mm ความยาวคาดการณ์จึงเป็น 100.012 mm เมื่อนำไปชดเชยจริงต้องแทนสัมประสิทธิ์สมมติด้วยข้อมูลวัสดุที่เหมาะสม และพิจารณาความต่างอุณหภูมิภายในกับการขยายตัวของเครื่องมือด้วย</value>
+  </data>
+  <data name="Source: NIST uncertainty in dimensional measurements at nonstandard temperatures" xml:space="preserve">
+    <value>แหล่งข้อมูล: NIST ความไม่แน่นอนของการวัดมิติที่อุณหภูมิต่างจากมาตรฐาน</value>
+  </data>
+  <data name="Before quotation, agree the drawing revision, numbered characteristics, nominal values and limits, sampling quantity, actual results, units, instrument or method, datum setup, environmental conditions where relevant, and acceptance rule. Identify each inspected part or lot. State whether the report covers every part, a first article, or a sample; these are different deliverables." xml:space="preserve">
+    <value>ก่อนเสนอราคา ให้ตกลงรุ่นแบบ หมายเลขลักษณะ ค่าเป้าหมายและขีดจำกัด จำนวนตัวอย่าง ค่าที่วัดจริง หน่วย เครื่องมือหรือวิธี ระบบดาตัม สภาพแวดล้อมที่เกี่ยวข้อง และเกณฑ์รับ ระบุชิ้นงานหรือล็อตที่ตรวจ ให้ชัดว่ารายงานครอบคลุมทุกชิ้น ชิ้นแรก หรือตัวอย่าง เพราะเป็นสิ่งส่งมอบต่างกัน</value>
+  </data>
+  <data name="When results disagree, compare the definition and setup before adjusting the process. Recheck revision, cleanliness, temperature, contact location, restraint, and calculation method. Preserve the original readings and identify the agreed repeat measurement so the record explains the decision instead of merely replacing an inconvenient number." xml:space="preserve">
+    <value>เมื่อผลไม่ตรงกัน ให้เปรียบเทียบนิยามและการจัดวางก่อนปรับกระบวนการ ตรวจรุ่นแบบ ความสะอาด อุณหภูมิ จุดสัมผัส การยึดรั้ง และวิธีคำนวณอีกครั้ง เก็บค่าเดิมไว้และระบุผลวัดซ้ำที่ตกลงกัน เพื่อให้บันทึกอธิบายเหตุผลตัดสิน แทนการลบค่าที่ไม่สะดวกทิ้ง</value>
+  </data>
+  <data name="An outside micrometer has aligned anvil and spindle contacts on a stationary steel cylinder." xml:space="preserve"><value>ไมโครมิเตอร์วัดนอกมีหน้าสัมผัสแอนวิลและสปินเดิลอยู่ในแนวเดียวกันขณะวัดทรงกระบอกเหล็กที่หยุดนิ่ง</value></data>
+  <data name="Choose the contacts, alignment and environment that match the measurement requirement. Illustrative image." xml:space="preserve"><value>เลือกหน้าสัมผัส แนววัด และสภาพแวดล้อมให้เหมาะกับข้อกำหนดการตรวจสอบ ภาพประกอบ</value></data>
+  <data name="An assumed 100 mm length at 20 degrees Celsius increases by 0.012 mm for a uniform ten degree rise using an assumed expansion coefficient of twelve times ten to the minus six per kelvin." xml:space="preserve"><value>ตัวอย่างความยาว 100 มม. ที่ 20 องศาเซลเซียส ยาวขึ้น 0.012 มม. เมื่ออุณหภูมิเพิ่มสม่ำเสมอ 10 องศา โดยสมมติสัมประสิทธิ์การขยายตัว 12 คูณ 10 ยกกำลังลบ 6 ต่อเคลวิน</value></data>
+  <data name="1: assumed length at 20 °C. 2: predicted length at 30 °C is 100.012 mm. Expansion is greatly exaggerated in the drawing. The coefficient is an illustrative assumption, not a material specification; real corrections also consider gradients and instrument expansion." xml:space="preserve"><value>1: ความยาวสมมติที่ 20 °C 2: ความยาวคำนวณที่ 30 °C เท่ากับ 100.012 มม. ภาพขยายการยืดตัวเกินจริงอย่างมาก ค่าสัมประสิทธิ์เป็นเพียงสมมติเพื่ออธิบาย ไม่ใช่ข้อกำหนดวัสดุ การแก้ค่าจริงต้องพิจารณาความต่างอุณหภูมิภายในและการขยายตัวของเครื่องมือด้วย</value></data>
+  <data name="Open full-size diagram" xml:space="preserve"><value>เปิดแผนภาพขนาดเต็ม</value></data>
+  <data name="JCGM VIM: measurement accuracy" xml:space="preserve"><value>JCGM VIM: ความถูกต้องของการวัด</value></data>
+  <data name="JCGM VIM: repeatability conditions" xml:space="preserve"><value>JCGM VIM: สภาวะของการทำซ้ำ</value></data>
+  <data name="JCGM VIM: measurement uncertainty" xml:space="preserve"><value>JCGM VIM: ความไม่แน่นอนของการวัด</value></data>
+</root>

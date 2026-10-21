@@ -14,6 +14,8 @@ public sealed partial class InstantQuotationLocalizationParityTests
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["Email"] = "อีเมล",
+            ["Privacy Policy"] = "นโยบายความเป็นส่วนตัว",
+            ["Non-Disclosure Agreement"] = "สัญญาปกปิดความลับ",
             ["Ready for manufacturing"] = "พร้อมเข้าสู่กระบวนการผลิต",
             ["We will get back to you with a quotation"] = "เราจะติดต่อกลับพร้อมใบเสนอราคา",
             ["{0}–{1} business days"] = "{0}–{1} วันทำการ",
@@ -123,6 +125,9 @@ public sealed partial class InstantQuotationLocalizationParityTests
             "Components",
             "Pages",
             "InstantQuotation");
+        var workflow = File.ReadAllText(Path.Combine(componentDirectory, "InstantQuotationWorkflow.razor"));
+        Assert.Contains("Localizer[\"Privacy Policy\"]", workflow, StringComparison.Ordinal);
+        Assert.Contains("Localizer[\"Non-Disclosure Agreement\"]", workflow, StringComparison.Ordinal);
         var usedKeys = Directory.EnumerateFiles(componentDirectory, "*.*", SearchOption.TopDirectoryOnly)
             .Where(path => Path.GetExtension(path) is ".razor" or ".cs")
             .SelectMany(path => LocalizerKey().Matches(File.ReadAllText(path)).Select(match => match.Groups[1].Value))

@@ -2286,8 +2286,8 @@ public sealed class WebSurfaceTests : IDisposable
     }
 
     [Theory]
-    [InlineData("en", "Precision. Speed. Reliability.", "Manufacturing Services for Prototypes and Production Parts", "Why customers work with MALIEV")]
-    [InlineData("th", "แม่นยำ รวดเร็ว เชื่อถือได้", "รับผลิตชิ้นส่วนตามแบบ ตั้งแต่ต้นแบบจนถึงการผลิตจริง", "เหตุผลที่ลูกค้าเลือกทำงานกับ MALIEV")]
+    [InlineData("en", "Custom parts.", "From CAD to assembly.", "What MALIEV helps you develop")]
+    [InlineData("th", "ชิ้นส่วนสั่งผลิต", "จาก CAD ถึงงานประกอบ", "สิ่งที่ MALIEV ช่วยพัฒนาให้คุณ")]
     public async Task HomePage_RendersLocalizedStaticBlazorBodyWithNavigationParity(
         string culture,
         string eyebrow,
@@ -2303,11 +2303,11 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains(eyebrow, decodedSource, StringComparison.Ordinal);
         Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
         Assert.Contains(valueLabel, decodedSource, StringComparison.Ordinal);
-        Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Services/CNC-Machining\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Services/3D-Printing\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Services/3D-Scanning\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/InstantQuotation/3D-Printing?culture={culture}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/Contact?culture={culture}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/Services/CNC-Machining?culture={culture}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/Services/3D-Printing?culture={culture}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/Services/3D-Scanning?culture={culture}\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }
@@ -2636,8 +2636,8 @@ public sealed class WebSurfaceTests : IDisposable
     }
 
     [Theory]
-    [InlineData("en", "From a family workshop to connected manufacturing.", "MALIEV is founded", "Machining meets digital quoting")]
-    [InlineData("th", "จากเวิร์กช็อปของครอบครัว สู่ระบบการผลิตที่เชื่อมต่อกัน", "ก่อตั้ง MALIEV", "เชื่อมงาน CNC เข้ากับการเสนอราคาแบบดิจิทัล")]
+    [InlineData("en", "From concept to a working part.", "Established in 2018", "04 · CNC batch production")]
+    [InlineData("th", "จากไอเดีย สู่ชิ้นงานจริง", "ก่อตั้งในปี 2018", "04 · ผลิตด้วย CNC เป็นชุด")]
     public async Task AboutRoute_PreservesLocalizedStaticSsrTimelineWithoutFacebookProfileIntegration(
         string culture,
         string heading,
@@ -2653,7 +2653,8 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
         Assert.Contains(foundedMilestone, decodedSource, StringComparison.Ordinal);
         Assert.Contains(cncMilestone, decodedSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("https://www.facebook.com", source, StringComparison.OrdinalIgnoreCase);
+        // Static business-profile metadata is permitted; executable Facebook integration is not.
+        Assert.Contains(SocialNetworks.Facebook, source, StringComparison.Ordinal);
         Assert.DoesNotContain("connect.facebook.net", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fb:app_id", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fb-like", source, StringComparison.OrdinalIgnoreCase);
@@ -2814,8 +2815,8 @@ public sealed class WebSurfaceTests : IDisposable
     }
 
     [Theory]
-    [InlineData("en", "Member workspace", "Review quotations, orders, project files, and account details.", "Sign in", "Create an account", "Reset password")]
-    [InlineData("th", "พื้นที่สมาชิก", "ตรวจสอบใบเสนอราคา คำสั่งซื้อ ไฟล์โครงการ และข้อมูลบัญชี", "เข้าสู่ระบบ", "สร้างบัญชี", "รีเซ็ตรหัสผ่าน")]
+    [InlineData("en", "Member workspace", "Sign in to review quotations, orders, project files, and account details.", "Sign in", "Create an account", "Reset password")]
+    [InlineData("th", "พื้นที่สมาชิก", "เข้าสู่ระบบเพื่อตรวจใบเสนอราคา คำสั่งซื้อ ไฟล์โปรเจ็ค และข้อมูลบัญชี", "เข้าสู่ระบบ", "สร้างบัญชี", "รีเซ็ตรหัสผ่าน")]
     public async Task AccountIndex_RendersLocalizedAnonymousStaticSsrActions(
         string culture,
         string workspaceLabel,
@@ -2853,6 +2854,8 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-component=\"account-index-content\"", source, StringComparison.Ordinal);
         Assert.Contains("Signed in as", source, StringComparison.Ordinal);
+        Assert.Contains(">Review quotations, orders, project files, and account details.<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(">Sign in to review quotations, orders, project files, and account details.<", source, StringComparison.Ordinal);
         Assert.Contains("customer@example.com", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/Member/Account/Manage/Profile\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/Member/Account/Manage/Address\"", source, StringComparison.OrdinalIgnoreCase);
@@ -3765,7 +3768,7 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/xml", response.Content.Headers.ContentType?.MediaType);
         Assert.Equal("utf-8", response.Content.Headers.ContentType?.CharSet);
-        Assert.Equal(27, routes.Length);
+        Assert.Equal(39, routes.Length);
         Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/contact");
         Assert.DoesNotContain(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/quotation");
         Assert.All(routes, route => Assert.Equal(3, route.Elements(xhtml + "link").Count()));
@@ -3853,6 +3856,19 @@ public sealed class WebSurfaceTests : IDisposable
 
     private sealed class StubCareerClient : ICareerClient
     {
+        public async Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(CareerSort.JobId_Ascending, null, 1, 25, cancellationToken);
+            return new ServiceResponse<IReadOnlyList<CareerLevel>>(listing.Levels, listing.ServiceAvailable);
+        }
+
+        public async Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
+            CareerSort sort, string? search, int pageIndex, int pageSize, CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(sort, search, pageIndex, pageSize, cancellationToken);
+            return new ServiceResponse<CareerOfferPage>(listing.Offers, listing.ServiceAvailable);
+        }
+
         private static readonly CareerLevel Level = new(1, "Engineer", null, null, null);
 
         private static readonly CareerOffer Offer = new(
@@ -3889,6 +3905,19 @@ public sealed class WebSurfaceTests : IDisposable
 
     private sealed class ThrowingCareerClient : ICareerClient
     {
+        public async Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(CareerSort.JobId_Ascending, null, 1, 25, cancellationToken);
+            return new ServiceResponse<IReadOnlyList<CareerLevel>>(listing.Levels, listing.ServiceAvailable);
+        }
+
+        public async Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
+            CareerSort sort, string? search, int pageIndex, int pageSize, CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(sort, search, pageIndex, pageSize, cancellationToken);
+            return new ServiceResponse<CareerOfferPage>(listing.Offers, listing.ServiceAvailable);
+        }
+
         public Task<CareerListing> GetListingAsync(
             CareerSort sort,
             string? search,
