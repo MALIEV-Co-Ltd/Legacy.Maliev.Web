@@ -1614,9 +1614,10 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
         border-radius: 0;
     }
 
-    /* The unit control owns a desktop row without displacing the fixed-height sidebar. */
+    /* Keep usable parts and configuration panes; shorter shells scroll instead of collapsing either pane. */
     .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) {
-        grid-template-rows: auto auto minmax(0, 1fr);
+        grid-template-rows: auto minmax(8rem, 1fr) minmax(24rem, 3fr);
+        overflow-y: auto;
     }
 
     .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > .instant-quote__gltf-unit {
@@ -1628,11 +1629,29 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     }
 
     .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] {
+        display: flex;
         grid-row: 2;
+        min-height: 0;
+        flex-direction: column;
+        overflow: auto;
+    }
+
+    .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] > .instant-quote__parts-header {
+        flex: 0 0 auto;
+    }
+
+    .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] > [data-workflow-parts] {
+        flex: 1 1 auto;
+        min-height: 44px;
     }
 
     .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-configuration] {
         grid-row: 3;
+        overflow: auto;
+    }
+
+    .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-configuration] > [data-workflow-configuration-content] {
+        min-height: 8rem;
     }
 
     .instant-quote__workflow[data-workflow-state="customerdetails"] > .instant-quote__customer-order {

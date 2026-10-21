@@ -116,6 +116,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         Assert.True(string.Equals(System.Text.Json.JsonSerializer.Serialize(beforeUnitChoice.QuoteAuthorization),
             System.Text.Json.JsonSerializer.Serialize(afterUnitChoice.QuoteAuthorization), StringComparison.Ordinal),
             "Choosing units for a future import must not mint or replace the existing quote authorization.");
+        await AssertPartsPaneActionsReachableAsync(fixture);
         var rail = fixture.Page.Locator("[data-material-card-scroll]");
         await rail.Locator("[data-material-key='PVA']").ScrollIntoViewIfNeededAsync();
         Assert.True(await rail.EvaluateAsync<bool>("element => element.scrollTop > 0"),
@@ -136,7 +137,12 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                     units.top, units.bottom, viewer.top, parts.top, footer.bottom, innerHeight,
                     workflow.getBoundingClientRect().top, configuration.top, configuration.bottom,
                     card.closest('[data-material-card-scroll]').scrollTop,
-                    card.closest('[data-workflow-configuration-content]').scrollTop];
+                    card.closest('[data-workflow-configuration-content]').scrollTop,
+                    parts.bottom,
+                    workflow.querySelector('[data-workflow-parts]').getBoundingClientRect().top,
+                    workflow.querySelector('[data-workflow-parts]').getBoundingClientRect().bottom,
+                    workflow.querySelector('[data-workflow-parts]').clientHeight,
+                    workflow.querySelector('[data-workflow-parts]').scrollHeight];
             }
             """);
         var evidenceName = $"source-material-safe-hit-area-before-{culture}-1280-720";
@@ -149,6 +155,11 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
             "Import units must own a visible row above the desktop viewer and parts panel.");
         Assert.True(hitArea[10] <= hitArea[11] + 1 && hitArea[13] >= hitArea[7] - 1 && hitArea[14] <= hitArea[11] + 1,
             "The configuration rail and its complete summary footer must remain within the short desktop viewport.");
+        Assert.True(hitArea[4] - hitArea[3] >= hitArea[2] - hitArea[1],
+            "The configuration content must retain enough height to show the complete material card.");
+        Assert.True(hitArea[9] >= hitArea[7] - 1 && hitArea[17] <= hitArea[13] + 1
+            && hitArea[18] >= hitArea[9] - 1 && hitArea[19] <= hitArea[17] + 1 && hitArea[20] >= 44,
+            "The parts list must fit its own bounded pane above configuration without losing its action viewport.");
         await Assertions.Expect(card.Locator("[data-material-card-price]")).ToHaveAttributeAsync("data-price-status", "unavailable");
         // This historical fixture has resin authority; retain ABS geometry coverage before selecting supported resin.
         card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='K']");
@@ -159,6 +170,67 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         await Assertions.Expect(fixture.Page.Locator(".instant-quote__configuration-footer")).ToBeVisibleAsync();
         await Assertions.Expect(fixture.Page.Locator("[data-summary-legal]")).ToBeVisibleAsync();
         await fixture.CaptureAsync($"source-material-safe-hit-area-{culture}-1280-720");
+    }
+
+    [Theory]
+    [InlineData("en", ColorScheme.Light)]
+    [InlineData("th", ColorScheme.Dark)]
+    public async Task CompactDesktopPaneMinimumsKeepPartsMaterialAndSummaryActionsReachable(string culture, ColorScheme scheme)
+    {
+        await using var fixture = await Fixture.CreateAsync(output, culture, 1280, scheme, height: 640,
+            displayFileName: "maliev-one-millimeter-fdm-00000000000000000000000000000000.stl");
+        await AssertPartsPaneActionsReachableAsync(fixture);
+        var card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='K']");
+        await card.ScrollIntoViewIfNeededAsync();
+        var geometry = await card.EvaluateAsync<double[]>("""
+            card => {
+                const bounds = card.getBoundingClientRect();
+                const content = card.closest('[data-workflow-configuration-content]').getBoundingClientRect();
+                const hit = card.ownerDocument.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+                return [card.contains(hit) ? 1 : 0, bounds.top, bounds.bottom, content.top, content.bottom];
+            }
+            """);
+        Assert.True(geometry[0] == 1 && geometry[1] >= geometry[3] - 1 && geometry[2] <= geometry[4] + 1,
+            "A compact desktop must keep a complete material card reachable instead of collapsing its content viewport.");
+        await card.ClickAsync();
+        await Assertions.Expect(card).ToHaveAttributeAsync("aria-checked", "true");
+        Assert.Equal("K", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+        await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
+        await fixture.Review.ScrollIntoViewIfNeededAsync();
+        Assert.True(await fixture.Review.EvaluateAsync<bool>("""
+            button => {
+                const bounds = button.getBoundingClientRect();
+                const hit = button.ownerDocument.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+                return bounds.top >= 0 && bounds.bottom <= innerHeight && button.contains(hit);
+            }
+            """), "The complete summary action must remain reachable when pane minimums need outer scrolling.");
+        await fixture.CaptureAsync($"source-material-compact-panes-{culture}-1280-640");
+    }
+
+    private static async Task AssertPartsPaneActionsReachableAsync(Fixture fixture)
+    {
+        var list = fixture.Page.Locator("[data-workflow-parts]");
+        var addFile = list.Locator("[data-workflow-add-file]");
+        await addFile.ScrollIntoViewIfNeededAsync();
+        Assert.True(await addFile.EvaluateAsync<bool>("""
+            label => {
+                const bounds = label.getBoundingClientRect();
+                const hit = label.ownerDocument.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+                return label.contains(hit);
+            }
+            """), "The Add file label must retain its normal hit target inside the parts scroll pane.");
+        var view = list.Locator("[data-workflow-part] button").First;
+        await view.ScrollIntoViewIfNeededAsync();
+        Assert.True(await view.EvaluateAsync<bool>("""
+            button => {
+                const bounds = button.getBoundingClientRect();
+                const list = button.closest('[data-workflow-parts]').getBoundingClientRect();
+                const hit = button.ownerDocument.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+                return bounds.top >= list.top - 1 && bounds.bottom <= list.bottom + 1 && button.contains(hit);
+            }
+            """), "The complete View action must remain reachable through the parts list's own scrolling.");
+        await view.ClickAsync();
+        await Assertions.Expect(view).ToHaveAttributeAsync("aria-pressed", "true");
     }
 
     [Theory]
