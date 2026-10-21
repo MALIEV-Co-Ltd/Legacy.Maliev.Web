@@ -210,6 +210,17 @@ public sealed class ErrorBrowserTests(ErrorBrowserFixture fixture)
         var dragged = Assert.IsType<LocatorBoundingBoxResult>(await astronaut.BoundingBoxAsync());
         Assert.InRange(dragged.X - box.X, 78, 82);
         Assert.InRange(dragged.Y - box.Y, 58, 62);
+        // Finish with a fresh swipe after geometry inspection, then release immediately.
+        for (int step = 1; step <= 2; step++)
+        {
+            await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
+            {
+                ["type"] = "touchMove",
+                ["touchPoints"] = new[] { new { x = x + 80 + (step * 8), y = y + 60 + (step * 6) } },
+            });
+            await page.EvaluateAsync("() => new Promise(requestAnimationFrame)");
+        }
+
         await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
         {
             ["type"] = "touchEnd",
