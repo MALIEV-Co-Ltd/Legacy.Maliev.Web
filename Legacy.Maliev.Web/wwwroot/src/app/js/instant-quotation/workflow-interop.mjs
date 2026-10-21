@@ -120,7 +120,10 @@ export function createWorkflowPreviewInterop({
     if (inputElement === input) return;
     unbindInput();
     inputElement = input;
-    inputChangeHandler = () => selectionSnapshots.push(Array.from(input.files ?? []));
+    inputChangeHandler = () => selectionSnapshots.push({
+      files: Array.from(input.files ?? []),
+      unit: input.closest?.('.instant-quote__workflow')?.querySelector?.('[data-workflow-gltf-unit]')?.value ?? null,
+    });
     inputElement?.addEventListener?.('change', inputChangeHandler, { capture: true });
   }
 
@@ -163,24 +166,31 @@ export function createWorkflowPreviewInterop({
     partsWheelHandler = null;
   }
 
-  function beginSelection(input, maximumFileSize = Number.POSITIVE_INFINITY) {
+  function beginSelection(input, maximumFileSize = Number.POSITIVE_INFINITY, selectedUnit = null) {
     assertActive();
-    const files = selectionSnapshots.shift() ?? Array.from(input?.files ?? []);
-    return files.filter(file => !Number.isFinite(maximumFileSize) || file.size <= maximumFileSize)
-      .map(startPreview);
+    const selection = selectionSnapshots.shift() ?? {
+      files: Array.from(input?.files ?? []),
+      unit: selectedUnit ?? input?.closest?.('.instant-quote__workflow')?.querySelector?.('[data-workflow-gltf-unit]')?.value ?? null,
+    };
+    return selection.files.filter(file => !Number.isFinite(maximumFileSize) || file.size <= maximumFileSize)
+      .map(file => startPreview(file, selection.unit));
   }
 
   function discardSelection() {
-    const files = selectionSnapshots.shift();
-    if (files) files.length = 0;
+    const selection = selectionSnapshots.shift();
+    if (selection) selection.files.length = 0;
   }
 
-  function startPreview(file) {
+  function startPreview(file, selectedUnit) {
     const key = `preview-${++nextKey}`;
     const controller = new AbortController();
     const entry = {
       key,
       file,
+      selectedUnit,
+      gltfUnitPolicy: Object.freeze(['glb', 'gltf'].includes(extensionOf(file?.name))
+        ? { version: 1, unit: selectedUnit === 'metres' ? 1 : 0 }
+        : { version: 0, unit: 0 }),
       controller,
       object: null,
       loadedObject: null,
@@ -208,8 +218,16 @@ export function createWorkflowPreviewInterop({
       return key;
     }
 
+    if (['glb', 'gltf'].includes(extensionOf(file?.name))
+        && selectedUnit !== 'millimetres' && selectedUnit !== 'metres') {
+      entry.failureCategory = 'unit_required';
+      entry.completion = Promise.resolve(null);
+      setUnavailable();
+      return key;
+    }
+
     const operation = Promise.all([
-      Promise.resolve().then(() => loadModel(file, { signal: controller.signal })).then(object => {
+      Promise.resolve().then(() => loadModel(file, { signal: controller.signal, gltfUnitPolicy: entry.gltfUnitPolicy })).then(object => {
         if (isCurrent(entry)) entry.loadedObject = object;
         else disposeModel(object, disposedResources);
         return object;
@@ -224,6 +242,7 @@ export function createWorkflowPreviewInterop({
         entry.geometryClaim = Object.freeze({
           ...analyzeGeometry(object),
           sha256: hash,
+          gltfUnitPolicy: entry.gltfUnitPolicy,
         });
         entry.previewOnly = classifyIncompletePreview(file, entry.geometryClaim);
       } catch (error) {
@@ -423,9 +442,10 @@ export function createWorkflowPreviewInterop({
     assertActive();
     const previous = requirePreview(key);
     const file = previous.file;
+    const selectedUnit = previous.selectedUnit;
     if (!file) throw new Error('The preview source is no longer available.');
     release(key);
-    return startPreview(file);
+    return startPreview(file, selectedUnit);
   }
 
   function select(partId) {
@@ -678,7 +698,7 @@ export function createWorkflowPreviewInterop({
     if (disposed) return;
     disposed = true;
     for (const key of [...previews.keys()]) release(key);
-    for (const files of selectionSnapshots) files.length = 0;
+    for (const selection of selectionSnapshots) selection.files.length = 0;
     selectionSnapshots.length = 0;
     unbindInput();
     unbindPartsWheel();

@@ -29,6 +29,15 @@
 
     @if (VisibleSections.Upload)
     {
+        <div class="instant-quote__gltf-unit">
+            <label for="instant-quote-gltf-unit">@Localizer["Units for the next GLB/GLTF upload"]</label>
+            <select id="instant-quote-gltf-unit" data-workflow-gltf-unit aria-describedby="instant-quote-gltf-unit-help" disabled="@InputDisabled">
+                <option value="">@Localizer["Choose units before importing GLB/GLTF"]</option>
+                <option value="metres">@Localizer["Metres (standard glTF)"]</option>
+                <option value="millimetres">@Localizer["Millimetres (printing compatibility)"]</option>
+            </select>
+            <small id="instant-quote-gltf-unit-help">@Localizer["This choice applies only to new GLB/GLTF files. Existing parts and other formats keep their units."]</small>
+        </div>
         <section data-workflow-upload
                  class="@(State is InstantQuotationWorkflowState.Empty ? null : "instant-quote__upload-control")"
                  aria-labelledby="instant-quote-upload-heading">

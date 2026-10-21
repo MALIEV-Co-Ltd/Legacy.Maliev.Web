@@ -212,7 +212,7 @@ test('advisory extraction refuses a real InstancedMesh instead of measuring its 
 
 for (const declaration of ['used', 'required', 'undeclared']) {
   test(`actual GLTF loading with ${declaration} GPU instancing cannot become base-only advisory physics`, async () => {
-    const object = await loadStandaloneModel(gltfGeometryFile({ declaration }));
+    const object = await loadStandaloneModel(gltfGeometryFile({ declaration }), { gltfUnitPolicy: { version: 1, unit: 0 } });
     try {
       let instanced = false;
       object.traverse(child => { if (child.isInstancedMesh) instanced = true; });
@@ -225,7 +225,7 @@ for (const declaration of ['used', 'required', 'undeclared']) {
 }
 
 test('actual core GLTF loading preserves native printing units despite extras.gltfExtensions collision', async () => {
-  const object = await loadStandaloneModel(gltfGeometryFile({ metadata: true }));
+  const object = await loadStandaloneModel(gltfGeometryFile({ metadata: true }), { gltfUnitPolicy: { version: 1, unit: 0 } });
   try {
     let collision = false;
     object.traverse(child => {
@@ -246,7 +246,7 @@ test('actual core GLTF loading preserves native printing units despite extras.gl
 });
 
 test('actual GLTF loading preserves unknown optional node extensions with core fallback', async () => {
-  const object = await loadStandaloneModel(gltfGeometryFile({ nodeExtension: 'UNKNOWN_geometry' }));
+  const object = await loadStandaloneModel(gltfGeometryFile({ nodeExtension: 'UNKNOWN_geometry' }), { gltfUnitPolicy: { version: 1, unit: 0 } });
   try {
     const result = analyzeUploadDerivedGeometry(object);
     assert.equal(result.facetCount, 4);

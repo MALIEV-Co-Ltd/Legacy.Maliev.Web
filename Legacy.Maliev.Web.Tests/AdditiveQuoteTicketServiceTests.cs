@@ -297,6 +297,53 @@ namespace Legacy.Maliev.Web.Tests
         }
 
         [Fact]
+        public void LegacyMissingPolicy_RetainsExistingSignedGeometryDigestBytes()
+        {
+            var service = CreateService();
+            var session = Session();
+            var quote = new InstantQuotationPricingService().Quote(session.RequestState);
+            var authorization = service.Issue(session, quote, Now);
+
+            var payload = service.UnprotectLine(Assert.Single(authorization.LineTickets), Now);
+
+            Assert.Equal("8792754C69369972E9F48F4F344A6B24D6F12C8E0F45E5CBBF80465A654E389C", payload.GeometryDigest);
+            Assert.True(service.Validate(session, quote, authorization, Now));
+        }
+
+        [Fact]
+        public void UnitPolicyOnlyReplay_InvalidatesSignedLineEvenWhenNumericGeometryMatches()
+        {
+            var service = CreateService();
+            var original = Session();
+            var part = Assert.Single(original.Parts);
+            var descriptor = new InstantQuotationPhysicalAnalysisUpload(
+                Guid.Parse(part.UploadReference.Value), "part.glb", "model/gltf-binary", 960,
+                part.Geometry.Sha256, "clean")
+            {
+                GltfUnitPolicy = new(1, InstantQuotationGltfLengthUnit.Millimetres),
+            };
+            var session = original with
+            {
+                RequestState = new InstantQuotationOrderState([part with { PhysicalAnalysisUpload = descriptor }]),
+            };
+            var quote = new InstantQuotationPricingService().Quote(session.RequestState);
+            var authorization = service.Issue(session, quote, Now);
+            Assert.True(service.Validate(session, quote, authorization, Now));
+            var changed = session with
+            {
+                RequestState = new InstantQuotationOrderState([part with
+                {
+                    PhysicalAnalysisUpload = descriptor with
+                    {
+                        GltfUnitPolicy = new(1, InstantQuotationGltfLengthUnit.Metres),
+                    },
+                }]),
+            };
+
+            Assert.False(service.Validate(changed, quote, authorization, Now));
+        }
+
+        [Fact]
         public void WorkflowAuthorization_RejectsOrderSubtotalDifferentFromRoundedLinePrices()
         {
             AdditiveQuoteTicketService service = CreateService();

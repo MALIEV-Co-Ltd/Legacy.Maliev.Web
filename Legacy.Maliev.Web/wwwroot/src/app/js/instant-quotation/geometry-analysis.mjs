@@ -133,6 +133,28 @@ export function analyzeUploadDerivedGeometry(object3D) {
   };
 }
 
+/**
+ * Returns a reusable rendered-local vertex reader only when deformation is active.
+ * Plain meshes keep the raw accessor path; no scene or geometry is baked or rescaled.
+ * Call after the complete hierarchy's world matrices have been updated.
+ */
+export function renderedVertexReader(mesh) {
+  if (mesh?.isInstancedMesh) {
+    throw new TypeError('Unsupported glTF node geometry cannot be analyzed.');
+  }
+  const morphing = mesh?.geometry?.morphAttributes?.position?.length > 0
+    && mesh.morphTargetInfluences?.some(weight => weight !== 0);
+  if (!mesh?.isSkinnedMesh && !morphing) return null;
+  if (typeof mesh.getVertexPosition !== 'function' || typeof mesh.position?.clone !== 'function') {
+    throw new TypeError('Rendered glTF vertex positions are unavailable.');
+  }
+  // Three's updateWorldMatrix does not invoke SkinnedMesh.updateMatrixWorld:
+  // refresh attached bindMatrixInverse after root printing rotation/unit scaling.
+  if (mesh.isSkinnedMesh) mesh.updateMatrixWorld(true);
+  const target = mesh.position.clone();
+  return index => mesh.getVertexPosition(index, target);
+}
+
 function extractWorldSpaceTriangles(object3D) {
   const triangles = [];
   if (!object3D?.traverse) return triangles;
@@ -146,14 +168,16 @@ function extractWorldSpaceTriangles(object3D) {
     const position = child?.geometry?.attributes?.position;
     if (!child?.isMesh || !position) return;
 
+    const readRenderedVertex = renderedVertexReader(child);
     const index = child.geometry.index;
     const count = index ? index.count : position.count;
     for (let offset = 0; offset < count; offset += 1) {
       const vertexIndex = index ? index.getX(offset) : offset;
+      const rendered = readRenderedVertex?.(vertexIndex);
       const vertex = applyMatrixWorld(
-        position.getX(vertexIndex),
-        position.getY(vertexIndex),
-        position.getZ(vertexIndex),
+        rendered ? rendered.x : position.getX(vertexIndex),
+        rendered ? rendered.y : position.getY(vertexIndex),
+        rendered ? rendered.z : position.getZ(vertexIndex),
         child.matrixWorld?.elements);
       triangles.push(vertex[0], vertex[1], vertex[2]);
     }

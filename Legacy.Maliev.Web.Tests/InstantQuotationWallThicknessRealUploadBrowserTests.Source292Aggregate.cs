@@ -41,6 +41,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
             const string sourceHash = "2d31d5a61f110106cf30c0c17d713602b8ab5c9d90c6c802e980e4c1c0bee8dc";
             Assert.Equal(960, bytes.Length);
             Assert.Equal(sourceHash, Convert.ToHexStringLower(SHA256.HashData(bytes)));
+            await page.Locator("[data-workflow-gltf-unit]").SelectOptionAsync("millimetres");
             await page.SetInputFilesAsync("#instant-quote-files", Enumerable.Range(1, partCount).Select(index => new FilePayload
             {
                 Name = $"source-292-seven-{index}.glb",

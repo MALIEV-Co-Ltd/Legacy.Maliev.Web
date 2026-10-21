@@ -64,6 +64,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 Buffer = bytes,
             };
             var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+            await page.Locator("[data-workflow-gltf-unit]").SelectOptionAsync("millimetres");
             await page.SetInputFilesAsync("#instant-quote-files", Copy(1));
             await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 90000 });
             await page.SetInputFilesAsync("#instant-quote-files", Enumerable.Range(2, 8).Select(Copy));
@@ -2201,6 +2202,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             Assert.Equal(960, bytes.Length);
             Assert.Equal("2d31d5a61f110106cf30c0c17d713602b8ab5c9d90c6c802e980e4c1c0bee8dc",
                 Convert.ToHexStringLower(SHA256.HashData(bytes)));
+            await page.Locator("[data-workflow-gltf-unit]").SelectOptionAsync("millimetres");
             await page.SetInputFilesAsync("#instant-quote-files", Enumerable.Range(0, partCount).Select(index => new FilePayload
             {
                 Name = $"card-layout-{index}.glb",
@@ -2971,7 +2973,10 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
 
             var fileId = Guid.NewGuid();
             verifiedUpload = new BrowserUpload(sessionId, ownerIdentity, fileId, fileName,
-                copy.ToArray(), sha256);
+                copy.ToArray(), sha256)
+            {
+                GltfUnitPolicy = geometryClaim.GltfUnitPolicy,
+            };
             uploads[fileId] = verifiedUpload;
             Interlocked.Increment(ref verifiedUploads);
             return InstantQuotationUploadResult.Succeeded(
@@ -2981,7 +2986,10 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 new InstantQuotationPhysicalAnalysisUpload(
                     fileId, fileName,
                     string.IsNullOrWhiteSpace(contentType) ? "model/stl" : contentType,
-                    copy.Length, sha256, "clean"));
+                    copy.Length, sha256, "clean")
+                {
+                    GltfUnitPolicy = geometryClaim.GltfUnitPolicy,
+                });
         }
 
         public InstantQuotationPhysicalAnalysisInputResult Read(
@@ -2993,6 +3001,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 ? new InstantQuotationPhysicalAnalysisInputResult(
                     upload.Bytes, InstantQuotationPhysicalAnalysisInputFailure.None,
                     upload.FileId, upload.FileName, upload.Sha256)
+                {
+                    GltfUnitPolicy = upload.GltfUnitPolicy,
+                }
                 : InstantQuotationPhysicalAnalysisInputResult.Unavailable(
                     InstantQuotationPhysicalAnalysisInputFailure.SessionUnavailable);
         }
@@ -3025,7 +3036,10 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
     }
 
     private sealed record BrowserUpload(
-        string SessionId, string? OwnerIdentity, Guid FileId, string FileName, byte[] Bytes, string Sha256);
+        string SessionId, string? OwnerIdentity, Guid FileId, string FileName, byte[] Bytes, string Sha256)
+    {
+        public InstantQuotationGltfUnitPolicy GltfUnitPolicy { get; init; } = InstantQuotationGltfUnitPolicy.Legacy;
+    }
 
     private sealed class BrowserMultiUploadInputReader(
         HashCheckingUploadClient upload,
@@ -3068,6 +3082,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 ? new InstantQuotationPhysicalAnalysisInputResult(
                     upload.Bytes, InstantQuotationPhysicalAnalysisInputFailure.None,
                     upload.FileId, upload.FileName, upload.Sha256)
+                {
+                    GltfUnitPolicy = upload.GltfUnitPolicy,
+                }
                 : InstantQuotationPhysicalAnalysisInputResult.Unavailable(
                     InstantQuotationPhysicalAnalysisInputFailure.SessionUnavailable));
         }

@@ -132,6 +132,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private string LocalPreviewFailureMessage(LocalPreviewFailure failure) => Localizer[failure.Category switch
     {
+        "unit_required" => "Choose units before importing GLB/GLTF",
         "unreadable" => "Invalid file. Repair the model and reupload it.",
         "complexity" => "This file exceeds the analysis limits. Simplify the mesh or contact our engineers for a quotation.",
         _ => "3D file processing is unavailable. Try again or contact our engineers for a quotation.",
@@ -144,7 +145,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         try
         {
             var category = await interop.InvokeAsync<string?>("getFailureCategory", key);
-            return category is "unreadable" or "complexity" ? category : "unavailable";
+            return category is "unreadable" or "complexity" or "unit_required" ? category : "unavailable";
         }
         catch (JSException) { return "unavailable"; }
     }
@@ -254,6 +255,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
         // Only the current server quotation may relax topology eligibility; the original geometry and warnings remain intact.
         return receipt.SessionId == binding.SessionId && receipt.OwnerIdentity == binding.OwnerIdentity
+            && receipt.GltfUnitPolicy == binding.GltfUnitPolicy
             && receipt.PartId == binding.PartId && receipt.FileId == binding.FileId
             && string.Equals(receipt.UploadSha256, binding.UploadSha256, StringComparison.OrdinalIgnoreCase)
             && receipt.ConfiguredMaterialKey == part.Configuration.MaterialKey && receipt.MaterialKey == binding.MaterialKey

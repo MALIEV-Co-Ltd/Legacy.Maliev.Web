@@ -93,6 +93,79 @@ public sealed class InstantQuotationSessionStoreTests
         Assert.Equal(BuildPreference.Strength, found!.Parts.Single().Configuration.BuildPreference);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ProtectedGltfPolicy_RoundTripsAndMissingLegacyFieldKeepsExistingGeometry(bool legacy)
+    {
+        var fixture = CreateFixture();
+        var original = Part("PLA", Enumerable.Repeat(500d, 64).ToArray(), Enumerable.Repeat(80d, 64).ToArray());
+        var fileId = Guid.NewGuid();
+        var policy = legacy ? InstantQuotationGltfUnitPolicy.Legacy
+            : new InstantQuotationGltfUnitPolicy(1, InstantQuotationGltfLengthUnit.Metres);
+        var part = original with
+        {
+            UploadReference = new(fileId.ToString("D")),
+            PhysicalAnalysisUpload = new(fileId, "saved.glb", "model/gltf-binary", 960, original.Geometry.Sha256, "clean")
+            {
+                GltfUnitPolicy = policy,
+            },
+        };
+        var created = await fixture.Store.CreateAsync("customer-42", new InstantQuotationOrderState([part]), default);
+        var protectedBytes = await fixture.Cache.GetAsync(DistributedInstantQuotationSessionStore.CacheKeyPrefix + created.SessionId);
+        using var payload = JsonDocument.Parse(fixture.Protector.Unprotect(protectedBytes!));
+        Assert.Equal(legacy ? 1 : 2, payload.RootElement.GetProperty("Version").GetInt32());
+        if (legacy)
+        {
+            var key = DistributedInstantQuotationSessionStore.CacheKeyPrefix + created.SessionId;
+            var raw = await fixture.Cache.GetAsync(key);
+            var json = System.Text.Json.Nodes.JsonNode.Parse(fixture.Protector.Unprotect(raw!))!;
+            json["RequestState"]!["Parts"]![0]!["PhysicalAnalysisUpload"]!.AsObject().Remove("GltfUnitPolicy");
+            await fixture.Cache.SetAsync(key, fixture.Protector.Protect(Encoding.UTF8.GetBytes(json.ToJsonString())));
+        }
+
+        var restored = await fixture.Store.GetAsync(created.SessionId, "customer-42", default);
+
+        Assert.NotNull(restored);
+        var retained = Assert.Single(restored.Parts);
+        Assert.Equal(policy, retained.PhysicalAnalysisUpload!.GltfUnitPolicy);
+        Assert.Equal(20, retained.Geometry.DimensionXmm);
+        Assert.Equal(25, retained.Geometry.DimensionYmm);
+        Assert.Equal(30, retained.Geometry.DimensionZmm);
+        Assert.Equal(1_000, retained.Geometry.VolumeMm3);
+        Assert.Equal(original.Geometry.Sha256, retained.Geometry.Sha256);
+        Assert.Null(await fixture.Store.GetAsync(created.SessionId, "foreign-owner", default));
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("partial")]
+    [InlineData("downgrade")]
+    public async Task SavedNullPartialOrDowngradedUnitPolicy_RejectsProtectedSession(string alteration)
+    {
+        var fixture = CreateFixture();
+        var original = Part("PLA", Enumerable.Repeat(500d, 64).ToArray(), Enumerable.Repeat(80d, 64).ToArray());
+        var fileId = Guid.NewGuid();
+        var part = original with
+        {
+            UploadReference = new(fileId.ToString("D")),
+            PhysicalAnalysisUpload = new(fileId, "saved.glb", "model/gltf-binary", 960, original.Geometry.Sha256, "clean")
+            {
+                GltfUnitPolicy = new(1, InstantQuotationGltfLengthUnit.Metres),
+            },
+        };
+        var created = await fixture.Store.CreateAsync("customer-42", new InstantQuotationOrderState([part]), default);
+        var key = DistributedInstantQuotationSessionStore.CacheKeyPrefix + created.SessionId;
+        var raw = await fixture.Cache.GetAsync(key);
+        var json = System.Text.Json.Nodes.JsonNode.Parse(fixture.Protector.Unprotect(raw!))!;
+        if (alteration == "downgrade") json["Version"] = 1;
+        else json["RequestState"]!["Parts"]![0]!["PhysicalAnalysisUpload"]!["GltfUnitPolicy"] =
+            alteration == "partial" ? new System.Text.Json.Nodes.JsonObject { ["Version"] = 1 } : null;
+        await fixture.Cache.SetAsync(key, fixture.Protector.Protect(Encoding.UTF8.GetBytes(json.ToJsonString())));
+
+        Assert.Null(await fixture.Store.GetAsync(created.SessionId, "customer-42", default));
+    }
+
     [Fact]
     public async Task CreateGet_PhysicalAnalysisDescriptor_RoundTripsOnlyForOwner()
     {

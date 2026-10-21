@@ -694,4 +694,19 @@
   </data>
   <data name="Apply {0} to selected parts" xml:space="preserve"><value>ใช้ {0} กับชิ้นงานที่เลือก</value></data>
   <data name="3D file processing is unavailable. Try again or contact our engineers for a quotation." xml:space="preserve"><value>ไม่สามารถประมวลผลไฟล์ 3 มิติได้ โปรดลองอีกครั้งหรือติดต่อวิศวกรเพื่อขอใบเสนอราคา</value></data>
+  <data name="Units for the next GLB/GLTF upload" xml:space="preserve">
+    <value>หน่วยสำหรับไฟล์ GLB/GLTF ที่จะอัปโหลดถัดไป</value>
+  </data>
+  <data name="Choose units before importing GLB/GLTF" xml:space="preserve">
+    <value>เลือกหน่วยก่อนนำเข้าไฟล์ GLB/GLTF</value>
+  </data>
+  <data name="Metres (standard glTF)" xml:space="preserve">
+    <value>เมตร (มาตรฐาน glTF)</value>
+  </data>
+  <data name="Millimetres (printing compatibility)" xml:space="preserve">
+    <value>มิลลิเมตร (รองรับไฟล์สำหรับการพิมพ์เดิม)</value>
+  </data>
+  <data name="This choice applies only to new GLB/GLTF files. Existing parts and other formats keep their units." xml:space="preserve">
+    <value>ตัวเลือกนี้ใช้กับไฟล์ GLB/GLTF ใหม่เท่านั้น ชิ้นงานที่มีอยู่และไฟล์รูปแบบอื่นจะใช้หน่วยเดิม</value>
+  </data>
 </root>

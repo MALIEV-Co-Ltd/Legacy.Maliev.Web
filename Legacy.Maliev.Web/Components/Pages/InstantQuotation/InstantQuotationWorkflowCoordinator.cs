@@ -151,7 +151,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         return new InstantQuotationPhysicalAnalysisBinding(
             session!.SessionId, ownerIdentity, partId, upload.FileId, upload.Sha256,
             part.Configuration.MaterialKey, part.Configuration.BuildPreference,
-            part.Configuration.Quantity, profileVersion);
+            part.Configuration.Quantity, profileVersion)
+        {
+            GltfUnitPolicy = upload.GltfUnitPolicy,
+        };
     }
 
     public InstantQuotationOrderQuote? OrderQuote { get; private set; }
@@ -823,7 +826,8 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             null,
             FileType(entry.File.FileName));
 
-        if (entry.File.GeometryClaim is null || !entry.File.GeometryClaim.IsValid())
+        if (entry.File.GeometryClaim is null || !entry.File.GeometryClaim.IsValid()
+            || entry.File.GeometryClaim.GltfUnitPolicy?.IsValidForFile(entry.File.FileName, newUpload: true) is not true)
         {
             entry.Status = InstantQuotationWorkflowUploadStatus.Error;
             entry.ProblemCategory = InstantQuotationProblemCategory.Validation;
@@ -1369,11 +1373,13 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         string? OwnerIdentity, IReadOnlyList<DisplayPartBinding> Parts, CancellationToken CancellationToken);
 
     private sealed record DisplayPartBinding(Guid PartId, string UploadReference, Guid? FileId, string GeometrySha256,
-        string? UploadSha256, string MaterialKey, string Color, int Quantity, BuildPreference BuildPreference)
+        string? UploadSha256, InstantQuotationGltfUnitPolicy? GltfUnitPolicy,
+        string MaterialKey, string Color, int Quantity, BuildPreference BuildPreference)
     {
         public static DisplayPartBinding Create(InstantQuotationPart part) => new(part.PartId,
             part.UploadReference.Value, part.PhysicalAnalysisUpload?.FileId, part.Geometry.Sha256,
-            part.PhysicalAnalysisUpload?.Sha256, part.Configuration.MaterialKey, part.Configuration.Color,
+            part.PhysicalAnalysisUpload?.Sha256, part.PhysicalAnalysisUpload?.GltfUnitPolicy,
+            part.Configuration.MaterialKey, part.Configuration.Color,
             part.Configuration.Quantity, part.Configuration.BuildPreference);
     }
 

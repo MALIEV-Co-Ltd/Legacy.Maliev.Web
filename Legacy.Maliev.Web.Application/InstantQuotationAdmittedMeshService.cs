@@ -19,6 +19,8 @@ internal sealed record InstantQuotationAdmittedMeshResult(
     string? UploadSha256,
     InstantQuotationAdmittedMeshFailure Failure)
 {
+    internal InstantQuotationGltfUnitPolicy GltfUnitPolicy { get; init; } = InstantQuotationGltfUnitPolicy.Legacy;
+
     internal bool IsReady => Mesh is not null && Failure == InstantQuotationAdmittedMeshFailure.None;
 
     internal static InstantQuotationAdmittedMeshResult Unavailable(InstantQuotationAdmittedMeshFailure failure) =>
@@ -87,7 +89,7 @@ internal sealed class InstantQuotationAdmittedMeshService(
             string? extension = Path.GetExtension(input.FileName);
             MeshInput parsed = string.Equals(extension, ".glb", StringComparison.OrdinalIgnoreCase)
                 || string.Equals(extension, ".gltf", StringComparison.OrdinalIgnoreCase)
-                ? AdmittedGltfMeshReader.Read(input.Content!, cancellationToken)
+                ? AdmittedGltfMeshReader.Read(input.Content!, cancellationToken, input.GltfUnitPolicy)
                 : string.Equals(extension, ".3mf", StringComparison.OrdinalIgnoreCase)
                     ? AdmittedThreeMfMeshReader.Read(input.Content!, cancellationToken)
                     : string.Equals(extension, ".obj", StringComparison.OrdinalIgnoreCase)
@@ -95,7 +97,10 @@ internal sealed class InstantQuotationAdmittedMeshService(
                         : AdmittedStlMeshReader.Read(input.Content!, cancellationToken);
             NormalizedMesh mesh = MeshNormalizer.Normalize(
                 parsed, new GeometryTolerance(0.001, 0.02), cancellationToken);
-            return new InstantQuotationAdmittedMeshResult(mesh, expectedSha256, InstantQuotationAdmittedMeshFailure.None);
+            return new InstantQuotationAdmittedMeshResult(mesh, expectedSha256, InstantQuotationAdmittedMeshFailure.None)
+            {
+                GltfUnitPolicy = input.GltfUnitPolicy,
+            };
         }
         catch (Exception exception) when (exception is FormatException or DecoderFallbackException or SimulationGeometryException)
         {

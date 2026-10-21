@@ -638,8 +638,11 @@ export function createThreeModelViewer(canvas) {
 }
 
 /** Loads one standalone model. GLTF companion files and OBJ MTL are not claimed. */
-export async function loadStandaloneModel(file, { signal } = {}) {
+export async function loadStandaloneModel(file, { signal, gltfUnitPolicy } = {}) {
   const extension = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
+  if (['glb', 'gltf'].includes(extension)
+      && (gltfUnitPolicy?.version !== 1 || ![0, 1].includes(gltfUnitPolicy.unit)))
+    throw new TypeError('Choose GLB/GLTF units before importing.');
   const buffer = await file.arrayBuffer();
   if (signal?.aborted) throw new DOMException('Operation cancelled.', 'AbortError');
   let object;
@@ -655,6 +658,8 @@ export async function loadStandaloneModel(file, { signal } = {}) {
     if (extension === 'gltf') validateStandaloneGltfDocument(input);
     const result = await new GLTFLoader().parseAsync(input, '');
     object = orientGltfForPrinting(result.scene);
+    // Scale the freshly loaded scene once, before preview, geometry and thickness consumers.
+    object.scale.multiplyScalar(gltfUnitPolicy.unit === 1 ? 1000 : 1);
   } else if (['stp', 'step', 'igs', 'iges'].includes(extension)) {
     object = await loadCadModel(buffer, extension, signal);
   } else {

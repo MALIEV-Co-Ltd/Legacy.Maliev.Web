@@ -15,6 +15,110 @@ public sealed class InstantQuotationFileServiceUploadClientTests
     private static readonly Guid FirstFileId = Guid.Parse("00000000-0000-0000-0000-000000000001");
     private static readonly Guid SecondFileId = Guid.Parse("00000000-0000-0000-0000-000000000002");
 
+    [Theory]
+    [InlineData(-1, InstantQuotationGltfLengthUnit.Millimetres)]
+    [InlineData(0, InstantQuotationGltfLengthUnit.Millimetres)]
+    [InlineData(0, InstantQuotationGltfLengthUnit.Metres)]
+    [InlineData(2, InstantQuotationGltfLengthUnit.Millimetres)]
+    [InlineData(1, (InstantQuotationGltfLengthUnit)99)]
+    public async Task NewGltfUnknownPolicy_RejectsBeforeCapabilitySpoolOrByteRead(
+        int version, InstantQuotationGltfLengthUnit unit)
+    {
+        var handler = new RecordingHandler((_, _) => throw new InvalidOperationException("No transport is allowed."));
+        var store = new RecordingCapabilityStore();
+        var adapter = CreateAdapter(handler, store, () => throw new InvalidOperationException("No spool is allowed."));
+        using var stream = new MemoryStream([1, 2, 3]);
+        var claim = Claim(Sha256([1, 2, 3])) with { GltfUnitPolicy = version < 0 ? null! : new(version, unit) };
+
+        var result = await adapter.UploadAsync(WebSessionId, OwnerIdentity, stream,
+            "part.glb", "model/gltf-binary", 3, claim, "upload-unit-0001", default);
+
+        Assert.Equal(InstantQuotationOperationStatus.Failed, result.Status);
+        Assert.Equal(InstantQuotationProblemCategory.Validation, result.ProblemCategory);
+        Assert.Equal(0, stream.Position);
+        Assert.Equal(0, store.PutCount);
+        Assert.Null(result.PhysicalAnalysisUpload);
+    }
+
+    [Theory]
+    [InlineData(InstantQuotationGltfLengthUnit.Millimetres, 10, 1_000)]
+    [InlineData(InstantQuotationGltfLengthUnit.Metres, 10_000, 1_000_000_000_000)]
+    public async Task NewGltfExplicitPolicy_PreservesRawHashAndAdmittedUnitDescriptor(
+        InstantQuotationGltfLengthUnit unit, double size, double volume)
+    {
+        var bytes = Encoding.UTF8.GetBytes(AdmittedGltfMeshReaderTests.OriginalGltf);
+        var digest = Sha256(bytes);
+        var calls = 0;
+        var handler = new RecordingHandler((_, _) =>
+        {
+            calls++;
+            var response = Json(HttpStatusCode.Created,
+                $$"""
+                {"fileId":"{{FirstFileId:D}}","fileName":"part.gltf","contentType":"model/gltf+json","sizeBytes":{{bytes.Length}},"sha256":"{{digest}}","status":"clean"}
+                """);
+            response.Headers.Location = new Uri($"/file/v1/instant-quotation/sessions/{FileSessionId:D}/files/{FirstFileId:D}", UriKind.Relative);
+            return Task.FromResult(response);
+        });
+        var adapter = CreateAdapter(handler, new RecordingCapabilityStore(Capability()));
+        var policy = new InstantQuotationGltfUnitPolicy(1, unit);
+        var claim = Claim(digest) with
+        {
+            GltfUnitPolicy = policy, DimensionXmm = size, DimensionYmm = size, DimensionZmm = size, VolumeMm3 = volume,
+        };
+        using var stream = new MemoryStream(bytes);
+
+        var result = await adapter.UploadAsync(WebSessionId, OwnerIdentity, stream,
+            "part.gltf", "model/gltf+json", bytes.Length, claim, "upload-unit-good-0001", default);
+
+        Assert.Equal(InstantQuotationOperationStatus.Succeeded, result.Status);
+        Assert.Equal(digest, result.ContentSha256);
+        Assert.Equal(policy, result.PhysicalAnalysisUpload!.GltfUnitPolicy);
+        Assert.Equal(digest, result.PhysicalAnalysisUpload.Sha256);
+        Assert.Equal(1, calls);
+    }
+
+    [Theory]
+    [InlineData("part.stl")]
+    [InlineData("part.obj")]
+    [InlineData("part.3mf")]
+    public async Task NonGltfCannotAcquireAMetrePolicyBeforeSpoolOrTransport(string fileName)
+    {
+        var handler = new RecordingHandler((_, _) => throw new InvalidOperationException("No transport is allowed."));
+        var adapter = CreateAdapter(handler, new RecordingCapabilityStore(),
+            () => throw new InvalidOperationException("No spool is allowed."));
+        using var stream = new MemoryStream([1, 2, 3]);
+        var claim = Claim(Sha256([1, 2, 3])) with
+        {
+            GltfUnitPolicy = new(1, InstantQuotationGltfLengthUnit.Metres),
+        };
+        var result = await adapter.UploadAsync(WebSessionId, OwnerIdentity, stream,
+            fileName, "application/octet-stream", 3, claim, "upload-non-gltf-0001", default);
+
+        Assert.Equal(InstantQuotationProblemCategory.Validation, result.ProblemCategory);
+        Assert.Equal(0, stream.Position);
+        Assert.Null(result.PhysicalAnalysisUpload);
+    }
+
+    [Fact]
+    public async Task NewGltfWrongScaleClaim_NeverUploadsBytesOrCreatesProtectedEvidence()
+    {
+        var bytes = Encoding.UTF8.GetBytes(AdmittedGltfMeshReaderTests.OriginalGltf);
+        var handler = new RecordingHandler((_, _) => throw new InvalidOperationException("No transport is allowed."));
+        var adapter = CreateAdapter(handler, new RecordingCapabilityStore(Capability()));
+        var claim = Claim(Sha256(bytes)) with
+        {
+            GltfUnitPolicy = new(1, InstantQuotationGltfLengthUnit.Metres),
+        };
+        using var stream = new MemoryStream(bytes);
+
+        var result = await adapter.UploadAsync(WebSessionId, OwnerIdentity, stream,
+            "part.gltf", "model/gltf+json", bytes.Length, claim, "upload-unit-wrong-0001", default);
+
+        Assert.Equal(InstantQuotationProblemCategory.Validation, result.ProblemCategory);
+        Assert.Null(result.UploadReference);
+        Assert.Null(result.PhysicalAnalysisUpload);
+    }
+
     [Fact]
     public async Task UploadAsync_ConcurrentFirstUploads_CreateOneOwnerBoundCapabilityAndSpoolNonSeekableStreams()
     {

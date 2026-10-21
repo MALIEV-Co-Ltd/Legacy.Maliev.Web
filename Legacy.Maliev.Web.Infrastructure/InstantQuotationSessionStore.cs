@@ -18,6 +18,7 @@ internal sealed class DistributedInstantQuotationSessionStore(
     IServiceProvider? services = null) : IInstantQuotationSessionStore
 {
     internal const int CurrentVersion = 1;
+    private const int ExplicitGltfUnitsVersion = 2;
     internal const string CacheKeyPrefix = "legacy:web:instant-quotation-session:";
     internal const string ProtectorPurpose = "Legacy.Maliev.Web.InstantQuotationSession.v1";
     internal static readonly TimeSpan SessionLifetime = TimeSpan.FromHours(3);
@@ -249,7 +250,7 @@ internal sealed class DistributedInstantQuotationSessionStore(
     private bool IsValid(PersistedSession? session, string expectedSessionId)
     {
         if (session is null
-            || session.Version != CurrentVersion
+            || (session.Version != CurrentVersion && session.Version != ExplicitGltfUnitsVersion)
             || string.IsNullOrWhiteSpace(session.SessionId)
             || !string.Equals(session.SessionId, expectedSessionId, StringComparison.Ordinal)
             || string.IsNullOrWhiteSpace(session.SubmissionId)
@@ -262,7 +263,9 @@ internal sealed class DistributedInstantQuotationSessionStore(
             return false;
         }
 
-        return session.RequestState.Parts.All(IsValid)
+        return session.Version == (session.RequestState.Parts.Any(part =>
+                part?.PhysicalAnalysisUpload?.GltfUnitPolicy?.Version == 1) ? ExplicitGltfUnitsVersion : CurrentVersion)
+            && session.RequestState.Parts.All(IsValid)
             && (session.PhysicalReceipts is null || session.PhysicalReceipts.All(receipt =>
                 receipt is not null
                 && string.Equals(receipt.SessionId, session.SessionId, StringComparison.Ordinal)
@@ -279,6 +282,7 @@ internal sealed class DistributedInstantQuotationSessionStore(
                 && session.RequestState.Parts.Count(part => part is not null
                     && part.PartId == receipt.PartId
                     && part.PhysicalAnalysisUpload is { } upload
+                    && receipt.GltfUnitPolicy == upload.GltfUnitPolicy
                     && upload.FileId == receipt.FileId
                     && string.Equals(upload.Sha256, receipt.UploadSha256, StringComparison.OrdinalIgnoreCase)
                     && string.Equals(part.Configuration?.MaterialKey,
@@ -328,7 +332,8 @@ internal sealed class DistributedInstantQuotationSessionStore(
         InstantQuotationPhysicalAnalysisUpload upload,
         string uploadReference,
         string geometrySha256) =>
-        upload.FileId != Guid.Empty
+        upload.GltfUnitPolicy?.IsValidForFile(upload.FileName, newUpload: false) is true
+        && upload.FileId != Guid.Empty
         && string.Equals(upload.FileId.ToString("D"), uploadReference, StringComparison.Ordinal)
         && !string.IsNullOrWhiteSpace(upload.FileName)
         && !string.IsNullOrWhiteSpace(upload.ContentType)
@@ -339,7 +344,9 @@ internal sealed class DistributedInstantQuotationSessionStore(
     private static PersistedSession ToPersisted(
         InstantQuotationSessionState session,
         string? ownerIdentity) => new(
-            CurrentVersion,
+            // Old readers must not restore explicit-metre bytes under their implicit-millimetre contract.
+            session.Parts.Any(part => part.PhysicalAnalysisUpload?.GltfUnitPolicy?.Version == 1)
+                ? ExplicitGltfUnitsVersion : CurrentVersion,
             session.SessionId,
             ownerIdentity,
             session.SubmissionId,

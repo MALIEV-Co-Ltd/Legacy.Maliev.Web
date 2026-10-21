@@ -85,7 +85,7 @@ for (const extension of supportedPreviewExtensions) {
       return disposableObject();
     });
 
-    const [key] = interop.beginSelection({ files: [selected] });
+    const [key] = interop.beginSelection({ files: [selected] }, Number.POSITIVE_INFINITY, 'millimetres');
     const claim = await interop.getGeometryClaim(key);
 
     assert.deepEqual(loaded, [selected]);
@@ -227,7 +227,7 @@ test('starts duplicate-name previews in selection order without waiting for pars
   let call = 0;
   const { calls, interop } = harness(() => [first.promise, second.promise][call++]);
   interop.attach({});
-  const keys = await interop.beginSelection({ files });
+  const keys = await interop.beginSelection({ files }, Number.POSITIVE_INFINITY, 'millimetres');
   assert.equal(keys.length, 2);
   assert.notEqual(keys[0], keys[1]);
   interop.admit(keys[0], 'part-a');
@@ -548,7 +548,7 @@ test('a retained local failure thumbnail and selection never create an admitted 
     thicknessAnalyzer: { analyze: async () => null, dispose() {} },
   });
   try {
-    const [key] = interop.beginSelection({ files: [selected] });
+    const [key] = interop.beginSelection({ files: [selected] }, Number.POSITIVE_INFINITY, 'millimetres');
     await interop.getGeometryClaim(key);
     interop.attach({});
     assert.equal(interop.getLocalThumbnail(key), null);
@@ -683,7 +683,7 @@ test('pending local selection is render-only and promotes exactly once after rea
   const object = disposableObject();
   const { interop, calls } = harness(async () => object);
   try {
-    const [key] = interop.beginSelection({ files: [modelFile('pending.glb')] });
+    const [key] = interop.beginSelection({ files: [modelFile('pending.glb')] }, Number.POSITIVE_INFINITY, 'millimetres');
     await interop.getGeometryClaim(key);
     interop.attach({});
     assert.equal(interop.selectLocalPreview(key), true);
@@ -763,7 +763,7 @@ for (const completion of ['before-local-attachment', 'after-local-attachment', '
 test('admitting another pending file does not steal the explicitly selected local preview', async () => {
   const { interop, calls } = harness();
   try {
-    const [first, last] = interop.beginSelection({ files: [modelFile('first.glb'), modelFile('last.glb')] });
+    const [first, last] = interop.beginSelection({ files: [modelFile('first.glb'), modelFile('last.glb')] }, Number.POSITIVE_INFINITY, 'millimetres');
     await Promise.all([interop.getGeometryClaim(first), interop.getGeometryClaim(last)]);
     interop.attach({});
     assert.equal(interop.selectLocalPreview(last), true);
@@ -779,7 +779,7 @@ test('admitting another pending file does not steal the explicitly selected loca
 test('removing a selected pending preview prevents local selection and server admission resurrection', async () => {
   const { interop, calls } = harness();
   try {
-    const [key] = interop.beginSelection({ files: [modelFile('removed.glb')] });
+    const [key] = interop.beginSelection({ files: [modelFile('removed.glb')] }, Number.POSITIVE_INFINITY, 'millimetres');
     await interop.getGeometryClaim(key);
     interop.attach({});
     assert.equal(interop.selectLocalPreview(key), true);
@@ -797,7 +797,7 @@ test('local View before parsing returns cannot admit an object and late removal 
   const object = disposableObject();
   const { interop, calls } = harness(() => loaded.promise);
   try {
-    const [key] = interop.beginSelection({ files: [modelFile('held.glb')] });
+    const [key] = interop.beginSelection({ files: [modelFile('held.glb')] }, Number.POSITIVE_INFINITY, 'millimetres');
     const claim = interop.getGeometryClaim(key);
     const rejected = assert.rejects(claim, /Geometry analysis is unavailable/);
     interop.attach({});
@@ -826,7 +826,7 @@ test('nine existing parsers start once while completion consumers and local sele
   const files = Array.from({ length: 9 }, (_, index) => modelFile(`copy-${index}.glb`));
   let claims = [];
   try {
-    const keys = interop.beginSelection({ files });
+    const keys = interop.beginSelection({ files }, Number.POSITIVE_INFINITY, 'millimetres');
     claims = keys.map(key => interop.getGeometryClaim(key));
     const observed = Promise.allSettled(claims);
     interop.attach({});
@@ -897,7 +897,7 @@ test('a selected unready local file never displays another admitted mesh and pre
   try {
     const [firstKey, middleKey, lastKey] = interop.beginSelection({
       files: [modelFile('first.glb'), modelFile('middle.glb'), modelFile('last.glb')],
-    });
+    }, Number.POSITIVE_INFINITY, 'millimetres');
     claims = [interop.getGeometryClaim(firstKey), interop.getGeometryClaim(middleKey), interop.getGeometryClaim(lastKey)];
     interop.attach({});
     assert.equal(interop.selectLocalPreview(lastKey), false);

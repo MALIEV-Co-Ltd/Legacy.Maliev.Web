@@ -18,10 +18,12 @@ internal static class AdmittedGltfMeshReader
     private const int MaximumExpandedVertices = 150_000;
     private const int MaximumDecodedComponents = 2_000_000;
 
-    internal static MeshInput Read(ReadOnlySpan<byte> bytes, CancellationToken cancellationToken = default)
+    internal static MeshInput Read(ReadOnlySpan<byte> bytes, CancellationToken cancellationToken = default,
+        InstantQuotationGltfUnitPolicy? unitPolicy = null, bool preserveRenderingWinding = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (bytes.IsEmpty || bytes.Length > MaximumBytes) throw Invalid();
+        unitPolicy ??= InstantQuotationGltfUnitPolicy.Legacy;
+        if (!unitPolicy.IsValid || bytes.IsEmpty || bytes.Length > MaximumBytes) throw Invalid();
         try
         {
             byte[] json = bytes.ToArray();
@@ -33,12 +35,66 @@ internal static class AdmittedGltfMeshReader
 
             using var document = JsonDocument.Parse(json, new JsonDocumentOptions { MaxDepth = 64 });
             ValidateJson(document.RootElement, cancellationToken, refCount: new int[1]);
-            return new Reader(document.RootElement, bin, cancellationToken).Read();
+            // Normalize the complete expanded world geometry, including translations, in one scale step.
+            return new Reader(document.RootElement, bin, cancellationToken, preserveRenderingWinding).Read() with
+            {
+                UnitsToMillimetres = unitPolicy.UnitsToMillimetres,
+            };
         }
         catch (Exception exception) when (exception is JsonException or OverflowException or ArgumentException or InvalidOperationException)
         {
             throw new FormatException("The admitted glTF input is invalid or exceeds its analysis budget.", exception);
         }
+    }
+
+    // Unit-consistency only: the existing resin section-profile trust contract is unchanged.
+    internal static bool MatchesClaimScale(ReadOnlySpan<byte> bytes, InstantQuotationGeometryClaim claim,
+        CancellationToken cancellationToken)
+    {
+        if (claim.GltfUnitPolicy?.IsValidForFile("part.gltf", newUpload: true) is not true) return false;
+        try
+        {
+            if (!string.Equals(Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(bytes)),
+                claim.Sha256, StringComparison.Ordinal)) return false;
+            var parsed = Read(bytes, cancellationToken, claim.GltfUnitPolicy, preserveRenderingWinding: true);
+            var minimum = new Vector3(float.PositiveInfinity);
+            var maximum = new Vector3(float.NegativeInfinity);
+            double signedVolume = 0;
+            foreach (var triangle in parsed.Triangles)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var a = triangle.A * (float)parsed.UnitsToMillimetres;
+                var b = triangle.B * (float)parsed.UnitsToMillimetres;
+                var c = triangle.C * (float)parsed.UnitsToMillimetres;
+                minimum = Vector3.Min(minimum, Vector3.Min(a, Vector3.Min(b, c)));
+                maximum = Vector3.Max(maximum, Vector3.Max(a, Vector3.Max(b, c)));
+                signedVolume += ((double)a.X * ((double)b.Y * c.Z - (double)b.Z * c.Y)
+                    - (double)a.Y * ((double)b.X * c.Z - (double)b.Z * c.X)
+                    + (double)a.Z * ((double)b.X * c.Y - (double)b.Y * c.X)) / 6;
+            }
+            var size = maximum - minimum;
+            var boundingVolume = (double)size.X * size.Y * size.Z;
+            var volume = Math.Abs(signedVolume);
+            // Match the existing advisory fallback only when server topology also proves an open mesh.
+            if (volume <= 0 || volume > boundingVolume * 1.02)
+            {
+                var normalized = MeshNormalizer.Normalize(parsed, new GeometryTolerance(0.001, 0.02), cancellationToken);
+                if (normalized.Diagnostics.Contains("mesh_open_edges", StringComparer.Ordinal)) volume = boundingVolume * 0.5;
+            }
+            return Near(size.X, claim.DimensionXmm, 0.001)
+                && Near(size.Y, claim.DimensionYmm, 0.001)
+                && Near(size.Z, claim.DimensionZmm, 0.001)
+                && Near(volume, claim.VolumeMm3, 0.001 * 0.001 * 0.001);
+        }
+        catch (Exception exception) when (exception is FormatException or SimulationGeometryException)
+        {
+            return false;
+        }
+
+        // Reuse the claim's existing two-percent numeric envelope and mesh coordinate precision.
+        static bool Near(double actual, double submitted, double precision) =>
+            double.IsFinite(actual) && double.IsFinite(submitted) && actual > 0 && submitted > 0
+            && Math.Abs(actual - submitted) <= Math.Max(precision, Math.Abs(actual) * 0.02);
     }
 
     private static (byte[] Json, byte[]? Bin) ReadGlb(ReadOnlySpan<byte> bytes, CancellationToken token)
@@ -109,12 +165,14 @@ internal static class AdmittedGltfMeshReader
         private readonly List<MeshTriangle> triangles = [];
         private readonly List<int> groups = [];
         private readonly bool quantization;
+        private readonly bool preserveRenderingWinding;
         private int decodedComponents, decodedBytes, instances, expandedVertices, candidateTriangles;
 
-        internal Reader(JsonElement root, byte[]? bin, CancellationToken token)
+        internal Reader(JsonElement root, byte[]? bin, CancellationToken token, bool preserveRenderingWinding)
         {
             this.root = root;
             this.token = token;
+            this.preserveRenderingWinding = preserveRenderingWinding;
             if (root.ValueKind != JsonValueKind.Object || Text(Required(root, "asset"), "version") != "2.0") throw Invalid();
             if (Required(root, "asset").TryGetProperty("minVersion", out var minimum) && minimum.GetString() != "2.0") throw Invalid();
             foreach (var extension in Array(root, "extensionsRequired", 64))
@@ -319,7 +377,7 @@ internal static class AdmittedGltfMeshReader
                 if (mode == 5 && i % 2 != 0) (a, b) = (b, a);
                 if (a == b || b == c || a == c) continue;
                 if (orientation[a] != orientation[b] || orientation[a] != orientation[c]) throw Invalid();
-                if (orientation[a] < 0) (b, c) = (c, b);
+                if (orientation[a] < 0 && !preserveRenderingWinding) (b, c) = (c, b);
                 if (triangles.Count == MaximumTriangles) throw Invalid();
                 triangles.Add(new(vertices[a], vertices[b], vertices[c]));
                 groups.Add(group);

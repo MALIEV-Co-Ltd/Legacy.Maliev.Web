@@ -69,6 +69,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
             await page.GotoAsync(url, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
             await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
             await WaitForBatchInputAsync(page);
+            await page.Locator("[data-workflow-gltf-unit]").SelectOptionAsync("millimetres");
             await page.SetInputFilesAsync("#instant-quote-files", Enumerable.Range(0, 9).Select(index => new FilePayload
             {
                 Name = $"partial-copy-{index}.glb",
@@ -208,6 +209,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
             await WaitForBatchInputAsync(page);
             FilePayload Copy(int index) => new() { Name = $"add-copy-{index}.glb", MimeType = "model/gltf-binary", Buffer = bytes };
             var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+            await page.Locator("[data-workflow-gltf-unit]").SelectOptionAsync("millimetres");
             await page.SetInputFilesAsync("#instant-quote-files", Copy(0));
             await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 90000 });
             await page.SetInputFilesAsync("#instant-quote-files", Enumerable.Range(1, 8).Select(Copy));

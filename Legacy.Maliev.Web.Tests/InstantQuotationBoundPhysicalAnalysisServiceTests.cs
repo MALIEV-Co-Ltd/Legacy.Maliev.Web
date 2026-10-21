@@ -63,6 +63,39 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
     }
 
     [Fact]
+    public async Task PolicyOnlyChange_BindsPhysicalDigestWithoutChangingRawUploadDigest()
+    {
+        var fixture = Fixture();
+        var evidence = await fixture.Service.AnalyzeAsync(fixture.Binding, default);
+        Assert.True(evidence.IsReady);
+        var mm = fixture.Binding with { GltfUnitPolicy = new(1, InstantQuotationGltfLengthUnit.Millimetres) };
+        var metres = fixture.Binding with { GltfUnitPolicy = new(1, InstantQuotationGltfLengthUnit.Metres) };
+        var first = InstantQuotationPhysicalAnalysisReceipt.Create(mm, "PLA", evidence.Physical!, evidence.BoundingCm3PerUnit);
+        var second = InstantQuotationPhysicalAnalysisReceipt.Create(metres, "PLA", evidence.Physical!, evidence.BoundingCm3PerUnit);
+
+        Assert.Equal(first.UploadSha256, second.UploadSha256);
+        Assert.NotEqual(first.PhysicalSha256, second.PhysicalSha256);
+        Assert.False(first.Matches(metres, "PLA"));
+        Assert.True(first.Matches(mm, "PLA"));
+    }
+
+    [Fact]
+    public async Task PolicyOnlyStaleBinding_NeverReadsBytesOrProducesPhysicalEvidence()
+    {
+        var fixture = Fixture();
+        var changed = fixture.Binding with
+        {
+            GltfUnitPolicy = new(1, InstantQuotationGltfLengthUnit.Metres),
+        };
+
+        var result = await fixture.Service.AnalyzeAsync(changed, default);
+
+        Assert.False(result.IsReady);
+        Assert.Equal(InstantQuotationBoundPhysicalAnalysisFailure.StalePart, result.Failure);
+        Assert.Equal(0, fixture.Reader.ReadCount);
+    }
+
+    [Fact]
     public async Task BrowserGeometryClaim_CannotChangePhysicalFdmShippingWeightOrBounding()
     {
         var fixture = Fixture();

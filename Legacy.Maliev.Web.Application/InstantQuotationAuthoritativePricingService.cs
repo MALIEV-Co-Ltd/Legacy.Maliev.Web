@@ -275,7 +275,10 @@ internal sealed class InstantQuotationAuthoritativePricingService(
         var binding = new InstantQuotationPhysicalAnalysisBinding(
             sessionId, ownerIdentity, part.PartId, upload.FileId, upload.Sha256,
             materialKey, part.Configuration.BuildPreference, part.Configuration.Quantity,
-            profiles.ProfileVersion, part.Configuration.MaterialKey);
+            profiles.ProfileVersion, part.Configuration.MaterialKey)
+        {
+            GltfUnitPolicy = upload.GltfUnitPolicy,
+        };
         return analysis.AnalyzeAsync(binding, cancellationToken);
     }
 
@@ -298,11 +301,13 @@ internal sealed class InstantQuotationAuthoritativePricingService(
         && string.Equals(binding.ConfiguredMaterialKey, part.Configuration.MaterialKey, StringComparison.Ordinal)
         && binding.Quantity == part.Configuration.Quantity
         && binding.BuildPreference == part.Configuration.BuildPreference
+        && binding.GltfUnitPolicy == part.PhysicalAnalysisUpload?.GltfUnitPolicy
         && binding.FileId == part.PhysicalAnalysisUpload?.FileId
         && string.Equals(binding.UploadSha256, part.PhysicalAnalysisUpload?.Sha256, StringComparison.OrdinalIgnoreCase);
 
     private static bool IsAdmittedMesh(InstantQuotationPart part) =>
         part.PhysicalAnalysisUpload is { Status: "clean" } upload
+        && upload.GltfUnitPolicy?.IsValidForFile(upload.FileName, newUpload: false) is true
         && InstantQuotationAdmittedMeshService.IsSupportedFileName(upload.FileName)
         && upload.FileId != Guid.Empty
         && string.Equals(upload.Sha256, part.Geometry.Sha256, StringComparison.OrdinalIgnoreCase);

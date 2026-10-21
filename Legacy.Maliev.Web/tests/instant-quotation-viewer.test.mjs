@@ -313,7 +313,7 @@ test('textual GLTF loading rejects an external resource before invoking the load
     name: 'external.gltf',
     arrayBuffer: async () => source.buffer,
   };
-  await assert.rejects(loadStandaloneModel(file), /embedded data URIs/i);
+  await assert.rejects(loadStandaloneModel(file, { gltfUnitPolicy: { version: 1, unit: 0 } }), /embedded data URIs/i);
 });
 
 test('canvas resize caches CSS dimensions and DPR without repeated DPR 2 setSize calls', () => {
