@@ -2,7 +2,8 @@
   "schema_version": 1,
   "source_commits": [
     "d7bb4f884786b4bb6460c5003d1da43c7ce1578f",
-    "d5385fdd683e443668bcef10e5e1e5286e43e707"
+    "d5385fdd683e443668bcef10e5e1e5286e43e707",
+    "edf4e45d7ffce2f55b0d607ca82d51e81c330781"
   ],
   "conversion": "Unchanged prove-corporate-logo-webp.py convert_static: lossless=True, exact=True, quality=100, method=6; no resize/crop/color remap or metadata removal.",
   "assets": [
@@ -97,20 +98,20 @@
       "xmp_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
-      "slug": "index-creative-village",
-      "original_path": "Maliev.Web/wwwroot/src/images/customers/index-creative-village.png",
-      "source_path": "tests/about-customer-row-source-inputs/index-creative-village.png",
-      "source_git_blob": "5fd513750b170e0173d875b14ebc765cbaa802ba",
-      "source_bytes": 7716,
-      "source_sha256": "2dbbe7f6cbe24c28f3e4a0b97548c3ba1846856e42c6c19339c5b0e5a63ac6fe",
-      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/index-creative-village.webp",
-      "width": 192,
-      "height": 100,
+      "slug": "crown-ceramics",
+      "original_path": "Maliev.Web/wwwroot/src/images/customers/crown-ceramics.png",
+      "source_path": "tests/about-customer-row-source-inputs/crown-ceramics.png",
+      "source_git_blob": "b9f8104db45442cbbf598a6a36d5649a159435d9",
+      "source_bytes": 11291,
+      "source_sha256": "5dc5f901e6aa3e4e17bfec19c2222b40ad9889e3e005b448dd3835cac9c46a1e",
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/crown-ceramics.webp",
+      "width": 234,
+      "height": 119,
       "format": "PNG",
       "orientation": 1,
       "icc_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "exif_bytes": 0,
-      "exif_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exif_bytes": 180,
+      "exif_sha256": "ced9feec0d3626b1336947d8f89c994f962b119a5753a739236f80dda548ee6d",
       "xmp_bytes": 0,
       "xmp_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     }

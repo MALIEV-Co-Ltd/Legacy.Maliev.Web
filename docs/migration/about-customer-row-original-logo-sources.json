@@ -44,14 +44,14 @@
     "bytes": 3017
   },
   {
-    "slug": "index-creative-village",
-    "sha256": "2dbbe7f6cbe24c28f3e4a0b97548c3ba1846856e42c6c19339c5b0e5a63ac6fe",
-    "source": "https://www.indexcreativevillage.com/wp-content/uploads/2020/05/indexcreativevillage_white_logo_H100.png",
-    "file": "index-creative-village.png",
+    "slug": "crown-ceramics",
+    "sha256": "5dc5f901e6aa3e4e17bfec19c2222b40ad9889e3e005b448dd3835cac9c46a1e",
+    "source": "https://www.kanikakitchen.com/source_global/2b2f38c20b88a3a2a5b0aab4f7eaabc3/Untitled%20design.png",
+    "file": "crown-ceramics.png",
     "dimensions": [
-      192,
-      100
+      234,
+      119
     ],
-    "bytes": 7716
+    "bytes": 11291
   }
 ]

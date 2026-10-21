@@ -23,16 +23,22 @@ class CustomerRowControls(unittest.TestCase):
 
     def test_exact_six_sources_are_accepted_without_changing_the_old_eighteen(self):
         self.assertEqual(proof.SLUGS, tuple(row["slug"] for row in self.manifest["assets"]))
-        self.assertEqual(24_410, sum(row["source_bytes"] for row in self.manifest["assets"]))
+        self.assertEqual(27_985, sum(row["source_bytes"] for row in self.manifest["assets"]))
         for row in self.manifest["assets"]:
             self.assertEqual(row["source_bytes"], len(proof.read_source(self.shared, ROOT, row)))
             self.assertTrue(set(proof.METADATA_KEYS).issubset(row))
+        crown = self.manifest["assets"][-1]
+        self.assertEqual("crown-ceramics", crown["slug"])
+        self.assertEqual((234, 119, 11291, 180),
+                         (crown["width"], crown["height"], crown["source_bytes"], crown["exif_bytes"]))
+        self.assertEqual("ced9feec0d3626b1336947d8f89c994f962b119a5753a739236f80dda548ee6d",
+                         crown["exif_sha256"])
         jpeg = self.manifest["assets"][2]
         self.assertEqual("JPEG", jpeg["format"])
         self.assertEqual((76, 74), (jpeg["width"], jpeg["height"]))
 
     def test_manifest_drift_is_rejected(self):
-        for kind in ("missing", "duplicate", "reordered", "foreign-source", "foreign-output", "dimensions", "metadata", "source-commit"):
+        for kind in ("missing", "duplicate", "reordered", "foreign-source", "foreign-output", "dimensions", "metadata", "source-commit", "superseded-index"):
             changed = copy.deepcopy(self.manifest)
             if kind == "missing":
                 changed["assets"].pop()
@@ -48,6 +54,8 @@ class CustomerRowControls(unittest.TestCase):
                 changed["assets"][0]["width"] += 1
             elif kind == "metadata":
                 changed["assets"][0]["xmp_sha256"] = "0" * 64
+            elif kind == "superseded-index":
+                changed["assets"][-1]["slug"] = "index-creative-village"
             else:
                 changed["source_commits"][0] = "0" * 40
             with self.subTest(kind=kind), self.assertRaisesRegex(ValueError, "manifest-identity"):

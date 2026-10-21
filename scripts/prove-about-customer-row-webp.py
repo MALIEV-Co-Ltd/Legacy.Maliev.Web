@@ -14,11 +14,11 @@ import warnings
 
 ROOT = Path(__file__).resolve().parents[1]
 SHARED_BLOB = "1a729ae1167675b07717b8809fa9c493ae32e24d"
-MANIFEST_BLOB = "4574eb90d161bb078353e7636a305a8a927cc905"
+MANIFEST_BLOB = "35e5cf98997ccb2baa13563fcca8f5212fcdde06"
 INPUT_PREFIX = "tests/about-customer-row-source-inputs/"
 OUTPUT_PREFIX = "Legacy.Maliev.Web/wwwroot/src/images/customers/"
 SLUGS = ("alten-korea", "forth", "do-day-dream", "thai-agri-foods",
-         "sahamitr-pressure-container", "index-creative-village")
+         "sahamitr-pressure-container", "crown-ceramics")
 METADATA_KEYS = ("format", "width", "height", "orientation", "icc_sha256",
                  "exif_bytes", "exif_sha256", "xmp_bytes", "xmp_sha256")
 
@@ -55,7 +55,8 @@ def read_manifest(shared, raw):
             and manifest["schema_version"] == 1
             and manifest["source_commits"] == [
                 "d7bb4f884786b4bb6460c5003d1da43c7ce1578f",
-                "d5385fdd683e443668bcef10e5e1e5286e43e707"],
+                "d5385fdd683e443668bcef10e5e1e5286e43e707",
+                "edf4e45d7ffce2f55b0d607ca82d51e81c330781"],
             "manifest-schema")
     require(tuple(row["slug"] for row in manifest["assets"]) == SLUGS, "six-source-order")
     for row in manifest["assets"]:
@@ -64,7 +65,7 @@ def read_manifest(shared, raw):
                 and row["original_path"] == "Maliev.Web/wwwroot/src/images/customers/" + row["slug"] + suffix
                 and row["derived_path"] == OUTPUT_PREFIX + row["slug"] + ".webp",
                 "closed-path-binding")
-    require(sum(row["source_bytes"] for row in manifest["assets"]) == 24_410, "six-source-size")
+    require(sum(row["source_bytes"] for row in manifest["assets"]) == 27_985, "six-source-size")
     return manifest
 
 

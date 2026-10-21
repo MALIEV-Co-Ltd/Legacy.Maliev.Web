@@ -15,7 +15,7 @@ on:
       - 'tests/about-customer-row-source-inputs/do-day-dream.jpg'
       - 'tests/about-customer-row-source-inputs/thai-agri-foods.png'
       - 'tests/about-customer-row-source-inputs/sahamitr-pressure-container.png'
-      - 'tests/about-customer-row-source-inputs/index-creative-village.png'
+      - 'tests/about-customer-row-source-inputs/crown-ceramics.png'
       - 'tests/corporate-logo-webp-requirements.txt'
       - 'tests/corporate-logo-webp-srgb-profile.json'
       - 'tests/corporate-logo-webp-srgb-profile.LICENSE.txt'
@@ -59,7 +59,7 @@ jobs:
             /tests/about-customer-row-source-inputs/do-day-dream.jpg
             /tests/about-customer-row-source-inputs/thai-agri-foods.png
             /tests/about-customer-row-source-inputs/sahamitr-pressure-container.png
-            /tests/about-customer-row-source-inputs/index-creative-village.png
+            /tests/about-customer-row-source-inputs/crown-ceramics.png
             /tests/corporate-logo-webp-requirements.txt
             /tests/corporate-logo-webp-srgb-profile.json
             /tests/corporate-logo-webp-srgb-profile.LICENSE.txt
