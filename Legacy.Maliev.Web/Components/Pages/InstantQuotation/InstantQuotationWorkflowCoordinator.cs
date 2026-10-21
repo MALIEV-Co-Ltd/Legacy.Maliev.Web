@@ -392,18 +392,20 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         {
             lock (configurationGate) CancelQuoteConsumer(obsolete);
         }
+        string?[] pricingStages;
         await WaitForStateGateAsync(cancellationToken);
         try
         {
             ThrowIfPricingCanceled(cancellationToken);
             entries.Remove(entry);
             await PersistAndPriceAsync(cancellationToken);
+            pricingStages = TakePendingUploadPricingStages(cancellationToken);
         }
         finally
         {
             stateGate.Release();
         }
-        await PublishPendingUploadPricingStagesAsync(cancellationToken);
+        await PublishPendingUploadPricingStagesAsync(pricingStages);
     }
 
     public async Task UpdateConfigurationAsync(
@@ -457,6 +459,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         var entry = entries.SingleOrDefault(item => item.Part?.PartId == partId)
             ?? throw new ArgumentException("The part was not found.", nameof(partId));
         var request = BeginConfigurationRequest(partId, entry);
+        string?[] pricingStages;
         try
         {
             await WaitForStateGateAsync(cancellationToken);
@@ -481,9 +484,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                     entry.HasConfigured = true;
                 }
                 await PersistAndPriceAsync(cancellationToken, request);
+                pricingStages = TakePendingUploadPricingStages(cancellationToken);
             }
             finally { stateGate.Release(); }
-            await PublishPendingUploadPricingStagesAsync(cancellationToken);
+            await PublishPendingUploadPricingStagesAsync(pricingStages);
         }
         finally
         {
@@ -696,6 +700,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private async Task FlushUploadPricingAsync(CancellationToken cancellationToken)
     {
         (UploadEntry Entry, string AnalyticsAttemptId)? failed = null;
+        string?[] pricingStages;
         await WaitForStateGateAsync(cancellationToken);
         try
         {
@@ -723,6 +728,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                     }
                 }
             }
+            pricingStages = TakePendingUploadPricingStages(cancellationToken);
         }
         finally { stateGate.Release(); }
         if (failed is { } failure)
@@ -731,22 +737,23 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             await analytics.RecordStageResultAsync(InstantQuotationStage.Upload, InstantQuotationStageResult.Failure,
                 InstantQuotationStageFailure.Network, FileType(failure.Entry.File.FileName));
         }
-        await PublishPendingUploadPricingStagesAsync(cancellationToken);
+        await PublishPendingUploadPricingStagesAsync(pricingStages);
     }
 
-    private async Task PublishPendingUploadPricingStagesAsync(CancellationToken cancellationToken)
+    // Call only while stateGate is held; obsolete edits must not reacquire a newer quote's gate.
+    private string?[] TakePendingUploadPricingStages(CancellationToken cancellationToken)
     {
-        string?[] fileTypes;
-        await WaitForStateGateAsync(cancellationToken);
-        try
-        {
-            if (uploadQuotePending || OrderQuote is null) return;
-            fileTypes = pendingUploadPricingStages
-                .Where(pending => OrderQuote.Parts.Any(part => part.PartId == pending.Entry.Part?.PartId))
-                .Select(static pending => FileType(pending.Entry.File.FileName)).ToArray();
-            pendingUploadPricingStages.Clear();
-        }
-        finally { stateGate.Release(); }
+        ThrowIfPricingCanceled(cancellationToken);
+        if (uploadQuotePending || OrderQuote is null) return [];
+        var fileTypes = pendingUploadPricingStages
+            .Where(pending => OrderQuote.Parts.Any(part => part.PartId == pending.Entry.Part?.PartId))
+            .Select(static pending => FileType(pending.Entry.File.FileName)).ToArray();
+        pendingUploadPricingStages.Clear();
+        return fileTypes;
+    }
+
+    private async Task PublishPendingUploadPricingStagesAsync(string?[] fileTypes)
+    {
         foreach (var fileType in fileTypes)
         {
             await analytics.RecordStageResultAsync(InstantQuotationStage.Pricing,

@@ -1908,6 +1908,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        if (disposed) return;
         disposed = true;
         InvalidatePreviewSelectionIntent();
         failedPreviewSelections.Clear();

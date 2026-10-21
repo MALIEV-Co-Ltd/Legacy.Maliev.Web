@@ -369,10 +369,10 @@ public sealed class InstantQuotationResinPresentationTests
 
 
     [Theory]
-    [InlineData("en", "The file could not be uploaded. Try again.", false, false)]
-    [InlineData("th", "ไม่สามารถอัปโหลดไฟล์ได้ โปรดลองอีกครั้ง", false, false)]
-    [InlineData("en", "The file could not be uploaded. Try again.", true, false)]
-    [InlineData("en", "The file could not be uploaded. Try again.", false, true)]
+    [InlineData("en", "3D file processing is unavailable. Try again or contact our engineers for a quotation.", false, false)]
+    [InlineData("th", "ไม่สามารถประมวลผลไฟล์ 3 มิติได้ โปรดลองอีกครั้งหรือติดต่อวิศวกรเพื่อขอใบเสนอราคา", false, false)]
+    [InlineData("en", "3D file processing is unavailable. Try again or contact our engineers for a quotation.", true, false)]
+    [InlineData("en", "3D file processing is unavailable. Try again or contact our engineers for a quotation.", false, true)]
     public async Task FailedLocalSelection_BlocksReviewWithoutRemovingThePricedPart(
         string culture, string message, bool disposeWhilePending, bool unavailableSelection)
     {
@@ -1447,6 +1447,8 @@ public sealed class InstantQuotationResinPresentationTests
             {
                 await preview.Entered.Task.WaitAsync(lease.Token);
                 await component.DisposeAsync();
+                await component.DisposeAsync();
+                Assert.Equal(1, preview.DisposalCalls);
                 preview.Release.TrySetResult();
                 var failure = await Assert.ThrowsAsync<InvalidDataException>(() => uploading);
                 Assert.Same(preview.Primary, failure);
@@ -1473,6 +1475,7 @@ public sealed class InstantQuotationResinPresentationTests
     private sealed class DisposedCleanupPreviewReference(CancellationToken lease) : IJSObjectReference
     {
         private bool disposed;
+        internal int DisposalCalls { get; private set; }
         internal InvalidDataException Primary { get; } = new("Controlled parser boundary.");
         internal TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -1495,7 +1498,7 @@ public sealed class InstantQuotationResinPresentationTests
             if (identifier == "getGeometryClaim") throw Primary;
             return default!;
         }
-        public ValueTask DisposeAsync() { disposed = true; return ValueTask.CompletedTask; }
+        public ValueTask DisposeAsync() { DisposalCalls++; disposed = true; return ValueTask.CompletedTask; }
     }
 
     [Theory]
