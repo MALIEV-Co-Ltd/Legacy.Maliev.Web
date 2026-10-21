@@ -444,6 +444,7 @@ export function createWorkflowPreviewInterop({
       // Local keys are renderer-only; only admit() can populate the authoritative correlation map.
       viewer.addPart(entry.key, entry.object);
       entry.attached = true;
+      if (entry.thicknessEvidence) viewer.setThicknessEvidence?.(entry.key, entry.thicknessEvidence);
     }
     viewer.select(entry.key);
     return true;

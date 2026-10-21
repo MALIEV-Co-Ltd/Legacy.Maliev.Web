@@ -701,6 +701,65 @@ test('pending local selection is render-only and promotes exactly once after rea
   } finally { interop.dispose(); }
 });
 
+
+for (const completion of ['before-local-attachment', 'after-local-attachment', 'after-admission']) {
+  test(`completed thickness evidence survives local preview promotion: ${completion}`, async () => {
+    const analysis = deferred();
+    const object = disposableObject();
+    const evidence = {
+      fields: [new Float32Array([1, 1, 1])],
+      summary: { state: 'complete', minMm: 1, measuredAreaRatio: 1 },
+    };
+    const attached = [];
+    const reports = [];
+    const viewer = createModelViewer({ adapter: {
+      attachThickness(model, value) {
+        assert.equal(model, object);
+        assert.equal(value, evidence);
+        attached.push(value);
+        return true;
+      },
+      setThickness: (_model, visible) => visible && attached.length > 0,
+    } });
+    const interop = createWorkflowPreviewInterop({
+      loadModel: async () => object,
+      analyzeGeometry: () => ({ version: 1, dimensionZMm: 1, volumeMm3: 400 }),
+      createViewer: () => viewer,
+      thicknessAnalyzer: { analyze: () => analysis.promise, dispose() {} },
+      reportThickness: (...args) => reports.push(args),
+    });
+    const complete = async () => {
+      analysis.resolve(evidence);
+      await analysis.promise;
+      await Promise.resolve();
+    };
+    try {
+      const [key] = interop.beginSelection({ files: [modelFile('one-millimeter.stl')] });
+      await interop.getGeometryClaim(key);
+      if (completion === 'before-local-attachment') await complete();
+      interop.attach({});
+      assert.equal(interop.selectLocalPreview(key), true);
+      assert.equal(interop.select(key), false);
+      if (completion === 'after-local-attachment') await complete();
+      assert.equal(interop.admit(key, 'server-part', 'ABS'), true);
+      if (completion === 'after-admission') await complete();
+      assert.equal(attached.length, 1);
+      assert.equal(reports.at(-1)[0], 'server-part');
+      assert.equal(reports.at(-1)[1], true);
+      assert.equal(reports.at(-1)[2], false);
+      assert.equal(interop.toggleThickness('server-part'), true);
+      assert.equal(interop.toggleThickness('server-part'), false);
+      interop.release(key);
+      assert.equal(interop.select('server-part'), false);
+      assert.equal(object.disposed, true);
+    } finally {
+      analysis.resolve(evidence);
+      await analysis.promise;
+      interop.dispose();
+    }
+  });
+}
+
 test('admitting another pending file does not steal the explicitly selected local preview', async () => {
   const { interop, calls } = harness();
   try {

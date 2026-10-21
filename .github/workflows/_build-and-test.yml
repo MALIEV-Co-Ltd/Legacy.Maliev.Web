@@ -398,6 +398,7 @@ jobs:
         with:
           name: web-combined-native-${{ github.sha }}
           path: |
+            Legacy.Maliev.Web/wwwroot/dist/instant-quotation-workflow.mjs
             Legacy.Maliev.Web.Tests/TestResults/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml
