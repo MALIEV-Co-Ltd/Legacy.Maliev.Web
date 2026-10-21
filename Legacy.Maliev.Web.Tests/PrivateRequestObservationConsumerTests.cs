@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
@@ -119,8 +120,11 @@ public sealed class PrivateRequestObservationConsumerTests
         AssertNoRequestLogging(factory.Records.Snapshot);
     }
 
-    [Fact]
-    public async Task ActualProgram_OrdinaryRazorThrowReexecutesErrorWithExactlyOneSanitizedWebIncident()
+    [Theory]
+    [InlineData("en", "Application error", "Please include this incident ID when contacting support.", "Error page preview")]
+    [InlineData("th", "ข้อผิดพลาดของระบบ", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ", "ตัวอย่างหน้าข้อผิดพลาด")]
+    public async Task ActualProgram_OrdinaryRazorThrowReexecutesErrorWithExactlyOneSanitizedWebIncident(
+        string culture, string applicationError, string incidentInstruction, string previewLabel)
     {
         using var factory = new ObservationFactory("127.0.0.1", ordinaryFailure: true);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -129,13 +133,22 @@ public sealed class PrivateRequestObservationConsumerTests
             BaseAddress = new Uri("https://localhost"),
         });
         factory.Records.Clear();
-        using var response = await client.GetAsync("/contact?token=" + Sensitive + "&culture=en");
+        using var response = await client.GetAsync("/contact?token=" + Sensitive + "&culture=" + culture);
         Assert.Equal(1, factory.PageFilter.Throws);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         var incident = Assert.Single(response.Headers.GetValues("X-Incident-Id"));
         Assert.Matches("^[a-f0-9]{32}$", incident);
-        var document = await response.Content.ReadAsStringAsync();
+        var document = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
         Assert.Contains(incident, document, StringComparison.Ordinal);
+        Assert.Contains($">{applicationError}<", document, StringComparison.Ordinal);
+        Assert.Contains($">{incidentInstruction}<", document, StringComparison.Ordinal);
+        Assert.DoesNotContain($">{previewLabel}<", document, StringComparison.Ordinal);
+        Assert.Contains("id=\"incident-id\"", document, StringComparison.Ordinal);
+        Assert.Contains("id=\"incident-occurred-at\"", document, StringComparison.Ordinal);
+        Assert.Contains("mailto:support@maliev.com?subject=" + Uri.EscapeDataString($"Application error {incident}"),
+            document, StringComparison.Ordinal);
+        Assert.DoesNotContain("StackTrace", document, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("UrlReferrer", document, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(Sensitive, document, StringComparison.Ordinal);
         Assert.Equal(1, factory.PageFilter.Throws);
         Assert.Equal(1, factory.PageFilter.ErrorExecutions);
@@ -144,6 +157,11 @@ public sealed class PrivateRequestObservationConsumerTests
             && entry.Fields.GetValueOrDefault("EventName") as string == "UnhandledRequestFailure");
         Assert.Equal(LogLevel.Critical, webIncident.Level);
         Assert.Equal(incident, webIncident.Fields["IncidentId"]);
+        var occurredAtUtc = DateTimeOffset.Parse(
+            Assert.IsType<string>(webIncident.Fields["OccurredAtUtc"]), CultureInfo.InvariantCulture);
+        Assert.Equal(TimeSpan.Zero, occurredAtUtc.Offset);
+        Assert.Contains(">" + occurredAtUtc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture) + "</time>",
+            document, StringComparison.Ordinal);
         Assert.DoesNotContain(factory.Records.Snapshot, entry =>
             entry.Fields.GetValueOrDefault("EventName") as string == "HandledOperationFailure");
         Assert.DoesNotContain(factory.Records.Snapshot, entry => entry.HasSyntheticScope);
