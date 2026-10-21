@@ -425,24 +425,41 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     font-size: .68rem;
 }
 
-.instant-quote__workflow > [data-workflow-parts] {
-    display: flex;
-    align-items: stretch;
-    gap: .5rem;
-    overflow-x: auto;
+.instant-quote__workflow > [data-workflow-parts-panel] {
+    padding: 0;
 }
 
-.instant-quote__workflow > [data-workflow-parts] > h3 {
-    align-self: center;
-    margin: 0 .5rem 0 0;
+.instant-quote__parts-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    padding: .5rem 1rem;
+}
+
+.instant-quote__parts-header > h3 {
+    margin: 0;
     font-size: .75rem;
     text-transform: uppercase;
 }
 
-.instant-quote__workflow > [data-workflow-parts] > .iq-compact-dropzone,
-.instant-quote__workflow > [data-workflow-parts] > [data-workflow-upload-item],
-.instant-quote__workflow > [data-workflow-parts] > [data-workflow-pending-parse],
-.instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] {
+.instant-quote__workflow .instant-quote__parts-header > label {
+    margin: 0;
+}
+
+.instant-quote__workflow [data-workflow-parts] {
+    display: flex;
+    align-items: stretch;
+    gap: .5rem;
+    padding: 1rem;
+    overflow-x: auto;
+}
+
+.instant-quote__workflow [data-workflow-parts] > .iq-compact-dropzone,
+.instant-quote__workflow [data-workflow-parts] > [data-workflow-upload-item],
+.instant-quote__workflow [data-workflow-parts] > [data-workflow-pending-parse],
+.instant-quote__workflow [data-workflow-parts] > [data-workflow-part] {
     width: 11.125rem;
     min-width: 11.125rem;
     margin-top: 0;
@@ -451,12 +468,12 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 /* Below the split-pane desktop shell, keep names and actions in the page's
    scroll path instead of clipping them behind the horizontal parts rail. */
 @media (max-width: 61.999rem) {
-    .instant-quote__workflow > [data-workflow-parts] {
+    .instant-quote__workflow [data-workflow-parts] {
         flex-wrap: wrap;
         overflow: visible;
     }
 
-    .instant-quote__workflow > [data-workflow-parts] > .iq-compact-dropzone {
+    .instant-quote__workflow [data-workflow-parts] > .iq-compact-dropzone {
         position: sticky;
         top: .5rem;
         z-index: 1;
@@ -464,14 +481,10 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
         background: var(--bs-body-bg, #fff);
     }
 
-    .instant-quote__workflow > [data-workflow-parts] > h3 {
-        flex-basis: 100%;
-    }
-
-    .instant-quote__workflow > [data-workflow-parts] > .iq-compact-dropzone,
-    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-upload-item],
-    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-pending-parse],
-    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] {
+    .instant-quote__workflow [data-workflow-parts] > .iq-compact-dropzone,
+    .instant-quote__workflow [data-workflow-parts] > [data-workflow-upload-item],
+    .instant-quote__workflow [data-workflow-parts] > [data-workflow-pending-parse],
+    .instant-quote__workflow [data-workflow-parts] > [data-workflow-part] {
         width: 100%;
         min-width: 0;
     }
@@ -1644,7 +1657,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
         aspect-ratio: auto;
     }
 
-    .instant-quote__workflow > [data-workflow-parts],
+    .instant-quote__workflow > [data-workflow-parts-panel],
     .instant-quote__workflow > [data-workflow-configuration],
     .instant-quote__workflow > [data-workflow-review],
     .instant-quote__workflow > [data-workflow-customer-details] {
@@ -1659,14 +1672,14 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
         overflow: auto;
     }
 
-    .instant-quote__workflow > [data-workflow-parts] {
+    .instant-quote__workflow [data-workflow-parts] {
         max-height: min(30dvh, 16rem);
         min-height: 0;
         overflow-y: auto;
         align-items: flex-start;
     }
 
-    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] {
+    .instant-quote__workflow [data-workflow-parts] > [data-workflow-part] {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         align-content: start;
@@ -1674,18 +1687,31 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
         padding: .5rem .6rem;
     }
 
-    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] > :is([data-workflow-part-number], h4) {
+    .instant-quote__workflow [data-workflow-parts] > [data-workflow-part] > h4 {
         grid-column: 1 / -1;
     }
 
-    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] > h4 {
+    .instant-quote__workflow [data-workflow-parts] > [data-workflow-part] > [data-workflow-part-number] {
+        grid-column: 2;
+        grid-row: 1;
+        align-self: center;
+        justify-self: end;
+    }
+
+    .instant-quote__workflow [data-workflow-parts] > [data-workflow-part] > .instant-quote__bulk-checkbox {
+        grid-column: 1;
+        grid-row: 1;
+        margin: 0;
+    }
+
+    .instant-quote__workflow [data-workflow-parts] > [data-workflow-part] > h4 {
         margin: 0;
         font-size: .85rem;
         line-height: 1.25;
         overflow-wrap: anywhere;
     }
 
-    .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] > button {
+    .instant-quote__workflow [data-workflow-parts] > [data-workflow-part] > button {
         min-width: 44px;
         min-height: 44px;
         margin: 0;
@@ -1825,7 +1851,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 
 /* Keep Add file reachable while the horizontal part rail reveals later parts. */
 @media (min-width: 62rem) {
-    .instant-quote__workflow > [data-workflow-parts] > .iq-compact-dropzone {
+    .instant-quote__workflow [data-workflow-parts] > .iq-compact-dropzone {
         position: sticky;
         left: 0;
         z-index: 1;

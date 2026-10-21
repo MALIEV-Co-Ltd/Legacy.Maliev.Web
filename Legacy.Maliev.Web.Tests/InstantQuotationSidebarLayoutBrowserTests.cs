@@ -166,9 +166,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
             culture == "th" ? "ชิ้นส่วนทดสอบชื่อยาวสำหรับตรวจสอบการแสดงผลครบถ้วน-รุ่นสอง.stl" : "long-customer-item-name-without-truncated-identification-second.stl",
         };
         if (width == 1600)
-            names = Enumerable.Range(1, 8)
-                .Select(index => culture == "th" ? $"ชิ้นงาน-{index}.stl" : $"wheel-part-{index}.stl")
-                .ToArray();
+            names = Enumerable.Range(1, 8).Select(index => $"{names[0]}-{index}.stl").ToArray();
         var parts = names.Select(name =>
         {
             var digest = new string('a', 64);
@@ -185,6 +183,9 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         failureEvidence.Stage("PartsRail");
         var rail = page.Locator("[data-workflow-parts]");
         await Assertions.Expect(rail.Locator("[data-workflow-part]")).ToHaveCountAsync(names.Length);
+        await Assertions.Expect(page.Locator("[data-workflow-parts-panel] .instant-quote__parts-header [data-workflow-select-all]")).ToHaveCountAsync(1);
+        await Assertions.Expect(rail.Locator("[data-workflow-select-all], [data-workflow-bulk-material]")).ToHaveCountAsync(0);
+        await Assertions.Expect(page.Locator("[data-workflow-material-picker] [data-workflow-bulk-material]")).ToHaveCountAsync(1);
         if (width == 1600)
         {
             // Upload/reveal can leave the rail at its newest part. Exercise a forward gesture from the left edge.
@@ -203,10 +204,13 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
             Assert.True(beforeWheel[1] > beforeWheel[2], "Eight parts must overflow the desktop rail for this regression to be meaningful.");
             Assert.True(beforeWheel[3] <= beforeWheel[4],
                 $"This gesture must exercise the horizontal rail, not native vertical scrolling. scrollHeight={beforeWheel[3]}, clientHeight={beforeWheel[4]}, paddingTop={beforeWheel[5]}, paddingBottom={beforeWheel[6]}, firstCardHeight={beforeWheel[7]}, maxChildHeight={beforeWheel[8]}.");
+            Assert.True(beforeWheel[8] + beforeWheel[5] + beforeWheel[6] <= beforeWheel[4],
+                "Full part names and 44px actions must fit inside the desktop rail padding without clipping.");
             await page.Mouse.WheelAsync(0, 120);
             await page.WaitForFunctionAsync("() => document.querySelector('[data-workflow-parts]').scrollLeft > 0");
             Assert.True(await rail.EvaluateAsync<double>("rail => rail.scrollLeft") > 0,
                 "A vertical wheel gesture must move the desktop parts rail horizontally.");
+            await Assertions.Expect(page.Locator("[data-workflow-select-all]")).ToBeInViewportAsync();
         }
         var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
         await Assertions.Expect(review).ToBeEnabledAsync();
