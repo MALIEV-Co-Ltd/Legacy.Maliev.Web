@@ -166,7 +166,9 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
             culture == "th" ? "ชิ้นส่วนทดสอบชื่อยาวสำหรับตรวจสอบการแสดงผลครบถ้วน-รุ่นสอง.stl" : "long-customer-item-name-without-truncated-identification-second.stl",
         };
         if (width == 1600)
-            names = Enumerable.Range(1, 8).Select(index => $"{names[0]}-{index}.stl").ToArray();
+            names = Enumerable.Range(1, 8)
+                .Select(index => culture == "th" ? $"ชิ้นงาน-{index}.stl" : $"wheel-part-{index}.stl")
+                .ToArray();
         var parts = names.Select(name =>
         {
             var digest = new string('a', 64);
