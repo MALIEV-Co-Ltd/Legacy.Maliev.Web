@@ -15,6 +15,7 @@ public sealed class OriginalBrowserFixtureSuccessorPortTests
     [InlineData(typeof(InstantQuotationTerminalPhysicalFailureBrowserTests), "Fixture")]
     [InlineData(typeof(InstantQuotationWallThicknessAdmittedWorkerBrowserTests), null)]
     [InlineData(typeof(InstantQuotationWallThicknessRealUploadBrowserTests), null)]
+    [InlineData(typeof(MaterialPricingDisplayBrowserTests), "Fixture")]
     [InlineData(typeof(MeasurementLifecycleBrowserFixture), null)]
     [InlineData(typeof(PublicContactBrowserFixture), null)]
     [InlineData(typeof(WallThicknessParityBrowserFixture), null)]
