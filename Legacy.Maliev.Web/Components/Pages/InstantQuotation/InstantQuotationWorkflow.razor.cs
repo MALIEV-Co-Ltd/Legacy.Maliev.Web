@@ -893,8 +893,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         if (bulkApplying || disposed) return;
         if (!pendingConfigurations.ContainsKey(key))
         {
-            var part = Parts.SingleOrDefault(item => BrowserPreviewKey(item.PreviewCorrelationId) == key);
-            if (part is not null) await SelectPreviewAsync(part.PartId);
+            var existingPart = Parts.SingleOrDefault(item => BrowserPreviewKey(item.PreviewCorrelationId) == key);
+            if (existingPart is not null) await SelectPreviewAsync(existingPart.PartId);
             return;
         }
         InvalidatePreviewSelectionIntent();
