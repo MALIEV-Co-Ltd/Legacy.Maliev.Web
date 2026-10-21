@@ -47,7 +47,12 @@ public sealed record CareerListing(
     bool ServiceAvailable);
 
 public sealed record ServiceResponse<T>(T? Value, bool ServiceAvailable)
-    where T : class;
+    where T : class
+{
+    /// <summary>Gets the actual caught failure type, without retaining exception details.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? FailureExceptionType { get; init; }
+}
 
 public interface ICareerClient
 {
