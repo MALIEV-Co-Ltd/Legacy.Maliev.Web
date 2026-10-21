@@ -15,6 +15,30 @@ namespace Legacy.Maliev.Web.Tests;
 // This proves real Razor/circuit layout, not FileService admission or commercial pricing.
 public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper output)
 {
+    private static int ReserveFreePort()
+    {
+        // Keep test listeners outside the outbound client-port pool on Windows.
+        for (var attempt = 0; attempt < 64; attempt++)
+        {
+            var listener = new TcpListener(IPAddress.Loopback, Random.Shared.Next(20000, 30000));
+            try
+            {
+                listener.Start();
+                return ((IPEndPoint)listener.LocalEndpoint).Port;
+            }
+            catch (SocketException exception) when (exception.SocketErrorCode is SocketError.AddressAlreadyInUse or SocketError.AccessDenied)
+            {
+                // Another task or an excluded port range owns this candidate.
+            }
+            finally
+            {
+                listener.Stop();
+            }
+        }
+
+        throw new InvalidOperationException("No loopback browser-test port is available in the test-server range.");
+    }
+
     [Theory]
     [InlineData("en", 320)]
     [InlineData("th", 320)]
@@ -31,10 +55,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
     public async Task RealPartsRailExposesLongNamesAndKeyboardActions(string culture, int width)
     {
         await using var factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
-        var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
+        var port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
         factory.UseKestrel(port);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });

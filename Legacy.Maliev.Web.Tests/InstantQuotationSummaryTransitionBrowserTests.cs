@@ -361,13 +361,36 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         public ILocator PartPrice => Page.Locator("[data-workflow-part-price]");
         private Fixture() => Factory = new(Control);
 
+        private static int ReserveFreePort()
+        {
+            // Keep test listeners outside the outbound client-port pool on Windows.
+            for (var attempt = 0; attempt < 64; attempt++)
+            {
+                var listener = new TcpListener(IPAddress.Loopback, Random.Shared.Next(20000, 30000));
+                try
+                {
+                    listener.Start();
+                    return ((IPEndPoint)listener.LocalEndpoint).Port;
+                }
+                catch (SocketException exception) when (exception.SocketErrorCode is SocketError.AddressAlreadyInUse or SocketError.AccessDenied)
+                {
+                    // Another task or an excluded port range owns this candidate.
+                }
+                finally
+                {
+                    listener.Stop();
+                }
+            }
+
+            throw new InvalidOperationException("No loopback browser-test port is available in the test-server range.");
+        }
+
         public static async Task<Fixture> CreateAsync(string culture, int width, ITestOutputHelper output, ReducedMotion motion = ReducedMotion.NoPreference, bool holdUnrelatedFetch = false)
         {
             var fixture = new Fixture { culture = culture };
             try
             {
-                var listener = new TcpListener(IPAddress.Loopback, 0);
-                listener.Start(); var port = ((IPEndPoint)listener.LocalEndpoint).Port; listener.Stop();
+                var port = ReserveFreePort();
                 var origin = new Uri($"http://127.0.0.1:{port}");
                 fixture.Factory.UseKestrel(port);
                 using var client = fixture.Factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });

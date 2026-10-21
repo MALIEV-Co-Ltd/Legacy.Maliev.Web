@@ -148,6 +148,30 @@ public sealed class InstantQuotationTerminalPhysicalFailureBrowserTests
         public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
         private Fixture(byte[] bytes) { Reader = new(bytes); Factory = new(Reader); }
 
+        private static int ReserveFreePort()
+        {
+            // Keep test listeners outside the outbound client-port pool on Windows.
+            for (var attempt = 0; attempt < 64; attempt++)
+            {
+                var listener = new TcpListener(System.Net.IPAddress.Loopback, Random.Shared.Next(20000, 30000));
+                try
+                {
+                    listener.Start();
+                    return ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+                }
+                catch (SocketException exception) when (exception.SocketErrorCode is SocketError.AddressAlreadyInUse or SocketError.AccessDenied)
+                {
+                    // Another task or an excluded port range owns this candidate.
+                }
+                finally
+                {
+                    listener.Stop();
+                }
+            }
+
+            throw new InvalidOperationException("No loopback browser-test port is available in the test-server range.");
+        }
+
         public static async Task<Fixture> CreateAsync(string culture, int width, string input)
         {
             var bytes = input switch
@@ -160,10 +184,7 @@ public sealed class InstantQuotationTerminalPhysicalFailureBrowserTests
             var fixture = new Fixture(bytes);
             try
             {
-                var listener = new TcpListener(System.Net.IPAddress.Loopback, 0);
-                listener.Start();
-                var port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
-                listener.Stop();
+                var port = ReserveFreePort();
                 var origin = new Uri($"http://127.0.0.1:{port}");
                 fixture.Factory.UseKestrel(port);
                 using var client = fixture.Factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
