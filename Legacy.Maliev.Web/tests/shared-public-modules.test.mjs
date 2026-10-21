@@ -244,6 +244,7 @@ async function tocHarness({ reducedMotion = false, headingTarget = false } = {})
             },
             setAttribute: (name, value) => attributes.set(name, value),
             getAttribute: name => attributes.get(name) ?? null,
+            removeAttribute: name => { attributes.delete(name); },
             hasAttribute: name => attributes.has(name),
             addEventListener(name, callback) { this.listeners[name] = callback; },
             append(child) { this.children.push(child); },
