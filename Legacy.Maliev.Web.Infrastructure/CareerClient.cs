@@ -79,8 +79,8 @@ internal sealed class CareerClient(
             }
 
             response.EnsureSuccessStatusCode();
-            var page = await response.Content.ReadFromJsonAsync<CareerOfferPage>(cancellationToken);
-            return new ServiceResponse<CareerOfferPage>(page ?? CareerOfferPage.Empty(pageIndex), true);
+            var page = await CareerOfferPageReader.ReadAsync(response.Content, cancellationToken);
+            return new ServiceResponse<CareerOfferPage>(page, true);
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
