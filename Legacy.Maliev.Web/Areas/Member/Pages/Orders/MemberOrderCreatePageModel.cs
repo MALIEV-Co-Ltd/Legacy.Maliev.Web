@@ -31,34 +31,34 @@ public abstract class MemberOrderCreatePageModel(
     public MemberOrderCreationDisplayModel DisplayModel { get; private set; } = default!;
 
     /// <summary>The customer-supplied order title used to identify the manufacturing request.</summary>
-    /// <summary>The optional customer instructions accompanying the manufacturing request.</summary>
-    /// <summary>The requested number of manufactured items; scanning submissions use one.</summary>
-    /// <summary>The selected manufacturing process identifier validated against the current order catalogue.</summary>
-    /// <summary>The selected material identifier validated against the current order catalogue.</summary>
-    /// <summary>The selected additive material colour identifier validated against available material options.</summary>
-    /// <summary>The selected surface-finish identifier validated against available material options.</summary>
-    /// <summary>Whether the customer permits social-media use associated with the submitted order.</summary>
-    /// <summary>Whether the customer accepted the required terms before order submission.</summary>
-    /// <summary>Whether scanning dimensions are expressed in millimetres rather than inches.</summary>
-    /// <summary>The optional approximate scanning width in the selected dimension unit.</summary>
-    /// <summary>The optional approximate scanning length in the selected dimension unit.</summary>
-    /// <summary>The optional approximate scanning height in the selected dimension unit.</summary>
-    /// <summary>The operation identifier used to correlate and validate this owned submission.</summary>
-    /// <summary>The uploaded request files validated before submission or attachment follow-up.</summary>
     [BindProperty, Required(ErrorMessage = "Please give your order a name"), StringLength(200)] public string Name { get; set; } = string.Empty;
+    /// <summary>The optional customer instructions accompanying the manufacturing request.</summary>
     [BindProperty, StringLength(500)] public string? Description { get; set; }
+    /// <summary>The requested number of manufactured items; scanning submissions use one.</summary>
     [BindProperty, Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1")] public int Quantity { get; set; } = 1;
+    /// <summary>The selected manufacturing process identifier validated against the current order catalogue.</summary>
     [BindProperty] public int ProcessId { get; set; }
+    /// <summary>The selected material identifier validated against the current order catalogue.</summary>
     [BindProperty] public int MaterialId { get; set; }
+    /// <summary>The selected additive material colour identifier validated against available material options.</summary>
     [BindProperty] public int ColorId { get; set; }
+    /// <summary>The selected surface-finish identifier validated against available material options.</summary>
     [BindProperty] public int SurfaceFinishId { get; set; }
+    /// <summary>Whether the customer permits social-media use associated with the submitted order.</summary>
     [BindProperty] public bool AllowSocialMedia { get; set; }
+    /// <summary>Whether the customer accepted the required terms before order submission.</summary>
     [BindProperty] public bool AcceptTermsAndConditions { get; set; }
+    /// <summary>Whether scanning dimensions are expressed in millimetres rather than inches.</summary>
     [BindProperty] public bool IsMetric { get; set; } = true;
+    /// <summary>The optional approximate scanning width in the selected dimension unit.</summary>
     [BindProperty] public decimal? Width { get; set; }
+    /// <summary>The optional approximate scanning length in the selected dimension unit.</summary>
     [BindProperty] public decimal? Length { get; set; }
+    /// <summary>The optional approximate scanning height in the selected dimension unit.</summary>
     [BindProperty] public decimal? Height { get; set; }
+    /// <summary>The operation identifier used to correlate and validate this owned submission.</summary>
     [BindProperty] public string OperationId { get; set; } = Guid.NewGuid().ToString("D");
+    /// <summary>The uploaded request files validated before submission or attachment follow-up.</summary>
     [BindProperty] public List<IFormFile> Files { get; set; } = [];
 
     /// <summary>The one-time outcome message carried across this workflow's post/redirect/get boundary.</summary>

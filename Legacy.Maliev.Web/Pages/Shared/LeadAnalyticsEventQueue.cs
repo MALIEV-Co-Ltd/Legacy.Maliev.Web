@@ -53,9 +53,9 @@ namespace Legacy.Maliev.Web.Pages.Shared
         /// </summary>
         /// <param name="tempData">The request TempData dictionary.</param>
         /// <param name="transactionId">The API-issued quotation-request transaction identifier.</param>
-        /// <param name="service">The controlled MALIEV service context.</param>
         /// <param name="hasFiles">Whether the submitted request included files.</param>
-        /// <param name="fileUploadCompleted">Whether every submitted file was stored and linked.</param>
+        /// <param name="requestedItem">The submitted manufacturing item used to resolve a controlled service context.</param>
+        /// <param name="journeyId">The non-PII GUID identifying this manual-quotation funnel journey.</param>
         /// <param name="failure">The validation, serialization, or TempData failure, when unsuccessful.</param>
         /// <returns><see langword="true" /> when the event was queued.</returns>
         internal static bool TryQueueManualQuotation(
