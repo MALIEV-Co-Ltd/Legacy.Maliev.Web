@@ -1876,7 +1876,8 @@ public sealed class InstantQuotationResinPresentationTests
                         try { await Task.WhenAll(preview.ActualClaims).WaitAsync(TimeSpan.FromSeconds(5)); }
                         catch (JSException) when (removeFifth && preview.ActualClaims.Count == 9
                             && preview.ActualClaims[4].IsFaulted
-                            && preview.ActualClaims.Where((_, index) => index != 4).All(task => task.Status is TaskStatus.RanToCompletion)) { }
+                            && preview.ActualClaims.Where((_, index) => index != 4).All(task => task.Status is TaskStatus.RanToCompletion))
+                        { }
                     });
             }
         });

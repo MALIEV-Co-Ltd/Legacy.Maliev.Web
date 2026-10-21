@@ -59,7 +59,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 """);
             FilePayload Copy(int index) => new()
             {
-                Name = $"source-cube-copy-{index:00}.glb", MimeType = "model/gltf-binary", Buffer = bytes,
+                Name = $"source-cube-copy-{index:00}.glb",
+                MimeType = "model/gltf-binary",
+                Buffer = bytes,
             };
             var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
             await page.SetInputFilesAsync("#instant-quote-files", Copy(1));
@@ -244,7 +246,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             var bytes = WallThicknessParityBrowserFixture.Box(5);
             await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
             {
-                Name = "healthy-protected.stl", MimeType = "model/stl", Buffer = bytes,
+                Name = "healthy-protected.stl",
+                MimeType = "model/stl",
+                Buffer = bytes,
             });
             var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
             await Assertions.Expect(review).ToBeEnabledAsync();
@@ -262,7 +266,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
 
             await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
             {
-                Name = "pending-local-parse.stl", MimeType = "model/stl", Buffer = bytes,
+                Name = "pending-local-parse.stl",
+                MimeType = "model/stl",
+                Buffer = bytes,
             });
             var pending = page.Locator("[data-workflow-pending-parse]");
             await Assertions.Expect(pending).ToHaveCountAsync(1);
@@ -998,7 +1004,8 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         factory.UseKestrel(port);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
-            AllowAutoRedirect = false, BaseAddress = origin,
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
         });
         using var readiness = await client.GetAsync(quoteUrl);
         Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
@@ -1013,7 +1020,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         var bytes = WallThicknessParityBrowserFixture.Box(5);
         await page.SetInputFilesAsync("#instant-quote-files", Enumerable.Range(0, 3).Select(index => new FilePayload
         {
-            Name = $"bulk-{index}.stl", MimeType = "model/stl", Buffer = bytes,
+            Name = $"bulk-{index}.stl",
+            MimeType = "model/stl",
+            Buffer = bytes,
         }));
         await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-workflow-part]').length === 3 && !document.querySelector('#instant-quote-files').disabled");
         var parts = page.Locator("[data-workflow-part]");
@@ -1092,7 +1101,8 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         factory.UseKestrel(port);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
-            AllowAutoRedirect = false, BaseAddress = origin,
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
         });
         using var readiness = await client.GetAsync(quoteUrl);
         Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
@@ -1107,16 +1117,22 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         var bytes = WallThicknessParityBrowserFixture.Box(5);
         await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
         {
-            Name = "original.stl", MimeType = "model/stl", Buffer = bytes,
+            Name = "original.stl",
+            MimeType = "model/stl",
+            Buffer = bytes,
         });
         await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-workflow-part]').length === 1 && !document.querySelector('#instant-quote-files').disabled");
         var originalId = await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id");
         var next = Enumerable.Range(0, 6).Select(index => new FilePayload
         {
-            Name = $"new-{index}.stl", MimeType = "model/stl", Buffer = bytes,
+            Name = $"new-{index}.stl",
+            MimeType = "model/stl",
+            Buffer = bytes,
         }).Append(new FilePayload
         {
-            Name = "unreadable.stl", MimeType = "model/stl", Buffer = new byte[] { 1, 2, 3 },
+            Name = "unreadable.stl",
+            MimeType = "model/stl",
+            Buffer = new byte[] { 1, 2, 3 },
         }).ToArray();
         await page.SetInputFilesAsync("#instant-quote-files", next);
         await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-workflow-part]').length === 7 && document.querySelectorAll('[data-workflow-failed-preview]').length === 1 && !document.querySelector('#instant-quote-files').disabled",
@@ -1202,7 +1218,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         {
             await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
             {
-                Name = "healthy.stl", MimeType = "model/stl", Buffer = WallThicknessParityBrowserFixture.Box(5),
+                Name = "healthy.stl",
+                MimeType = "model/stl",
+                Buffer = WallThicknessParityBrowserFixture.Box(5),
             });
             await entered.Task.WaitAsync(lease.Token);
             var processing = page.Locator("[data-workflow-upload-overlay]");
@@ -1232,7 +1250,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             upload.RejectFileName = rejectsRenderable ? "open-mesh.stl" : null;
             await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
             {
-                Name = "open-mesh.stl", MimeType = "model/stl", Buffer = rejectsRenderable
+                Name = "open-mesh.stl",
+                MimeType = "model/stl",
+                Buffer = rejectsRenderable
                     ? WallThicknessParityBrowserFixture.Box(5) : await File.ReadAllBytesAsync(badPath),
             });
             var failed = page.Locator("[data-workflow-upload-item][data-upload-error]");
@@ -1333,7 +1353,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
         await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
         {
-            Name = "healthy-advisory.stl", MimeType = "model/stl", Buffer = WallThicknessParityBrowserFixture.Box(5),
+            Name = "healthy-advisory.stl",
+            MimeType = "model/stl",
+            Buffer = WallThicknessParityBrowserFixture.Box(5),
         });
         await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-workflow-part]').length === 1 && !document.querySelector('#instant-quote-files').disabled");
         await MaterialCardBrowserActions.SelectAsync(page, "PETG");
@@ -1365,7 +1387,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 """, category);
             await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
             {
-                Name = "advisory-failure.stl", MimeType = "model/stl", Buffer = WallThicknessParityBrowserFixture.Box(5),
+                Name = "advisory-failure.stl",
+                MimeType = "model/stl",
+                Buffer = WallThicknessParityBrowserFixture.Box(5),
             });
             var failed = page.Locator("[data-workflow-failed-preview]");
             await Assertions.Expect(failed).ToHaveCountAsync(1);
@@ -1506,7 +1530,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             await Assertions.Expect(page.Locator("[data-workflow-file-error]")).ToHaveCountAsync(0);
             await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
             {
-                Name = "replacement.stl", MimeType = "model/stl", Buffer = WallThicknessParityBrowserFixture.Box(5),
+                Name = "replacement.stl",
+                MimeType = "model/stl",
+                Buffer = WallThicknessParityBrowserFixture.Box(5),
             });
             await page.WaitForFunctionAsync("""
                 () => {
@@ -2177,7 +2203,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 Convert.ToHexStringLower(SHA256.HashData(bytes)));
             await page.SetInputFilesAsync("#instant-quote-files", Enumerable.Range(0, partCount).Select(index => new FilePayload
             {
-                Name = $"card-layout-{index}.glb", MimeType = "model/gltf-binary", Buffer = bytes,
+                Name = $"card-layout-{index}.glb",
+                MimeType = "model/gltf-binary",
+                Buffer = bytes,
             }));
             await Assertions.Expect(page.Locator("[data-workflow-part]")).ToHaveCountAsync(partCount,
                 new() { Timeout = 90000 });

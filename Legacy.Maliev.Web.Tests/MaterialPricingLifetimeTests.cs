@@ -479,7 +479,8 @@ public sealed class MaterialPricingLifetimeTests
         catch (ControlledLatePriceException) { }
         catch (InstantQuotationWorkflowCoordinator.ObsoleteQuoteCancellationException exception) when (
             callbackFault && exception.InnerException is AggregateException callbacks
-            && callbacks.InnerExceptions.All(error => error is ControlledCancellationCallbackException)) { }
+            && callbacks.InnerExceptions.All(error => error is ControlledCancellationCallbackException))
+        { }
     }
 
     private static async Task IgnoreCancellationAsync(Task task)

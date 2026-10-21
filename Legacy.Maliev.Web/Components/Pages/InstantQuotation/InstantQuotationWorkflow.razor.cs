@@ -926,7 +926,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         var color = colors.Contains(intent.Configuration.Color) ? intent.Configuration.Color : colors.First();
         intent.Configuration = intent.Configuration with
         {
-            MaterialKey = material.Key, Color = color,
+            MaterialKey = material.Key,
+            Color = color,
             BuildPreference = material.Process is PrintProcess.Resin ? BuildPreference.Standard : intent.Configuration.BuildPreference,
         };
         intent.Modified = true;

@@ -205,7 +205,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
             Assert.Equal(sourceHash, Convert.ToHexStringLower(SHA256.HashData(bytes)));
             await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
             {
-                Name = "source-292-quantity.glb", MimeType = "model/gltf-binary", Buffer = bytes,
+                Name = "source-292-quantity.glb",
+                MimeType = "model/gltf-binary",
+                Buffer = bytes,
             });
             var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
             await Assertions.Expect(page.Locator("[data-workflow-part]")).ToHaveCountAsync(1, new() { Timeout = 90000 });

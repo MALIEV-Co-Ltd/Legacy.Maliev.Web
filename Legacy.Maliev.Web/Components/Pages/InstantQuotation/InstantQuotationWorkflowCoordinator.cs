@@ -1257,7 +1257,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                     || current.UploadReference != part.UploadReference
                     || !string.Equals(current.Geometry.Sha256, part.Geometry.Sha256, StringComparison.OrdinalIgnoreCase)
                     || quote.Parts.SingleOrDefault(candidate => candidate.PartId == part.PartId) is not
-                        { Process: PrintProcess.Fdm, PhysicalReceipt: { } receipt } line
+                    { Process: PrintProcess.Fdm, PhysicalReceipt: { } receipt } line
                     || line.Color != part.Configuration.Color
                     || CurrentPhysicalAnalysisBinding(part.PartId, receipt.ProfileVersion) is null
                     || receipt.AnalysisVersion != Legacy.Maliev.Web.Application.Pricing.Simulation.FdmSimulationEngine.AnalysisVersion

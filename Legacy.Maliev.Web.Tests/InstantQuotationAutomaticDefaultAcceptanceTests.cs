@@ -302,16 +302,31 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
                 "invalid-ticket" => state with { QuoteAuthorization = state.QuoteAuthorization with { OrderTicket = "invalid" } },
                 "session" => state with { SessionId = "different-controlled-session" },
                 "owner" => state with { OwnerIdentity = "different-controlled-owner" },
-                "file" => state with { RequestState = new([part with
-                { PhysicalAnalysisUpload = part.PhysicalAnalysisUpload! with { FileId = Guid.NewGuid() } }]) },
-                "sha" => state with { RequestState = new([part with
-                { PhysicalAnalysisUpload = part.PhysicalAnalysisUpload! with { Sha256 = new string('f', 64) } }]) },
-                "quantity" => state with { RequestState = new([part with
-                { Configuration = part.Configuration with { Quantity = 2 } }]) },
-                "build" => state with { RequestState = new([part with
-                { Configuration = part.Configuration with { BuildPreference = BuildPreference.Strength } }]) },
-                "profile" => state with { PhysicalReceipts = state.PhysicalReceipts!.Select(receipt =>
-                    receipt with { ProfileVersion = "different-profile" }).ToArray() },
+                "file" => state with
+                {
+                    RequestState = new([part with
+                { PhysicalAnalysisUpload = part.PhysicalAnalysisUpload! with { FileId = Guid.NewGuid() } }])
+                },
+                "sha" => state with
+                {
+                    RequestState = new([part with
+                { PhysicalAnalysisUpload = part.PhysicalAnalysisUpload! with { Sha256 = new string('f', 64) } }])
+                },
+                "quantity" => state with
+                {
+                    RequestState = new([part with
+                { Configuration = part.Configuration with { Quantity = 2 } }])
+                },
+                "build" => state with
+                {
+                    RequestState = new([part with
+                { Configuration = part.Configuration with { BuildPreference = BuildPreference.Strength } }])
+                },
+                "profile" => state with
+                {
+                    PhysicalReceipts = state.PhysicalReceipts!.Select(receipt =>
+                    receipt with { ProfileVersion = "different-profile" }).ToArray()
+                },
                 "missing-protected-receipt" => state with { PhysicalReceipts = [] },
                 _ => state,
             };
