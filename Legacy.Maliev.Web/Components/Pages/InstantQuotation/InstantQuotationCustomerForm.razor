@@ -1,4 +1,5 @@
 @inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> Localizer
+@inject NavigationManager Navigation
 
 <section data-workflow-customer-details-content aria-labelledby="instant-quote-customer-heading">
     <header class="instant-quote__panel-header">
@@ -25,7 +26,7 @@
             <ul>
                 @foreach (var field in Model.InvalidFields)
                 {
-                    <li><a href="#@FieldId(field)">@Localizer["Please correct {0}.", FieldLabel(field)]</a></li>
+                    <li><a href="@FieldUrl(field)">@Localizer["Please correct {0}.", FieldLabel(field)]</a></li>
                 }
             </ul>
         </div>
@@ -267,6 +268,8 @@
             : string.Empty);
         builder.CloseElement();
     };
+
+    private string FieldUrl(string field) => Navigation.Uri.Split('#')[0] + "#" + FieldId(field);
 
     private static string FieldId(string field) => field switch
     {

@@ -485,6 +485,7 @@ public sealed class MaterialPricingDisplayRendererContractTests
                 fixture.Pricing.ProjectionControls = projectionControls;
                 var services = new ServiceCollection().AddLogging().AddLocalization(options => options.ResourcesPath = "Resources")
                     .AddSingleton<IJSRuntime, NoJavaScript>()
+                    .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager())
                     .AddSingleton(fixture.scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>())
                     .AddSingleton(fixture.Store)
                     .AddSingleton(fixture.scope.ServiceProvider.GetRequiredService<IInstantQuotationUploadClient>())

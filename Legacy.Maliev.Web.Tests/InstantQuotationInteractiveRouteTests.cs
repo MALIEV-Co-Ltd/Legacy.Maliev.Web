@@ -511,7 +511,8 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             Environment.NewLine,
             File.ReadAllText(Path.Combine(directory, "InstantQuotationWorkflow.razor")),
             File.ReadAllText(Path.Combine(directory, "InstantQuotationWorkflow.razor.cs")),
-            File.ReadAllText(Path.Combine(directory, "InstantQuotationWorkflowState.cs")));
+            File.ReadAllText(Path.Combine(directory, "InstantQuotationWorkflowState.cs")),
+            File.ReadAllText(Path.Combine(directory, "InstantQuotationEmptyScene.razor")));
     }
 
     private static int Count(string source, string value) =>
@@ -525,6 +526,7 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             .AddLogging()
             .AddLocalization(options => options.ResourcesPath = "Resources")
             .AddSingleton<IJSRuntime, NullJsRuntime>()
+            .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager())
             .AddSingleton<IWebHostEnvironment>(_ => new TestWebHostEnvironment
             {
                 EnvironmentName = "Testing",

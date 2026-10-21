@@ -428,6 +428,7 @@ public sealed class InstantQuotationWorkflowUploadTests
         using var services = new ServiceCollection().AddLogging()
             .AddLocalization(options => options.ResourcesPath = "Resources")
             .AddSingleton<IComponentActivator>(activator)
+            .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager())
             .AddSingleton<IJSRuntime>(javascript)
             .AddSingleton<IInstantQuotationSessionStore>(store)
             .AddSingleton<IInstantQuotationUploadClient>(client)

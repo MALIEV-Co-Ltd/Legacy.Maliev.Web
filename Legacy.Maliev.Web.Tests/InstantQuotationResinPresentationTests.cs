@@ -213,6 +213,7 @@ public sealed class InstantQuotationResinPresentationTests
     private static ServiceProvider Services(CapturingActivator activator, RecordingJavaScript javascript) =>
         new ServiceCollection().AddLogging().AddLocalization(options => options.ResourcesPath = "Resources")
             .AddSingleton<IComponentActivator>(activator).AddSingleton<IJSRuntime>(javascript)
+            .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager())
             .AddSingleton(FdmRuntimeProfileCatalog.LoadEmbedded())
             .AddSingleton<IWebHostEnvironment>(new ComponentEnvironment()).BuildServiceProvider();
 

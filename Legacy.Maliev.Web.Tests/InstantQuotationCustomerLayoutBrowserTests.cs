@@ -1,9 +1,10 @@
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 [Collection(CncNativeBrowserCollection.Name)]
-public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserFixture fixture)
+public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserFixture fixture, ITestOutputHelper output)
 {
     [Theory]
     [InlineData(320, 700, "en", ColorScheme.Light)]
@@ -144,6 +145,30 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         // Read a normal antiforgery form without navigating to or executing the login page.
         // Missing required customer fields take the existing validation redirect before
         // the submission service, creating the real customer-details child, not test HTML.
+        var submitResponse = page.WaitForResponseAsync(response =>
+            response.Request.Method == "POST"
+            && Uri.TryCreate(response.Url, UriKind.Absolute, out var responseUri)
+            && responseUri.GetLeftPart(UriPartial.Authority) == origin
+            && string.Equals(responseUri.AbsolutePath, "/InstantQuotation/3D-Printing", StringComparison.OrdinalIgnoreCase)
+            && responseUri.Query == "?handler=SubmitRequest",
+            new() { Timeout = 30000 });
+        async Task ObserveSubmitResponseAsync()
+        {
+            var response = await submitResponse;
+            var location = await response.HeaderValueAsync("location");
+            var redirectsToQuotation = Uri.TryCreate(new Uri(origin), location, out var redirect)
+                && redirect.GetLeftPart(UriPartial.Authority) == origin
+                && string.Equals(redirect.AbsolutePath, "/InstantQuotation/3D-Printing", StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrEmpty(redirect.Fragment);
+            try
+            {
+                output.WriteLine($"[customer-layout-submit] status={response.Status}; redirectsToQuotation={redirectsToQuotation}");
+            }
+            catch { /* Secondary diagnostic output must not replace the original test failure. */ }
+            Assert.Equal(302, response.Status);
+            Assert.True(redirectsToQuotation);
+        }
+
         await Task.WhenAll(
             page.WaitForURLAsync(new Uri(new Uri(origin), "/InstantQuotation/3D-Printing" + (culture == "en" ? "?culture=en" : string.Empty)).ToString(), new() { Timeout = 30000 }),
             page.EvaluateAsync("""
@@ -163,7 +188,8 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
                   document.body.appendChild(form);
                   HTMLFormElement.prototype.submit.call(form);
                 }
-                """));
+                """),
+            ObserveSubmitResponseAsync());
         var content = page.Locator("[data-workflow-customer-details-content]");
         await Assertions.Expect(content).ToBeVisibleAsync();
         var form = content.Locator("#instant-quotation-form");
