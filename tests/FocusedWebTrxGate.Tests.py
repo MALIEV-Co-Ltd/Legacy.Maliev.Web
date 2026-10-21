@@ -21,7 +21,7 @@ class FocusedGateControls(unittest.TestCase):
         dll.write_bytes(b"Synthetic parser control marker, not a native assembly")
         root = ET.Element(NS + "TestRun")
         summary = ET.SubElement(root, NS + "ResultSummary", outcome="Completed")
-        total = 59 if suite == "fdm" else 10
+        total = 59 if suite == "fdm" else 12
         ET.SubElement(summary, NS + "Counters", {k: str(total) if k in ("total", "executed", "passed") else "0" for k in FIELDS})
         results = ET.SubElement(root, NS + "Results")
         definitions = ET.SubElement(root, NS + "TestDefinitions")
@@ -30,7 +30,7 @@ class FocusedGateControls(unittest.TestCase):
             for method, rows in methods.items():
                 for index in range(rows):
                     if suite == "sidebar":
-                        culture, width = [(c, w) for c in ("en", "th") for w in (320, 375, 820, 992, 1280)][index]
+                        culture, width = [(c, w) for c in ("en", "th") for w in (320, 375, 820, 992, 1280, 1600)][index]
                         name = f'{cls}.{method}(culture: "{culture}", width: {width})'
                     else:
                         name = f"{cls}.{method}(syntheticControl: {index})"
@@ -53,10 +53,10 @@ class FocusedGateControls(unittest.TestCase):
             for cls in ("FdmSimulationModelPathsTests", "FdmSimulationSupportTests",
                         "FdmSimulationScenarioTests", "FdmSimulationProfileTests",
                         "FdmOriginalServiceEligibilityBoundaryTests")])
-        self.assertEqual(10, sum(next(iter(gate.ROSTERS["sidebar"].values())).values()))
+        self.assertEqual(12, sum(next(iter(gate.ROSTERS["sidebar"].values())).values()))
 
     def test_both_complete_suites_accept_lowercase_native_storage(self):
-        for suite, total in (("fdm", 59), ("sidebar", 10)):
+        for suite, total in (("fdm", 59), ("sidebar", 12)):
             with self.subTest(suite=suite), tempfile.TemporaryDirectory() as temp:
                 directory = Path(temp)
                 root, dll = self.fixture(directory, suite)
@@ -104,6 +104,41 @@ class FocusedGateControls(unittest.TestCase):
                     mutate(root)
                     with self.assertRaises(ValueError):
                         self.verify(root, directory, dll, "fdm")
+
+    def test_each_1600_sidebar_identity_rejects_missing_duplicate_foreign_and_nonpassed_rows(self):
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            baseline, dll = self.fixture(directory, "sidebar")
+            for culture in ("en", "th"):
+                required = f'culture: "{culture}", width: 1600)'
+                index = next(i for i, row in enumerate(baseline.find(NS + "Results"))
+                             if row.get("testName").endswith(required))
+                for mutation in ("missing", "duplicate", "foreign-culture", "foreign-viewport", "failed", "not-executed"):
+                    with self.subTest(culture=culture, mutation=mutation):
+                        root = copy.deepcopy(baseline)
+                        results = root.find(NS + "Results")
+                        definitions = root.find(NS + "TestDefinitions")
+                        entries = root.find(NS + "TestEntries")
+                        if mutation == "missing":
+                            for rows in (results, definitions, entries):
+                                rows.remove(rows[index])
+                            counters = root.find(NS + "ResultSummary/" + NS + "Counters")
+                            for field in ("total", "executed", "passed"):
+                                counters.set(field, "11")
+                        elif mutation in ("failed", "not-executed"):
+                            results[index].set("outcome", "Failed" if mutation == "failed" else "NotExecuted")
+                        else:
+                            name = results[index].get("testName")
+                            if mutation == "duplicate":
+                                name = name.replace("width: 1600", "width: 1280")
+                            elif mutation == "foreign-culture":
+                                name = name.replace(f'culture: "{culture}"', 'culture: "fr"')
+                            else:
+                                name = name.replace("width: 1600", "width: 1601")
+                            results[index].set("testName", name)
+                            definitions[index].set("name", name)
+                        with self.assertRaises(ValueError):
+                            self.verify(root, directory, dll, "sidebar")
 
     def test_unknown_sidebar_viewport_cannot_replace_required_row(self):
         with tempfile.TemporaryDirectory() as temp:
