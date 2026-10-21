@@ -482,6 +482,11 @@ jobs:
         with:
           name: web-combined-native-${{ github.sha }}
           path: |
+            Legacy.Maliev.Web/wwwroot/dist/route-service-toc.js
+            Legacy.Maliev.Web/wwwroot/dist/route-service-printing.js
+            Legacy.Maliev.Web/wwwroot/dist/route-service-cnc.js
+            Legacy.Maliev.Web/wwwroot/dist/route-service-finishing.js
+            Legacy.Maliev.Web/wwwroot/dist/route-service-scanning.js
             Legacy.Maliev.Web.Tests/TestResults/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml

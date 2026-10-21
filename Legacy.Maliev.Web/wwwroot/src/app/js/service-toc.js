@@ -58,6 +58,23 @@
             let previewTargetId = null;
             let previewLink = null;
             let activeUpdateScheduled = false;
+            let navigationFrame = null;
+            let navigationDisposed = false;
+
+            const cancelNavigation = () => {
+                if (navigationFrame !== null) {
+                    window.cancelAnimationFrame(navigationFrame);
+                    navigationFrame = null;
+                }
+            };
+
+            window.addEventListener('pagehide', () => {
+                navigationDisposed = true;
+                cancelNavigation();
+            });
+            window.addEventListener('pageshow', () => {
+                navigationDisposed = false;
+            });
 
             const setPreviewSection = (targetId) => {
                 const link = links.get(targetId);
@@ -84,6 +101,9 @@
             // The rail can only ever show a few destinations, and none at all on a phone.
             // The panel is the reliable way to reach every section, so it owns the full list.
             const setPanelOpen = (open) => {
+                if (open) {
+                    cancelNavigation();
+                }
                 toc.dataset.tocOpen = open ? 'true' : 'false';
                 toggle?.setAttribute('aria-expanded', open ? 'true' : 'false');
                 preview?.setAttribute('aria-hidden', open ? 'false' : 'true');
@@ -159,9 +179,34 @@
                         setPreviewSection(targetId);
                     }
                 });
-                link.addEventListener('click', () => {
+                link.addEventListener('click', (event) => {
+                    if (navigationDisposed || event.defaultPrevented || event.button !== 0
+                        || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+                        return;
+                    }
+
+                    cancelNavigation();
                     setPanelOpen(false);
-                    setActiveSection(targetId);
+                    setActiveSection(targetId, false);
+                    // Keep the native href/default action for URL, history and fragment semantics.
+                    // On mobile the collapsed panel hides the activated link. Move focus and
+                    // scroll the bound destination after that layout change, not the hidden link.
+                    navigationFrame = window.requestAnimationFrame(() => {
+                        navigationFrame = null;
+                        const destination = section.id === targetId ? section : heading;
+                        if (navigationDisposed || !page.isConnected || !toc.isConnected
+                            || !destination?.isConnected || destination.id !== targetId) {
+                            return;
+                        }
+                        if (!destination.hasAttribute('tabindex')) {
+                            destination.setAttribute('tabindex', '-1');
+                        }
+                        destination.focus({ preventScroll: true });
+                        destination.scrollIntoView({
+                            block: 'start',
+                            behavior: prefersReducedMotion() ? 'instant' : 'smooth'
+                        });
+                    });
                 });
                 item.append(link);
                 list.append(item);

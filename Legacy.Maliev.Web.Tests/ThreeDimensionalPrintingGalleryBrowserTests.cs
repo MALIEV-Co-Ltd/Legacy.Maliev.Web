@@ -164,4 +164,119 @@ public sealed class ThreeDimensionalPrintingGalleryBrowserTests(PublicContactBro
             throw;
         }
     }
+    [Theory]
+    [InlineData("en", false, false)]
+    [InlineData("en", false, true)]
+    [InlineData("en", true, false)]
+    [InlineData("en", true, true)]
+    [InlineData("th", false, false)]
+    [InlineData("th", false, true)]
+    [InlineData("th", true, false)]
+    [InlineData("th", true, true)]
+    public async Task TocActivation_FocusesThePhysicalDestinationAndPreservesNativeHistory(
+        string culture, bool reducedMotion, bool keyboard)
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            Locale = culture == "th" ? "th-TH" : "en-US",
+            ViewportSize = new ViewportSize { Width = 390, Height = 900 },
+            ReducedMotion = reducedMotion ? ReducedMotion.Reduce : ReducedMotion.NoPreference,
+        });
+        await using var page = await context.NewPageAsync();
+        var response = await page.GotoAsync(
+            new Uri(fixture.Origin, $"/services/3d-printing?culture={culture}").ToString(),
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30000 });
+        Assert.NotNull(response);
+        Assert.True(response.Ok);
+        var consent = page.Locator("#cookieConsent");
+        if (await consent.IsVisibleAsync())
+        {
+            await consent.Locator("[data-consent-action='reject']").ClickAsync();
+        }
+
+        var toc = page.Locator("nav[data-service-toc]");
+        var toggle = toc.Locator("[data-service-toc-toggle]");
+        await toggle.ClickAsync();
+        var link = toc.Locator("a[href='#printing-tolerances']");
+        await Assertions.Expect(link).ToBeVisibleAsync();
+        var beforeUrl = page.Url;
+        var historyLength = await page.EvaluateAsync<int>("history.length");
+        if (keyboard)
+        {
+            await link.PressAsync("Enter");
+        }
+        else
+        {
+            await link.ClickAsync();
+        }
+
+        var destination = page.Locator("#printing-tolerances");
+        await Assertions.Expect(destination).ToBeInViewportAsync(new LocatorAssertionsToBeInViewportOptions
+        {
+            Timeout = 30000,
+        });
+        await Assertions.Expect(destination).ToBeFocusedAsync();
+        Assert.Equal("-1", await destination.GetAttributeAsync("tabindex"));
+        Assert.Equal(beforeUrl + "#printing-tolerances", page.Url);
+        Assert.Equal(historyLength + 1, await page.EvaluateAsync<int>("history.length"));
+        Assert.Equal("false", await toggle.GetAttributeAsync("aria-expanded"));
+        Assert.Equal("true", await link.GetAttributeAsync("aria-current"));
+
+        await page.GoBackAsync(new PageGoBackOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        await Assertions.Expect(page).ToHaveURLAsync(beforeUrl);
+        await page.GoForwardAsync(new PageGoForwardOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        await Assertions.Expect(page).ToHaveURLAsync(beforeUrl + "#printing-tolerances");
+        await Assertions.Expect(destination).ToBeInViewportAsync(new LocatorAssertionsToBeInViewportOptions
+        {
+            Timeout = 30000,
+        });
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task TocModifiedActivation_OpensTheNativeDestinationWithoutChangingTheCurrentDocument(string culture)
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            Locale = culture == "th" ? "th-TH" : "en-US",
+            ViewportSize = new ViewportSize { Width = 390, Height = 900 },
+        });
+        await using var page = await context.NewPageAsync();
+        var response = await page.GotoAsync(
+            new Uri(fixture.Origin, $"/services/3d-printing?culture={culture}").ToString(),
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30000 });
+        Assert.NotNull(response);
+        Assert.True(response.Ok);
+        var consent = page.Locator("#cookieConsent");
+        if (await consent.IsVisibleAsync())
+        {
+            await consent.Locator("[data-consent-action='reject']").ClickAsync();
+        }
+
+        var toc = page.Locator("nav[data-service-toc]");
+        var toggle = toc.Locator("[data-service-toc-toggle]");
+        await toggle.ClickAsync();
+        var link = toc.Locator("a[href='#printing-tolerances']");
+        await Assertions.Expect(link).ToBeVisibleAsync();
+        var beforeUrl = page.Url;
+        var beforeScroll = await page.EvaluateAsync<double>("scrollY");
+        var beforeHistory = await page.EvaluateAsync<int>("history.length");
+        var popupTask = context.WaitForPageAsync(new BrowserContextWaitForPageOptions { Timeout = 30000 });
+        await link.ClickAsync(new LocatorClickOptions { Modifiers = [KeyboardModifier.Control] });
+        var popup = await popupTask;
+        try
+        {
+            await Assertions.Expect(popup).ToHaveURLAsync(beforeUrl + "#printing-tolerances");
+            Assert.Equal(beforeUrl, page.Url);
+            Assert.Equal(beforeHistory, await page.EvaluateAsync<int>("history.length"));
+            Assert.Equal(beforeScroll, await page.EvaluateAsync<double>("scrollY"));
+            Assert.Equal("true", await toggle.GetAttributeAsync("aria-expanded"));
+        }
+        finally
+        {
+            await popup.CloseAsync();
+        }
+    }
+
 }
