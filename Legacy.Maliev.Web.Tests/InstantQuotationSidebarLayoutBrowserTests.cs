@@ -190,10 +190,19 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
             // Upload/reveal can leave the rail at its newest part. Exercise a forward gesture from the left edge.
             await rail.EvaluateAsync("rail => { rail.scrollLeft = 0; }");
             await rail.Locator("[data-workflow-part] button").First.HoverAsync();
-            var beforeWheel = await rail.EvaluateAsync<double[]>("rail => [rail.scrollLeft, rail.scrollWidth, rail.clientWidth, rail.scrollHeight, rail.clientHeight]");
+            var beforeWheel = await rail.EvaluateAsync<double[]>("""
+                rail => {
+                  const style = getComputedStyle(rail);
+                  return [rail.scrollLeft, rail.scrollWidth, rail.clientWidth, rail.scrollHeight, rail.clientHeight,
+                    parseFloat(style.paddingTop), parseFloat(style.paddingBottom),
+                    rail.querySelector('[data-workflow-part]')?.getBoundingClientRect().height ?? 0,
+                    Math.max(0, ...Array.from(rail.children).slice(0, 16).map(child => child.getBoundingClientRect().height))];
+                }
+                """);
             Assert.Equal(0, beforeWheel[0]);
             Assert.True(beforeWheel[1] > beforeWheel[2], "Eight parts must overflow the desktop rail for this regression to be meaningful.");
-            Assert.True(beforeWheel[3] <= beforeWheel[4], "This gesture must exercise the horizontal rail, not native vertical scrolling.");
+            Assert.True(beforeWheel[3] <= beforeWheel[4],
+                $"This gesture must exercise the horizontal rail, not native vertical scrolling. scrollHeight={beforeWheel[3]}, clientHeight={beforeWheel[4]}, paddingTop={beforeWheel[5]}, paddingBottom={beforeWheel[6]}, firstCardHeight={beforeWheel[7]}, maxChildHeight={beforeWheel[8]}.");
             await page.Mouse.WheelAsync(0, 120);
             await page.WaitForFunctionAsync("() => document.querySelector('[data-workflow-parts]').scrollLeft > 0");
             Assert.True(await rail.EvaluateAsync<double>("rail => rail.scrollLeft") > 0,
