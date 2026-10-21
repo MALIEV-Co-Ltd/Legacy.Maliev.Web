@@ -159,7 +159,8 @@ public sealed class ContactPageTests
                 ? Task.FromCanceled<NotificationResult>(new CancellationToken(canceled: true))
                 : Task.FromException<NotificationResult>(failure);
         });
-        var page = CreatePage(contactClient, new StubAntiBotVerifier(true), notifications);
+        var logger = new FollowUpLogger();
+        var page = CreatePage(contactClient, new StubAntiBotVerifier(true), notifications, logger: logger);
 
         var pending = page.OnPostSubmitRequestAsync(CancellationToken.None);
         try
@@ -183,6 +184,14 @@ public sealed class ContactPageTests
             Assert.Equal("maliev_contact_submitted", document.RootElement.GetProperty("event").GetString());
             Assert.Equal("message-913", document.RootElement.GetProperty("transaction_id").GetString());
             Assert.DoesNotContain("private-notification-failure", analytics, StringComparison.Ordinal);
+            AssertFollowUpFailure(
+                logger,
+                913,
+                failingCall == 1 ? "customer_notification" : "internal_notification",
+                dependencyCancellation
+                    ? synchronousFailure ? nameof(OperationCanceledException) : nameof(TaskCanceledException)
+                    : nameof(InvalidOperationException),
+                "private-notification-failure");
         }
         finally
         {
@@ -206,7 +215,8 @@ public sealed class ContactPageTests
 
             return Task.FromResult(new NotificationResult(true, true, true));
         });
-        var page = CreatePage(contactClient, new StubAntiBotVerifier(true), notifications);
+        var logger = new FollowUpLogger();
+        var page = CreatePage(contactClient, new StubAntiBotVerifier(true), notifications, logger: logger);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => page.OnPostSubmitRequestAsync(requestAbort.Token));
@@ -214,6 +224,7 @@ public sealed class ContactPageTests
         Assert.Equal(1, contactClient.CallCount);
         Assert.Equal(2, notifications.Messages.Count);
         Assert.Null(page.Notification);
+        Assert.Empty(logger.Entries);
         Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("message-913", StringComparison.Ordinal));
     }
 
@@ -372,6 +383,54 @@ public sealed class ContactPageTests
                 ?? Task.FromResult(new NotificationResult(true, true, true));
         }
     }
+
+    private static void AssertFollowUpFailure(
+        FollowUpLogger logger,
+        int referenceNumber,
+        string stage,
+        string exceptionType,
+        string sensitive)
+    {
+        var entry = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Error, entry.Level);
+        Assert.Null(entry.Exception);
+        Assert.Equal(3, entry.Properties.Count);
+        Assert.Equal(referenceNumber, entry.Properties["MessageId"]);
+        Assert.Equal(stage, entry.Properties["Stage"]);
+        Assert.Equal(exceptionType, entry.Properties["ExceptionType"]);
+        Assert.DoesNotContain(sensitive, entry.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("mali@example.com", entry.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("browser-token", entry.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(sensitive, JsonSerializer.Serialize(entry.Properties), StringComparison.Ordinal);
+    }
+
+    private sealed class FollowUpLogger : ILogger<ContactPage>
+    {
+        public System.Collections.Concurrent.ConcurrentQueue<FollowUpLogEntry> Entries { get; } = new();
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            var properties = state is IEnumerable<KeyValuePair<string, object?>> values
+                ? values.Where(pair => pair.Key != "{OriginalFormat}").ToDictionary(pair => pair.Key, pair => pair.Value)
+                : new Dictionary<string, object?>();
+            Entries.Enqueue(new FollowUpLogEntry(logLevel, exception, formatter(state, exception), properties));
+        }
+    }
+
+    private sealed record FollowUpLogEntry(
+        LogLevel Level,
+        Exception? Exception,
+        string Message,
+        IReadOnlyDictionary<string, object?> Properties);
 
     private sealed class MemoryTempDataProvider : ITempDataProvider
     {

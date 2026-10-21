@@ -318,6 +318,7 @@ public sealed class Index(
 
         var fileResult = new QuotationFileResult(false, false, false, false);
         var notificationsSent = false;
+        var followUpIsNotification = false;
         try
         {
             var uploads = Files
@@ -334,13 +335,19 @@ public sealed class Index(
                 SubmissionId,
                 uploads,
                 cancellationToken);
+            followUpIsNotification = true;
             notificationsSent = await SendNotificationsAsync(referenceNumber, cancellationToken);
         }
-        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
         {
-            logger.LogError(
-                "Quotation follow-up failed after request {QuotationRequestId} was persisted.",
-                referenceNumber);
+            if (!followUpIsNotification)
+            {
+                logger.LogError(
+                    "Quotation follow-up failed after request {QuotationRequestId} was persisted. Stage={Stage} ExceptionType={ExceptionType}",
+                    referenceNumber,
+                    "attachment_upload",
+                    exception.GetType().Name);
+            }
         }
 
         Notification = fileResult.Completed && notificationsSent
@@ -361,29 +368,44 @@ public sealed class Index(
         return results.All(result => result.Sent);
 
         async Task<NotificationResult> SendCustomerAsync() =>
-            await notificationClient.SendAsync(
-                NotificationChannel.Manufacturing,
-                new EmailNotification(
+            await SendAsync(
+                "customer_notification",
+                () => new EmailNotification(
                     Email.Trim(),
                     localizer["Quotation request #{0}", referenceNumber].Value,
                     "<p>" + Encode(localizer["Thank you for requesting a quotation from MALIEV. Your reference number is #{0}.", referenceNumber].Value)
                         + "</p><p>" + Encode(localizer["Our manufacturing team will review the request and reply directly."].Value) + "</p>",
                     null,
                     null,
-                    null),
-                cancellationToken);
+                    null));
 
         async Task<NotificationResult> SendInternalAsync() =>
-            await notificationClient.SendAsync(
-                NotificationChannel.Manufacturing,
-                new EmailNotification(
+            await SendAsync(
+                "internal_notification",
+                () => new EmailNotification(
                     "manufacturing@maliev.com",
                     $"Quotation request #{referenceNumber}",
                     BuildInternalMessage(referenceNumber),
                     Email.Trim(),
                     null,
-                    null),
-                cancellationToken);
+                    null));
+
+        async Task<NotificationResult> SendAsync(string stage, Func<EmailNotification> createNotification)
+        {
+            try
+            {
+                return await notificationClient.SendAsync(NotificationChannel.Manufacturing, createNotification(), cancellationToken);
+            }
+            catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                logger.LogError(
+                    "Quotation follow-up failed after request {QuotationRequestId} was persisted. Stage={Stage} ExceptionType={ExceptionType}",
+                    referenceNumber,
+                    stage,
+                    exception.GetType().Name);
+                throw;
+            }
+        }
     }
 
     private string BuildInternalMessage(int referenceNumber) =>

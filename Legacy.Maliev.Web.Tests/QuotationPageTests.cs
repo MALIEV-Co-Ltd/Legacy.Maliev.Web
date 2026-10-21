@@ -243,7 +243,8 @@ public sealed class QuotationPageTests
                 ? Task.FromCanceled<NotificationResult>(new CancellationToken(canceled: true))
                 : Task.FromException<NotificationResult>(failure);
         });
-        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true), notifications);
+        var logger = new FollowUpLogger();
+        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true), notifications, logger);
         page.Files = [FormFile("model.step", "application/step", "STEP")];
 
         var pending = page.OnPostSubmitRequestAsync(CancellationToken.None);
@@ -269,6 +270,14 @@ public sealed class QuotationPageTests
             Assert.Equal("request-713", document.RootElement.GetProperty("transaction_id").GetString());
             Assert.True(document.RootElement.GetProperty("has_files").GetBoolean());
             Assert.DoesNotContain("private-notification-failure", analytics, StringComparison.Ordinal);
+            AssertFollowUpFailure(
+                logger,
+                713,
+                failingCall == 1 ? "customer_notification" : "internal_notification",
+                dependencyCancellation
+                    ? synchronousFailure ? nameof(OperationCanceledException) : nameof(TaskCanceledException)
+                    : nameof(InvalidOperationException),
+                "private-notification-failure");
         }
         finally
         {
@@ -307,7 +316,8 @@ public sealed class QuotationPageTests
             return Task.FromException<QuotationFileResult>(failure);
         });
         var notifications = new RecordingNotificationClient();
-        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true), notifications);
+        var logger = new FollowUpLogger();
+        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true), notifications, logger);
         page.Files = failureMode == "stream"
             ? [new StubFormFile("unreadable.step", 4)]
             : [FormFile("model.step", "application/step", "STEP")];
@@ -327,6 +337,14 @@ public sealed class QuotationPageTests
         Assert.Equal("request-713", document.RootElement.GetProperty("transaction_id").GetString());
         Assert.True(document.RootElement.GetProperty("has_files").GetBoolean());
         Assert.DoesNotContain("private-attachment-failure", analytics, StringComparison.Ordinal);
+        AssertFollowUpFailure(
+            logger,
+            713,
+            "attachment_upload",
+            failureMode == "stream" ? nameof(NotSupportedException)
+                : failureMode == "foreign-cancellation" ? nameof(TaskCanceledException)
+                : nameof(IOException),
+            "private-attachment-failure");
     }
 
     [Fact]
@@ -340,7 +358,8 @@ public sealed class QuotationPageTests
             return Task.FromCanceled<QuotationFileResult>(cancellationToken);
         });
         var notifications = new RecordingNotificationClient();
-        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true), notifications);
+        var logger = new FollowUpLogger();
+        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true), notifications, logger);
         page.Files = [FormFile("model.step", "application/step", "STEP")];
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
@@ -349,6 +368,7 @@ public sealed class QuotationPageTests
         Assert.Equal(1, quotation.CallCount);
         Assert.Empty(notifications.Messages);
         Assert.Null(page.Notification);
+        Assert.Empty(logger.Entries);
         Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("request-713", StringComparison.Ordinal));
     }
 
@@ -368,7 +388,8 @@ public sealed class QuotationPageTests
 
             return Task.FromResult(new NotificationResult(true, true, true));
         });
-        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true), notifications);
+        var logger = new FollowUpLogger();
+        var page = CreatePage(quotation, files, new StubAntiBotVerifier(true), notifications, logger);
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => page.OnPostSubmitRequestAsync(requestAbort.Token));
@@ -376,6 +397,7 @@ public sealed class QuotationPageTests
         Assert.Equal(1, quotation.CallCount);
         Assert.Equal(2, notifications.Messages.Count);
         Assert.Null(page.Notification);
+        Assert.Empty(logger.Entries);
         Assert.Single(page.TempData.Values.OfType<string>(), value => value.Contains("request-713", StringComparison.Ordinal));
     }
 
@@ -589,6 +611,54 @@ public sealed class QuotationPageTests
 
         public Stream OpenReadStream() => throw new NotSupportedException();
     }
+
+    private static void AssertFollowUpFailure(
+        FollowUpLogger logger,
+        int referenceNumber,
+        string stage,
+        string exceptionType,
+        string sensitive)
+    {
+        var entry = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Error, entry.Level);
+        Assert.Null(entry.Exception);
+        Assert.Equal(3, entry.Properties.Count);
+        Assert.Equal(referenceNumber, entry.Properties["QuotationRequestId"]);
+        Assert.Equal(stage, entry.Properties["Stage"]);
+        Assert.Equal(exceptionType, entry.Properties["ExceptionType"]);
+        Assert.DoesNotContain(sensitive, entry.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("mali@example.com", entry.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("browser-token", entry.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(sensitive, JsonSerializer.Serialize(entry.Properties), StringComparison.Ordinal);
+    }
+
+    private sealed class FollowUpLogger : ILogger<QuotationPage>
+    {
+        public System.Collections.Concurrent.ConcurrentQueue<FollowUpLogEntry> Entries { get; } = new();
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            var properties = state is IEnumerable<KeyValuePair<string, object?>> values
+                ? values.Where(pair => pair.Key != "{OriginalFormat}").ToDictionary(pair => pair.Key, pair => pair.Value)
+                : new Dictionary<string, object?>();
+            Entries.Enqueue(new FollowUpLogEntry(logLevel, exception, formatter(state, exception), properties));
+        }
+    }
+
+    private sealed record FollowUpLogEntry(
+        LogLevel Level,
+        Exception? Exception,
+        string Message,
+        IReadOnlyDictionary<string, object?> Properties);
 
     private sealed class MemoryTempDataProvider : ITempDataProvider
     {

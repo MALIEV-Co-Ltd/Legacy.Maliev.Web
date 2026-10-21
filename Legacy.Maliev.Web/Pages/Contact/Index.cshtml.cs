@@ -163,9 +163,7 @@ public sealed class Index(
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
-            logger.LogError(
-                "Confirmation delivery failed after contact message {MessageId} was persisted.",
-                referenceNumber);
+            // Each concurrent notification failure is observed at its own send boundary.
         }
 
         Notification = notificationsSent
@@ -184,29 +182,44 @@ public sealed class Index(
         return results.All(result => result.Sent);
 
         async Task<NotificationResult> SendCustomerAsync() =>
-            await notificationClient.SendAsync(
-                NotificationChannel.Info,
-                new EmailNotification(
+            await SendAsync(
+                "customer_notification",
+                () => new EmailNotification(
                     Email.Trim(),
                     localizer["Contact request #{0}", referenceNumber].Value,
                     "<p>" + Encode(localizer["Thank you for contacting MALIEV. Your reference number is #{0}.", referenceNumber].Value)
                         + "</p><p>" + Encode(localizer["We will reply as soon as possible."].Value) + "</p>",
                     null,
                     null,
-                    null),
-                cancellationToken);
+                    null));
 
         async Task<NotificationResult> SendInternalAsync() =>
-            await notificationClient.SendAsync(
-                NotificationChannel.Info,
-                new EmailNotification(
+            await SendAsync(
+                "internal_notification",
+                () => new EmailNotification(
                     "info@maliev.com",
                     $"Contact request #{referenceNumber}",
                     BuildInternalMessage(referenceNumber),
                     Email.Trim(),
                     null,
-                    null),
-                cancellationToken);
+                    null));
+
+        async Task<NotificationResult> SendAsync(string stage, Func<EmailNotification> createNotification)
+        {
+            try
+            {
+                return await notificationClient.SendAsync(NotificationChannel.Info, createNotification(), cancellationToken);
+            }
+            catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                logger.LogError(
+                    "Confirmation delivery failed after contact message {MessageId} was persisted. Stage={Stage} ExceptionType={ExceptionType}",
+                    referenceNumber,
+                    stage,
+                    exception.GetType().Name);
+                throw;
+            }
+        }
     }
 
     private string BuildInternalMessage(int referenceNumber) =>
