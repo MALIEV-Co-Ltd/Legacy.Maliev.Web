@@ -153,8 +153,8 @@ public sealed class WebSurfaceTests : IDisposable
     [Theory]
     [InlineData("en", 404, "404 — Page not found | MALIEV", "Page not found", "The page may have moved, or the address may be incorrect.", "Back to the home page", "Contact support")]
     [InlineData("th", 404, "404 — ไม่พบหน้าที่ต้องการ | MALIEV", "ไม่พบหน้าที่ต้องการ", "หน้านี้อาจถูกย้าย หรือลิงก์ไม่ถูกต้อง", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
-    [InlineData("en", 500, "Error | MALIEV", "Sorry. Something did not work properly.", "Please include this incident ID when contacting support.", "Back to the home page", "Contact support")]
-    [InlineData("th", 500, "ข้อผิดพลาด | MALIEV", "ขออภัย ระบบทำงานผิดพลาด", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
+    [InlineData("en", 500, "Error | MALIEV", "Sorry. Something did not work properly.", "Error page preview", "Back to the home page", "Contact support")]
+    [InlineData("th", 500, "ข้อผิดพลาด | MALIEV", "ขออภัย ระบบทำงานผิดพลาด", "ตัวอย่างหน้าข้อผิดพลาด", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
     public async Task ErrorRoute_RendersLocalizedSafeStaticSsrForStatusCode(
         string culture,
         int statusCode,
