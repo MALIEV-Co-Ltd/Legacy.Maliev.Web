@@ -105,7 +105,21 @@ public sealed class AboutPageContractTests : IClassFixture<TestingWebApplication
             var card = Assert.Single(Regex.Matches(html,
                 $"<li class=\"profile-customer\" data-customer=\"{customer.Slug}\">(?<card>.*?)</li>", RegexOptions.Singleline)).Groups["card"].Value;
             Assert.Contains($"class=\"profile-customer-logo{(customer.Dark ? " profile-customer-logo-dark" : "")}\"", card, StringComparison.Ordinal);
-            Assert.Contains($"src=\"/src/images/customers/{customer.Slug}.webp\" width=\"{customer.Width}\" height=\"{customer.Height}\" loading=\"lazy\" decoding=\"async\" alt=\"\"", card, StringComparison.Ordinal);
+            var image = Assert.Single(Regex.Matches(card, "<img\\b[^>]*>", RegexOptions.IgnoreCase)).Value;
+            foreach (var (name, value) in new[]
+            {
+                ("src", $"/src/images/customers/{customer.Slug}.webp"),
+                ("width", customer.Width.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                ("height", customer.Height.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                ("loading", "lazy"), ("decoding", "async"), ("alt", "")
+            })
+            {
+                // Razor can minimize an empty static attribute; its value must still be empty.
+                var attribute = Assert.Single(Regex.Matches(image,
+                    $"""\s{Regex.Escape(name)}(?:="(?<value>[^"]*)")?(?=\s|/?>)""",
+                    RegexOptions.IgnoreCase));
+                Assert.Equal(value, attribute.Groups["value"].Value);
+            }
             Assert.Contains($">{(culture == "th" ? customer.Thai : customer.English)}<", card, StringComparison.Ordinal);
         }
         Assert.Contains("/src/images/customers/kobelco.webp", html, StringComparison.Ordinal);
