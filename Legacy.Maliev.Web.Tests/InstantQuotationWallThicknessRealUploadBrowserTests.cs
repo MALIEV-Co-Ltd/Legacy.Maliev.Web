@@ -48,12 +48,14 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         await using var page = await context.NewPageAsync();
         var pageErrors = new List<string>();
         page.PageError += (_, error) => pageErrors.Add(error);
+        var readinessTimer = System.Diagnostics.Stopwatch.StartNew();
         await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
 
         var path = CreateBoxStl(20, 20, 5);
         try
         {
+            await WaitForInteractiveInputFileAsync(page, readinessTimer);
             await page.SetInputFilesAsync("#instant-quote-files", path);
             await page.Locator("[data-workflow-price-tier]").Last.WaitForAsync();
             var viewerControlsFit = await page.Locator("[data-workflow-viewer] > button:not(.instant-quote__thickness-toggle)")
@@ -228,6 +230,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         await using var page = await browser.NewPageAsync();
         var pageErrors = new List<string>();
         page.PageError += (_, error) => pageErrors.Add(error);
+        var readinessTimer = System.Diagnostics.Stopwatch.StartNew();
         await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
 
@@ -235,6 +238,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         var large = CreateBoxStl(30, 30, 10);
         try
         {
+            await WaitForInteractiveInputFileAsync(page, readinessTimer);
             await page.SetInputFilesAsync("#instant-quote-files", [small, large]);
             var parts = page.Locator("[data-workflow-part]");
             await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-workflow-part]').length === 2");
@@ -333,6 +337,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         });
         var pageErrors = new List<string>();
         page.PageError += (_, error) => pageErrors.Add(error);
+        var readinessTimer = System.Diagnostics.Stopwatch.StartNew();
         await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
 
@@ -348,6 +353,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         {
             Assert.Equal(9, paths.Select(path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))))
                 .Distinct(StringComparer.Ordinal).Count());
+            await WaitForInteractiveInputFileAsync(page, readinessTimer);
             await page.SetInputFilesAsync("#instant-quote-files", paths);
             await page.WaitForFunctionAsync(
                 "() => document.querySelectorAll('[data-workflow-part]').length === 9",
@@ -537,6 +543,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             if (message.Type is "error" or "warning") consoleErrors.Add(message.Text);
         };
 
+        var readinessTimer = System.Diagnostics.Stopwatch.StartNew();
         var response = await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         Assert.Equal(200, response?.Status);
         Assert.Contains(pageTitle, await page.TitleAsync(), StringComparison.Ordinal);
@@ -546,6 +553,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         var path = CreateBoxStl(20, 20, 0.7f);
         try
         {
+            await WaitForInteractiveInputFileAsync(page, readinessTimer);
             await page.SetInputFilesAsync("#instant-quote-files", path);
             try
             {
@@ -717,6 +725,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
         await using var page = await browser.NewPageAsync();
+        var readinessTimer = System.Diagnostics.Stopwatch.StartNew();
         var response = await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         Assert.Equal(200, response?.Status);
         await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
@@ -724,6 +733,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         var path = CreateBoxStl(20, 20, 1f, "maliev-one-millimeter-fdm");
         try
         {
+            await WaitForInteractiveInputFileAsync(page, readinessTimer);
             await page.SetInputFilesAsync("#instant-quote-files", path);
             await page.Locator("[data-workflow-part]").WaitForAsync(new LocatorWaitForOptions { Timeout = 30000 });
             await page.WaitForFunctionAsync("() => !!document.querySelector('.instant-quote__thickness-toggle:not(:disabled)')");
@@ -767,6 +777,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
         await using var page = await browser.NewPageAsync();
+        var readinessTimer = System.Diagnostics.Stopwatch.StartNew();
         var response = await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         Assert.Equal(200, response?.Status);
         await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
@@ -774,6 +785,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         var path = CreateOpenSheetStl();
         try
         {
+            await WaitForInteractiveInputFileAsync(page, readinessTimer);
             await page.SetInputFilesAsync("#instant-quote-files", path);
             await page.WaitForFunctionAsync("() => document.querySelector('.instant-quote__workflow')?.dataset.workflowState === 'error'");
             Assert.Contains("The file could not be uploaded. Try again.",
@@ -823,6 +835,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         failureEvidence.Stage("Navigation");
         try
         {
+            var readinessTimer = System.Diagnostics.Stopwatch.StartNew();
             var response = await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
             Assert.NotNull(response);
             Assert.Equal(200, response.Status);
@@ -832,6 +845,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 paths.Add(CreatePreliminaryPdfBoxStl(index + 1));
             }
             failureEvidence.Stage("UploadAdmission");
+            await WaitForInteractiveInputFileAsync(page, readinessTimer);
             await page.SetInputFilesAsync("#instant-quote-files", paths);
             try
             {
@@ -919,9 +933,10 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 "() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')",
                 null, new PageWaitForFunctionOptions { Timeout = 90000 });
             failureEvidence.Stage("Review");
-            await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button").ClickAsync();
+            failureEvidence.AwaitBoundary("review", false);
             try
             {
+                await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button").ClickAsync();
                 await page.WaitForFunctionAsync(
                     """
                     count => {
@@ -929,6 +944,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                         return images.length === count && images.every(image => image.getAttribute('src')?.startsWith('data:image/png'));
                     }
                     """, partCount, new PageWaitForFunctionOptions { Timeout = 90000 });
+                failureEvidence.AwaitBoundary("review", true);
             }
             catch (Exception original)
             {
@@ -944,6 +960,10 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                         reviewParts:Math.min(reviewParts,32),
                         actualThumbnails:Math.min(images.length,32),
                         pngReadyThumbnails:Math.min(pngReady,32),
+                        reviewImages:Math.min(images.length,32),
+                        reviewPngImages:Math.min(pngReady,32),
+                        reviewPlaceholderImages:Math.min(images.filter(image => image.getAttribute('src') === '/src/images/3d-canvas-placeholder.svg').length,32),
+                        reviewOtherImages:Math.min(images.filter(image => !image.getAttribute('src')?.startsWith('data:image/png') && image.getAttribute('src') !== '/src/images/3d-canvas-placeholder.svg').length,32),
                         reviewCountsCapped:expected > 32 || reviewParts > 32 || images.length > 32,
                         errorVisible:document.querySelector('#blazor-error-ui')?.style.display === 'block'
                       });
@@ -1264,6 +1284,123 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         {
             if (File.Exists(temporary)) File.Delete(temporary);
         }
+    }
+
+
+    [Fact]
+    public async Task RealUploadReadiness_WaitsForTheCurrentInputFileBindingWhileBootstrapIsHeld()
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var origin = new Uri($"http://127.0.0.1:{ReserveFreePort()}");
+        var quoteUrl = new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString();
+        factory.UseKestrel(origin.Port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
+        using var response = await client.GetAsync(quoteUrl);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
+        await using var page = await browser.NewPageAsync();
+        var bootstrapEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseBootstrap = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var callbacks = new List<Task>();
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await page.RouteAsync("**/_framework/blazor.web.js", async route =>
+        {
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (callbacks) callbacks.Add(completion.Task);
+            bootstrapEntered.TrySetResult();
+            try
+            {
+                await releaseBootstrap.Task.WaitAsync(lease.Token);
+                await route.ContinueAsync();
+                completion.TrySetResult();
+            }
+            catch (OperationCanceledException) when (lease.IsCancellationRequested) { completion.TrySetResult(); }
+            catch (PlaywrightException) when (page.IsClosed) { completion.TrySetResult(); }
+            catch (Exception exception) { completion.TrySetException(exception); }
+        });
+        var path = CreateBoxStl(20, 20, 5);
+        Exception? primary = null;
+        Task? ready = null;
+        try
+        {
+            var readinessTimer = System.Diagnostics.Stopwatch.StartNew();
+            await page.GotoAsync(quoteUrl, new() { WaitUntil = WaitUntilState.Commit, Timeout = 30000 });
+            await bootstrapEntered.Task.WaitAsync(lease.Token);
+            await page.Locator("#instant-quote-files").WaitForAsync(new()
+            {
+                State = WaitForSelectorState.Attached,
+                Timeout = Math.Max(1, 30000 - readinessTimer.ElapsedMilliseconds),
+            });
+            Assert.True(await page.EvaluateAsync<bool>(
+                "() => typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'undefined'"));
+            ready = WaitForInteractiveInputFileAsync(page, readinessTimer);
+            Assert.False(ready.IsCompleted);
+            Assert.Equal(0, upload.VerifiedUploads);
+            releaseBootstrap.TrySetResult();
+            await ready;
+            Task[] started;
+            lock (callbacks) started = callbacks.ToArray();
+            await Task.WhenAll(started).WaitAsync(lease.Token);
+            Assert.True(await page.EvaluateAsync<bool>(
+                "() => typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'number'"));
+            await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+            await page.SetInputFilesAsync("#instant-quote-files", path);
+            await page.Locator("[data-workflow-price-tier]").Last.WaitForAsync();
+            var partId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
+            await upload.AssertAdmittedMeshMatchesBrowserUploadAsync(partId);
+            Assert.Equal(1, upload.StartedUploads);
+            Assert.Equal(1, upload.VerifiedUploads);
+            var stored = await factory.Services.GetRequiredService<IInstantQuotationSessionStore>()
+                .GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+            Assert.NotNull(stored);
+            Assert.NotNull(stored.QuoteAuthorization);
+            var part = Assert.Single(stored.Parts);
+            Assert.Equal(partId, part.PartId);
+            var receipt = Assert.Single(stored.PhysicalReceipts!,
+                candidate => candidate.MaterialKey == part.Configuration.MaterialKey);
+            Assert.Equal(partId, receipt.PartId);
+            Assert.Equal(stored.SessionId, receipt.SessionId);
+            Assert.Equal(part.Geometry.Sha256, receipt.UploadSha256);
+            Assert.True(receipt.MotionSeconds > 0);
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                () => { releaseBootstrap.TrySetResult(); lease.Cancel(); return ValueTask.CompletedTask; },
+                async () => await page.CloseAsync(),
+                async () =>
+                {
+                    Task[] started;
+                    lock (callbacks) started = callbacks.ToArray();
+                    await Task.WhenAll(started).WaitAsync(TimeSpan.FromSeconds(5));
+                },
+                async () =>
+                {
+                    if (ready is not null)
+                    {
+                        try { await ready.WaitAsync(TimeSpan.FromSeconds(5)); }
+                        catch (PlaywrightException) when (page.IsClosed) { }
+                    }
+                },
+                () => { File.Delete(path); return ValueTask.CompletedTask; });
+        }
+    }
+
+    // Network quiet and SSR markup do not prove that this DOM input has a live .NET change binding.
+    private static async Task WaitForInteractiveInputFileAsync(
+        IPage page, System.Diagnostics.Stopwatch readinessTimer)
+    {
+        var remaining = 30000 - readinessTimer.ElapsedMilliseconds;
+        if (remaining <= 0) throw new TimeoutException("The current file input was not ready within the navigation readiness budget.");
+        var binding = await page.WaitForFunctionAsync(
+            "() => { const input = document.querySelector('#instant-quote-files'); return !!input && !input.disabled && typeof input._blazorInputFileNextFileId === 'number'; }",
+            options: new() { Timeout = remaining });
+        await binding.DisposeAsync();
     }
 
     private static int ReserveFreePort()

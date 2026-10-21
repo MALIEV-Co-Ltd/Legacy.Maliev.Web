@@ -193,7 +193,8 @@ internal sealed class BrowserFailureEvidence : IDisposable, IAsyncDisposable
                 value = text is "empty" or "uploading" or "uploaded" or "error" or "multipart" or "configured" or "review" or "customerdetails" or "submitted" or "unavailable"
                     ? text : throw new FormatException();
             }
-            else if (property.Name is "parts" or "uploadRows" or "expectedThumbnails" or "reviewParts" or "actualThumbnails" or "pngReadyThumbnails")
+            else if (property.Name is "parts" or "uploadRows" or "expectedThumbnails" or "reviewParts" or "actualThumbnails" or "pngReadyThumbnails"
+                or "reviewImages" or "reviewPngImages" or "reviewPlaceholderImages" or "reviewOtherImages")
                 value = property.Value.ValueKind == JsonValueKind.Number && property.Value.TryGetInt32(out var count) && count is >= 0 and <= 32
                     ? count : throw new FormatException();
             else if (property.Name is "progress" or "isRepricing" or "configurationEnabled" or "errorVisible" or "reviewCountsCapped")
