@@ -139,6 +139,10 @@ function extractWorldSpaceTriangles(object3D) {
 
   object3D.updateWorldMatrix?.(true, true);
   object3D.traverse(child => {
+    // Instance transforms are not part of matrixWorld; never measure the uninstanced base as the full model.
+    if (child?.isInstancedMesh) {
+      throw new TypeError('Unsupported glTF node geometry cannot be analyzed.');
+    }
     const position = child?.geometry?.attributes?.position;
     if (!child?.isMesh || !position) return;
 

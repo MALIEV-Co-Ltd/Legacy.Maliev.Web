@@ -233,11 +233,57 @@ public sealed class AdmittedGltfMeshReaderTests
     [InlineData("KHR_draco_mesh_compression")]
     [InlineData("EXT_meshopt_compression")]
     [InlineData("UNKNOWN_geometry")]
+    [InlineData("EXT_mesh_gpu_instancing")]
     public void UnsupportedRequiredExtension_FailsClosed(string name)
     {
         var doc = Triangle();
         doc["extensionsRequired"] = new JsonArray(name);
         Assert.Throws<FormatException>(() => Read(doc));
+    }
+
+    [Theory]
+    [InlineData("used")]
+    [InlineData("required")]
+    [InlineData("undeclared")]
+    public void GpuInstancingNode_RejectsInsteadOfQuotingItsBaseMesh(string declaration)
+    {
+        var doc = Triangle();
+        if (declaration != "undeclared") doc["extensionsUsed"] = new JsonArray("EXT_mesh_gpu_instancing");
+        if (declaration == "required") doc["extensionsRequired"] = new JsonArray("EXT_mesh_gpu_instancing");
+        doc["nodes"]![0]!["extensions"] = new JsonObject
+        {
+            ["EXT_mesh_gpu_instancing"] = new JsonObject { ["attributes"] = new JsonObject { ["TRANSLATION"] = 0 } },
+        };
+
+        Assert.Throws<FormatException>(() => Read(doc));
+    }
+
+    [Fact]
+    public void OptionalNodeExtensionsAndMetadata_PreserveCoreGeometry()
+    {
+        var doc = Triangle();
+        doc["extensionsUsed"] = new JsonArray("KHR_lights_punctual", "KHR_materials_unlit", "UNKNOWN_geometry");
+        doc["extensions"] = new JsonObject
+        {
+            ["KHR_lights_punctual"] = new JsonObject { ["lights"] = new JsonArray(new JsonObject { ["type"] = "point" }) },
+        };
+        doc["nodes"]![0]!["extensions"] = new JsonObject
+        {
+            ["KHR_lights_punctual"] = new JsonObject { ["light"] = 0 },
+            ["UNKNOWN_geometry"] = new JsonObject(),
+        };
+        doc["nodes"]![0]!["extras"] = new JsonObject
+        {
+            ["extensions"] = new JsonObject { ["EXT_mesh_gpu_instancing"] = new JsonObject() },
+            ["gltfExtensions"] = new JsonObject { ["EXT_mesh_gpu_instancing"] = new JsonObject() },
+        };
+        doc["materials"] = new JsonArray(new JsonObject
+        {
+            ["extensions"] = new JsonObject { ["KHR_materials_unlit"] = new JsonObject() },
+        });
+        Primitive(doc)["material"] = 0;
+
+        AssertTriangle(Read(doc), Vector3.Zero, new(2, 0, 0), new(0, 0, 3));
     }
 
     [Fact]

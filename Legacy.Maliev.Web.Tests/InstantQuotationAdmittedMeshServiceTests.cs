@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Nodes;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Application.Pricing.Simulation;
@@ -301,6 +302,33 @@ public sealed class InstantQuotationAdmittedMeshServiceTests
             Assert.Equal(alteration == "format" ? InstantQuotationAdmittedMeshFailure.UnsupportedFormat
                 : InstantQuotationAdmittedMeshFailure.UploadChanged, result.Failure);
         }
+    }
+
+    [Theory]
+    [InlineData("used")]
+    [InlineData("required")]
+    [InlineData("undeclared")]
+    public async Task GpuInstancingAdmission_NeverProducesTrustedMeshOrDigest(string declaration)
+    {
+        var document = JsonNode.Parse(AdmittedGltfMeshReaderTests.OriginalGltf)!.AsObject();
+        if (declaration != "undeclared") document["extensionsUsed"] = new JsonArray("EXT_mesh_gpu_instancing");
+        if (declaration == "required") document["extensionsRequired"] = new JsonArray("EXT_mesh_gpu_instancing");
+        document["nodes"]![1]!["extensions"] = new JsonObject
+        {
+            ["EXT_mesh_gpu_instancing"] = new JsonObject { ["attributes"] = new JsonObject { ["TRANSLATION"] = 1 } },
+        };
+        byte[] bytes = Encoding.UTF8.GetBytes(document.ToJsonString());
+        string digest = Convert.ToHexString(SHA256.HashData(bytes));
+        var reader = new RecordingInputReader(Ready(bytes, digest) with { FileName = "instanced.gltf" });
+
+        var result = await new InstantQuotationAdmittedMeshService(reader).ReadAsync(
+            SessionId, Owner, PartId, FileId, digest, default);
+
+        Assert.Equal((SessionId, Owner, PartId), reader.LastRequest);
+        Assert.False(result.IsReady);
+        Assert.Null(result.Mesh);
+        Assert.Null(result.UploadSha256);
+        Assert.Equal(InstantQuotationAdmittedMeshFailure.InvalidMesh, result.Failure);
     }
 
     private static InstantQuotationPhysicalAnalysisInputResult Ready(byte[] bytes, string? digest = null) =>

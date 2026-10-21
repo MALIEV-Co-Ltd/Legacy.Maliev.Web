@@ -208,6 +208,10 @@ internal static class AdmittedGltfMeshReader
             token.ThrowIfCancellationRequested();
             if (depth > 64) throw Invalid();
             JsonElement node = nodes[id];
+            // The viewer renders every GPU instance; this reader cannot safely quote only its base mesh.
+            if (node.TryGetProperty("extensions", out var nodeExtensions)
+                && nodeExtensions.TryGetProperty("EXT_mesh_gpu_instancing", out _)) throw Invalid();
+
             if (node.TryGetProperty("mesh", out var meshId))
             {
                 if (instances == MaximumInstances) throw Invalid();
