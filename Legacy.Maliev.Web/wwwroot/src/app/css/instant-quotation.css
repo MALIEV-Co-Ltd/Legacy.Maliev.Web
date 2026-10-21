@@ -1614,6 +1614,27 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
         border-radius: 0;
     }
 
+    /* The unit control owns a desktop row without displacing the fixed-height sidebar. */
+    .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) {
+        grid-template-rows: auto auto minmax(0, 1fr);
+    }
+
+    .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > .instant-quote__gltf-unit {
+        grid-row: 1;
+    }
+
+    .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-viewer] {
+        grid-row: 2 / -1;
+    }
+
+    .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] {
+        grid-row: 2;
+    }
+
+    .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-configuration] {
+        grid-row: 3;
+    }
+
     .instant-quote__workflow[data-workflow-state="customerdetails"] > .instant-quote__customer-order {
         grid-column: 1;
         grid-row: 1 / -1;

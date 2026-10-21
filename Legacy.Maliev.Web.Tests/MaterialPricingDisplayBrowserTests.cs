@@ -105,6 +105,21 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         await using var fixture = await Fixture.CreateAsync(output, culture, 1280, scheme, height: 720,
             displayFileName: "maliev-one-millimeter-fdm-00000000000000000000000000000000.stl");
         var card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='ABS']");
+        var units = fixture.Page.Locator("[data-workflow-gltf-unit]");
+        await Assertions.Expect(units).ToBeVisibleAsync();
+        var beforeUnitChoice = await fixture.StoredAsync();
+        await units.SelectOptionAsync("metres");
+        var afterUnitChoice = await fixture.StoredAsync();
+        Assert.True(string.Equals(System.Text.Json.JsonSerializer.Serialize(Assert.Single(beforeUnitChoice.Parts)),
+            System.Text.Json.JsonSerializer.Serialize(Assert.Single(afterUnitChoice.Parts)), StringComparison.Ordinal),
+            "Choosing units for a future import must not reinterpret an existing protected part.");
+        Assert.True(string.Equals(System.Text.Json.JsonSerializer.Serialize(beforeUnitChoice.QuoteAuthorization),
+            System.Text.Json.JsonSerializer.Serialize(afterUnitChoice.QuoteAuthorization), StringComparison.Ordinal),
+            "Choosing units for a future import must not mint or replace the existing quote authorization.");
+        var rail = fixture.Page.Locator("[data-material-card-scroll]");
+        await rail.Locator("[data-material-key='PVA']").ScrollIntoViewIfNeededAsync();
+        Assert.True(await rail.EvaluateAsync<bool>("element => element.scrollTop > 0"),
+            "Lower material choices must remain reachable through the material rail.");
         await card.ScrollIntoViewIfNeededAsync();
         var hitArea = await card.EvaluateAsync<double[]>("""
             card => {
@@ -112,7 +127,16 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                 const content = card.closest('[data-workflow-configuration-content]').getBoundingClientRect();
                 const footer = card.closest('[data-workflow-configuration]').querySelector('.instant-quote__configuration-footer').getBoundingClientRect();
                 const hit = card.ownerDocument.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
-                return [card.contains(hit) ? 1 : 0, bounds.top, bounds.bottom, content.top, content.bottom, footer.top];
+                const workflow = card.closest('.instant-quote__workflow');
+                const units = workflow.querySelector(':scope > .instant-quote__gltf-unit').getBoundingClientRect();
+                const viewer = workflow.querySelector(':scope > [data-workflow-viewer]').getBoundingClientRect();
+                const parts = workflow.querySelector(':scope > [data-workflow-parts-panel]').getBoundingClientRect();
+                const configuration = card.closest('[data-workflow-configuration]').getBoundingClientRect();
+                return [card.contains(hit) ? 1 : 0, bounds.top, bounds.bottom, content.top, content.bottom, footer.top,
+                    units.top, units.bottom, viewer.top, parts.top, footer.bottom, innerHeight,
+                    workflow.getBoundingClientRect().top, configuration.top, configuration.bottom,
+                    card.closest('[data-material-card-scroll]').scrollTop,
+                    card.closest('[data-workflow-configuration-content]').scrollTop];
             }
             """);
         var evidenceName = $"source-material-safe-hit-area-before-{culture}-1280-720";
@@ -121,6 +145,10 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
             System.Text.Json.JsonSerializer.Serialize(new { Culture = culture, Width = 1280, Height = 720, Geometry = hitArea }));
         Assert.True(hitArea[0] == 1 && hitArea[1] >= hitArea[3] - 1 && hitArea[2] <= hitArea[4] + 1 && hitArea[2] <= hitArea[5] + 1,
             "The complete material card and its normal click target must stay above the summary footer.");
+        Assert.True(hitArea[6] >= hitArea[12] - 1 && hitArea[7] <= Math.Min(hitArea[8], hitArea[9]) + 1,
+            "Import units must own a visible row above the desktop viewer and parts panel.");
+        Assert.True(hitArea[10] <= hitArea[11] + 1 && hitArea[13] >= hitArea[7] - 1 && hitArea[14] <= hitArea[11] + 1,
+            "The configuration rail and its complete summary footer must remain within the short desktop viewport.");
         await Assertions.Expect(card.Locator("[data-material-card-price]")).ToHaveAttributeAsync("data-price-status", "unavailable");
         // This historical fixture has resin authority; retain ABS geometry coverage before selecting supported resin.
         card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='K']");
