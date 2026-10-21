@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -28,6 +29,28 @@ public sealed class AboutStaticSsrRouteTests : IClassFixture<TestingWebApplicati
         Assert.Contains($"<title>{title}</title>", html, StringComparison.Ordinal);
         Assert.Contains($"property=\"og:title\" content=\"{title}\"", html, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", html, StringComparison.Ordinal);
+        var about = Assert.Single(Regex.Matches(html,
+            "<main class=\"landing-main profile-about\"[^>]*>(?<body>.*?)</main>",
+            RegexOptions.Singleline).Cast<Match>()).Groups["body"].Value;
+        var imageUrls = Regex.Matches(about, "<img\\b[^>]*src=\"(?<url>/src/images/[^\"]+)\"",
+                RegexOptions.CultureInvariant)
+            .Select(match => match.Groups["url"].Value)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        Assert.NotEmpty(imageUrls);
+        foreach (var url in imageUrls)
+        {
+            using var image = await client.GetAsync(url);
+            Assert.Equal(HttpStatusCode.OK, image.StatusCode);
+            Assert.Equal(url.EndsWith(".svg", StringComparison.Ordinal) ? "image/svg+xml" : "image/webp",
+                image.Content.Headers.ContentType?.MediaType);
+            var expected = await File.ReadAllBytesAsync(Path.Combine(
+                BrowserHostIdentityVerifier.SourceProjectDirectory(), "wwwroot", url.TrimStart('/')));
+            var actual = await image.Content.ReadAsByteArrayAsync();
+            Assert.Equal(expected.Length, actual.Length);
+            Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(expected)),
+                Convert.ToHexStringLower(SHA256.HashData(actual)));
+        }
         Assert.Equal(36, Regex.Matches(html, "data-customer=\"([^\"]+)\"").Count);
         Assert.Contains(culture == "th"
             ? "บริษัทที่เลือกใช้บริการพัฒนาและผลิตชิ้นงานกับ MALIEV"

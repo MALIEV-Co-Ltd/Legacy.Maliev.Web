@@ -28,6 +28,17 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
         await Expect(page.Locator("[data-workpiece-gallery]")).ToHaveAttributeAsync("data-workpiece-ready", "true");
         await Expect(page.Locator("main.profile-about")).ToHaveAttributeAsync("data-presentation-state", "reduced");
         await DismissConsentAsync(page);
+        Assert.True(await page.Locator("main.profile-about img").EvaluateAllAsync<bool>("""
+            async images => {
+                if (images.length === 0) return false;
+                for (const image of images) image.loading = 'eager';
+                const decoded = await Promise.all(images.map(async image => {
+                    await image.decode();
+                    return image.complete && image.naturalWidth > 0 && image.naturalHeight > 0;
+                }));
+                return decoded.every(Boolean);
+            }
+            """).WaitAsync(TimeSpan.FromSeconds(30)));
 
         Assert.Equal(6, await page.Locator(".profile-capability-choices button[data-capability-index]").CountAsync());
         Assert.Equal(6, await page.Locator(".profile-capability-slide").CountAsync());
