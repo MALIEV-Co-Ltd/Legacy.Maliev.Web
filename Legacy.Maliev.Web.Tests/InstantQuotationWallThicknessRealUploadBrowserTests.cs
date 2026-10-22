@@ -120,6 +120,9 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         failureEvidence.Stage("UploadAdmission");
         try
         {
+            // Upload admission is not a configuration gesture: explicitly accept the initial color.
+            await page.Locator("[data-workflow-configuration] select[id^='color-']").SelectOptionAsync(
+                "Black", new LocatorSelectOptionOptions { Timeout = 30_000 });
             await page.WaitForFunctionAsync(
                 """
                 () => document.querySelectorAll('[data-workflow-parts] > [data-workflow-part]').length === 1
@@ -1910,6 +1913,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 var path = CreateBoxStl(20, 20, 5, "development-demo");
                 try
                 {
+                    await WaitForUploadInputReadyAsync(page);
                     await page.SetInputFilesAsync("#instant-quote-files", path);
                     await Microsoft.Playwright.Assertions.Expect(page.Locator(".instant-quote__workflow"))
                         .ToHaveAttributeAsync("data-workflow-state", "error",
@@ -1982,7 +1986,11 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
 
                     // The ordinary failed-row action and Demo action must share fresh-key rebinding.
                     upload.FailNextUpload();
-                    await page.Locator("[data-workflow-upload-item] button").ClickAsync();
+                    var retryName = culture == "th"
+                        ? $"ลองอัปโหลด {Path.GetFileName(path)} อีกครั้ง"
+                        : $"Try upload again for {Path.GetFileName(path)}";
+                    await page.Locator("[data-workflow-upload-item]").GetByRole(
+                        AriaRole.Button, new LocatorGetByRoleOptions { Name = retryName, Exact = true }).ClickAsync();
                     await canvas.WaitForElementStateAsync(ElementState.Hidden, new() { Timeout = 30_000 });
                     await Microsoft.Playwright.Assertions.Expect(demo.Locator("[data-local-demo-canvas]"))
                         .ToHaveAttributeAsync("data-local-demo-ready", "true",
@@ -2060,8 +2068,14 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             var path = CreateBoxStl(20, 20, 5, "cancelled-demo");
             try
             {
+                await WaitForUploadInputReadyAsync(page);
                 await page.SetInputFilesAsync("#instant-quote-files", path);
-                var cancel = page.Locator("[data-workflow-upload-item] button");
+                var cancel = page.Locator("[data-workflow-upload-item]").GetByRole(
+                    AriaRole.Button, new LocatorGetByRoleOptions
+                    {
+                        Name = $"Cancel upload for {Path.GetFileName(path)}",
+                        Exact = true,
+                    });
                 await cancel.WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
                 await upload.UploadEntered.WaitAsync(TimeSpan.FromSeconds(30));
                 await cancel.ClickAsync();
@@ -2098,6 +2112,25 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         {
             await startup.DisposeAsync();
         }
+    }
+
+    private static async Task WaitForUploadInputReadyAsync(IPage page)
+    {
+        // InputFile wiring and preview capture are separate from static HTML readiness.
+        await using var readiness = await page.WaitForFunctionAsync(
+            """
+            () => {
+              const zone = document.querySelector('.instant-quote__workflow');
+              const input = document.querySelector('#instant-quote-files');
+              if (!zone || !input || input._blazorInputFileNextFileId === undefined
+                  || input.disabled || zone.getAttribute('aria-busy') === 'true') return false;
+              const transfer = new DataTransfer();
+              transfer.items.add(new File([], 'picker-readiness.stl', { type: 'model/stl' }));
+              const probe = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: transfer });
+              return !zone.dispatchEvent(probe) && probe.defaultPrevented;
+            }
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
     }
 
     private sealed class RealUploadTestingWebApplicationFactory(
