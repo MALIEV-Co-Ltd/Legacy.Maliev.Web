@@ -34,31 +34,32 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.Contains("Results.LocalRedirect", program, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"@RouteOwner\"", content, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(HomeContent)\"", fallback, StringComparison.Ordinal);
+        Assert.Contains("HomeHeroSelection.GetVariant(Model.HttpContext, HostEnvironment)", fallback, StringComparison.Ordinal);
     }
 
     [Theory]
     [InlineData(
         "en",
-        "Custom Manufacturing Services | MALIEV",
-        "Custom CNC, 3D printing, 3D scanning, and design services for prototypes and production parts in Bangkok and Nonthaburi.",
-        "custom part manufacturing thailand, 3d printing thailand, 3d scanning thailand, 3d design thailand, silicone casting thailand, low volume injection molding thailand, cnc machining thailand",
-        "Precision. Speed. Reliability.",
-        "Manufacturing Services for Prototypes and Production Parts",
+        "Functional Prototypes & Reverse Engineering | MALIEV",
+        "Turn ideas and existing parts into CAD and functional prototypes with MALIEV in Nonthaburi, Thailand. 3D design, CNC machining, 3D printing, 3D scanning and suitable molding processes.",
+        "functional prototypes, reverse engineering Thailand, 3D design, CNC machining, 3D printing, 3D scanning, replacement parts",
+        "Custom parts.",
+        "From CAD to assembly.",
         "Our Services",
         "How It Works",
         "Why Choose MALIEV",
-        "Ready to bring your ideas to life?")]
+        "Have an idea, drawing or sample part?")]
     [InlineData(
         "th",
-        "รับผลิตชิ้นส่วนตามแบบ | MALIEV",
-        "รับผลิตชิ้นส่วนตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ 3D ในนนทบุรีและกรุงเทพ",
-        "รับผลิตชิ้นส่วนตามแบบ, รับผลิตชิ้นงานตามแบบ, รับปริ้น 3D, รับพิมพ์ 3 มิติ, รับสแกน 3D, รับออกแบบ 3D, หล่อซิลิโคน, ฉีดพลาสติกจำนวนน้อย, รับ CNC ตามแบบ",
-        "แม่นยำ รวดเร็ว เชื่อถือได้",
-        "รับผลิตชิ้นส่วนตามแบบ ตั้งแต่ต้นแบบจนถึงการผลิตจริง",
+        "พัฒนาต้นแบบและวิศวกรรมย้อนกลับ | MALIEV",
+        "จากไอเดียและชิ้นงานตัวอย่าง สู่แบบ CAD และต้นแบบที่ใช้งานได้ ด้วยงานออกแบบ 3 มิติ CNC, 3D Printing, 3D Scanning และการขึ้นรูปที่เหมาะกับงาน โดย MALIEV นนทบุรี",
+        "พัฒนาต้นแบบ, วิศวกรรมย้อนกลับ, ออกแบบ 3 มิติ, CNC, พิมพ์ 3 มิติ, สแกน 3 มิติ, ชิ้นส่วนทดแทน",
+        "ชิ้นส่วนสั่งผลิต",
+        "จาก CAD ถึงงานประกอบ",
         "บริการของเรา",
         "ขั้นตอนการสั่งงาน",
         "ทำไมต้องเลือก MALIEV",
-        "พร้อมเปลี่ยนไอเดียของคุณให้เป็นชิ้นงานจริงหรือยัง?")]
+        "มีไอเดีย แบบงาน หรือชิ้นงานตัวอย่าง?")]
     public async Task HomeRoute_RendersCompleteLocalizedSeoAndLandingContent(
         string culture,
         string title,
@@ -87,10 +88,10 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.Contains($">{process}<", source, StringComparison.Ordinal);
         Assert.Contains($">{reasons}<", source, StringComparison.Ordinal);
         Assert.Contains($">{finalCallToAction}<", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/Services/Index\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/Contact\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(culture == "th" ? "ค้นหาบริการที่เหมาะกับคุณ" : "Find the right service", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/InstantQuotation/3D-Printing?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"{(culture == "en" ? "/services?culture=en" : "/services")}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/Contact?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(culture == "th" ? "ดูบริการทั้งหมด" : "View all services", source, StringComparison.Ordinal);
         Assert.Contains("landing-service-card--injection", source, StringComparison.Ordinal);
         Assert.Contains("pp-injection-molded-component.webp", source, StringComparison.Ordinal);
         Assert.Contains("width=\"1700\" height=\"925\" loading=\"lazy\" decoding=\"async\"", source, StringComparison.Ordinal);
@@ -105,14 +106,14 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.Contains(
             culture == "th"
                 ? "ผลิตชิ้นงานซิลิโคนจำนวนน้อยด้วยแม่พิมพ์ที่พิมพ์ 3 มิติ โดยตรวจสอบวัสดุและผิวงานให้เหมาะกับการใช้งาน"
-                : "with material and finish reviewed for the application.",
+                : "with the material and finish reviewed for the application.",
             source,
             StringComparison.Ordinal);
-        Assert.Contains("landing-hero-cnc.webp", source, StringComparison.Ordinal);
-        Assert.Contains("landing-hero-printing.webp", source, StringComparison.Ordinal);
-        Assert.Contains("landing-hero-scanning.webp", source, StringComparison.Ordinal);
-        Assert.Contains("width=\"1672\" height=\"941\" loading=\"eager\" fetchpriority=\"high\"", source, StringComparison.Ordinal);
-        Assert.Contains("rel=\"preload\" as=\"image\" href=\"/src/images/landing/landing-hero-cnc.webp\"", source, StringComparison.Ordinal);
+        Assert.Contains("profile-hybrid-gripper-cutout.webp", source, StringComparison.Ordinal);
+        Assert.Contains("camera-bracket-deployment.webp", source, StringComparison.Ordinal);
+        Assert.Contains("camera-bracket-production-v5.webp", source, StringComparison.Ordinal);
+        Assert.Contains("width=\"1200\" height=\"800\" fetchpriority=\"high\" loading=\"eager\"", source, StringComparison.Ordinal);
+        Assert.Contains("rel=\"preload\" as=\"image\" href=\"/src/images/landing/profile-hybrid-gripper-cutout.webp\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-website-structured-data\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
@@ -203,9 +204,9 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
     {
         var fallbackFactory = factory.WithWebHostBuilder(builder => builder.UseSetting("BlazorRouting:Home", "false"));
         using var client = CreateClient(fallbackFactory);
-        var source = await client.GetStringAsync("/?culture=en");
+        var source = WebUtility.HtmlDecode(await client.GetStringAsync("/?culture=en"));
 
-        Assert.Contains("<title>Custom Manufacturing Services | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains("<title>Functional Prototypes & Reverse Engineering | MALIEV</title>", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"home-content\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }
@@ -233,18 +234,45 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         var steps = Regex.Matches(ordered, "<li>[\\s\\S]*?</li>", RegexOptions.CultureInvariant).Cast<Match>().ToArray();
         Assert.Equal(4, steps.Length);
         string[] headings = culture == "th"
-            ? ["อัปโหลดไฟล์ CAD", "ตรวจสอบใบเสนอราคา", "ยืนยันคำสั่งซื้อ", "รับชิ้นงาน"]
-            : ["Upload CAD files", "Review quotation", "Confirm order", "Receive parts"];
+            ? ["ไอเดีย แบบงาน หรือชิ้นงานตัวอย่าง", "ออกแบบ 3 มิติ", "เลือกกระบวนการผลิต", "ผลิตและตรวจสอบ"]
+            : ["Ideas, drawings or samples", "3D design", "Choose the process", "Build and inspect"];
         string[] descriptions = culture == "th"
-            ? ["ส่งไฟล์ CAD และรายละเอียดโครงการผ่านระบบที่ปลอดภัยของเรา", "รับใบเสนอราคาพร้อมราคา ระยะเวลาผลิต และคำแนะนำจากวิศวกร", "ยืนยันใบเสนอราคา แล้วเราจะเริ่มผลิตชิ้นงานของคุณ", "ชิ้นงานผ่านการตรวจสอบคุณภาพและจัดส่งถึงคุณอย่างปลอดภัย"]
-            : ["Submit your CAD files and project details through our secure portal.", "Receive a detailed quote with price, lead time, and engineering feedback.", "Approve the quote and we will start manufacturing your parts.", "Parts are quality-checked and delivered safely to your doorstep."];
-        string[] icons = ["fas fa-upload", "far fa-file-alt", "far fa-check-circle", "fas fa-box"];
+            ? ["ส่งสิ่งที่คุณมี พร้อมการใช้งานของชิ้นงาน", "สร้างหรือปรับแบบ CAD จากไอเดียหรือชิ้นงานเดิม", "พิจารณาวัสดุ รูปทรง และจำนวนร่วมกัน", "ผลิตและตรวจสอบตามข้อกำหนดที่ตกลงร่วมกัน"]
+            : ["Share what you have and how the part will be used.", "Create or refine CAD from your idea or existing part.", "Review material, geometry and quantity together.", "Build and inspect against the agreed requirements."];
+        string[] photographs = ["sketch", "cad", "prototypes", "inspection"];
+        Assert.DoesNotContain("landing-step-icon", process, StringComparison.Ordinal);
+        Assert.DoesNotContain("camera-bracket", process, StringComparison.Ordinal);
         for (var index = 0; index < steps.Length; index++)
         {
             Assert.Contains($"<h3>{headings[index]}</h3>", steps[index].Value, StringComparison.Ordinal);
             Assert.Contains($"<p>{descriptions[index]}</p>", steps[index].Value, StringComparison.Ordinal);
-            Assert.Contains($"<div class=\"landing-step-icon\"><i class=\"{icons[index]}\" aria-hidden=\"true\"></i></div>", steps[index].Value, StringComparison.Ordinal);
+            Assert.Contains($"home-enclosure-{photographs[index]}.webp", steps[index].Value, StringComparison.Ordinal);
+            Assert.Contains("class=\"landing-step-photo\"", steps[index].Value, StringComparison.Ordinal);
+            Assert.Contains("width=\"1200\" height=\"800\" loading=\"lazy\" decoding=\"async\"", steps[index].Value, StringComparison.Ordinal);
         }
+    }
+
+    [Theory]
+    [InlineData("HomeContent.resx", "3D Design", "CNC Machining", "3D design", "CNC machining")]
+    [InlineData("HomeContent.th.resx", "ออกแบบ 3 มิติ", "งาน CNC ตามแบบ", "ออกแบบ 3 มิติ", "กัด CNC")]
+    public void HomeResources_UseUniqueCaseInsensitiveKeysAndKeepSceneSpecificCopy(
+        string file, string serviceDesign, string serviceCnc, string processDesign, string heroCnc)
+    {
+        var path = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "Resources",
+            "Components", "Pages", "Home", file);
+        var root = System.Xml.Linq.XDocument.Load(path).Root;
+        Assert.NotNull(root);
+        var entries = root.Elements("data").ToArray();
+        Assert.NotEmpty(entries);
+        Assert.All(entries.GroupBy(entry => entry.Attribute("name")?.Value
+                ?? throw new InvalidDataException("A Home resource key is required."), StringComparer.OrdinalIgnoreCase),
+            group => Assert.Single(group));
+        string? Value(string key) => entries.Single(entry => (string?)entry.Attribute("name") == key)
+            .Element("value")?.Value;
+        Assert.Equal(serviceDesign, Value("3D Design"));
+        Assert.Equal(serviceCnc, Value("CNC Machining"));
+        Assert.Equal(processDesign, Value("Home.Process.DesignTitle"));
+        Assert.Equal(heroCnc, Value("Home.Hero.CncLabel"));
     }
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) => sourceFactory.CreateClient(

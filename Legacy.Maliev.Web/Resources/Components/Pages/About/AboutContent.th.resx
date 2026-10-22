@@ -1,180 +1,175 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
-  <!-- 
-    Microsoft ResX Schema 
-    
-    Version 2.0
-    
-    The primary goals of this format is to allow a simple XML format 
-    that is mostly human readable. The generation and parsing of the 
-    various data types are done through the TypeConverter classes 
-    associated with the data types.
-    
-    Example:
-    
-    ... ado.net/XML headers & schema ...
-    <resheader name="resmimetype">text/microsoft-resx</resheader>
-    <resheader name="version">2.0</resheader>
-    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
-    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
-    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
-    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
-    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
-        <value>[base64 mime encoded serialized .NET Framework object]</value>
-    </data>
-    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
-        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
-        <comment>This is a comment</comment>
-    </data>
-                
-    There are any number of "resheader" rows that contain simple 
-    name/value pairs.
-    
-    Each data row contains a name, and value. The row also contains a 
-    type or mimetype. Type corresponds to a .NET class that support 
-    text/value conversion through the TypeConverter architecture. 
-    Classes that don't support this are serialized and stored with the 
-    mimetype set.
-    
-    The mimetype is used for serialized objects, and tells the 
-    ResXResourceReader how to depersist the object. This is currently not 
-    extensible. For a given mimetype the value must be set accordingly:
-    
-    Note - application/x-microsoft.net.object.binary.base64 is the format 
-    that the ResXResourceWriter will generate, however the reader can 
-    read any of the formats listed below.
-    
-    mimetype: application/x-microsoft.net.object.binary.base64
-    value   : The object must be serialized with 
-            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
-            : and then encoded with base64 encoding.
-    
-    mimetype: application/x-microsoft.net.object.soap.base64
-    value   : The object must be serialized with 
-            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
-            : and then encoded with base64 encoding.
-
-    mimetype: application/x-microsoft.net.object.bytearray.base64
-    value   : The object must be serialized into a byte array 
-            : using a System.ComponentModel.TypeConverter
-            : and then encoded with base64 encoding.
-    -->
-  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xms-msdata">
-    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
-    <xsd:element name="root" msdata:IsDataSet="true">
-      <xsd:complexType>
-        <xsd:choice maxOccurs="unbounded">
-          <xsd:element name="metadata">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" />
-              </xsd:sequence>
-              <xsd:attribute name="name" use="required" type="xsd:string" />
-              <xsd:attribute name="type" type="xsd:string" />
-              <xsd:attribute name="mimetype" type="xsd:string" />
-              <xsd:attribute ref="xml:space" />
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name="assembly">
-            <xsd:complexType>
-              <xsd:attribute name="alias" type="xsd:string" />
-              <xsd:attribute name="name" type="xsd:string" />
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name="data">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
-                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
-              </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
-              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
-              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
-              <xsd:attribute ref="xml:space" />
-            </xsd:complexType>
-          </xsd:element>
-          <xsd:element name="resheader">
-            <xsd:complexType>
-              <xsd:sequence>
-                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
-              </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" use="required" />
-            </xsd:complexType>
-          </xsd:element>
-        </xsd:choice>
-      </xsd:complexType>
-    </xsd:element>
-  </xsd:schema>
-  <resheader name="resmimetype">
-    <value>text/microsoft-resx</value>
-  </resheader>
-  <resheader name="version">
-    <value>2.0</value>
-  </resheader>
-  <resheader name="reader">
-    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </resheader>
-  <resheader name="writer">
-    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </resheader>
-  <data name="April" xml:space="preserve">
-    <value>เดือนเมษายน</value>
-  </data>
-  <data name="as a family owned business with 3 directors." xml:space="preserve">
-    <value>ซึ่งเป็นธุรกิจภายในครอบครัวโดยมีผู้อำนวยการรวมทั้งหมด 3 คน</value>
-  </data>
-  <data name="First CNC Machine" xml:space="preserve">
-    <value>เครื่อง CNC เครื่องแรก</value>
-  </data>
-  <data name="First CNC machine that we used was the Haas VF-2." xml:space="preserve">
-    <value>เครื่อง CNC เครื่องแรกที่เราใช้คือ Haas VF-2</value>
-  </data>
-  <data name="Founded" xml:space="preserve">
-    <value>ก่อตั้ง</value>
-  </data>
-  <data name="January" xml:space="preserve">
-    <value>เดือนมกราคม</value>
-  </data>
-  <data name="Mali Co., Ltd." xml:space="preserve">
-    <value>บริษัท อุตสาหกรรมเส้นจันทร์ตรามะลิ จำกัด</value>
-  </data>
-  <data name="Natthakarn Vanasrivilai" xml:space="preserve">
-    <value>ณัฐกานต์ วนาศรีวิไล</value>
-  </data>
-  <data name="Natthapol Vanasrivilai" xml:space="preserve">
-    <value>ณฐพล วนาศรีวิไล</value>
-  </data>
-  <data name="Our journey continues" xml:space="preserve">
-    <value>ติดตามตอนต่อไป</value>
-  </data>
-  <data name="The company was founded on the property of" xml:space="preserve">
-    <value>บริษัท มาลีฟ จำกัด ได้ถูกก่อตั้งบนที่ดินของ</value>
-  </data>
-  <data name="The main goal of the company is to provide customers locally and internationally the CNC and 3D printing services." xml:space="preserve">
-    <value>เป้าหมายหลักของบริษัทเราคือให้การบริการงานด้าน CNC และพิมพ์ 3D ทั้งในประเทศและต่างประเทศ</value>
-  </data>
-  <data name="Thossapol Vanasrivilai" xml:space="preserve">
-    <value>ทศพล วนาศรีวิไล</value>
-  </data>
-  <data name="3D Scanning Services" xml:space="preserve">
-    <value>บริการสแกน 3 มิติ</value>
-  </data>
-  <data name="We have expanded our capability to be able to offer 3D scanning services to our customers." xml:space="preserve">
-    <value>เราได้เพิ่มความสามารถของเราโดยการเปิดให้บริการสแกน 3 มิติ ให้กับลูกค้าภายในประเทศ</value>
-  </data>
-  <data name="Our journey begins" xml:space="preserve">
-    <value>การเดินทางของเราเริ่มต้นที่</value>
-  </data>
-  <data name="Instant Pricing for 3D Printing" xml:space="preserve">
-    <value>ประเมินราคาพิมพ์ 3D อัตโนมัติ</value>
-  </data>
-  <data name="June" xml:space="preserve">
-    <value>มิถุนายน</value>
-  </data>
-  <data name="We were the first to introduced machine learning to the world of automated pricing process. This dramatically reduce the quotation time down for our customers. Hence improved customer satisfaction with us." xml:space="preserve">
-    <value>เราคือบริษัทแรกในประเทศไทย ที่ได้เริ่มนำเทคโนโลยี Machine Learning เข้ามาใช้ในระบบเพื่อประเมินราคาพิมพ์ 3D ให้กับลูกค้า ระบบนี้สามารถย่นระยะเวลาที่ลูกค้าต้องรอการประเมินราคาได้อยากมากมาย</value>
-  </data>
-  <data name="About MALIEV" xml:space="preserve"><value>เกี่ยวกับ MALIEV</value></data>
-  <data name="Our manufacturing journey" xml:space="preserve"><value>เส้นทางงานผลิตของเรา</value></data>
-  <data name="How our CNC machining, 3D printing, and 3D scanning capabilities developed to support customer projects." xml:space="preserve"><value>การพัฒนาความสามารถด้าน CNC งานพิมพ์ 3 มิติ และงานสแกน 3 มิติ เพื่อรองรับโครงการของลูกค้า</value></data>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="01 · Idea &amp; sketch" xml:space="preserve"><value>01 · ไอเดียและภาพร่าง</value></data>
+  <data name="02 · CAD design" xml:space="preserve"><value>02 · ออกแบบ CAD</value></data>
+  <data name="03 · Prototype variations" xml:space="preserve"><value>03 · ทดลองต้นแบบหลายแบบ</value></data>
+  <data name="04 · CNC batch production" xml:space="preserve"><value>04 · ผลิตด้วย CNC เป็นชุด</value></data>
+  <data name="3D design" xml:space="preserve"><value>ออกแบบ 3 มิติ</value></data>
+  <data name="3D printing" xml:space="preserve"><value>พิมพ์ 3 มิติ</value></data>
+  <data name="3D scanning" xml:space="preserve"><value>สแกน 3 มิติ</value></data>
+  <data name="3D-print several bracket variations to compare height, stiffness and camera fit. Use the results to refine the final design." xml:space="preserve"><value>พิมพ์ขายึด 3 มิติหลายแบบ เพื่อเปรียบเทียบความสูง ความแข็งแรง และการประกอบกล้อง แล้วนำผลมาปรับแบบสุดท้าย</value></data>
+  <data name="A family-owned manufacturing business." xml:space="preserve"><value>ธุรกิจครอบครัวด้านการพัฒนาและผลิตชิ้นงาน</value></data>
+  <data name="About MALIEV | Prototype Development &amp; Reverse Engineering" xml:space="preserve"><value>เกี่ยวกับ MALIEV | พัฒนาต้นแบบและวิศวกรรมย้อนกลับ</value></data>
+  <data name="Aeon Fantasy Thailand" xml:space="preserve"><value>อิออน แฟนตาซี ประเทศไทย</value></data>
+  <data name="Agree CAD formats, STEP, STL and 2D drawings before modeling; validate the approved design with a prototype." xml:space="preserve"><value>ตกลงรูปแบบไฟล์ CAD, STEP, STL และแบบ 2 มิติก่อนเริ่มงาน แล้วทดสอบแบบที่ยืนยันด้วยต้นแบบ</value></data>
+  <data name="Air Liquide Thailand" xml:space="preserve"><value>Air Liquide Thailand</value></data>
+  <data name="Already have a part? Start there." xml:space="preserve"><value>เริ่มจากชิ้นงานเดิมที่มีอยู่ได้</value></data>
+  <data name="An illustrative camera-mount project for inspecting bottles: define the requirements, develop the bracket, test variations and prepare the final design for use." xml:space="preserve"><value>ตัวอย่างการพัฒนาขายึดกล้องสำหรับตรวจวัดขวด ตั้งแต่กำหนดโจทย์ ออกแบบขายึด ทดลองหลายแนวทาง จนถึงเตรียมแบบสุดท้ายสำหรับใช้งาน</value></data>
+  <data name="Automotive mounting part" xml:space="preserve"><value>ขายึดรถยนต์</value></data>
+  <data name="Bangchak Corporation" xml:space="preserve"><value>บางจาก คอร์ปอเรชั่น</value></data>
+  <data name="Bangkok Expressway and Metro" xml:space="preserve"><value>ทางด่วนและรถไฟฟ้ากรุงเทพ</value></data>
+  <data name="Based in Pak Kret." xml:space="preserve"><value>ดำเนินงานในอำเภอปากเกร็ด</value></data>
+  <data name="Before we quote" xml:space="preserve"><value>ก่อนเสนอราคา</value></data>
+  <data name="Build prototypes and functional parts to compare fit, form and design variations before committing to a production process." xml:space="preserve"><value>สร้างต้นแบบและชิ้นส่วนใช้งาน เพื่อเปรียบเทียบการประกอบ รูปทรง และแบบต่าง ๆ ก่อนเลือกกระบวนการผลิต</value></data>
+  <data name="Capture" xml:space="preserve"><value>การเก็บข้อมูล</value></data>
+  <data name="Capture the geometry of an existing part as a starting point for reverse engineering and CAD reconstruction." xml:space="preserve"><value>เก็บข้อมูลรูปทรงชิ้นงานเดิม เพื่อใช้เป็นจุดเริ่มต้นของงานวิศวกรรมย้อนกลับและสร้างแบบ CAD</value></data>
+  <data name="Capture the visible surfaces" xml:space="preserve"><value>สแกนผิวชิ้นงาน</value></data>
+  <data name="carousel" xml:space="preserve"><value>ภาพเลื่อนบริการ</value></data>
+  <data name="Cast liquid silicone in a 3D-printed mold for suitable prototypes and short runs." xml:space="preserve"><value>หล่อซิลิโคนเหลวในแม่พิมพ์พิมพ์ 3 มิติ สำหรับต้นแบบและการผลิตจำนวนน้อยที่เหมาะสม</value></data>
+  <data name="Choose a capability" xml:space="preserve"><value>เลือกบริการ</value></data>
+  <data name="Choose a workpiece photo" xml:space="preserve"><value>เลือกภาพชิ้นงาน</value></data>
+  <data name="Clarify the process, material, finish, quantity and inspection scope so the quotation reflects the work and deliverables agreed together." xml:space="preserve"><value>กำหนดกระบวนการ วัสดุ ผิวงาน จำนวน และขอบเขตการตรวจสอบ ให้ใบเสนอราคาสอดคล้องกับงานและสิ่งส่งมอบที่ตกลงร่วมกัน</value></data>
+  <data name="Clarify the technical requirements, project scope and confidentiality before quotation and manufacturing." xml:space="preserve"><value>พูดคุยข้อกำหนดทางเทคนิค ขอบเขตงาน และการรักษาความลับ ก่อนเสนอราคาและเริ่มผลิต</value></data>
+  <data name="CNC machining" xml:space="preserve"><value>งาน CNC</value></data>
+  <data name="Companies we have completed manufacturing and development work for." xml:space="preserve"><value>บริษัทที่เราเคยร่วมพัฒนาและผลิตชิ้นงานให้</value></data>
+  <data name="Company at a glance" xml:space="preserve"><value>ข้อมูลบริษัท</value></data>
+  <data name="Compare mouse-shell design revisions in Autodesk Fusion" xml:space="preserve"><value>เปรียบเทียบแบบตัวเรือนเมาส์แต่ละรุ่นใน Autodesk Fusion</value></data>
+  <data name="Crown Seal" xml:space="preserve"><value>ฝาจีบ</value></data>
+  <data name="Deliverables" xml:space="preserve"><value>สิ่งส่งมอบ</value></data>
+  <data name="Demold the detailed sculpture" xml:space="preserve"><value>ถอดชิ้นงานประติมากรรม</value></data>
+  <data name="Design and manufacturing, connected." xml:space="preserve"><value>เชื่อมการออกแบบเข้ากับการผลิต</value></data>
+  <data name="Design for manufacture" xml:space="preserve"><value>ออกแบบเพื่อการผลิต</value></data>
+  <data name="Develop CAD from a sketch, idea or existing part. Review assembly, material and manufacturability before making the first prototype." xml:space="preserve"><value>พัฒนาแบบ CAD จากภาพร่าง ไอเดีย หรือชิ้นงานเดิม ทบทวนการประกอบ วัสดุ และความเหมาะสมในการผลิตก่อนสร้างต้นแบบ</value></data>
+  <data name="Develop the mouse-shell CAD in Autodesk Fusion" xml:space="preserve"><value>พัฒนาแบบ CAD ตัวเรือนเมาส์ใน Autodesk Fusion</value></data>
+  <data name="Develop the owl and mold" xml:space="preserve"><value>ออกแบบนกฮูกและแม่พิมพ์</value></data>
+  <data name="Discuss your idea" xml:space="preserve"><value>ปรึกษาไอเดียของคุณ</value></data>
+  <data name="Discuss your project" xml:space="preserve"><value>ปรึกษาโปรเจกต์ของคุณ</value></data>
+  <data name="Engineering requirements" xml:space="preserve"><value>โจทย์ทางวิศวกรรม</value></data>
+  <data name="Engineering review" xml:space="preserve"><value>การทบทวนทางวิศวกรรม</value></data>
+  <data name="Established in 2018" xml:space="preserve"><value>ก่อตั้งในปี 2018</value></data>
+  <data name="Explore 3D design" xml:space="preserve"><value>ดูงานออกแบบ 3 มิติ</value></data>
+  <data name="Explore 3D scanning" xml:space="preserve"><value>ดูงานสแกน 3 มิติ</value></data>
+  <data name="Explore ergonomic mouse-shell concepts" xml:space="preserve"><value>สำรวจแนวคิดรูปทรงตัวเรือนเมาส์ตามหลักสรีรศาสตร์</value></data>
+  <data name="Explore prototyping" xml:space="preserve"><value>ดูงานพิมพ์ต้นแบบ</value></data>
+  <data name="Explore the processes available for your material, geometry and production quantity." xml:space="preserve"><value>เลือกดูกระบวนการให้เหมาะกับวัสดุ รูปทรง และจำนวนผลิตของคุณ</value></data>
+  <data name="Fabrinet" xml:space="preserve"><value>Fabrinet</value></data>
+  <data name="FDM and resin printing. MJF, SLS, SLM and DMLS require engineering review to confirm the project scope." xml:space="preserve"><value>พิมพ์ FDM และเรซิน ส่วน MJF, SLS, SLM และ DMLS ต้องประเมินทางวิศวกรรมเพื่อยืนยันขอบเขตของโปรเจกต์</value></data>
+  <data name="FDM printed ABS fan sample" xml:space="preserve"><value>ตัวอย่างใบพัด ABS พิมพ์ FDM</value></data>
+  <data name="Files &amp; next step" xml:space="preserve"><value>ไฟล์และขั้นตอนถัดไป</value></data>
+  <data name="Files &amp; requirements" xml:space="preserve"><value>ไฟล์และข้อกำหนด</value></data>
+  <data name="Finish the PP cover" xml:space="preserve"><value>ชิ้นงานฝาครอบ PP</value></data>
+  <data name="Flanged adapter" xml:space="preserve"><value>อะแดปเตอร์หน้าแปลน</value></data>
+  <data name="Flexible resin printed pulley sample" xml:space="preserve"><value>ตัวอย่างพูลเลย์พิมพ์เรซินยืดหยุ่น</value></data>
+  <data name="From concept to a working part." xml:space="preserve"><value>จากไอเดีย สู่ชิ้นงานจริง</value></data>
+  <data name="Grohe Siam" xml:space="preserve"><value>โกรเฮ่ สยาม</value></data>
+  <data name="Have an idea, drawing or sample part?" xml:space="preserve"><value>มีไอเดีย แบบงาน หรือชิ้นงานตัวอย่าง?</value></data>
+  <data name="If your project requires an NDA, complete and sign the agreement before sending sensitive drawings, CAD files or samples." xml:space="preserve"><value>หากโปรเจกต์ต้องใช้ NDA ให้จัดทำและลงนามข้อตกลงก่อนส่งแบบงาน ไฟล์ CAD หรือชิ้นงานตัวอย่างที่เป็นความลับ</value></data>
+  <data name="Illustrative 3D-printed camera-bracket variations beside the same white inspection bottle in a printer room" xml:space="preserve"><value>ภาพประกอบต้นแบบขายึดกล้องที่พิมพ์ 3 มิติหลายแบบ ข้างขวดสีขาวในห้องเครื่องพิมพ์</value></data>
+  <data name="Illustrative batch machining of identical aluminium camera brackets in a guarded Haas VF-2" xml:space="preserve"><value>ภาพประกอบการผลิตขายึดกล้องอะลูมิเนียมแบบเดียวกันเป็นชุดในเครื่อง Haas VF-2 ที่ปิดประตูนิรภัย</value></data>
+  <data name="Illustrative customer sketches of camera-bracket variations, bottle and handwritten requirements on an office table" xml:space="preserve"><value>ภาพประกอบภาพร่างขายึดกล้องหลายแบบ ขวด และข้อกำหนดที่เขียนด้วยมือบนโต๊ะสำนักงาน</value></data>
+  <data name="Illustrative examples of existing workpieces" xml:space="preserve"><value>ภาพประกอบตัวอย่างชิ้นงานเดิม</value></data>
+  <data name="Illustrative final aluminium bracket holding the same measurement camera beside white bottles on a customer production conveyor" xml:space="preserve"><value>ภาพประกอบขายึดอะลูมิเนียมแบบสุดท้ายติดตั้งกล้องตรวจวัดข้างขวดสีขาวบนสายพานผลิตของลูกค้า</value></data>
+  <data name="Illustrative finished aluminium brackets with machined faces" xml:space="preserve"><value>ภาพประกอบขายึดอะลูมิเนียมที่กัดขึ้นรูปเสร็จแล้ว</value></data>
+  <data name="Illustrative Haas VF-2 machining an aluminium billet" xml:space="preserve"><value>ภาพประกอบเครื่อง Haas VF-2 กัดชิ้นงานจากแท่งอะลูมิเนียม</value></data>
+  <data name="Illustrative instrument housing machined from aluminium billet" xml:space="preserve"><value>ภาพประกอบตัวเรือนเครื่องมือที่กัดจากแท่งอะลูมิเนียม</value></data>
+  <data name="Illustrative operator programming toolpaths in Autodesk Fusion Manufacture" xml:space="preserve"><value>ภาพประกอบการเขียนทางเดินเครื่องมือใน Autodesk Fusion Manufacture</value></data>
+  <data name="Illustrative project: the same camera bracket, bottle and inspection task throughout. Images illustrate the process and are not a named customer case study." xml:space="preserve"><value>โปรเจกต์ตัวอย่างที่ใช้ขายึดกล้อง ขวด และโจทย์ตรวจวัดเดียวกันตลอดกระบวนการ ภาพใช้ประกอบการอธิบาย ไม่ใช่กรณีศึกษาของลูกค้าที่ระบุชื่อ</value></data>
+  <data name="Illustrative scenario of a Thai customer and MALIEV engineer reviewing a working camera-mount application together" xml:space="preserve"><value>ภาพประกอบสถานการณ์ลูกค้าชาวไทยและวิศวกร MALIEV ร่วมกันทบทวนการใช้งานขายึดกล้องตรวจสอบชิ้นงาน</value></data>
+  <data name="Illustrative Thai MALIEV engineer viewing the customer drawing on the left 30 percent of a monitor and bracket CAD on the right 70 percent" xml:space="preserve"><value>ภาพประกอบวิศวกร MALIEV ชาวไทยดูภาพร่างลูกค้าฝั่งซ้าย 30 เปอร์เซ็นต์ และแบบ CAD ขายึดฝั่งขวา 70 เปอร์เซ็นต์ของจอ</value></data>
+  <data name="Khon Kaen Sugar Industry" xml:space="preserve"><value>น้ำตาลขอนแก่น</value></data>
+  <data name="Kobelco Construction Machinery Southeast Asia" xml:space="preserve"><value>Kobelco Construction Machinery Southeast Asia</value></data>
+  <data name="Kohler Thailand" xml:space="preserve"><value>โคห์เลอร์ ประเทศไทย</value></data>
+  <data name="Kumwell Corporation" xml:space="preserve"><value>คัมเวล คอร์ปอเรชั่น</value></data>
+  <data name="Lenso Wheel" xml:space="preserve"><value>เลนโซ่ วีล</value></data>
+  <data name="LIXIL Thailand" xml:space="preserve"><value>LIXIL Thailand</value></data>
+  <data name="Low-volume injection molding" xml:space="preserve"><value>ฉีดพลาสติกจำนวนน้อย</value></data>
+  <data name="Machine limits" xml:space="preserve"><value>ขอบเขตเครื่อง</value></data>
+  <data name="Machine metal and plastic parts from your drawings, with material, finish and inspection requirements agreed before production." xml:space="preserve"><value>ผลิตชิ้นส่วนโลหะและพลาสติกตามแบบ โดยตกลงวัสดุ ผิวงาน และขอบเขตการตรวจสอบก่อนผลิต</value></data>
+  <data name="Machine the approved aluminium bracket in batches, using fixtures to hold the same design for repeat production and inspection." xml:space="preserve"><value>ผลิตขายึดอะลูมิเนียมตามแบบที่ยืนยันเป็นชุด โดยใช้ฟิกซ์เจอร์จับยึดสำหรับผลิตแบบเดียวกันซ้ำและตรวจสอบชิ้นงาน</value></data>
+  <data name="MALIEV also works from existing parts. Reverse engineering reconstructs a CAD design for replacement parts, functional improvements or further product development." xml:space="preserve"><value>MALIEV รับพัฒนางานจากชิ้นงานเดิมด้วยวิศวกรรมย้อนกลับ เพื่อสร้างแบบ CAD สำหรับผลิตชิ้นส่วนทดแทน ปรับปรุงการใช้งาน หรือต่อยอดผลิตภัณฑ์</value></data>
+  <data name="Maliev Co., Ltd." xml:space="preserve"><value>บริษัท มาลีฟ จำกัด</value></data>
+  <data name="MALIEV company profile, prototype development, reverse engineering, CNC machining, 3D design, 3D printing, 3D scanning" xml:space="preserve"><value>บริษัท มาลีฟ จำกัด, พัฒนาต้นแบบ, วิศวกรรมย้อนกลับ, ออกแบบ 3 มิติ, CNC, พิมพ์ 3 มิติ, สแกน 3 มิติ</value></data>
+  <data name="MALIEV specializes in prototype development and reverse engineering. We create new parts from ideas and reconstruct designs from existing parts to make replacements, improve function and develop products further." xml:space="preserve"><value>MALIEV เชี่ยวชาญด้านการพัฒนาชิ้นงานต้นแบบและวิศวกรรมย้อนกลับ เราช่วยสร้างชิ้นงานใหม่จากแนวคิด และสร้างแบบจากชิ้นงานเดิม เพื่อผลิตชิ้นส่วนทดแทน ปรับปรุงการใช้งาน และต่อยอดผลิตภัณฑ์</value></data>
+  <data name="Manufacturing capabilities" xml:space="preserve"><value>ความสามารถด้านการผลิต</value></data>
+  <data name="Match stiffness, impact, heat and chemical exposure to the application; review layer direction, supports and finish." xml:space="preserve"><value>เลือกตามความแข็ง การรับแรงกระแทก ความร้อน และสารเคมี พร้อมทบทวนทิศทางชั้นพิมพ์ ซัพพอร์ต และผิวงาน</value></data>
+  <data name="Material selection" xml:space="preserve"><value>การเลือกวัสดุ</value></data>
+  <data name="Materials" xml:space="preserve"><value>วัสดุ</value></data>
+  <data name="Meet MALIEV: prototype development and reverse engineering in Nonthaburi, Thailand. From ideas and existing parts to CAD, replacement parts and product development." xml:space="preserve"><value>รู้จัก MALIEV ผู้พัฒนาชิ้นงานต้นแบบและวิศวกรรมย้อนกลับในนนทบุรี จากแนวคิดและชิ้นงานเดิม สู่แบบ CAD ชิ้นส่วนทดแทน และการต่อยอดผลิตภัณฑ์</value></data>
+  <data name="Mektec Precision Component Thailand" xml:space="preserve"><value>Mektec Precision Component Thailand</value></data>
+  <data name="Metals and engineering plastics; confirm grade, stock and finish for each job." xml:space="preserve"><value>โลหะและพลาสติกวิศวกรรม โดยยืนยันเกรด วัตถุดิบ และผิวงานสำหรับแต่ละงาน</value></data>
+  <data name="MFEC" xml:space="preserve"><value>เอ็ม เอฟ อี ซี</value></data>
+  <data name="Minor Food Holding" xml:space="preserve"><value>ไมเนอร์ ฟู้ด โฮลดิ้ง</value></data>
+  <data name="Mitsubishi Materials Thailand" xml:space="preserve"><value>มิตซูบิชิ แมททีเรียลส์ ประเทศไทย</value></data>
+  <data name="MJF PA12 nylon linkage sample" xml:space="preserve"><value>ตัวอย่างชิ้นส่วนกลไกไนลอน PA12 พิมพ์ MJF</value></data>
+  <data name="Mold and check the batch" xml:space="preserve"><value>ฉีดและตรวจสอบชิ้นงานเป็นชุด</value></data>
+  <data name="Mold review" xml:space="preserve"><value>การประเมินแม่พิมพ์</value></data>
+  <data name="Next service" xml:space="preserve"><value>บริการถัดไป</value></data>
+  <data name="Nonthaburi, Thailand" xml:space="preserve"><value>นนทบุรี ประเทศไทย</value></data>
+  <data name="Olympus Thailand" xml:space="preserve"><value>โอลิมปัส ประเทศไทย</value></data>
+  <data name="On the production line" xml:space="preserve"><value>ติดตั้งบนสายการผลิต</value></data>
+  <data name="One bracket. From idea to production line." xml:space="preserve"><value>ขายึดหนึ่งชิ้น จากไอเดียสู่สายการผลิต</value></data>
+  <data name="One-off parts through repeat batches, with machining access, setup and inspection reviewed before quotation." xml:space="preserve"><value>ตั้งแต่ชิ้นเดียวถึงผลิตซ้ำเป็นชุด โดยทบทวนการเข้าถึงของเครื่องมือ การจับยึด และการตรวจสอบก่อนเสนอราคา</value></data>
+  <data name="Pause photos" xml:space="preserve"><value>หยุดเปลี่ยนภาพ</value></data>
+  <data name="Plan production" xml:space="preserve"><value>วางแผนการผลิต</value></data>
+  <data name="Play photos" xml:space="preserve"><value>เปลี่ยนภาพอัตโนมัติ</value></data>
+  <data name="Pneumatic PIMM injection molding for pilot runs and repeat batches of up to 1,000 parts." xml:space="preserve"><value>ฉีดพลาสติก PIMM ระบบลม สำหรับล็อตทดลองและการผลิตซ้ำไม่เกิน 1,000 ชิ้น</value></data>
+  <data name="Pour into the closed mold" xml:space="preserve"><value>เทซิลิโคนลงแม่พิมพ์ที่ประกบแล้ว</value></data>
+  <data name="Previous service" xml:space="preserve"><value>บริการก่อนหน้า</value></data>
+  <data name="Process" xml:space="preserve"><value>กระบวนการ</value></data>
+  <data name="Process and workpiece examples" xml:space="preserve"><value>ตัวอย่างกระบวนการและชิ้นงาน</value></data>
+  <data name="Produce small quantities of silicone parts using a suitable mold, with material and surface requirements reviewed for the application." xml:space="preserve"><value>ผลิตชิ้นงานซิลิโคนจำนวนน้อยด้วยแม่พิมพ์ที่เหมาะสม โดยพิจารณาวัสดุและผิวงานตามการใช้งาน</value></data>
+  <data name="Production scope" xml:space="preserve"><value>ขอบเขตการผลิต</value></data>
+  <data name="Project confidentiality" xml:space="preserve"><value>ความลับของโปรเจกต์</value></data>
+  <data name="PTT" xml:space="preserve"><value>ปตท.</value></data>
+  <data name="PTTEP" xml:space="preserve"><value>ปตท.สผ.</value></data>
+  <data name="Pump impeller" xml:space="preserve"><value>ใบพัดปั๊ม</value></data>
+  <data name="Rebuild geometry or compare with nominal CAD. Agree critical features and reporting scope; wear may obscure the original design." xml:space="preserve"><value>สร้างรูปทรงใหม่หรือเปรียบเทียบกับ CAD อ้างอิง โดยตกลงจุดสำคัญและขอบเขตรายงาน ทั้งนี้รอยสึกอาจทำให้ระบุแบบเดิมได้ไม่ครบ</value></data>
+  <data name="Reconstruct the CAD geometry" xml:space="preserve"><value>สร้างรูปทรง CAD ใหม่</value></data>
+  <data name="Review an existing mold or scope a new tool. Confirm resin, geometry, finish, quantity and inspection requirements before production." xml:space="preserve"><value>ประเมินแม่พิมพ์เดิมหรือกำหนดงานแม่พิมพ์ใหม่ พร้อมยืนยันวัสดุ รูปทรง ผิวงาน จำนวน และข้อกำหนดการตรวจสอบก่อนผลิต</value></data>
+  <data name="Review intended use, critical dimensions and mating features using your CAD, drawing or physical sample. Identify missing information before choosing a production route." xml:space="preserve"><value>ทบทวนการใช้งาน ขนาดสำคัญ และจุดประกอบ จากไฟล์ CAD แบบงาน หรือชิ้นงานตัวอย่าง พร้อมระบุข้อมูลที่ต้องเพิ่มเติมก่อนเลือกแนวทางผลิต</value></data>
+  <data name="Review material, tolerances, assembly, machining access, print orientation and mold strategy for the chosen process." xml:space="preserve"><value>ทบทวนวัสดุ ค่าความคลาดเคลื่อน การประกอบ การเข้าถึงของเครื่องมือ ทิศทางพิมพ์ และแนวทางแม่พิมพ์ตามกระบวนการที่เลือก</value></data>
+  <data name="Review parting lines, vents, release, printed mold surface and silicone compatibility before pouring and curing." xml:space="preserve"><value>ทบทวนแนวประกบ ช่องระบายอากาศ การถอดแบบ ผิวแม่พิมพ์ และความเข้ากันได้กับซิลิโคนก่อนเทและบ่ม</value></data>
+  <data name="Review the cover and tooling" xml:space="preserve"><value>ทบทวนฝาครอบและแม่พิมพ์</value></data>
+  <data name="Review the part and tooling before production. Our pneumatic injection route supports the following limits." xml:space="preserve"><value>ประเมินชิ้นงานและแม่พิมพ์ก่อนผลิต โดยงานฉีดพลาสติกระบบลมรองรับขอบเขตดังนี้</value></data>
+  <data name="S&amp;P Syndicate" xml:space="preserve"><value>เอส แอนด์ พี ซินดิเคท</value></data>
+  <data name="Scan-only work produces a triangular mesh such as STL. Editable CAD and 2D drawings are separately defined work." xml:space="preserve"><value>งานสแกนอย่างเดียวส่งมอบเมชสามเหลี่ยม เช่น STL ส่วน CAD ที่แก้ไขได้และแบบ 2 มิติเป็นขอบเขตงานที่ต้องกำหนดเพิ่มเติม</value></data>
+  <data name="Scope and deliverables" xml:space="preserve"><value>ขอบเขตงานและสิ่งส่งมอบ</value></data>
+  <data name="Sculpture master" xml:space="preserve"><value>ต้นแบบประติมากรรม</value></data>
+  <data name="Selected corporate customers" xml:space="preserve"><value>ลูกค้าองค์กรบางส่วนของเรา</value></data>
+  <data name="Send CAD, quantity, hardness or flexibility, color, finish, inserts and intended use. Cure cycles and mold count affect the schedule." xml:space="preserve"><value>ส่ง CAD จำนวน ความแข็งหรือความยืดหยุ่น สี ผิวงาน อินเสิร์ต และการใช้งาน โดยรอบบ่มและจำนวนแม่พิมพ์มีผลต่อระยะเวลา</value></data>
+  <data name="Services, scroll horizontally" xml:space="preserve"><value>เลื่อนแนวนอนเพื่อดูบริการ</value></data>
+  <data name="Share your sample and explain how it is used. We review the material, geometry and quantity together before choosing a manufacturing process." xml:space="preserve"><value>นำชิ้นงานตัวอย่างมาพร้อมข้อมูลการใช้งาน เพื่อพิจารณาวัสดุ รูปทรง และจำนวนร่วมกัน ก่อนเลือกกระบวนการผลิต</value></data>
+  <data name="Siam Motors" xml:space="preserve"><value>สยามกลการ</value></data>
+  <data name="Siemens Mobility" xml:space="preserve"><value>Siemens Mobility</value></data>
+  <data name="Silicone casting" xml:space="preserve"><value>หล่อซิลิโคน</value></data>
+  <data name="Singha Kameda (Thailand) Co., Ltd." xml:space="preserve"><value>สิงห์ คาเมดะ (ประเทศไทย)</value></data>
+  <data name="Sketch bracket alternatives around the bottle, camera position and conveyor clearance. Record the basic requirements before developing CAD." xml:space="preserve"><value>ร่างขายึดหลายแนวทาง โดยพิจารณาขวด ตำแหน่งกล้อง และระยะหลบสายพาน พร้อมจดข้อกำหนดเบื้องต้นก่อนพัฒนาแบบ CAD</value></data>
+  <data name="Sketches, reference photos, drawings, sample parts or scanned meshes, with intended use and critical interfaces." xml:space="preserve"><value>ภาพร่าง ภาพอ้างอิง แบบงาน ชิ้นงานตัวอย่าง หรือเมชจากการสแกน พร้อมการใช้งานและจุดประกอบสำคัญ</value></data>
+  <data name="slide" xml:space="preserve"><value>รายการบริการ</value></data>
+  <data name="Source-based image of a PA-CF printed wheel-like sample" xml:space="preserve"><value>ภาพจากชิ้นงานพิมพ์ PA-CF ลักษณะคล้ายล้อ</value></data>
+  <data name="Specify the part" xml:space="preserve"><value>ข้อมูลชิ้นงาน</value></data>
+  <data name="Start with the worn part" xml:space="preserve"><value>เริ่มจากชิ้นงานที่สึกหรอ</value></data>
+  <data name="Starting information" xml:space="preserve"><value>ข้อมูลเริ่มต้น</value></data>
+  <data name="STEP/STP or IGES/IGS geometry, plus a PDF drawing for critical dimensions, tolerances, threads and fits." xml:space="preserve"><value>ไฟล์ STEP/STP หรือ IGES/IGS พร้อมแบบ PDF ระบุขนาดสำคัญ ค่าความคลาดเคลื่อน เกลียว และจุดสวมประกอบ</value></data>
+  <data name="STL, STEP, OBJ or 3MF. Compare printed variations for fit and function before approving the production design." xml:space="preserve"><value>รับไฟล์ STL, STEP, OBJ หรือ 3MF เปรียบเทียบต้นแบบหลายแบบเพื่อทดสอบการประกอบและการใช้งานก่อนยืนยันแบบผลิต</value></data>
+  <data name="Structured-light scanning, in-house or onsite after reviewing access, surface preparation and working conditions." xml:space="preserve"><value>สแกนด้วยแสงแบบมีโครงสร้าง ทั้งที่บริษัทและนอกสถานที่ โดยประเมินการเข้าถึง การเตรียมผิว และสภาพแวดล้อมก่อน</value></data>
+  <data name="Talk to us to review a development and manufacturing approach." xml:space="preserve"><value>คุยกับเราเพื่อประเมินแนวทางพัฒนาและผลิต</value></data>
+  <data name="Technologies" xml:space="preserve"><value>เทคโนโลยี</value></data>
+  <data name="Technology &amp; batch" xml:space="preserve"><value>เทคโนโลยีและจำนวน</value></data>
+  <data name="Thai Asahi Denso" xml:space="preserve"><value>Thai Asahi Denso</value></data>
+  <data name="Thai Coconut" xml:space="preserve"><value>ไทย โคโคนัท</value></data>
+  <data name="Thai Murata Electronics Trading" xml:space="preserve"><value>Thai Murata Electronics Trading</value></data>
+  <data name="Thai Optical Group" xml:space="preserve"><value>ไทยออพติคอล กรุ๊ป</value></data>
+  <data name="The final bracket holds the measurement camera beside the bottle conveyor. The mounting position, camera view and clearance come together in the application the customer sketched at the start." xml:space="preserve"><value>ขายึดแบบสุดท้ายรองรับกล้องตรวจวัดข้างสายพานขวด ตำแหน่งยึด มุมมองกล้อง และระยะหลบ เชื่อมกลับมาสู่โจทย์ที่ลูกค้าร่างไว้ตั้งแต่เริ่มต้น</value></data>
+  <data name="Tooling &amp; inspection" xml:space="preserve"><value>แม่พิมพ์และการตรวจสอบ</value></data>
+  <data name="TPI Polene Power" xml:space="preserve"><value>ทีพีไอ โพลีน เพาเวอร์</value></data>
+  <data name="Up to 50 g per shot; plastic melting temperature up to 350 °C. Suitability depends on the part, resin and mold." xml:space="preserve"><value>น้ำหนักฉีดไม่เกิน 50 กรัมต่อช็อต อุณหภูมิหลอมพลาสติกไม่เกิน 350 °C โดยต้องประเมินชิ้นงาน เม็ดพลาสติก และแม่พิมพ์ร่วมกัน</value></data>
+  <data name="View our NDA" xml:space="preserve"><value>ดูข้อตกลงรักษาความลับ</value></data>
+  <data name="View service" xml:space="preserve"><value>ดูรายละเอียดบริการ</value></data>
+  <data name="Work from the customer sketch alongside the CAD model. Refine the mounting holes, upright supports and camera fit before making prototypes." xml:space="preserve"><value>พัฒนาโมเดล CAD ควบคู่กับภาพร่างของลูกค้า ปรับรูยึด ขารองรับ และจุดประกอบกล้อง ก่อนสร้างต้นแบบ</value></data>
+  <data name="YG-1 Thailand" xml:space="preserve"><value>วายจี-1 ประเทศไทย</value></data>
 </root>

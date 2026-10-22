@@ -116,6 +116,11 @@
             reference = DotNetObjectReference.Create(this);
             controller = await module.InvokeAsync<IJSObjectReference>("createMaterialCardSelector", root, reference);
         }
+        else if (controller is not null)
+        {
+            // Complete selected-card visibility repair before this render settles.
+            await controller.InvokeVoidAsync("refresh");
+        }
     }
 
     /// <summary>Releases selector observers and circuit references.</summary>

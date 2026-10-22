@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="01 · Idea &amp; sketch" xml:space="preserve"><value>01 · Idea &amp; sketch</value></data>
+  <data name="02 · CAD design" xml:space="preserve"><value>02 · CAD design</value></data>
+  <data name="03 · Prototype variations" xml:space="preserve"><value>03 · Prototype variations</value></data>
+  <data name="04 · CNC batch production" xml:space="preserve"><value>04 · CNC batch production</value></data>
+  <data name="3D design" xml:space="preserve"><value>3D design</value></data>
+  <data name="3D printing" xml:space="preserve"><value>3D printing</value></data>
+  <data name="3D scanning" xml:space="preserve"><value>3D scanning</value></data>
+  <data name="3D-print several bracket variations to compare height, stiffness and camera fit. Use the results to refine the final design." xml:space="preserve"><value>3D-print several bracket variations to compare height, stiffness and camera fit. Use the results to refine the final design.</value></data>
+  <data name="A family-owned manufacturing business." xml:space="preserve"><value>A family-owned manufacturing business.</value></data>
+  <data name="About MALIEV | Prototype Development &amp; Reverse Engineering" xml:space="preserve"><value>About MALIEV | Prototype Development &amp; Reverse Engineering</value></data>
+  <data name="Aeon Fantasy Thailand" xml:space="preserve"><value>Aeon Fantasy Thailand</value></data>
+  <data name="Agree CAD formats, STEP, STL and 2D drawings before modeling; validate the approved design with a prototype." xml:space="preserve"><value>Agree CAD formats, STEP, STL and 2D drawings before modeling; validate the approved design with a prototype.</value></data>
+  <data name="Air Liquide Thailand" xml:space="preserve"><value>Air Liquide Thailand</value></data>
+  <data name="Already have a part? Start there." xml:space="preserve"><value>Already have a part? Start there.</value></data>
+  <data name="An illustrative camera-mount project for inspecting bottles: define the requirements, develop the bracket, test variations and prepare the final design for use." xml:space="preserve"><value>An illustrative camera-mount project for inspecting bottles: define the requirements, develop the bracket, test variations and prepare the final design for use.</value></data>
+  <data name="Automotive mounting part" xml:space="preserve"><value>Automotive mounting part</value></data>
+  <data name="Bangchak Corporation" xml:space="preserve"><value>Bangchak Corporation</value></data>
+  <data name="Bangkok Expressway and Metro" xml:space="preserve"><value>Bangkok Expressway and Metro</value></data>
+  <data name="Based in Pak Kret." xml:space="preserve"><value>Based in Pak Kret.</value></data>
+  <data name="Before we quote" xml:space="preserve"><value>Before we quote</value></data>
+  <data name="Build prototypes and functional parts to compare fit, form and design variations before committing to a production process." xml:space="preserve"><value>Build prototypes and functional parts to compare fit, form and design variations before committing to a production process.</value></data>
+  <data name="Capture" xml:space="preserve"><value>Capture</value></data>
+  <data name="Capture the geometry of an existing part as a starting point for reverse engineering and CAD reconstruction." xml:space="preserve"><value>Capture the geometry of an existing part as a starting point for reverse engineering and CAD reconstruction.</value></data>
+  <data name="Capture the visible surfaces" xml:space="preserve"><value>Capture the visible surfaces</value></data>
+  <data name="carousel" xml:space="preserve"><value>carousel</value></data>
+  <data name="Cast liquid silicone in a 3D-printed mold for suitable prototypes and short runs." xml:space="preserve"><value>Cast liquid silicone in a 3D-printed mold for suitable prototypes and short runs.</value></data>
+  <data name="Choose a capability" xml:space="preserve"><value>Choose a capability</value></data>
+  <data name="Choose a workpiece photo" xml:space="preserve"><value>Choose a workpiece photo</value></data>
+  <data name="Clarify the process, material, finish, quantity and inspection scope so the quotation reflects the work and deliverables agreed together." xml:space="preserve"><value>Clarify the process, material, finish, quantity and inspection scope so the quotation reflects the work and deliverables agreed together.</value></data>
+  <data name="Clarify the technical requirements, project scope and confidentiality before quotation and manufacturing." xml:space="preserve"><value>Clarify the technical requirements, project scope and confidentiality before quotation and manufacturing.</value></data>
+  <data name="CNC machining" xml:space="preserve"><value>CNC machining</value></data>
+  <data name="Companies we have completed manufacturing and development work for." xml:space="preserve"><value>Companies we have completed manufacturing and development work for.</value></data>
+  <data name="Company at a glance" xml:space="preserve"><value>Company at a glance</value></data>
+  <data name="Compare mouse-shell design revisions in Autodesk Fusion" xml:space="preserve"><value>Compare mouse-shell design revisions in Autodesk Fusion</value></data>
+  <data name="Crown Seal" xml:space="preserve"><value>Crown Seal</value></data>
+  <data name="Deliverables" xml:space="preserve"><value>Deliverables</value></data>
+  <data name="Demold the detailed sculpture" xml:space="preserve"><value>Demold the detailed sculpture</value></data>
+  <data name="Design and manufacturing, connected." xml:space="preserve"><value>Design and manufacturing, connected.</value></data>
+  <data name="Design for manufacture" xml:space="preserve"><value>Design for manufacture</value></data>
+  <data name="Develop CAD from a sketch, idea or existing part. Review assembly, material and manufacturability before making the first prototype." xml:space="preserve"><value>Develop CAD from a sketch, idea or existing part. Review assembly, material and manufacturability before making the first prototype.</value></data>
+  <data name="Develop the mouse-shell CAD in Autodesk Fusion" xml:space="preserve"><value>Develop the mouse-shell CAD in Autodesk Fusion</value></data>
+  <data name="Develop the owl and mold" xml:space="preserve"><value>Develop the owl and mold</value></data>
+  <data name="Discuss your idea" xml:space="preserve"><value>Discuss your idea</value></data>
+  <data name="Discuss your project" xml:space="preserve"><value>Discuss your project</value></data>
+  <data name="Engineering requirements" xml:space="preserve"><value>Engineering requirements</value></data>
+  <data name="Engineering review" xml:space="preserve"><value>Engineering review</value></data>
+  <data name="Established in 2018" xml:space="preserve"><value>Established in 2018</value></data>
+  <data name="Explore 3D design" xml:space="preserve"><value>Explore 3D design</value></data>
+  <data name="Explore 3D scanning" xml:space="preserve"><value>Explore 3D scanning</value></data>
+  <data name="Explore ergonomic mouse-shell concepts" xml:space="preserve"><value>Explore ergonomic mouse-shell concepts</value></data>
+  <data name="Explore prototyping" xml:space="preserve"><value>Explore prototyping</value></data>
+  <data name="Explore the processes available for your material, geometry and production quantity." xml:space="preserve"><value>Explore the processes available for your material, geometry and production quantity.</value></data>
+  <data name="Fabrinet" xml:space="preserve"><value>Fabrinet</value></data>
+  <data name="FDM and resin printing. MJF, SLS, SLM and DMLS require engineering review to confirm the project scope." xml:space="preserve"><value>FDM and resin printing. MJF, SLS, SLM and DMLS require engineering review to confirm the project scope.</value></data>
+  <data name="FDM printed ABS fan sample" xml:space="preserve"><value>FDM printed ABS fan sample</value></data>
+  <data name="Files &amp; next step" xml:space="preserve"><value>Files &amp; next step</value></data>
+  <data name="Files &amp; requirements" xml:space="preserve"><value>Files &amp; requirements</value></data>
+  <data name="Finish the PP cover" xml:space="preserve"><value>Finish the PP cover</value></data>
+  <data name="Flanged adapter" xml:space="preserve"><value>Flanged adapter</value></data>
+  <data name="Flexible resin printed pulley sample" xml:space="preserve"><value>Flexible resin printed pulley sample</value></data>
+  <data name="From concept to a working part." xml:space="preserve"><value>From concept to a working part.</value></data>
+  <data name="Grohe Siam" xml:space="preserve"><value>Grohe Siam</value></data>
+  <data name="Have an idea, drawing or sample part?" xml:space="preserve"><value>Have an idea, drawing or sample part?</value></data>
+  <data name="If your project requires an NDA, complete and sign the agreement before sending sensitive drawings, CAD files or samples." xml:space="preserve"><value>If your project requires an NDA, complete and sign the agreement before sending sensitive drawings, CAD files or samples.</value></data>
+  <data name="Illustrative 3D-printed camera-bracket variations beside the same white inspection bottle in a printer room" xml:space="preserve"><value>Illustrative 3D-printed camera-bracket variations beside the same white inspection bottle in a printer room</value></data>
+  <data name="Illustrative batch machining of identical aluminium camera brackets in a guarded Haas VF-2" xml:space="preserve"><value>Illustrative batch machining of identical aluminium camera brackets in a guarded Haas VF-2</value></data>
+  <data name="Illustrative customer sketches of camera-bracket variations, bottle and handwritten requirements on an office table" xml:space="preserve"><value>Illustrative customer sketches of camera-bracket variations, bottle and handwritten requirements on an office table</value></data>
+  <data name="Illustrative examples of existing workpieces" xml:space="preserve"><value>Illustrative examples of existing workpieces</value></data>
+  <data name="Illustrative final aluminium bracket holding the same measurement camera beside white bottles on a customer production conveyor" xml:space="preserve"><value>Illustrative final aluminium bracket holding the same measurement camera beside white bottles on a customer production conveyor</value></data>
+  <data name="Illustrative finished aluminium brackets with machined faces" xml:space="preserve"><value>Illustrative finished aluminium brackets with machined faces</value></data>
+  <data name="Illustrative Haas VF-2 machining an aluminium billet" xml:space="preserve"><value>Illustrative Haas VF-2 machining an aluminium billet</value></data>
+  <data name="Illustrative instrument housing machined from aluminium billet" xml:space="preserve"><value>Illustrative instrument housing machined from aluminium billet</value></data>
+  <data name="Illustrative operator programming toolpaths in Autodesk Fusion Manufacture" xml:space="preserve"><value>Illustrative operator programming toolpaths in Autodesk Fusion Manufacture</value></data>
+  <data name="Illustrative project: the same camera bracket, bottle and inspection task throughout. Images illustrate the process and are not a named customer case study." xml:space="preserve"><value>Illustrative project: the same camera bracket, bottle and inspection task throughout. Images illustrate the process and are not a named customer case study.</value></data>
+  <data name="Illustrative scenario of a Thai customer and MALIEV engineer reviewing a working camera-mount application together" xml:space="preserve"><value>Illustrative scenario of a Thai customer and MALIEV engineer reviewing a working camera-mount application together</value></data>
+  <data name="Illustrative Thai MALIEV engineer viewing the customer drawing on the left 30 percent of a monitor and bracket CAD on the right 70 percent" xml:space="preserve"><value>Illustrative Thai MALIEV engineer viewing the customer drawing on the left 30 percent of a monitor and bracket CAD on the right 70 percent</value></data>
+  <data name="Khon Kaen Sugar Industry" xml:space="preserve"><value>Khon Kaen Sugar Industry</value></data>
+  <data name="Kobelco Construction Machinery Southeast Asia" xml:space="preserve"><value>Kobelco Construction Machinery Southeast Asia</value></data>
+  <data name="Kohler Thailand" xml:space="preserve"><value>Kohler Thailand</value></data>
+  <data name="Kumwell Corporation" xml:space="preserve"><value>Kumwell Corporation</value></data>
+  <data name="Lenso Wheel" xml:space="preserve"><value>Lenso Wheel</value></data>
+  <data name="LIXIL Thailand" xml:space="preserve"><value>LIXIL Thailand</value></data>
+  <data name="Low-volume injection molding" xml:space="preserve"><value>Low-volume injection molding</value></data>
+  <data name="Machine limits" xml:space="preserve"><value>Machine limits</value></data>
+  <data name="Machine metal and plastic parts from your drawings, with material, finish and inspection requirements agreed before production." xml:space="preserve"><value>Machine metal and plastic parts from your drawings, with material, finish and inspection requirements agreed before production.</value></data>
+  <data name="Machine the approved aluminium bracket in batches, using fixtures to hold the same design for repeat production and inspection." xml:space="preserve"><value>Machine the approved aluminium bracket in batches, using fixtures to hold the same design for repeat production and inspection.</value></data>
+  <data name="MALIEV also works from existing parts. Reverse engineering reconstructs a CAD design for replacement parts, functional improvements or further product development." xml:space="preserve"><value>MALIEV also works from existing parts. Reverse engineering reconstructs a CAD design for replacement parts, functional improvements or further product development.</value></data>
+  <data name="Maliev Co., Ltd." xml:space="preserve"><value>Maliev Co., Ltd.</value></data>
+  <data name="MALIEV company profile, prototype development, reverse engineering, CNC machining, 3D design, 3D printing, 3D scanning" xml:space="preserve"><value>MALIEV company profile, prototype development, reverse engineering, CNC machining, 3D design, 3D printing, 3D scanning</value></data>
+  <data name="MALIEV specializes in prototype development and reverse engineering. We create new parts from ideas and reconstruct designs from existing parts to make replacements, improve function and develop products further." xml:space="preserve"><value>MALIEV specializes in prototype development and reverse engineering. We create new parts from ideas and reconstruct designs from existing parts to make replacements, improve function and develop products further.</value></data>
+  <data name="Manufacturing capabilities" xml:space="preserve"><value>Manufacturing capabilities</value></data>
+  <data name="Match stiffness, impact, heat and chemical exposure to the application; review layer direction, supports and finish." xml:space="preserve"><value>Match stiffness, impact, heat and chemical exposure to the application; review layer direction, supports and finish.</value></data>
+  <data name="Material selection" xml:space="preserve"><value>Material selection</value></data>
+  <data name="Materials" xml:space="preserve"><value>Materials</value></data>
+  <data name="Meet MALIEV: prototype development and reverse engineering in Nonthaburi, Thailand. From ideas and existing parts to CAD, replacement parts and product development." xml:space="preserve"><value>Meet MALIEV: prototype development and reverse engineering in Nonthaburi, Thailand. From ideas and existing parts to CAD, replacement parts and product development.</value></data>
+  <data name="Mektec Precision Component Thailand" xml:space="preserve"><value>Mektec Precision Component Thailand</value></data>
+  <data name="Metals and engineering plastics; confirm grade, stock and finish for each job." xml:space="preserve"><value>Metals and engineering plastics; confirm grade, stock and finish for each job.</value></data>
+  <data name="MFEC" xml:space="preserve"><value>MFEC</value></data>
+  <data name="Minor Food Holding" xml:space="preserve"><value>Minor Food Holding</value></data>
+  <data name="Mitsubishi Materials Thailand" xml:space="preserve"><value>Mitsubishi Materials Thailand</value></data>
+  <data name="MJF PA12 nylon linkage sample" xml:space="preserve"><value>MJF PA12 nylon linkage sample</value></data>
+  <data name="Mold and check the batch" xml:space="preserve"><value>Mold and check the batch</value></data>
+  <data name="Mold review" xml:space="preserve"><value>Mold review</value></data>
+  <data name="Next service" xml:space="preserve"><value>Next service</value></data>
+  <data name="Nonthaburi, Thailand" xml:space="preserve"><value>Nonthaburi, Thailand</value></data>
+  <data name="Olympus Thailand" xml:space="preserve"><value>Olympus Thailand</value></data>
+  <data name="On the production line" xml:space="preserve"><value>On the production line</value></data>
+  <data name="One bracket. From idea to production line." xml:space="preserve"><value>One bracket. From idea to production line.</value></data>
+  <data name="One-off parts through repeat batches, with machining access, setup and inspection reviewed before quotation." xml:space="preserve"><value>One-off parts through repeat batches, with machining access, setup and inspection reviewed before quotation.</value></data>
+  <data name="Pause photos" xml:space="preserve"><value>Pause photos</value></data>
+  <data name="Plan production" xml:space="preserve"><value>Plan production</value></data>
+  <data name="Play photos" xml:space="preserve"><value>Play photos</value></data>
+  <data name="Pneumatic PIMM injection molding for pilot runs and repeat batches of up to 1,000 parts." xml:space="preserve"><value>Pneumatic PIMM injection molding for pilot runs and repeat batches of up to 1,000 parts.</value></data>
+  <data name="Pour into the closed mold" xml:space="preserve"><value>Pour into the closed mold</value></data>
+  <data name="Previous service" xml:space="preserve"><value>Previous service</value></data>
+  <data name="Process" xml:space="preserve"><value>Process</value></data>
+  <data name="Process and workpiece examples" xml:space="preserve"><value>Process and workpiece examples</value></data>
+  <data name="Produce small quantities of silicone parts using a suitable mold, with material and surface requirements reviewed for the application." xml:space="preserve"><value>Produce small quantities of silicone parts using a suitable mold, with material and surface requirements reviewed for the application.</value></data>
+  <data name="Production scope" xml:space="preserve"><value>Production scope</value></data>
+  <data name="Project confidentiality" xml:space="preserve"><value>Project confidentiality</value></data>
+  <data name="PTT" xml:space="preserve"><value>PTT</value></data>
+  <data name="PTTEP" xml:space="preserve"><value>PTTEP</value></data>
+  <data name="Pump impeller" xml:space="preserve"><value>Pump impeller</value></data>
+  <data name="Rebuild geometry or compare with nominal CAD. Agree critical features and reporting scope; wear may obscure the original design." xml:space="preserve"><value>Rebuild geometry or compare with nominal CAD. Agree critical features and reporting scope; wear may obscure the original design.</value></data>
+  <data name="Reconstruct the CAD geometry" xml:space="preserve"><value>Reconstruct the CAD geometry</value></data>
+  <data name="Review an existing mold or scope a new tool. Confirm resin, geometry, finish, quantity and inspection requirements before production." xml:space="preserve"><value>Review an existing mold or scope a new tool. Confirm resin, geometry, finish, quantity and inspection requirements before production.</value></data>
+  <data name="Review intended use, critical dimensions and mating features using your CAD, drawing or physical sample. Identify missing information before choosing a production route." xml:space="preserve"><value>Review intended use, critical dimensions and mating features using your CAD, drawing or physical sample. Identify missing information before choosing a production route.</value></data>
+  <data name="Review material, tolerances, assembly, machining access, print orientation and mold strategy for the chosen process." xml:space="preserve"><value>Review material, tolerances, assembly, machining access, print orientation and mold strategy for the chosen process.</value></data>
+  <data name="Review parting lines, vents, release, printed mold surface and silicone compatibility before pouring and curing." xml:space="preserve"><value>Review parting lines, vents, release, printed mold surface and silicone compatibility before pouring and curing.</value></data>
+  <data name="Review the cover and tooling" xml:space="preserve"><value>Review the cover and tooling</value></data>
+  <data name="Review the part and tooling before production. Our pneumatic injection route supports the following limits." xml:space="preserve"><value>Review the part and tooling before production. Our pneumatic injection route supports the following limits.</value></data>
+  <data name="S&amp;P Syndicate" xml:space="preserve"><value>S&amp;P Syndicate</value></data>
+  <data name="Scan-only work produces a triangular mesh such as STL. Editable CAD and 2D drawings are separately defined work." xml:space="preserve"><value>Scan-only work produces a triangular mesh such as STL. Editable CAD and 2D drawings are separately defined work.</value></data>
+  <data name="Scope and deliverables" xml:space="preserve"><value>Scope and deliverables</value></data>
+  <data name="Sculpture master" xml:space="preserve"><value>Sculpture master</value></data>
+  <data name="Selected corporate customers" xml:space="preserve"><value>Selected corporate customers</value></data>
+  <data name="Send CAD, quantity, hardness or flexibility, color, finish, inserts and intended use. Cure cycles and mold count affect the schedule." xml:space="preserve"><value>Send CAD, quantity, hardness or flexibility, color, finish, inserts and intended use. Cure cycles and mold count affect the schedule.</value></data>
+  <data name="Services, scroll horizontally" xml:space="preserve"><value>Services, scroll horizontally</value></data>
+  <data name="Share your sample and explain how it is used. We review the material, geometry and quantity together before choosing a manufacturing process." xml:space="preserve"><value>Share your sample and explain how it is used. We review the material, geometry and quantity together before choosing a manufacturing process.</value></data>
+  <data name="Siam Motors" xml:space="preserve"><value>Siam Motors</value></data>
+  <data name="Siemens Mobility" xml:space="preserve"><value>Siemens Mobility</value></data>
+  <data name="Silicone casting" xml:space="preserve"><value>Silicone casting</value></data>
+  <data name="Singha Kameda (Thailand) Co., Ltd." xml:space="preserve"><value>Singha Kameda (Thailand) Co., Ltd.</value></data>
+  <data name="Sketch bracket alternatives around the bottle, camera position and conveyor clearance. Record the basic requirements before developing CAD." xml:space="preserve"><value>Sketch bracket alternatives around the bottle, camera position and conveyor clearance. Record the basic requirements before developing CAD.</value></data>
+  <data name="Sketches, reference photos, drawings, sample parts or scanned meshes, with intended use and critical interfaces." xml:space="preserve"><value>Sketches, reference photos, drawings, sample parts or scanned meshes, with intended use and critical interfaces.</value></data>
+  <data name="slide" xml:space="preserve"><value>slide</value></data>
+  <data name="Source-based image of a PA-CF printed wheel-like sample" xml:space="preserve"><value>Source-based image of a PA-CF printed wheel-like sample</value></data>
+  <data name="Specify the part" xml:space="preserve"><value>Specify the part</value></data>
+  <data name="Start with the worn part" xml:space="preserve"><value>Start with the worn part</value></data>
+  <data name="Starting information" xml:space="preserve"><value>Starting information</value></data>
+  <data name="STEP/STP or IGES/IGS geometry, plus a PDF drawing for critical dimensions, tolerances, threads and fits." xml:space="preserve"><value>STEP/STP or IGES/IGS geometry, plus a PDF drawing for critical dimensions, tolerances, threads and fits.</value></data>
+  <data name="STL, STEP, OBJ or 3MF. Compare printed variations for fit and function before approving the production design." xml:space="preserve"><value>STL, STEP, OBJ or 3MF. Compare printed variations for fit and function before approving the production design.</value></data>
+  <data name="Structured-light scanning, in-house or onsite after reviewing access, surface preparation and working conditions." xml:space="preserve"><value>Structured-light scanning, in-house or onsite after reviewing access, surface preparation and working conditions.</value></data>
+  <data name="Talk to us to review a development and manufacturing approach." xml:space="preserve"><value>Talk to us to review a development and manufacturing approach.</value></data>
+  <data name="Technologies" xml:space="preserve"><value>Technologies</value></data>
+  <data name="Technology &amp; batch" xml:space="preserve"><value>Technology &amp; batch</value></data>
+  <data name="Thai Asahi Denso" xml:space="preserve"><value>Thai Asahi Denso</value></data>
+  <data name="Thai Coconut" xml:space="preserve"><value>Thai Coconut</value></data>
+  <data name="Thai Murata Electronics Trading" xml:space="preserve"><value>Thai Murata Electronics Trading</value></data>
+  <data name="Thai Optical Group" xml:space="preserve"><value>Thai Optical Group</value></data>
+  <data name="The final bracket holds the measurement camera beside the bottle conveyor. The mounting position, camera view and clearance come together in the application the customer sketched at the start." xml:space="preserve"><value>The final bracket holds the measurement camera beside the bottle conveyor. The mounting position, camera view and clearance come together in the application the customer sketched at the start.</value></data>
+  <data name="Tooling &amp; inspection" xml:space="preserve"><value>Tooling &amp; inspection</value></data>
+  <data name="TPI Polene Power" xml:space="preserve"><value>TPI Polene Power</value></data>
+  <data name="Up to 50 g per shot; plastic melting temperature up to 350 °C. Suitability depends on the part, resin and mold." xml:space="preserve"><value>Up to 50 g per shot; plastic melting temperature up to 350 °C. Suitability depends on the part, resin and mold.</value></data>
+  <data name="View our NDA" xml:space="preserve"><value>View our NDA</value></data>
+  <data name="View service" xml:space="preserve"><value>View service</value></data>
+  <data name="Work from the customer sketch alongside the CAD model. Refine the mounting holes, upright supports and camera fit before making prototypes." xml:space="preserve"><value>Work from the customer sketch alongside the CAD model. Refine the mounting holes, upright supports and camera fit before making prototypes.</value></data>
+  <data name="YG-1 Thailand" xml:space="preserve"><value>YG-1 Thailand</value></data>
+</root>
