@@ -589,10 +589,13 @@ export function createWorkflowPreviewInterop({
       .find(element => element.dataset.partId === partId);
     if (!tile) return false;
     const bounds = rail.getBoundingClientRect();
-    const target = tile.getBoundingClientRect();
+    const focused = tile.ownerDocument?.activeElement;
+    // A late render must not scroll an oversized card over its keyboard-focused action.
+    const revealTarget = focused && tile.contains(focused) ? focused : tile;
+    const target = revealTarget.getBoundingClientRect();
     if (globalThis.getComputedStyle?.(rail)?.overflowY === 'visible') {
       if (target.top < 0 || target.bottom > globalThis.innerHeight)
-        tile.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+        revealTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
       return true;
     }
     const add = rail.querySelector?.('.iq-compact-dropzone');

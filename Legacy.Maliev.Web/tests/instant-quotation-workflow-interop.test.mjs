@@ -490,6 +490,101 @@ test('a synchronous failed loader preserves its neighbour selection and yields n
   } finally { interop.dispose(); }
 });
 
+for (const action of ['View', 'Remove']) {
+  test(`late selected-part reveal preserves a focused ${action} inside an oversized compact card`, () => {
+    const { interop } = harness();
+    const oldStyle = globalThis.getComputedStyle;
+    const button = { getBoundingClientRect: () => ({ left: 200, right: 528, top: 270, bottom: 314 }) };
+    const tile = { dataset: { partId: 'selected' }, ownerDocument: { activeElement: button },
+      contains: element => element === button,
+      getBoundingClientRect: () => ({ left: 180, right: 860, top: 210, bottom: 348 }) };
+    const rail = { scrollLeft: 0, scrollTop: 200,
+      getBoundingClientRect: () => ({ left: 164, right: 879, top: 256, bottom: 325 }),
+      querySelector: () => null, querySelectorAll: () => [tile] };
+    globalThis.getComputedStyle = () => ({ overflowY: 'auto' });
+    try {
+      assert.equal(interop.revealPart({ querySelector: () => rail }, 'selected'), true);
+      assert.equal(rail.scrollTop, 200);
+      assert.equal(rail.scrollLeft, 0);
+      assert.equal(tile.ownerDocument.activeElement, button);
+    } finally {
+      globalThis.getComputedStyle = oldStyle;
+      interop.dispose();
+    }
+  });
+}
+
+test('selected-part reveal scrolls its focused action instead of the oversized card edge', () => {
+  const { interop } = harness();
+  const oldStyle = globalThis.getComputedStyle;
+  const button = { getBoundingClientRect: () => ({ left: 200, right: 528, top: 300, bottom: 344 }) };
+  const tile = { dataset: { partId: 'selected' }, ownerDocument: { activeElement: button },
+    contains: element => element === button,
+    getBoundingClientRect: () => ({ left: 180, right: 860, top: 206, bottom: 344 }) };
+  const rail = { scrollLeft: 0, scrollTop: 200,
+    getBoundingClientRect: () => ({ left: 164, right: 879, top: 256, bottom: 325 }),
+    querySelector: () => null, querySelectorAll: () => [tile] };
+  globalThis.getComputedStyle = () => ({ overflowY: 'auto' });
+  try {
+    assert.equal(interop.revealPart({ querySelector: () => rail }, 'selected'), true);
+    assert.equal(rail.scrollTop, 219);
+    assert.equal(rail.scrollLeft, 0);
+    assert.equal(tile.ownerDocument.activeElement, button);
+  } finally {
+    globalThis.getComputedStyle = oldStyle;
+    interop.dispose();
+  }
+});
+
+test('focus in a different card does not replace the selected whole-card reveal target', () => {
+  const { interop } = harness();
+  const oldStyle = globalThis.getComputedStyle;
+  const foreignButton = { getBoundingClientRect: () => { throw new Error('Foreign focus must not be measured.'); } };
+  const tile = { dataset: { partId: 'selected' }, ownerDocument: { activeElement: foreignButton },
+    contains: () => false,
+    getBoundingClientRect: () => ({ left: 500, right: 650, top: 300, bottom: 350 }) };
+  const rail = { scrollLeft: 0, scrollTop: 0,
+    getBoundingClientRect: () => ({ left: 0, right: 400, top: 0, bottom: 200 }),
+    querySelector: () => null, querySelectorAll: () => [tile] };
+  globalThis.getComputedStyle = () => ({ overflowY: 'auto' });
+  try {
+    assert.equal(interop.revealPart({ querySelector: () => rail }, 'selected'), true);
+    assert.equal(rail.scrollLeft, 250);
+    assert.equal(rail.scrollTop, 150);
+    assert.equal(tile.ownerDocument.activeElement, foreignButton);
+  } finally {
+    globalThis.getComputedStyle = oldStyle;
+    interop.dispose();
+  }
+});
+
+test('wrapped selected-part reveal keeps scrolling scoped to its focused action', () => {
+  const { interop } = harness();
+  const oldStyle = globalThis.getComputedStyle;
+  const oldHeight = globalThis.innerHeight;
+  const scrolls = [];
+  const button = { getBoundingClientRect: () => ({ left: 20, right: 200, top: 1100, bottom: 1144 }),
+    scrollIntoView: options => scrolls.push(options) };
+  const tile = { dataset: { partId: 'selected' }, ownerDocument: { activeElement: button },
+    contains: element => element === button,
+    getBoundingClientRect: () => ({ left: 0, right: 390, top: 950, bottom: 1150 }),
+    scrollIntoView: () => { throw new Error('The focused action owns this reveal.'); } };
+  const rail = { querySelectorAll: () => [tile],
+    getBoundingClientRect: () => ({ left: 0, right: 390, top: 0, bottom: 1200 }) };
+  globalThis.getComputedStyle = () => ({ overflowY: 'visible' });
+  globalThis.innerHeight = 1000;
+  try {
+    assert.equal(interop.revealPart({ querySelector: () => rail }, 'selected'), true);
+    assert.deepEqual(scrolls, [{ block: 'nearest', inline: 'nearest', behavior: 'auto' }]);
+    assert.equal(tile.ownerDocument.activeElement, button);
+  } finally {
+    globalThis.getComputedStyle = oldStyle;
+    if (oldHeight === undefined) delete globalThis.innerHeight;
+    else globalThis.innerHeight = oldHeight;
+    interop.dispose();
+  }
+});
+
 test('local reveal changes only the part rail scroll and respects its sticky upload control', () => {
   const { interop } = harness();
   const oldStyle = globalThis.getComputedStyle;
