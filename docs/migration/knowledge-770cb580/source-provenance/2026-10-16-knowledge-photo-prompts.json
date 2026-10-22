@@ -1,0 +1,192 @@
+[
+  {
+    "slug": "cnc-overview",
+    "prompt": "Use case: photorealistic-natural. Asset type: wide editorial photograph for a manufacturing knowledge article, landscape 3:2, composed so the important subject remains inside the central 16:9 crop. Primary request: a technically credible macro photograph of a carbide end mill machining a rectangular aluminium electronics housing from a billet, at the edge of a pocket, inside a closed CNC machining enclosure. The housing is firmly clamped on a real machine vise with sensible parallel planar edges, four consistent mounting bosses and clean circular bores. Show realistic bright machined aluminium, subtle tool marks and a few small chips, controlled workshop lighting, physically coherent cutting contact. No people, no hands, no gloves, no text, no numbers, no labels, no logos, no infographics, no border, no whitespace padding. Natural photographic texture, no CGI appearance, no impossible geometry or distorted perspective. This is an illustrative process photograph, not documentary proof of a specific facility.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/cnc-overview.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 125528,
+    "sha256": "30aae2174a126c63faed248f72f1eb0ed2bc66673fa11c760b4a162a39ea1bd6"
+  },
+  {
+    "slug": "feeds-speeds",
+    "prompt": "Use case: photorealistic-natural. Wide editorial manufacturing photograph, landscape 3:2; protect the main subject inside a central 16:9 crop. Precise plausible geometry, natural textures, restrained daylight and neutral industrial tones, documentary photographic quality. No captions, labels, numbers, fake interface text, watermarks, decorative frames or blank margins. No bottle-inspection brackets. No MALIEV logo on equipment. This is an illustrative technical scene, not proof of a real customer project. Close view of a real four-flute carbide end mill side-milling the straight outer edge of a securely vise-clamped solid aluminium rectangular plate inside a CNC enclosure. Oblique view showing a sensible short tool overhang, regular helical flutes and small bright chips, with the machined side and top face clearly distinguishable. No people or hands. No motion blur hiding the tool. A different workpiece from an electronics housing.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/feeds-speeds.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 156194,
+    "sha256": "058b5b36a3ac23516d7dfc2442814af00cb01ea2ac497b392b387006542a21b0"
+  },
+  {
+    "slug": "cutting-tools",
+    "prompt": "Use case: photorealistic-natural. Wide editorial manufacturing photograph, landscape 3:2; protect the main subject inside a central 16:9 crop. Precise plausible geometry, natural textures, restrained daylight and neutral industrial tones, documentary photographic quality. No captions, labels, numbers, fake interface text, watermarks, decorative frames or blank margins. No bottle-inspection brackets. No MALIEV logo on equipment. This is an illustrative technical scene, not proof of a real customer project. A meticulous but naturally used tool-setting bench with a small selection of physically correct solid carbide end mills, a twist drill, a spiral flute tap and two assembled precision tool holders. Tools lie in separate shallow dark foam recesses, close view where flute geometries and coated surfaces are clear. A machining workshop softly out of focus behind. No people or hands.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/cutting-tools.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 151226,
+    "sha256": "e9140c890b4e8c45790caf9f4044a21596b6473a3fd9cab703e6bb1422e316ac"
+  },
+  {
+    "slug": "metals",
+    "prompt": "Use case: photorealistic-natural. Wide editorial manufacturing photograph, landscape 3:2; protect the main subject inside a central 16:9 crop. Precise plausible geometry, natural textures, restrained daylight and neutral industrial tones, documentary photographic quality. No captions, labels, numbers, fake interface text, watermarks, decorative frames or blank margins. No bottle-inspection brackets. No MALIEV logo on equipment. This is an illustrative technical scene, not proof of a real customer project. Close editorial still life of metal stock and finished industrial parts on a charcoal inspection mat: a bright aluminium rectangular billet beside a small finned machined heat sink, a stainless cylindrical shaft, a dark steel block and a warm brass hexagonal threaded fitting. Distinct authentic surface finishes and densities visually expressed through colour and machining texture. Coherent threads and round bores, no impossible reflections. No people.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/metals.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 156334,
+    "sha256": "cd54a42ace319f73cd0575b6cdb4cdf2254dcf03939df042d2039f6f5b66216b"
+  },
+  {
+    "slug": "engineering-plastics",
+    "prompt": "Use case: photorealistic-natural. Wide editorial technical manufacturing photograph, landscape 3:2 with the main subject protected in a central 16:9 crop. Authentic materials, precise physically plausible geometry, natural photographic texture, neutral industrial daylight, detailed but calm composition. No text, captions, labels, numbers, logos, watermark, border or blank padding. No bottle-inspection brackets. Illustrative technical scene. On a clean grey workshop bench, a diverse selection of machined engineering polymer components: a white acetal toothed gear with coherent regular teeth, a cream nylon flanged bushing, a beige PEEK ring, a white PTFE sealing washer, a small black plastic housing and a clear polycarbonate guard sample. Distinguish polymers from metal by matte or translucent surface finish, fine machining marks and realistic edges. Show no people. No colourful decorative filament toys.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-plastics.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 102262,
+    "sha256": "9b48ef47071d4492e7afe743909689615c8a2a7bdb7dd42efc691d9d72c6bfea"
+  },
+  {
+    "slug": "surface-finishes",
+    "prompt": "Use case: photorealistic-natural. Wide editorial technical manufacturing photograph, landscape 3:2 with the main subject protected in a central 16:9 crop. Authentic materials, precise physically plausible geometry, natural photographic texture, neutral industrial daylight, detailed but calm composition. No text, captions, labels, numbers, logos, watermark, border or blank padding. No bottle-inspection brackets. Illustrative technical scene. A close product photograph of a row of six DIFFERENT small aluminium components showing contrasting industrial finishes: a blue anodized cylindrical collar, a matte black anodized small housing, a natural clear-anodized mounting plate, a glass-bead-blasted silver block, a brushed flat strip and a polished turning. On a light neutral inspection table. Accurate circles, flat planes, coherent machining marks and a convincing range of satin, brushed and polished surfaces. No labels or coating thickness numbers. No people.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/surface-finishes.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 70376,
+    "sha256": "42b3373e40d0f260e0205f10da016c6385621108d6015990a28bb1a32c5f5976"
+  },
+  {
+    "slug": "heat-treatment",
+    "prompt": "Use case: photorealistic-natural. Wide editorial technical manufacturing photograph, landscape 3:2 with the main subject protected in a central 16:9 crop. Authentic materials, precise physically plausible geometry, natural photographic texture, neutral industrial daylight, detailed but calm composition. No text, captions, labels, numbers, logos, watermark, border or blank padding. No bottle-inspection brackets. Illustrative technical scene. A credible industrial heat-treatment area. A CLOSED box furnace with its door latched in the softly blurred background; in the foreground on a steel rack, room-temperature steel shafts, simple rings and a rectangular machined tool insert, showing subtle grey oxide colours. An understated real workshop photograph, no sparks, fire, glowing objects, magical plasma or theatrical orange light. No people, no text or brand marks. Depict process planning rather than a claimed specific furnace operation.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/heat-treatment.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 123652,
+    "sha256": "d747937cacaa9bc22220fc42b214e91b0f405f98a137027a59ef58b403d7e804"
+  },
+  {
+    "slug": "workholding",
+    "prompt": "Use case: photorealistic-natural. Wide editorial technical photograph for a manufacturing knowledge guide, landscape 3:2, preserve all important details inside a central 16:9 crop. Natural photographic textures and restrained industrial lighting. Exact coherent straight edges, circular holes, believable scale and workholding. No text, labels, numbers, brands, logos, watermark, border, blank margin or people. Do not show a bottle-inspection bracket. Illustrative process scene. A thin rectangular aluminium instrument frame secured on a purpose-made CNC fixture plate using sensible external toe clamps and support pads beneath its perimeter. The part has a broad central rectangular opening and several small mounting holes. The frame is visibly delicate but straight, with support placed close to its thin walls. Show the complete non-cutting fixture setup from a useful three-quarter angle, no cutting tool touching it, no chips obscuring the supports.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/workholding.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 128386,
+    "sha256": "58a1ccacc9465c8c5afd7c33b9084e375265308c7a70a70350946d5013771add"
+  },
+  {
+    "slug": "holes-tolerances",
+    "prompt": "Use case: photorealistic-natural. Wide editorial technical photograph for a manufacturing knowledge guide, landscape 3:2, preserve all important details inside a central 16:9 crop. Natural photographic textures and restrained industrial lighting. Exact coherent straight edges, circular holes, believable scale and workholding. No text, labels, numbers, brands, logos, watermark, border, blank margin or people. Do not show a bottle-inspection bracket. Illustrative process scene. An engineering inspection still life: a small square machined aluminium plate with a clear stepped counterbore, one blind threaded hole, two smooth precision bores and clean chamfered edges. A detached precision steel dowel pin and a plain cylindrical plug gauge rest beside it on a granite surface plate. Close, sharply focused, square and mechanically correct geometry, no impossible overlapping holes. No measuring screens or engraved fake specifications.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/holes-tolerances.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 177930,
+    "sha256": "c7c3178458273951849a0069f7969b90c12c0714630c482b8e6048f1585ac92e"
+  },
+  {
+    "slug": "multi-axis",
+    "prompt": "Use case: photorealistic-natural. Wide editorial technical photograph for a manufacturing knowledge guide, landscape 3:2, preserve all important details inside a central 16:9 crop. Natural photographic textures and restrained industrial lighting. Exact coherent straight edges, circular holes, believable scale and workholding. No text, labels, numbers, brands, logos, watermark, border, blank margin or people. Do not show a bottle-inspection bracket. Illustrative process scene. Inside a modern enclosed five-axis CNC machine, a small aluminium turbine impeller is securely held in a cylindrical fixture on a clearly visible tilted rotary trunnion table. The spindle and a short ball-nose cutter are positioned near one smoothly curved vane. A credible restrained machine-tool photograph with coherent continuous impeller vanes, realistic metal surfaces and a visible workholding connection. No people or hands, no unbranded magical machinery, no excessive sparks.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/multi-axis.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 98868,
+    "sha256": "0e389a7e3d3142ace62fc42221da1a00342cf5304d31def30e09db6676654345"
+  },
+  {
+    "slug": "library",
+    "prompt": "Use case: photorealistic-natural. Wide landscape 3:2 editorial manufacturing photograph; keep the essential scene in the central 16:9 area for responsive crops. Precise physically plausible workpieces, natural industrial daylight, authentic material texture, warm but technically restrained. No captions, labels, writing, numbers, watermarks, logos, borders or blank margins. No bottle-inspection brackets. No people. Illustrative scene, not a claimed customer project. A considered overhead view of a manufacturing engineer's workbench with DIFFERENT functional examples: a small machined aluminium manifold, a white polymer gear, a black 3D-printed air duct, a brass turned connector and a simple stainless folded enclosure. A caliper lies to one side and an unmarked pencil sketch sheet is partly visible beneath one part. Visual emphasis on the variety of manufacturing processes and materials. Leave no large dead area; parts fill the composition naturally.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/library.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 225042,
+    "sha256": "244671b3bd691b1d2472ff17e0251713241041de76fe31085be03fc892ec9d18"
+  },
+  {
+    "slug": "process-selection",
+    "prompt": "Use case: photorealistic-natural. Wide landscape 3:2 editorial manufacturing photograph; keep the essential scene in the central 16:9 area for responsive crops. Precise physically plausible workpieces, natural industrial daylight, authentic material texture, warm but technically restrained. No captions, labels, writing, numbers, watermarks, logos, borders or blank margins. No bottle-inspection brackets. No people. Illustrative scene, not a claimed customer project. A product-development bench comparing three DIFFERENT manufacturing routes for a compact rectangular handheld instrument enclosure: a charcoal 3D-printed housing with visible layer texture, a silver milled aluminium housing, and a folded sheet-metal enclosure with tidy bend lines. Distinct real manufacturing construction, technically coherent matching overall scale but different details. An open unmarked notebook and a caliper sit unobtrusively nearby. Do not imply that these materials are interchangeable. No assembly line or bottle components.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/process-selection.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 134064,
+    "sha256": "6e5c102e559cdb87e79b9b07fe62c59a83fed4a21fd637768b621bf37fa300ec"
+  },
+  {
+    "slug": "material-selection",
+    "prompt": "Use case: photorealistic-natural. Wide landscape 3:2 editorial manufacturing photograph; keep the essential scene in the central 16:9 area for responsive crops. Precise physically plausible workpieces, natural industrial daylight, authentic material texture, warm but technically restrained. No captions, labels, writing, numbers, watermarks, logos, borders or blank margins. No bottle-inspection brackets. No people. Illustrative scene, not a claimed customer project. Close editorial still life of carefully selected material samples around a small functional bearing support concept: a polished cylindrical stainless sample, a matte black engineering polymer block, a warm brass round bar, a natural aluminium billet and a cream polymer bushing. A small disassembled steel bearing and a neutral grey fabricated machine base suggest load, environment and mating interfaces. Clean grey workbench, simple coherent forms, no fake engineering diagrams or equations.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/material-selection.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 147360,
+    "sha256": "5d08816e87bbe3cd1a05b429d204fe540187eaf4a8f2636a4115231a2486e443"
+  },
+  {
+    "slug": "quotation-files",
+    "prompt": "Use case: photorealistic-natural. Wide editorial photograph for a technical manufacturing knowledge page, landscape 3:2, main subject inside central 16:9 crop. Realistic Thai manufacturing workplace, natural skin and fabric texture, convincing anatomy, restrained daylight, coherent real workpieces. No captions, infographics, watermark, border or blank margins. Never put MALIEV branding on equipment. No SolidWorks. Not documentary proof of a real customer project. A Thai woman engineer aged about 40, in a plain black polo, seated three-quarter back to camera at a clean engineering desk. Because the shirt is back-turned, show absolutely no text or logo on it. Her desk holds a small flanged shaft coupling, matching clear pencil orthographic sketches without readable text, and a computer monitor showing the SAME simple grey flanged coupling in an Autodesk Fusion design workspace. The monitor is slightly out of focus; do not invent prominent software names or text. Include a pencil and caliper as supporting objects. The focus is the relationship between part, model and drawing.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/quotation-files.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 79948,
+    "sha256": "38f0ab23333512b4b8306899ae743fb2df723ef52bad092c81853dbd1892b9a7"
+  },
+  {
+    "slug": "engineering-workflow",
+    "prompt": "Use case: photorealistic-natural. Wide editorial photograph for a technical manufacturing knowledge page, landscape 3:2, main subject inside central 16:9 crop. Realistic Thai manufacturing workplace, natural skin and fabric texture, convincing anatomy, restrained daylight, coherent real workpieces. No captions, infographics, watermark, border or blank margins. Never put MALIEV branding on equipment. No SolidWorks. Not documentary proof of a real customer project. A Thai woman engineer in her early 30s and a Thai man engineer in his mid 50s reviewing a small machined pneumatic valve body and a grey polymer fit-check prototype across a workshop meeting table. Both are front or gently three-quarter facing, wearing black polos with the exact small white left-chest wordmark \"MALIEV\", spelled M-A-L-I-E-V. Render the six letters correctly, otherwise use a completely plain black polo with no text. Natural conversation and careful handling of the stationary parts, an unmarked drawing sheet on the table. Different workpiece from a bottle-inspection bracket. No thumbs-up poses or boardroom stock-photo look.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/engineering-workflow.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 108596,
+    "sha256": "c65a6024c390a897d474534e99ee8bf098786b5b06c961a87585ded519137a1b"
+  },
+  {
+    "slug": "dimensional-inspection",
+    "prompt": "Use case: photorealistic-natural. Wide editorial photograph for a technical manufacturing knowledge page, landscape 3:2, main subject inside central 16:9 crop. Realistic Thai manufacturing workplace, natural skin and fabric texture, convincing anatomy, restrained daylight, coherent real workpieces. No captions, infographics, watermark, border or blank margins. Never put MALIEV branding on equipment. No SolidWorks. Not documentary proof of a real customer project. Close documentary-style photograph of a Thai male quality technician aged around 45 carefully measuring the outside diameter of a small stationary steel shaft with a genuine outside micrometer at a granite inspection bench. The micrometer's flat anvil and spindle contact opposite sides of the SAME cylindrical journal, the shaft axis perpendicular to the measurement axis. Bare clean hands with correct anatomy, no tools near running machines. Technician wears a plain black shirt with no visible text because framing crops the chest. No readable or fabricated measurement digits. Show physical measurement method and careful alignment rather than a claimed result.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/dimensional-inspection.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 104678,
+    "sha256": "73edf1ffbd62e3191f79b38579d6e133635043277ad2d9cfc73e8bdaa5d0d133"
+  },
+  {
+    "slug": "printing",
+    "prompt": "Use case: photorealistic-natural. Wide editorial manufacturing knowledge photograph, landscape 3:2, protect main subject within central 16:9 crop. Physically plausible machinery and parts, natural textures, calm industrial daylight. No captions, numbers, labels, watermark, border or blank padding. No bottle-inspection bracket and no branding on third-party equipment. An illustrative process scene, not proof of a specific customer job. Close view through the clear front of an enclosed FDM 3D printer. A single dark grey curved air duct with two flat mounting flanges is being printed upright on a firmly seated build plate. Show credible fine layer lines, sensible sacrificial support under an overhanging flange and an extruder nozzle just above the current top layer. No person, hand, loose tools, cartoon printed toys, floating filament or impossible unsupported geometry.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/printing.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 119110,
+    "sha256": "ef979dba985b46bd1b30d338c8c88ddfa3e215008a3c9c6df54000731f3271f7"
+  },
+  {
+    "slug": "scanning",
+    "prompt": "Use case: photorealistic-natural. Wide editorial manufacturing knowledge photograph, landscape 3:2, protect main subject within central 16:9 crop. Physically plausible machinery and parts, natural textures, calm industrial daylight. No captions, numbers, labels, watermark, border or blank padding. No bottle-inspection bracket and no branding on third-party equipment. An illustrative process scene, not proof of a specific customer job. A Thai woman technician aged about 35 operating a professional handheld structured-light 3D scanner at a stationary cast aluminium pump housing on a small inspection turntable. The housing has a broad circular flange and side outlet, real cast texture and a few optical tracking targets. Blue structured light on the workpiece, scanner held at a sensible distance. Her black polo is shown from the back or cropped, so it has NO text or logo. A background monitor shows the SAME pump housing as a restrained grey scan mesh, without readable UI text. No automotive triangular bracket or bottle-inspection parts.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/scanning.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 112734,
+    "sha256": "4aa689c48b102e9fa055e0d3a938ee0e83146e91c0bcae125a94d8ad1e193d7c"
+  },
+  {
+    "slug": "service-guides",
+    "prompt": "Use case: photorealistic-natural. Wide editorial manufacturing knowledge photograph, landscape 3:2, protect main subject within central 16:9 crop. Physically plausible machinery and parts, natural textures, calm industrial daylight. No captions, numbers, labels, watermark, border or blank padding. No bottle-inspection bracket and no branding on third-party equipment. An illustrative process scene, not proof of a specific customer job. A clean inspection bench with several distinct manufacturing preparation samples: a compact turned steel stepped shaft, a silver machined valve plate with clean bores, a small cream resin prototype of an ergonomic knob, and a raw cast aluminium cover with a clear machined sealing rim. An open drawing sheet with unlabelled orthographic linework lies partially beneath them. Close three-quarter composition, authentic material texture and coherent perspective. No people, no screens, no added text or fake dimensions.",
+    "mode": "built-in image_gen",
+    "asset": "Maliev.Web/wwwroot/src/images/knowledge/photos/service-guides.webp",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 142896,
+    "sha256": "ae086f8ed89800a19116964f81fe95adc6297a3792ef270dd033af3a56da850a"
+  }
+]

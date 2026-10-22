@@ -42,7 +42,7 @@
                 <dt>@Localizer["Estimated shipment"]</dt><dd>@Date(Model.PromisedDate)</dd>
                 <dt>@Localizer["Finished date"]</dt><dd>@Date(Model.FinishedDate)</dd>
                 <dt>@Localizer["Tracking number"]</dt><dd>@(Model.TrackingNumber == "-" ? Localizer["Not yet available"] : Model.TrackingNumber)</dd>
-                <dt>@Localizer["Description"]</dt><dd>@(string.IsNullOrWhiteSpace(Model.Description) ? Localizer["None"] : Model.Description)</dd>
+                <dt>@Localizer["Description"]</dt><dd class="table-multiline">@(string.IsNullOrWhiteSpace(Model.Description) ? Localizer["None"] : Model.Description)</dd>
             </dl>
         </article>
         <section class="maliev-panel" aria-labelledby="member-order-files-title">

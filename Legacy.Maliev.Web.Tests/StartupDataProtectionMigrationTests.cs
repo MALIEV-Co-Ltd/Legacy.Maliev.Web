@@ -107,7 +107,7 @@ public sealed class StartupDataProtectionMigrationTests(StartupDataProtectionMig
             var document = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
             Assert.Contains($"<html lang=\"{culture}\"", document, StringComparison.Ordinal);
             Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", document, StringComparison.Ordinal);
-            Assert.Contains(culture == "th" ? ">ภาพรวม<" : ">Overview<", document, StringComparison.Ordinal);
+            Assert.Contains(culture == "th" ? ">ศูนย์ความรู้</span></a>" : ">Knowledge center</span></a>", document, StringComparison.Ordinal);
         }
     }
 }

@@ -3,8 +3,15 @@ import {
     wireInstantEstimate,
 } from './instant-quotation-controller.mjs';
 import { wireOptionalQuotationFields } from './instant-quotation-optional-fields.mjs';
-import { wireInstantQuotationAddressValidation } from './instant-quotation-address-validation.mjs';
+import {
+    navigateInstantQuotationValidationField,
+    wireInstantQuotationAddressValidation,
+} from './instant-quotation-address-validation.mjs';
 import { wireInstantQuotationSubmission } from './instant-quotation-submission.mjs';
+
+document.addEventListener('click', (event) => {
+    navigateInstantQuotationValidationField(event, window.location);
+});
 
 const form = document.querySelector('[data-instant-estimate]');
 const status = document.getElementById('estimate-status');

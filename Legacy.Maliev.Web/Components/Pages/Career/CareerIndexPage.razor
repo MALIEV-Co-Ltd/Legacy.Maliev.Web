@@ -42,7 +42,7 @@ else
         serviceAvailable: true,
         levels: [],
         offers: CareerOfferPage.Empty(1),
-        currentSort: CareerSort.JobCreatedDate_Descending,
+        currentSort: CareerSort.JobId_Ascending,
         search: null,
         pageSize: 25);
     private bool loadFailed;
@@ -54,7 +54,7 @@ else
     public string? Search { get; set; }
 
     [SupplyParameterFromQuery(Name = "index")]
-    public int? PageIndex { get; set; }
+    public string? PageIndex { get; set; }
 
     [SupplyParameterFromQuery(Name = "size")]
     public string? PageSize { get; set; }
@@ -63,18 +63,32 @@ else
     {
         var requestContext = HttpContextAccessor.HttpContext
             ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
-        if (!PageSizeQuery.TryResolve(PageSize, out var pageSize))
+        var changeItemCount = requestContext.Request.Query["handler"].Count > 0
+            && string.Equals(requestContext.Request.Query["handler"][0], "ChangeItemCount", StringComparison.OrdinalIgnoreCase);
+        var validPageSize = changeItemCount
+            ? PageSizeQuery.TryParse(PageSize, out var pageSize)
+            : PageSizeQuery.TryResolve(PageSize, out pageSize);
+        if (!validPageSize)
         {
             requestContext.Response.StatusCode = StatusCodes.Status400BadRequest;
             requestContext.Response.Headers.CacheControl = "no-store";
             return;
         }
 
-        var currentSort = Enum.TryParse<CareerSort>(Sort, out var parsedSort)
+        if (!changeItemCount && !string.IsNullOrWhiteSpace(PageIndex)
+            && !int.TryParse(PageIndex, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
+        {
+            requestContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+            requestContext.Response.Headers.CacheControl = "no-store";
+            return;
+        }
+
+        var currentSort = !changeItemCount && Enum.TryParse<CareerSort>(Sort, out var parsedSort)
             ? parsedSort
-            : CareerSort.JobCreatedDate_Descending;
-        var search = string.IsNullOrWhiteSpace(Search) ? null : Search.Trim();
-        var pageIndex = search is null ? Math.Max(PageIndex ?? 1, 1) : 1;
+            : CareerSort.JobId_Ascending;
+        var search = changeItemCount || string.IsNullOrWhiteSpace(Search) ? null : Search;
+        var parsedPageIndex = int.TryParse(PageIndex, NumberStyles.Integer, CultureInfo.InvariantCulture, out var index) ? index : 1;
+        var pageIndex = changeItemCount ? 0 : string.IsNullOrEmpty(search) ? parsedPageIndex : 1;
         var cancellationToken = HttpContextAccessor.HttpContext?.RequestAborted ?? CancellationToken.None;
         try
         {
@@ -84,7 +98,7 @@ else
                 pageIndex,
                 pageSize,
                 cancellationToken);
-            var hideLocalAspireFixture = Configuration.GetValue<bool>("Career:HideLocalAspireFixture");
+            var hideLocalAspireFixture = !changeItemCount && Configuration.GetValue<bool>("Career:HideLocalAspireFixture");
             var visibleOffers = listing.Offers with
             {
                 Items = listing.Offers.Items

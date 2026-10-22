@@ -1,4 +1,5 @@
 using System.Net;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Components.Analytics;
@@ -47,6 +48,19 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
         Assert.True(File.Exists(Path.Combine(web, "Components", "Analytics", "PublicGoogleTagManagerDisplayModel.cs")));
         Assert.False(File.Exists(Path.Combine(web, "Pages", "Shared", "_GoogleTagManagerPartial.cshtml")));
         Assert.False(File.Exists(Path.Combine(web, "Pages", "Shared", "_GoogleTagManagerBodyPartial.cshtml")));
+
+        var webAssembly = typeof(Program).Assembly;
+        var queueType = webAssembly.GetType("Legacy.Maliev.Web.Pages.Shared.LeadAnalyticsEventQueue");
+        var eventType = webAssembly.GetType("Legacy.Maliev.Web.Pages.Shared.LeadAnalyticsEvent");
+
+        Assert.NotNull(queueType);
+        Assert.NotNull(eventType);
+        Assert.True(queueType.IsPublic);
+        Assert.True(eventType.IsPublic);
+        Assert.NotNull(queueType.GetMethod("TryConsume", BindingFlags.Public | BindingFlags.Static));
+        Assert.Null(queueType.GetMethod("TryQueueContactMessage", BindingFlags.Public | BindingFlags.Static));
+        Assert.Null(queueType.GetMethod("TryQueueManualQuotation", BindingFlags.Public | BindingFlags.Static));
+        Assert.Null(queueType.GetMethod("TryQueueInstantQuotation", BindingFlags.Public | BindingFlags.Static));
     }
 
     [Fact]

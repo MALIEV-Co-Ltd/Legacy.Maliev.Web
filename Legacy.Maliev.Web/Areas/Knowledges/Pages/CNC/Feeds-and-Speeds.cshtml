@@ -1,0 +1,7 @@
+@page
+@inject IStringLocalizer<CncFeedsAndSpeedsContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["CNC feeds and speeds: calculate, then verify"];
+    ViewData["Description"] = MetadataLocalizer["Connect cutting speed, spindle speed and feed with the actual tool, material, engagement and machine limits. Worked metric examples show how to keep units and assumptions consistent."];
+}
+<component type="typeof(CncFeedsAndSpeedsContent)" render-mode="Static" />

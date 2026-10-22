@@ -209,13 +209,25 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~BillingProofLifetimeTests"
           --logger trx --results-directory ./billing-lifetime-test-results
-      - name: Require all thirty-one exact unique passed lifecycle control rows
+      - name: Require all forty-three exact unique passed lifecycle control rows
         run: |
           python3 -B - <<'PY'
           from pathlib import Path
           import xml.etree.ElementTree as ET
           ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
           expected = {
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "System.IO.IOException", expected: "IOException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "System.Net.Sockets.SocketException", expected: "SocketException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Microsoft.AspNetCore.Connections.AddressInUseExcep"···, expected: "AddressInUseException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Microsoft.Extensions.Options.OptionsValidationExce"···, expected: "OptionsValidationException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "System.InvalidOperationException", expected: "InvalidOperationException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Npgsql.NpgsqlException", expected: "NpgsqlException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Npgsql.PostgresException", expected: "PostgresException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_DiscardsMalformedForeignOversizedAndArbitraryText',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_DrainRetainsOnlyFixedStderrClassificationAcrossChunks(observeStartupFailure: False, expected: "NotObserved")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_DrainRetainsOnlyFixedStderrClassificationAcrossChunks(observeStartupFailure: True, expected: "IOException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_ReaderFailureCannotReplaceTheOriginalExitedChildAssertion(cancelled: False)',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_ReaderFailureCannotReplaceTheOriginalExitedChildAssertion(cancelled: True)',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAdmittedSynchronousBodyBeforeDependencyRelease',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: False)',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: True)',
@@ -254,15 +266,15 @@ jobs:
           root = ET.parse(files[0]).getroot()
           rows = root.findall('.//t:UnitTestResult', ns)
           names = [row.get('testName') for row in rows]
-          if len(rows) != 31 or len(set(names)) != 31 or set(names) != expected or any(row.get('outcome') != 'Passed' for row in rows):
+          if len(rows) != 43 or len(set(names)) != 43 or set(names) != expected or any(row.get('outcome') != 'Passed' for row in rows):
               raise SystemExit('Missing, duplicate, foreign or unsuccessful lifecycle control row')
           counters = root.find('.//t:Counters', ns)
-          required = {'total': '31', 'executed': '31', 'passed': '31', 'failed': '0', 'error': '0', 'timeout': '0',
+          required = {'total': '43', 'executed': '43', 'passed': '43', 'failed': '0', 'error': '0', 'timeout': '0',
               'aborted': '0', 'inconclusive': '0', 'passedButRunAborted': '0', 'notRunnable': '0', 'notExecuted': '0',
               'disconnected': '0', 'warning': '0', 'completed': '0', 'inProgress': '0', 'pending': '0'}
           if counters is None or any(counters.get(key) != value for key, value in required.items()):
-              raise SystemExit('Lifecycle TRX counters do not match thirty-one completed Passed rows')
-          print('Verified thirty-one exact unique Passed lifecycle controls; no skipped or unsuccessful rows')
+              raise SystemExit('Lifecycle TRX counters do not match forty-three completed Passed rows')
+          print('Verified forty-three exact unique Passed lifecycle controls; no skipped or unsuccessful rows')
           PY
       - name: Verify exact billing rows receipts and candidate relation
         run: python3 -B scripts/verify-billing-persistence-proof.py

@@ -42,7 +42,7 @@ public sealed class InstantQuotationLocalizedValidationBrowserTests(CncNativeBro
         });
         await using var page = await context.NewPageAsync();
         var origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
-        await page.GotoAsync(new Uri(new Uri(origin), $"/instantquotation/3d-printing?culture={culture}").ToString());
+        await page.GotoAsync(new Uri(new Uri(origin), $"/instantquotation/3d-printing?culture={culture}&navigation-probe=summary%20link").ToString());
         var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
         if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
         var uploadHelp = await page.Locator("[data-workflow-upload]").InnerTextAsync();
@@ -81,8 +81,12 @@ public sealed class InstantQuotationLocalizedValidationBrowserTests(CncNativeBro
                 FullPage = true,
             });
         }
+        var pageBeforeClick = new Uri(page.Url);
         await page.Locator(".instant-quote__validation-summary a[href='#instant-quote-taxnumber']").Last.ClickAsync();
         Assert.Equal("#instant-quote-taxnumber", await page.EvaluateAsync<string>("() => location.hash"));
+        Assert.Equal(pageBeforeClick.GetLeftPart(UriPartial.Path), new Uri(page.Url).GetLeftPart(UriPartial.Path));
+        Assert.Equal(pageBeforeClick.Query, new Uri(page.Url).Query);
+        await Assertions.Expect(tax).ToBeFocusedAsync();
     }
 
     private static async Task<string> RenderCustomerAsync(string culture)

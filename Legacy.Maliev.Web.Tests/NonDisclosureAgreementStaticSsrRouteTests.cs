@@ -66,6 +66,9 @@ public sealed class NonDisclosureAgreementStaticSsrRouteTests : IClassFixture<Te
         Assert.Contains($"<meta name=\"keywords\" content=\"{keywords}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th"
+            ? "ปกป้องข้อมูลงานผลิตที่เป็นความลับก่อนส่งไฟล์โปรเจกต์"
+            : "Protect confidential manufacturing information before sharing project files.", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"https://storage.googleapis.com/maliev.com/web-contents/documents/mutual%20non-disclosure%20agreement.pdf\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);

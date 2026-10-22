@@ -34,6 +34,10 @@
                     <span data-workflow-part-number aria-label="@Localizer["Part {0}", partNumber]">@partNumber.ToString("00")</span>
                     <h4 id="instant-quote-review-part-@part.PartId">@part.DisplayFileName</h4>
                     <small>@Measurement(part.Geometry.DimensionXmm) × @Measurement(part.Geometry.DimensionYmm) × @Measurement(part.Geometry.DimensionZmm) mm</small>
+                    @if (warnings.Count > 0)
+                    {
+                        <p data-review-warning-consequence>@Localizer["Manufacturing warnings may affect the final result of this part."]</p>
+                    }
                 </div>
                 <div class="instant-quote__review-fields">
                     <div>

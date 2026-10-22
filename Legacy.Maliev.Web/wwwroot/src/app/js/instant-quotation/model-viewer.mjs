@@ -310,24 +310,46 @@ function createCadFaceBoundaryGeometry(geometry) {
   return edges;
 }
 
-export function createCanvasResizeController({ renderer, camera, canvas, devicePixelRatio }) {
+export function createCanvasResizeController({
+  renderer, camera, canvas, devicePixelRatio, onAspectSettled, now = () => performance.now(),
+}) {
   let previousWidth = null;
   let previousHeight = null;
   let previousRatio = null;
+  let previousAspect = null;
+  let lastFramedAspect = null;
+  let pendingAspect = null;
+  let settleAt = 0;
   return Object.freeze({
     sync() {
       const width = Math.max(1, Math.round(canvas.clientWidth));
       const height = Math.max(1, Math.round(canvas.clientHeight));
       const ratio = Math.max(1, Math.min(Number(devicePixelRatio?.()) || 1, 2));
-      if (width === previousWidth && height === previousHeight && ratio === previousRatio) return false;
-      if (ratio !== previousRatio) renderer.setPixelRatio(ratio);
-      renderer.setSize(width, height, false);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-      previousWidth = width;
-      previousHeight = height;
-      previousRatio = ratio;
-      return true;
+      const changed = width !== previousWidth || height !== previousHeight || ratio !== previousRatio;
+      if (changed) {
+        if (ratio !== previousRatio) renderer.setPixelRatio(ratio);
+        renderer.setSize(width, height, false);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        previousWidth = width;
+        previousHeight = height;
+        previousRatio = ratio;
+      }
+      const aspect = camera.aspect;
+      if (Number.isFinite(aspect) && aspect > 0) {
+        if (lastFramedAspect === null) lastFramedAspect = aspect;
+        else if (aspect !== previousAspect) {
+          pendingAspect = Math.abs(aspect - lastFramedAspect) >= 0.02 ? aspect : null;
+          settleAt = now() + 180;
+        }
+        if (pendingAspect !== null && now() >= settleAt) {
+          lastFramedAspect = aspect;
+          pendingAspect = null;
+          onAspectSettled?.();
+        }
+        previousAspect = aspect;
+      }
+      return changed;
     },
   });
 }
@@ -454,7 +476,8 @@ export function createModelViewer({ adapter, eventTarget = null }) {
 
   function fit() {
     assertActive();
-    adapter.fit?.(activeId === null ? null : requirePart(activeId).object);
+    if (activeId === null) return;
+    adapter.fit?.(requirePart(activeId).object);
   }
 
   function fullscreen() {
@@ -538,6 +561,7 @@ export function createThreeModelViewer(canvas) {
     camera,
     canvas,
     devicePixelRatio: () => window.devicePixelRatio,
+    onAspectSettled: () => viewer.fit(),
   });
 
   const adapter = {
@@ -682,14 +706,19 @@ function ensureOcct() {
   return productionOcctLoader.load();
 }
 
-function frameObject(object, camera, controls) {
+export function frameObject(object, camera, controls) {
   if (!object) return;
   const box = new THREE.Box3().setFromObject(object);
   if (box.isEmpty()) return;
-  const center = box.getCenter(new THREE.Vector3());
-  const size = box.getSize(new THREE.Vector3()).length();
-  controls.target.copy(center);
-  camera.position.copy(center).add(new THREE.Vector3(size, size * 0.8, size));
+  const sphere = box.getBoundingSphere(new THREE.Sphere());
+  const dimensions = box.getSize(new THREE.Vector3());
+  const size = dimensions.length();
+  const verticalFov = THREE.MathUtils.degToRad(camera.fov);
+  const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
+  const radius = Math.max(sphere.radius, Math.max(dimensions.x, dimensions.y, dimensions.z, 1) * 0.01, 1);
+  const distance = radius / Math.sin(Math.min(verticalFov, horizontalFov) / 2) * 1.22;
+  controls.target.copy(sphere.center);
+  camera.position.copy(sphere.center).addScaledVector(new THREE.Vector3(1, 0.8, 1).normalize(), distance);
   camera.near = Math.max(size / 1000, 0.01);
   camera.far = Math.max(size * 100, 1000);
   camera.updateProjectionMatrix();
@@ -842,3 +871,5 @@ function quantize(value) {
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
+
+export { createEmptyScene } from './empty-scene.mjs';
