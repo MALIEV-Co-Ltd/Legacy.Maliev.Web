@@ -151,9 +151,9 @@ internal sealed class CncOwnedResourceScope
             if (!Process.Start()) throw new InvalidOperationException("Owned child failed to start.");
             started = true;
             pid = Process.Id;
+            ownedHandle = Process.SafeHandle; // Retain before identity observation can fail; never reconstruct ownership.
             start = Process.StartTime.ToUniversalTime();
-            executable = Process.MainModule?.FileName ?? throw new InvalidOperationException("Executable identity unavailable.");
-            ownedHandle = Process.SafeHandle; // Retain handle through terminal observation and reader settlement.
+            executable = ReadExecutableIdentity(Process);
             stdout = ReadAndSettle(Process.StandardOutput.BaseStream, true);
             stderr = ReadBounded(Process.StandardError.BaseStream, false);
             monitor = Monitor();
@@ -221,11 +221,37 @@ internal sealed class CncOwnedResourceScope
                 throw;
             }
         }
+        internal static string ReadExecutableIdentity(Process process, Func<Process, string?>? readModule = null)
+            => OperatingSystem.IsLinux()
+                ? ReadLinuxExecutableIdentity(process.Id, path => new FileInfo(path).LinkTarget)
+                : RequireAbsoluteExecutable((readModule ?? (child => child.MainModule?.FileName))(process));
+
+        internal static string ReadLinuxExecutableIdentity(int processId, Func<string, string?> readLink)
+        {
+            // /proc may be mounted from another PID namespace. Never resolve an owned PID there.
+            if (processId <= 0
+                || !int.TryParse(readLink("/proc/self"), System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture, out var observedSelf)
+                || observedSelf != Environment.ProcessId)
+                throw new InvalidOperationException("Executable PID namespace identity unavailable.");
+            return RequireAbsoluteExecutable(readLink("/proc/" + processId.ToString(System.Globalization.CultureInfo.InvariantCulture) + "/exe"));
+        }
+
+        private static string RequireAbsoluteExecutable(string? image)
+            => !string.IsNullOrWhiteSpace(image) && Path.IsPathFullyQualified(image)
+                ? image : throw new InvalidOperationException("Executable identity unavailable.");
+
+        internal static bool IsMatchingExecutableIdentity(string? captured, string? observed)
+            => !string.IsNullOrWhiteSpace(captured) && Path.IsPathFullyQualified(captured)
+                && StringComparer.Ordinal.Equals(captured, observed);
+
         private void VerifyIdentity()
         {
             Process.Refresh();
-            if (RejectIdentity || Process.Id != pid || Process.StartTime.ToUniversalTime() != start
-                || Process.MainModule?.FileName != executable)
+            if (RejectIdentity || ownedHandle is null || ownedHandle.IsClosed || ownedHandle.IsInvalid
+                || !ReferenceEquals(Process.SafeHandle, ownedHandle)
+                || Process.Id != pid || Process.StartTime.ToUniversalTime() != start
+                || !IsMatchingExecutableIdentity(executable, ReadExecutableIdentity(Process)))
                 throw new InvalidOperationException("Owned PID/birth/executable identity changed; preserve process.");
         }
         private async Task StopExact()

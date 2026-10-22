@@ -165,4 +165,74 @@ public sealed class CncOwnedResourceScopeTests(Xunit.Abstractions.ITestOutputHel
                 mode == "pid-mismatch" ? -1 : pid, () => throw original)));
         }, rows => output.WriteLine(JsonSerializer.Serialize(rows)));
     }
+
+    [Fact]
+    public async Task ExecutableIdentity_ObservesExactOwnedImageWithoutLinuxModuleEnumeration()
+    {
+        var dll = Environment.GetEnvironmentVariable("MALIEV_CNC_LEASE_PROBE_DLL");
+        Assert.True(File.Exists(dll));
+        await CncOwnedResourceScope.ExecuteAsync(async scope =>
+        {
+            var child = scope.StartChild(dll!, new() { ["MALIEV_CNC_PROBE_MODE"] = "partial-start" });
+            var moduleReads = 0;
+            var actual = CncOwnedResourceScope.OwnedChild.ReadExecutableIdentity(child.Process, process =>
+            {
+                moduleReads++;
+                if (OperatingSystem.IsLinux()) throw new InvalidOperationException("controlled-module-enumeration-unavailable");
+                return process.MainModule?.FileName;
+            });
+            Assert.True(Path.IsPathFullyQualified(actual));
+            if (OperatingSystem.IsLinux())
+            {
+                Assert.Equal(0, moduleReads);
+                Assert.Equal(new FileInfo($"/proc/{child.Process.Id}/exe").LinkTarget, actual);
+            }
+            else
+            {
+                Assert.Equal(1, moduleReads);
+                Assert.Equal(child.Process.MainModule?.FileName, actual);
+            }
+            Assert.False(child.Process.HasExited);
+            await Task.CompletedTask;
+        }, rows =>
+        {
+            using var json = JsonDocument.Parse(JsonSerializer.Serialize(Assert.Single(rows)));
+            Assert.True(json.RootElement.GetProperty("terminal").GetBoolean());
+            Assert.True(json.RootElement.GetProperty("readersSettled").GetBoolean());
+        });
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("", "")]
+    [InlineData("relative", "relative")]
+    [InlineData("/owned/dotnet", "/other/dotnet")]
+    public void ExecutableIdentity_MissingOrDifferentObservationCannotAuthorizeSignal(string? captured, string? observed)
+    {
+        Assert.False(CncOwnedResourceScope.OwnedChild.IsMatchingExecutableIdentity(captured, observed));
+    }
+
+    [Theory]
+    [InlineData("namespace-mismatch")]
+    [InlineData("namespace-unavailable")]
+    [InlineData("image-unavailable")]
+    [InlineData("relative-image")]
+    public void ExecutableIdentity_LinuxObservationFailsClosedWithoutMatchingNamespaceAndAbsoluteImage(string mode)
+    {
+        var reads = new List<string>();
+        var failure = Record.Exception(() => CncOwnedResourceScope.OwnedChild.ReadLinuxExecutableIdentity(
+            123, path =>
+            {
+                reads.Add(path);
+                if (path == "/proc/self")
+                    return mode == "namespace-mismatch" ? "-1"
+                        : mode == "namespace-unavailable" ? null
+                        : Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                return mode == "image-unavailable" ? null : "relative-dotnet";
+            }));
+        Assert.IsType<InvalidOperationException>(failure);
+        Assert.Equal("/proc/self", reads[0]);
+        Assert.Equal(mode is "namespace-mismatch" or "namespace-unavailable" ? 1 : 2, reads.Count);
+        if (reads.Count == 2) Assert.Equal("/proc/123/exe", reads[1]);
+    }
 }
