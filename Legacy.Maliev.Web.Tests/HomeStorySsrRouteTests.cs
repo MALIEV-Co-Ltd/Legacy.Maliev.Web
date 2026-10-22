@@ -41,8 +41,27 @@ public sealed class HomeStorySsrRouteTests(StartupDataProtectionMigrationFixture
         Assert.DoesNotContain("Hero previews", html, StringComparison.Ordinal);
         foreach (var path in new[] { "/Contact", "/About", "/InstantQuotation/3D-Printing", "/Services/Index" })
         {
-            Assert.Contains($"href=\"{path}?culture={culture}\"", html, StringComparison.Ordinal);
+            var expectedHref = path == "/Services/Index"
+                ? culture == "en" ? "/services?culture=en" : "/services"
+                : $"{path}?culture={culture}";
+            Assert.Contains($"href=\"{expectedHref}\"", html, StringComparison.Ordinal);
         }
+        var directoryLink = Assert.Single(Regex.Matches(html,
+            "<a\\b(?=[^>]*\\bclass=\"[^\"]*\\blanding-service-card--directory-link\\b[^\"]*\")[^>]*\\bhref=\"(?<href>[^\"]+)\"[^>]*>[\\s\\S]*?</a>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        var directoryHref = directoryLink.Groups["href"].Value;
+        Assert.Equal(culture == "en" ? "/services?culture=en" : "/services", directoryHref);
+        Assert.Contains(culture == "th" ? "ดูบริการทั้งหมด" : "View all services", directoryLink.Value, StringComparison.Ordinal);
+        using var servicesResponse = await client.GetAsync(directoryHref);
+        var services = WebUtility.HtmlDecode(await servicesResponse.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, servicesResponse.StatusCode);
+        Assert.Equal("/services", servicesResponse.RequestMessage?.RequestUri?.AbsolutePath);
+        Assert.Equal(culture == "en" ? "?culture=en" : string.Empty, servicesResponse.RequestMessage?.RequestUri?.Query);
+        Assert.Contains($"<html lang=\"{culture}\"", services, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "<title>บริการผลิตชิ้นส่วน | MALIEV</title>" : "<title>Manufacturing services | MALIEV</title>", services, StringComparison.Ordinal);
+        Assert.Contains("data-service-finder", services, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"service-breadcrumb\"", services, StringComparison.Ordinal);
+        Assert.Equal(active, services.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
         Assert.Contains(culture == "th" ? "ภาพประกอบ" : "Illustrative", html, StringComparison.Ordinal);
         Assert.Contains("data-tech-leader=\"resin\" data-target-x=\"790\" data-target-y=\"289\"", html, StringComparison.Ordinal);
         Assert.Contains("camera-bracket-sketch-v6.webp", html, StringComparison.Ordinal);

@@ -89,7 +89,7 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.Contains($">{reasons}<", source, StringComparison.Ordinal);
         Assert.Contains($">{finalCallToAction}<", source, StringComparison.Ordinal);
         Assert.Contains($"href=\"/InstantQuotation/3D-Printing?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains($"href=\"/Services/Index?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"{(culture == "en" ? "/services?culture=en" : "/services")}\"", source, StringComparison.Ordinal);
         Assert.Contains($"href=\"/Contact?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(culture == "th" ? "ดูบริการทั้งหมด" : "View all services", source, StringComparison.Ordinal);
         Assert.Contains("landing-service-card--injection", source, StringComparison.Ordinal);
