@@ -82,6 +82,7 @@ public sealed class DevelopmentCustomerFixtureBrowserTests(CncNativeBrowserFixtu
         Assert.False(await page.Locator("#instant-quotation-form").EvaluateAsync<bool>(
             "form => form.hasAttribute('aria-busy')"));
         await page.Locator(".instant-quote__customer-actions button[type=button]").ClickAsync();
+        await Assertions.Expect(page.Locator(".instant-quote__workflow")).ToHaveAttributeAsync("data-workflow-state", "empty");
         Assert.Equal("empty", await page.Locator(".instant-quote__workflow").GetAttributeAsync("data-workflow-state"));
         Assert.True(await page.Locator("[data-workflow-upload]").IsVisibleAsync());
         Assert.Equal(0, effects.PreparationCalls);
