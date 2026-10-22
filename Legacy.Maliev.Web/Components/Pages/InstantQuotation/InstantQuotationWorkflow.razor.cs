@@ -1193,13 +1193,13 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private async Task ChangeReviewMaterialAsync((Guid PartId, string Value) change)
     {
         await ChangeMaterialAsync(change.PartId, new ChangeEventArgs { Value = change.Value });
-        workflow?.EnterReview();
+        if (CanEnterReview) workflow?.EnterReview();
     }
 
     private async Task ChangeReviewColorAsync((Guid PartId, string Value) change)
     {
         await ChangeColorAsync(change.PartId, new ChangeEventArgs { Value = change.Value });
-        workflow?.EnterReview();
+        if (CanEnterReview) workflow?.EnterReview();
     }
 
     private async Task ChangeReviewQuantityAsync((Guid PartId, string Value) change)
@@ -1212,7 +1212,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
 
         await ChangeQuantityAsync(change.PartId, new ChangeEventArgs { Value = quantity });
-        workflow?.EnterReview();
+        if (CanEnterReview) workflow?.EnterReview();
     }
 
     private async Task ChangeReviewBuildPreferenceAsync((Guid PartId, string Value) change)
@@ -1224,7 +1224,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
 
         await ChangeBuildPreferenceAsync(change.PartId, preference);
-        workflow?.EnterReview();
+        if (CanEnterReview) workflow?.EnterReview();
     }
 
     private async Task EditReviewPartAsync(Guid partId)
