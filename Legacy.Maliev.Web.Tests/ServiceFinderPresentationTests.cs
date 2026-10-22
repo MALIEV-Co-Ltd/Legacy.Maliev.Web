@@ -61,6 +61,9 @@ public sealed class ServiceFinderPresentationTests
 
         Assert.Contains("quantity-over-1000", script, StringComparison.Ordinal);
         Assert.Contains("service.id === 'injection') score -= 100", script, StringComparison.Ordinal);
+        Assert.Contains("cnc-priority-precision", script, StringComparison.Ordinal);
+        Assert.Contains("scanning-output-deviation", script, StringComparison.Ordinal);
+        Assert.Contains("molding-priority-rigid", script, StringComparison.Ordinal);
         Assert.Contains("recommendationChain", script, StringComparison.Ordinal);
         Assert.Contains("files-image", script, StringComparison.Ordinal);
         Assert.Contains("aria-current", script, StringComparison.Ordinal);
