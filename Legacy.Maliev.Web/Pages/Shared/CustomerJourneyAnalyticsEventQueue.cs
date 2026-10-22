@@ -39,6 +39,10 @@ public static class CustomerJourneyAnalyticsEventQueue
         }
     }
 
+    /// <summary>Removes a pending quotation-decision event and returns it only when its serialized payload is allowlisted.</summary>
+    /// <param name="tempData">The redirect-scoped temporary data containing the pending analytics event.</param>
+    /// <param name="journeyEvent">The validated event when consumption succeeds; otherwise, null.</param>
+    /// <returns>True when a valid event was consumed; otherwise, false.</returns>
     public static bool TryConsume(
         ITempDataDictionary tempData,
         out CustomerJourneyAnalyticsEvent? journeyEvent)
@@ -66,6 +70,9 @@ public static class CustomerJourneyAnalyticsEventQueue
 /// <summary>The exact, controlled customer quotation-decision data-layer payload.</summary>
 public sealed class CustomerJourneyAnalyticsEvent
 {
+    /// <summary>Initializes the controlled quotation-decision payload from its transaction and decision values.</summary>
+    /// <param name="transactionId">The controlled quotation-prefixed transaction identifier for the persisted decision.</param>
+    /// <param name="decision">The accepted or declined decision associated with the quotation.</param>
     [JsonConstructor]
     public CustomerJourneyAnalyticsEvent(string transactionId, string decision)
     {
@@ -73,15 +80,19 @@ public sealed class CustomerJourneyAnalyticsEvent
         Decision = decision;
     }
 
+    /// <summary>The fixed data-layer event name for a persisted customer quotation decision.</summary>
     [JsonPropertyName("event")]
     public string Event { get; } = "maliev_quote_decision";
 
+    /// <summary>The controlled quotation-prefixed transaction identifier used to correlate the persisted decision.</summary>
     [JsonPropertyName("transaction_id")]
     public string TransactionId { get; }
 
+    /// <summary>The accepted or declined decision value validated before the event is consumed.</summary>
     [JsonPropertyName("decision")]
     public string Decision { get; }
 
+    /// <summary>The fixed customer-portal origin marker for the quotation-decision event.</summary>
     [JsonPropertyName("source")]
     public string Source { get; } = "customer_portal";
 

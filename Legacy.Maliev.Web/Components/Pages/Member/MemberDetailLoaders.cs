@@ -4,10 +4,24 @@ using Legacy.Maliev.Web.Infrastructure;
 
 namespace Legacy.Maliev.Web.Components.Pages.Member;
 
+/// <summary>
+/// Loads and formats member-owned order and quotation details with explicit missing-resource and session outcomes.
+/// </summary>
 public static class MemberDetailLoaders
 {
     private static readonly TimeZoneInfo BangkokTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Bangkok");
 
+    /// <summary>
+    /// Loads a customer-scoped order and combines its detail data with catalog and download supplements.
+    /// </summary>
+    /// <param name="context">The current authenticated request.</param>
+    /// <param name="sessionManager">The server-side session accessor used to resolve the customer identifier.</param>
+    /// <param name="orderClient">The customer-scoped client used to retrieve the order.</param>
+    /// <param name="memberDetailClient">The client used to retrieve display labels, currency, and downloadable files.</param>
+    /// <param name="orderId">The requested customer order identifier.</param>
+    /// <param name="notification">The optional order-operation outcome message retained for display.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The formatted order view and its not-found or unauthorized outcome when applicable.</returns>
     public static async Task<MemberDetailLoadResult<MemberOrderDetailDisplayModel>> LoadOrderAsync(
         HttpContext context,
         IAccountSessionManager sessionManager,
@@ -48,6 +62,17 @@ public static class MemberDetailLoaders
         return MemberDetailLoadResult<MemberOrderDetailDisplayModel>.Success(model);
     }
 
+    /// <summary>
+    /// Loads a customer-scoped quotation and its customer, document, invoice, and payment supplements.
+    /// </summary>
+    /// <param name="context">The current authenticated request.</param>
+    /// <param name="sessionManager">The server-side session accessor used to resolve the customer identifier.</param>
+    /// <param name="quotationClient">The customer-scoped client used to retrieve the quotation.</param>
+    /// <param name="memberDetailClient">The client used to retrieve quotation documents and commercial display supplements.</param>
+    /// <param name="quotationId">The requested customer quotation identifier.</param>
+    /// <param name="notification">The optional quotation-operation outcome message retained for display.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The formatted quotation view and its not-found or unauthorized outcome when applicable.</returns>
     public static async Task<MemberDetailLoadResult<MemberQuotationDetailDisplayModel>> LoadQuotationAsync(
         HttpContext context,
         IAccountSessionManager sessionManager,
@@ -88,12 +113,27 @@ public static class MemberDetailLoaders
                 errors.Concat(supplement.Warnings).Distinct(StringComparer.Ordinal).ToArray()));
     }
 
+    /// <summary>
+    /// Formats order details without optional catalog, currency, or file supplements.
+    /// </summary>
+    /// <param name="details">The order detail response, or null when unavailable.</param>
+    /// <param name="notification">The optional order-operation outcome message retained for display.</param>
+    /// <param name="errors">The messages displayed alongside the order details.</param>
+    /// <returns>The formatted order view, using unavailable placeholders for missing supplemental data.</returns>
     public static MemberOrderDetailDisplayModel CreateOrderDisplayModel(
         CustomerOrderDetails? details,
         string? notification,
         IReadOnlyList<string> errors) =>
         CreateOrderDisplayModel(details, EmptyOrderSupplement, notification, errors);
 
+    /// <summary>
+    /// Formats order details using the supplied catalog labels, currency, and downloadable files.
+    /// </summary>
+    /// <param name="details">The order detail response, or null when unavailable.</param>
+    /// <param name="supplement">The catalog, currency, and file information associated with the order.</param>
+    /// <param name="notification">The optional order-operation outcome message retained for display.</param>
+    /// <param name="errors">The messages displayed alongside the order details.</param>
+    /// <returns>The formatted order view, or its empty representation when details are absent.</returns>
     public static MemberOrderDetailDisplayModel CreateOrderDisplayModel(
         CustomerOrderDetails? details,
         CustomerOrderSupplement supplement,
@@ -140,6 +180,14 @@ public static class MemberDetailLoaders
             supplement.Files.Select(ToFileDisplay).ToArray());
     }
 
+    /// <summary>
+    /// Formats quotation values, customer contact details, linked documents, and related orders for member review.
+    /// </summary>
+    /// <param name="details">The quotation detail response, or null when unavailable.</param>
+    /// <param name="supplement">The customer, invoice, payment, and file information associated with the quotation.</param>
+    /// <param name="notification">The optional quotation-operation outcome message retained for display.</param>
+    /// <param name="errors">The messages displayed alongside the quotation details.</param>
+    /// <returns>The formatted quotation view, or its empty representation when details are absent.</returns>
     public static MemberQuotationDetailDisplayModel CreateQuotationDisplayModel(
         CustomerQuotationDetails? details,
         CustomerQuotationSupplement supplement,
@@ -270,9 +318,31 @@ public static class MemberDetailLoaders
         new(null, null, null, null, null, null, [], [], []);
 }
 
+/// <summary>
+/// Carries a member detail view together with its missing-resource and authentication outcome.
+/// </summary>
+/// <typeparam name="T">The order or quotation display model carried by the result.</typeparam>
+/// <param name="Model">The projected view, including an empty representation on unsuccessful lookup.</param>
+/// <param name="IsNotFound">Whether the requested member resource was not found.</param>
+/// <param name="IsUnauthorized">Whether no authorized member session was available.</param>
 public sealed record MemberDetailLoadResult<T>(T Model, bool IsNotFound, bool IsUnauthorized)
 {
+    /// <summary>
+    /// Creates a detail result that can render the supplied view without missing-resource or session flags.
+    /// </summary>
+    /// <param name="model">The detail view to render.</param>
+    /// <returns>A successful detail result carrying the supplied model.</returns>
     public static MemberDetailLoadResult<T> Success(T model) => new(model, false, false);
+    /// <summary>
+    /// Creates a missing-resource result while retaining the supplied empty detail view.
+    /// </summary>
+    /// <param name="model">The empty detail view associated with the missing resource.</param>
+    /// <returns>A detail result marked as not found.</returns>
     public static MemberDetailLoadResult<T> NotFound(T model) => new(model, true, false);
+    /// <summary>
+    /// Creates an unauthorized result while retaining the supplied empty detail view.
+    /// </summary>
+    /// <param name="model">The empty detail view associated with the unavailable member session.</param>
+    /// <returns>A detail result marked as unauthorized.</returns>
     public static MemberDetailLoadResult<T> Unauthorized(T model) => new(model, false, true);
 }

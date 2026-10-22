@@ -3,8 +3,26 @@ using Legacy.Maliev.Web.Pages.Quotation;
 
 namespace Legacy.Maliev.Web.Components.Pages.Quotation;
 
+/// <summary>
+/// Carries a normalized service context and localized starting message for a quotation enquiry.
+/// </summary>
+/// <param name="ServiceContext">The canonical manufacturing-service key attached to the enquiry.</param>
+/// <param name="Message">The suggested enquiry text containing available item, process, material, and finishing context.</param>
 public sealed record QuotationPrefill(string ServiceContext, string Message)
 {
+    /// <summary>
+    /// Builds localized enquiry prompts for supported service-page links and optional finishing references.
+    /// </summary>
+    /// <param name="culture">The requested language; Thai is selected only for the Thai culture key.</param>
+    /// <param name="item">The service-page item key used to choose supported prefill prompts.</param>
+    /// <param name="process">The optional manufacturing process to mention in the enquiry.</param>
+    /// <param name="material">The optional material to mention for non-scanning work.</param>
+    /// <param name="finishHex">The optional hexadecimal finishing color reference.</param>
+    /// <param name="finishHlc">The optional HLC finishing color reference.</param>
+    /// <param name="finishLab">The optional Lab finishing color reference.</param>
+    /// <param name="finishPantone">The optional Pantone finishing color reference.</param>
+    /// <param name="finishSheen">The optional finishing sheen requirement.</param>
+    /// <returns>The normalized service context and suggested message; unsupported items produce an empty message.</returns>
     public static QuotationPrefill Create(
         string? culture,
         string? item,
@@ -70,6 +88,11 @@ public sealed record QuotationPrefill(string ServiceContext, string Message)
         return new QuotationPrefill(serviceContext, builder.ToString());
     }
 
+    /// <summary>
+    /// Normalizes supported public service aliases to their canonical quotation-context keys.
+    /// </summary>
+    /// <param name="service">The optional service alias supplied by the incoming public link.</param>
+    /// <returns>The canonical service key, or custom_manufacturing for an unsupported or missing alias.</returns>
     public static string NormalizeServiceContext(string? service) => service?.Trim().ToLowerInvariant() switch
     {
         "3d-printing" or "3d_printing" => "3d_printing",

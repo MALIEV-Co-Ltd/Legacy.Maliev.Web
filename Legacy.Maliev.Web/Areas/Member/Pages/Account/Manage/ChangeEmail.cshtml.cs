@@ -11,6 +11,12 @@ using Microsoft.AspNetCore.WebUtilities;
 
 namespace Legacy.Maliev.Web.Areas.Member.Pages.Account.Manage;
 
+/// <summary>Requests an identity-owned email change and sends confirmation and security notifications without exposing session credentials.</summary>
+/// <param name="sessionManager">The server-side account session manager used to resolve identity and manage sign-in state.</param>
+/// <param name="authenticationClient">The typed identity client handling customer credential and challenge operations.</param>
+/// <param name="customerClient">The typed customer client used by this page to read or update customer details.</param>
+/// <param name="notificationClient">The typed notification client used for customer and staff messages.</param>
+/// <param name="logger">The logger instance for diagnostic output.</param>
 [Authorize]
 [EnableRateLimiting("account")]
 public sealed class ChangeEmail(
@@ -20,17 +26,24 @@ public sealed class ChangeEmail(
     INotificationClient notificationClient,
     ILogger<ChangeEmail> logger) : PageModel
 {
+    /// <summary>The existing password submitted for identity verification before an account security change.</summary>
     [BindProperty, Required, DataType(DataType.Password), StringLength(1024)]
     public string CurrentPassword { get; set; } = string.Empty;
 
+    /// <summary>The proposed replacement email address awaiting identity validation and confirmation.</summary>
     [BindProperty, Required, EmailAddress, StringLength(320)]
     public string NewEmail { get; set; } = string.Empty;
 
+    /// <summary>The one-time outcome message carried across this workflow's post/redirect/get boundary.</summary>
     [TempData]
     public string? Notification { get; set; }
 
+    /// <summary>The proposed email and safe validation feedback, excluding the current password.</summary>
     public MemberChangeEmailDisplayModel DisplayModel { get; private set; } = MemberChangeEmailDisplayModel.Empty;
 
+    /// <summary>Loads the owned account email before displaying the email-change form.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The email-change page or an authentication challenge.</returns>
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         var session = await GetOwnedSessionAsync(cancellationToken);
@@ -49,6 +62,9 @@ public sealed class ChangeEmail(
         return Page();
     }
 
+    /// <summary>Validates the current password and proposed email, then requests confirmation and security notifications.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A redirect after a pending change, the form with safe errors, or an authentication challenge.</returns>
     public async Task<IActionResult> OnPostChangeEmailAsync(CancellationToken cancellationToken)
     {
         var session = await GetOwnedSessionAsync(cancellationToken);

@@ -18,6 +18,7 @@ public static class InstantQuotationSessionIdentityClaim
 /// <summary>
 /// Reads the request-established identity from Blazor's circuit-safe authentication state.
 /// </summary>
+/// <param name="authenticationStateProvider">The circuit-safe authentication state supplying the request-established quotation identity.</param>
 public sealed class AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor(
     AuthenticationStateProvider authenticationStateProvider)
     : IInstantQuotationWorkflowSessionIdentityAccessor
@@ -48,9 +49,14 @@ public sealed class AuthenticationStateInstantQuotationWorkflowSessionIdentityAc
 /// <summary>
 /// Establishes and restores the protected quotation identity at the HTTP request boundary.
 /// </summary>
+/// <param name="next">The next middleware delegate in the HTTP request pipeline.</param>
 public sealed class InstantQuotationSessionIdentityMiddleware(RequestDelegate next)
 {
     /// <summary>Processes the Instant Quotation document and Blazor circuit handshake.</summary>
+    /// <param name="context">The quotation document or circuit request being processed.</param>
+    /// <param name="sessionStore">The protected session store used to resolve owner-bound quotation state.</param>
+    /// <param name="identityCookie">The cookie boundary used to read, write or remove protected session identities.</param>
+    /// <returns>A task that completes after identity preparation and the downstream request pipeline.</returns>
     public async Task InvokeAsync(
         HttpContext context,
         IInstantQuotationSessionStore sessionStore,
@@ -112,6 +118,9 @@ public sealed class InstantQuotationSessionIdentityMiddleware(RequestDelegate ne
 /// <summary>
 /// Protects the opaque server-session identifier stored in the essential host cookie.
 /// </summary>
+/// <param name="dataProtectionProvider">The provider protecting the opaque session identity in the host cookie.</param>
+/// <param name="timeProvider">The clock used to preserve the session's absolute expiry.</param>
+/// <param name="logger">The logger for bounded invalid-cookie diagnostics.</param>
 public sealed class InstantQuotationSessionIdentityCookie(
     IDataProtectionProvider dataProtectionProvider,
     TimeProvider timeProvider,
@@ -128,6 +137,8 @@ public sealed class InstantQuotationSessionIdentityCookie(
     private readonly IDataProtector protector = dataProtectionProvider.CreateProtector(ProtectorPurpose);
 
     /// <summary>Returns a valid unprotected identity, or null for missing/malformed input.</summary>
+    /// <param name="context">The request containing the protected quotation cookie.</param>
+    /// <returns>A valid unprotected identity, or null when the cookie is missing or malformed.</returns>
     public string? TryRead(HttpContext context)
     {
         if (!context.Request.Cookies.TryGetValue(CookieName, out var protectedValue))
@@ -148,6 +159,9 @@ public sealed class InstantQuotationSessionIdentityCookie(
     }
 
     /// <summary>Writes a protected cookie without extending the server session's absolute expiry.</summary>
+    /// <param name="context">The response on which to append the essential secure host cookie.</param>
+    /// <param name="identity">The valid opaque server-session identity to protect.</param>
+    /// <param name="absoluteExpiration">The existing session's absolute expiry; writing does not extend it.</param>
     public void Write(HttpContext context, string identity, DateTimeOffset absoluteExpiration)
     {
         if (!IsValidIdentity(identity))
@@ -177,6 +191,7 @@ public sealed class InstantQuotationSessionIdentityCookie(
     }
 
     /// <summary>Expires an invalid or orphaned identity cookie when headers remain writable.</summary>
+    /// <param name="context">The response on which to expire the host cookie if headers remain writable.</param>
     public void Delete(HttpContext context)
     {
         if (context.Response.HasStarted)

@@ -639,4 +639,7 @@ app.MapRazorPages();
 app.MapApiDocumentation(servicePrefix: "web");
 await app.RunAsync();
 
+/// <summary>
+/// Exposes the web application's entry-point type to integration hosts and compiled-assembly checks.
+/// </summary>
 public partial class Program;

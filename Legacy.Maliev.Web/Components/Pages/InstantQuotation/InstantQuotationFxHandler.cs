@@ -7,6 +7,12 @@ using Microsoft.Extensions.Caching.Distributed;
 
 namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
+/// <summary>Converts selected THB response fields for display using a protected, session-bound exchange-rate snapshot.</summary>
+/// <param name="rates">The typed client supplying expiring exchange-rate observations.</param>
+/// <param name="cache">The distributed cache storing protected display-rate snapshots.</param>
+/// <param name="protection">The data-protection provider binding cached rate snapshots to this application.</param>
+/// <param name="clock">The clock used to reject future or expired observations.</param>
+/// <param name="logger">The logger for bounded FX failure categories.</param>
 public sealed class InstantQuotationFxHandler(
     IInstantQuotationExchangeRateClient rates,
     IDistributedCache cache,
@@ -22,6 +28,11 @@ public sealed class InstantQuotationFxHandler(
         "shipping", "vat", "priceBeforeVat", "finalOrderPrice",
     };
 
+    /// <summary>Leaves failed or THB responses unchanged and converts eligible monetary display fields using a valid rate.</summary>
+    /// <param name="context">The request carrying the protected session identity and cancellation token.</param>
+    /// <param name="payload">The calculator response whose successful monetary fields may be converted.</param>
+    /// <param name="requestedCurrency">The requested three-letter display currency; blank selects THB.</param>
+    /// <returns>The original or converted payload with HTTP 200, or a bounded unavailable payload with HTTP 503.</returns>
     public async Task<InstantQuotationFxHandlerResult> ConvertAsync(HttpContext context, object payload, string? requestedCurrency)
     {
         var currency = string.IsNullOrWhiteSpace(requestedCurrency) ? "THB" : requestedCurrency.Trim().ToUpperInvariant();
@@ -112,4 +123,7 @@ public sealed class InstantQuotationFxHandler(
     private sealed record CachedSnapshot(string Identity, InstantQuotationExchangeRate Observation);
 }
 
+/// <summary>Carries the compatibility response body and status selected by display currency conversion.</summary>
+/// <param name="Payload">The original, converted or bounded failure response object.</param>
+/// <param name="StatusCode">The HTTP status code to apply to that response.</param>
 public sealed record InstantQuotationFxHandlerResult(object Payload, int StatusCode);

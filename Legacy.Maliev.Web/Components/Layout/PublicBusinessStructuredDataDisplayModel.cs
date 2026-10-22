@@ -4,6 +4,11 @@ using Legacy.Maliev.Web.Application;
 
 namespace Legacy.Maliev.Web.Components.Layout;
 
+/// <summary>
+/// Carries localized organization and local-business JSON-LD for public document metadata.
+/// </summary>
+/// <param name="OrganizationJson">Serialized organization metadata with public company identity and social links.</param>
+/// <param name="LocalBusinessJson">Serialized local-business metadata with location, opening hours, and contact details.</param>
 public sealed record PublicBusinessStructuredDataDisplayModel(
     string OrganizationJson,
     string LocalBusinessJson)
@@ -17,6 +22,10 @@ public sealed record PublicBusinessStructuredDataDisplayModel(
         SocialNetworks.Threads
     ];
 
+    /// <summary>
+    /// Builds public company structured data in the current request culture.
+    /// </summary>
+    /// <returns>The serialized organization and local-business metadata.</returns>
     public static PublicBusinessStructuredDataDisplayModel Create()
     {
         var isThai = string.Equals(
