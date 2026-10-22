@@ -39,7 +39,7 @@ public sealed class AccountIndexStaticSsrRouteTests : IClassFixture<TestingWebAp
 
     [Theory]
     [InlineData("en", "Member account | MALIEV", "Member workspace", "Sign in to review quotations, orders, project files, and account details.", "Sign in", "Create an account", "Reset password")]
-    [InlineData("th", "บัญชีสมาชิก | MALIEV", "พื้นที่สมาชิก", "เข้าสู่ระบบเพื่อตรวจใบเสนอราคา คำสั่งซื้อ ไฟล์โปรเจ็ค และข้อมูลบัญชี", "เข้าสู่ระบบ", "สร้างบัญชี", "รีเซ็ตรหัสผ่าน")]
+    [InlineData("th", "บัญชีสมาชิก | MALIEV", "พื้นที่สมาชิก", "เข้าสู่ระบบเพื่อตรวจใบเสนอราคา คำสั่งซื้อ ไฟล์โครงการ และข้อมูลบัญชี", "เข้าสู่ระบบ", "สร้างบัญชี", "รีเซ็ตรหัสผ่าน")]
     public async Task AnonymousAccountIndex_RendersLocalizedStaticSsrWithoutSessionSecrets(
         string culture,
         string title,
@@ -58,7 +58,7 @@ public sealed class AccountIndexStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.Contains($"<html lang=\"{culture}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<title>{title}</title>", source, StringComparison.Ordinal);
         Assert.Contains($">{workspaceLabel}<", source, StringComparison.Ordinal);
-        Assert.Contains(culture == "th" ? ">จัดการโปรเจ็คผลิตในที่เดียว<" : ">Manage manufacturing projects in one place<", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? ">จัดการโครงการผลิตในที่เดียว<" : ">Manage manufacturing projects in one place<", source, StringComparison.Ordinal);
         Assert.Contains($">{description}<", source, StringComparison.Ordinal);
         Assert.Contains($">{signInLabel}<", source, StringComparison.Ordinal);
         Assert.Contains($">{createAccountLabel}<", source, StringComparison.Ordinal);
