@@ -63,7 +63,11 @@ public sealed class InstantQuotationFileServiceUploadClientTests
         var policy = new InstantQuotationGltfUnitPolicy(1, unit);
         var claim = Claim(digest) with
         {
-            GltfUnitPolicy = policy, DimensionXmm = size, DimensionYmm = size, DimensionZmm = size, VolumeMm3 = volume,
+            GltfUnitPolicy = policy,
+            DimensionXmm = size,
+            DimensionYmm = size,
+            DimensionZmm = size,
+            VolumeMm3 = volume,
         };
         using var stream = new MemoryStream(bytes);
 
