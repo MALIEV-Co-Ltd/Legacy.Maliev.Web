@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Hosting;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -16,7 +17,7 @@ public sealed class WebContentSecurityPolicyMiddlewareTests
     public async Task SameRequest_TwoMiddlewarePassesEmitExactlyOneDocumentPolicy()
     {
         var nextInvocations = 0;
-        using var server = new TestServer(new WebHostBuilder().Configure(app =>
+        using var host = new HostBuilder().ConfigureWebHost(web => web.UseTestServer().Configure(app =>
         {
             app.Run(async context =>
             {
@@ -30,10 +31,12 @@ public sealed class WebContentSecurityPolicyMiddlewareTests
                 await middleware.InvokeAsync(context);
                 await context.Response.WriteAsync("double-pass");
             });
-        }));
-        using var client = server.CreateClient();
+        })).Build();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await host.StartAsync(timeout.Token);
+        using var client = host.GetTestClient();
         client.Timeout = TimeSpan.FromSeconds(30);
-        using var response = await client.GetAsync("/");
+        using var response = await client.GetAsync("/", timeout.Token);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("double-pass", await response.Content.ReadAsStringAsync());
