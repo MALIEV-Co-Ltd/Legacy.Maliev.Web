@@ -150,8 +150,17 @@ public sealed class ThreeDimensionalPrinting : PageModel
     [StringLength(50)]
     public string? Telephone { get; set; }
 
-    public void OnGet()
+    /// <summary>Gets the local fixture's presentation-only customer fields for the retained Razor route.</summary>
+    public InstantQuotationCustomerDisplayModel CustomerModel { get; private set; } = InstantQuotationCustomerDisplayModel.Empty;
+
+    /// <summary>Loads only local fixture presentation data when the retained Razor route owns the GET.</summary>
+    /// <param name="cancellationToken">Cancellation of the incoming request.</param>
+    /// <returns>A task representing the bounded country read and form projection.</returns>
+    public async Task OnGetAsync(CancellationToken cancellationToken)
     {
+        if (Legacy.Maliev.Web.Infrastructure.DevelopmentCustomerFixture.IsActive(HttpContext))
+            CustomerModel = await Legacy.Maliev.Web.Infrastructure.DevelopmentCustomerFixture.CreateDisplayAsync(
+                HttpContext, cancellationToken);
     }
 
     [NonHandler]
@@ -221,6 +230,15 @@ public sealed class ThreeDimensionalPrinting : PageModel
 
     public async Task<IActionResult> OnPostSubmitRequestAsync(CancellationToken cancellationToken)
     {
+        if (Legacy.Maliev.Web.Infrastructure.DevelopmentCustomerFixture.IsActive(HttpContext))
+        {
+            ApplyProfile(Legacy.Maliev.Web.Infrastructure.DevelopmentCustomerFixture.MergeProfile(PostedProfile()));
+            ValidateConditionalCustomerFields();
+            ValidateBuildingFields();
+            ModelState.AddModelError(string.Empty,
+                "Development fixture mode stops here; no customer account or quotation was written.");
+            return RetryJson();
+        }
         var wantsJson = Request.Headers.Accept.ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase);
         InstantQuotationAuthenticatedPreparation? prepared = null;
         if (User.Identity?.IsAuthenticated is true)

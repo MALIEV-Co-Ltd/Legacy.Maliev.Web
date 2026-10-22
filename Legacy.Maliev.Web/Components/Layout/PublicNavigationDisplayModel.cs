@@ -1,4 +1,5 @@
 using System.Globalization;
+using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.WebUtilities;
@@ -15,6 +16,9 @@ public sealed record PublicNavigationDisplayModel(
     string LanguageAction,
     IReadOnlyList<PublicNavigationCultureOption> Cultures)
 {
+    /// <summary>Identifies the separately authenticated Development-only UI preview, never member authority.</summary>
+    public bool IsDevelopmentCustomerFixture { get; init; }
+
     public static PublicNavigationDisplayModel Create(HttpContext context, bool suppressIdentityNavigation)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -50,7 +54,10 @@ public sealed record PublicNavigationDisplayModel(
             tokens.FormFieldName,
             tokens.RequestToken ?? throw new InvalidOperationException("The antiforgery request token was not generated."),
             languageAction,
-            cultures);
+            cultures)
+        {
+            IsDevelopmentCustomerFixture = DevelopmentCustomerFixture.IsActive(context),
+        };
     }
 }
 
