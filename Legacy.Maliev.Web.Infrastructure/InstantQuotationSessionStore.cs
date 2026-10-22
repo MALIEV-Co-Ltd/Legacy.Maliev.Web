@@ -86,6 +86,12 @@ internal sealed class DistributedInstantQuotationSessionStore(
             OwnerIdentity = existing.OwnerIdentity,
             PhysicalReceipts = session.PhysicalReceipts?.ToArray(),
         };
+        if (updated.PhysicalReceipts?.Any(receipt =>
+                receipt?.GeometryReconstruction is { } reconstruction && !reconstruction.IsValid()) == true)
+        {
+            return false;
+        }
+
         await WriteAsync(updated, existing.OwnerIdentity, cancellationToken);
         return true;
     }

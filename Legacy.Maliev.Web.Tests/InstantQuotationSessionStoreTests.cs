@@ -444,6 +444,101 @@ public sealed class InstantQuotationSessionStoreTests
         Assert.Null(await store.GetAsync(created.SessionId, "foreign-owner", default));
     }
 
+    /// <summary>Rejects invalid reconstruction updates without changing the prior protected session or deleting its cache entry.</summary>
+    /// <param name="method">The proposed reconstruction algorithm revision.</param>
+    /// <param name="size">The proposed voxel pitch in millimetres.</param>
+    /// <param name="accepted">Whether the existing provenance validator permits the update.</param>
+    /// <returns>A task that completes after verifying cache mutations, protected bytes and owner-scoped restoration.</returns>
+    [Theory]
+    [InlineData("unknown", 0.3, false)]
+    [InlineData("voxel-majority-v1", 0.1, false)]
+    [InlineData("voxel-majority-v1", 0.6, false)]
+    [InlineData("voxel-majority-v1", 0.4, true)]
+    public async Task PutAsync_ReconstructionValidationPrecedesCacheMutation(
+        string method, double size, bool accepted)
+    {
+        using var services = new ServiceCollection().AddDistributedMemoryCache().BuildServiceProvider();
+        var cache = new MutationCountingCache(services.GetRequiredService<IDistributedCache>());
+        var store = new DistributedInstantQuotationSessionStore(
+            cache, new EphemeralDataProtectionProvider(), new AdjustableTimeProvider(Now),
+            NullLogger<DistributedInstantQuotationSessionStore>.Instance);
+        var fileId = Guid.NewGuid();
+        var original = State().Parts.Single();
+        var part = original with
+        {
+            UploadReference = new InstantQuotationUploadReference(fileId.ToString("D")),
+            PhysicalAnalysisUpload = new InstantQuotationPhysicalAnalysisUpload(
+                fileId, "part.stl", "model/stl", 100, original.Geometry.Sha256, "clean"),
+        };
+        var created = await store.CreateAsync("owner-1", new InstantQuotationOrderState([part]), default);
+        var receipt = new InstantQuotationPhysicalAnalysisReceipt(
+            created.SessionId, "owner-1", part.PartId, fileId, part.Geometry.Sha256,
+            "PLA", "PLA", BuildPreference.Standard, 1, "profile-v1", new string('B', 64),
+            "analysis-v1", new string('C', 64), 1000, 100, 3600, 2)
+        { GeometryReconstruction = new("voxel-majority-v1", 0.3) };
+        Assert.True(await store.PutAsync(created with { PhysicalReceipts = [receipt] }, "owner-1", default));
+        var current = Assert.IsType<InstantQuotationSessionState>(
+            await store.GetAsync(created.SessionId, "owner-1", default));
+        var key = DistributedInstantQuotationSessionStore.CacheKeyPrefix + created.SessionId;
+        var before = await cache.GetAsync(key);
+        Assert.NotNull(before);
+        var writes = cache.SetCalls;
+        var removals = cache.RemoveCalls;
+        var proposed = receipt with { GeometryReconstruction = new(method, size) };
+
+        Assert.Equal(accepted, await store.PutAsync(
+            current with { PhysicalReceipts = [proposed] }, "owner-1", default));
+
+        Assert.Equal(writes + (accepted ? 1 : 0), cache.SetCalls);
+        Assert.Equal(removals, cache.RemoveCalls);
+        var after = await cache.GetAsync(key);
+        Assert.NotNull(after);
+        Assert.Equal(!accepted, before.AsSpan().SequenceEqual(after));
+        var restored = Assert.IsType<InstantQuotationSessionState>(
+            await store.GetAsync(created.SessionId, "owner-1", default));
+        Assert.Equal(accepted ? proposed : receipt, Assert.Single(restored.PhysicalReceipts!));
+        Assert.Equal(current.SessionId, restored.SessionId);
+        Assert.Equal(current.SubmissionId, restored.SubmissionId);
+        Assert.Equal(current.CreatedAt, restored.CreatedAt);
+        if (accepted)
+            Assert.True(restored.UpdatedAt > current.UpdatedAt);
+        else
+            Assert.Equal(current.UpdatedAt, restored.UpdatedAt);
+        Assert.Null(await store.GetAsync(created.SessionId, "foreign-owner", default));
+        Assert.Equal(removals, cache.RemoveCalls);
+    }
+
+    private sealed class MutationCountingCache(IDistributedCache inner) : IDistributedCache
+    {
+        internal int SetCalls { get; private set; }
+        internal int RemoveCalls { get; private set; }
+
+        public byte[]? Get(string key) => inner.Get(key);
+        public Task<byte[]?> GetAsync(string key, CancellationToken token = default) => inner.GetAsync(key, token);
+        public void Refresh(string key) => inner.Refresh(key);
+        public Task RefreshAsync(string key, CancellationToken token = default) => inner.RefreshAsync(key, token);
+        public void Set(string key, byte[] value, DistributedCacheEntryOptions options)
+        {
+            SetCalls++;
+            inner.Set(key, value, options);
+        }
+        public Task SetAsync(string key, byte[] value, DistributedCacheEntryOptions options, CancellationToken token = default)
+        {
+            SetCalls++;
+            return inner.SetAsync(key, value, options, token);
+        }
+        public void Remove(string key)
+        {
+            RemoveCalls++;
+            inner.Remove(key);
+        }
+        public Task RemoveAsync(string key, CancellationToken token = default)
+        {
+            RemoveCalls++;
+            return inner.RemoveAsync(key, token);
+        }
+    }
+
     private static Fixture CreateFixture()
     {
         var services = new ServiceCollection()
