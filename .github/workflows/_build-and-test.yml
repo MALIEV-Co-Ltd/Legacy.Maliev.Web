@@ -162,7 +162,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~PublishWorkflowPermissionContractTests|FullyQualifiedName~NineGeneratedStlUploadsKeepDistinctReviewAndPreliminaryPreviews|FullyQualifiedName~OneMillimeterFdmUploadDoesNotInventAThinWallWarning|FullyQualifiedName~ComparisonCallback"
+          --filter "FullyQualifiedName~PublishWorkflowPermissionContractTests|FullyQualifiedName~NineGeneratedStlUploadsKeepDistinctReviewAndPreliminaryPreviews|FullyQualifiedName~OneMillimeterFdmUploadDoesNotInventAThinWallWarning|FullyQualifiedName~ComparisonCallback|FullyQualifiedName~ModelViewerCadSourceBrowserTests|FullyQualifiedName~ModelViewerWorkerBrowserTests|FullyQualifiedName~CncNativeImportBrowserTests|FullyQualifiedName~WorkerAssetFingerprintTests|FullyQualifiedName~BrowserHostIdentityTests"
           --logger trx --results-directory ./publisher-mesh-test-results
       - name: Verify localized physical result, actual summary and consent browser boundaries
         run: >-
