@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
 {
     private static readonly IDataProtectionProvider DataProtectionProvider = new EphemeralDataProtectionProvider();
     private readonly WebApplicationFactory<Program> factory;
@@ -29,6 +29,14 @@ public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<WebA
                 services.AddSingleton<ICountryClient, StubCountryClient>();
             });
         });
+
+    /// <summary>Completes setup after the per-test child factory has been created.</summary>
+    /// <returns>A completed setup task.</returns>
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    /// <summary>Releases this test's child host and its tracked clients without disposing the borrowed parent.</summary>
+    /// <returns>A task that completes after the owned child factory has been disposed.</returns>
+    public async Task DisposeAsync() => await factory.DisposeAsync();
 
     [Fact]
     public void Runtime_RegistersAuthoritativePricingAndServerOnlySessionIdentity()

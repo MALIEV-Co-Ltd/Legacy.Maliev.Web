@@ -29,6 +29,67 @@ public sealed class WebSurfaceOwnedLifetimeTests
         Assert.Equal(3, second.LifetimeOwner.RemainingOwnedResources);
     }
 
+    /// <summary>Releases each real quotation test's created child while leaving its borrowed parent and sibling usable.</summary>
+    /// <param name="testClass">The concrete test class whose constructor creates the child factory.</param>
+    /// <returns>A task that completes after the owned child and regression-owned factories have been released.</returns>
+    [Theory]
+    [InlineData(nameof(InstantQuotationStaticSsrRouteTests))]
+    [InlineData(nameof(InstantQuotationAnalyticsIntegrationTests))]
+    [InlineData(nameof(InstantQuotationRuntimeIntegrationTests))]
+    [InlineData(nameof(InstantQuotationInteractiveRouteTests))]
+    public async Task QuotationCaseTeardownReleasesOnlyItsCreatedChild(string testClass)
+    {
+        await using var parent = new TestingWebApplicationFactory();
+        IAsyncLifetime owner = testClass switch
+        {
+            nameof(InstantQuotationStaticSsrRouteTests) => new InstantQuotationStaticSsrRouteTests(parent),
+            nameof(InstantQuotationAnalyticsIntegrationTests) => new InstantQuotationAnalyticsIntegrationTests(parent),
+            nameof(InstantQuotationRuntimeIntegrationTests) => new InstantQuotationRuntimeIntegrationTests(parent),
+            nameof(InstantQuotationInteractiveRouteTests) => new InstantQuotationInteractiveRouteTests(parent),
+            _ => throw new ArgumentOutOfRangeException(nameof(testClass)),
+        };
+        Exception? primary = null;
+        try
+        {
+            var child = Assert.Single(parent.Factories);
+            var childLease = child.Services.GetRequiredService<TestingWebRootLease>();
+            await using var sibling = parent.WithWebHostBuilder(_ => { });
+            var siblingLease = sibling.Services.GetRequiredService<TestingWebRootLease>();
+            Assert.NotSame(childLease, siblingLease);
+            Assert.False(childLease.IsDisposed);
+            Assert.False(siblingLease.IsDisposed);
+
+            await owner.InitializeAsync();
+            await owner.DisposeAsync();
+            Assert.True(childLease.IsDisposed);
+            Assert.False(siblingLease.IsDisposed);
+            await owner.DisposeAsync();
+            Assert.True(childLease.IsDisposed);
+            Assert.False(siblingLease.IsDisposed);
+
+            using var siblingClient = sibling.CreateClient();
+            using var siblingResponse = await siblingClient.GetAsync("/account/login?culture=en");
+            Assert.Equal(HttpStatusCode.OK, siblingResponse.StatusCode);
+            using var parentClient = parent.CreateClient();
+            using var parentResponse = await parentClient.GetAsync("/account/login?culture=en");
+            Assert.Equal(HttpStatusCode.OK, parentResponse.StatusCode);
+            Assert.False(parent.Services.GetRequiredService<TestingWebRootLease>().IsDisposed);
+        }
+        catch (Exception failure)
+        {
+            primary = failure;
+            throw;
+        }
+        finally
+        {
+            try { await owner.DisposeAsync(); }
+            catch (Exception cleanup) when (primary is not null)
+            {
+                OwnedWebSurfaceResources.RecordFailureTypes(primary, [cleanup]);
+            }
+        }
+    }
+
     [Fact]
     public void PinnedSharedParentPatternRetainsBothDisposedChildren()
     {
