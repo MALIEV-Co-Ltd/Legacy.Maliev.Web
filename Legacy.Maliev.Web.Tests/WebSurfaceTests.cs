@@ -2212,9 +2212,16 @@ public sealed class WebSurfaceTests : IDisposable
     [InlineData("/")]
     [InlineData("/robots.txt")]
     [InlineData("/Error?code=404")]
+    [InlineData("/definitely-not-a-maliev-route?culture=en")]
     public async Task HttpResponses_IncludeBaselineBrowserSecurityHeaders(string path)
     {
         using var response = await client.GetAsync(path);
+        if (path == "/definitely-not-a-maliev-route?culture=en")
+        {
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.Contains("data-migration-component=\"error-content\"",
+                await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        }
 
         Assert.Equal("max-age=63072000; includeSubDomains",
             Assert.Single(response.Headers.GetValues("Strict-Transport-Security")));
@@ -2227,7 +2234,9 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains("frame-ancestors 'none'", policy, StringComparison.Ordinal);
         Assert.DoesNotContain("paypal", policy, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(
-            path.StartsWith("/Error", StringComparison.Ordinal) ? "no-referrer" : "strict-origin-when-cross-origin",
+            path.StartsWith("/Error", StringComparison.Ordinal)
+                || path == "/definitely-not-a-maliev-route?culture=en"
+                ? "no-referrer" : "strict-origin-when-cross-origin",
             Assert.Single(response.Headers.GetValues("Referrer-Policy")));
     }
 
