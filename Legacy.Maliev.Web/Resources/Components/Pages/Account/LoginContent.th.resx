@@ -161,4 +161,7 @@
   <data name="Email address is too long." xml:space="preserve"><value>อีเมลยาวเกินไป</value></data>
   <data name="Sign in is temporarily unavailable. Please try again." xml:space="preserve"><value>ระบบเข้าสู่ระบบไม่พร้อมใช้งานชั่วคราว กรุณาลองอีกครั้ง</value></data>
   <data name="The email or password is invalid, or the email has not been confirmed." xml:space="preserve"><value>อีเมลหรือรหัสผ่านไม่ถูกต้อง หรือยังไม่ได้ยืนยันอีเมล</value></data>
+  <data name="Local customer fixture" xml:space="preserve"><value>ข้อมูลลูกค้าทดสอบในเครื่อง</value></data>
+  <data name="Test the logged-in quotation profile without connecting to the production identity database." xml:space="preserve"><value>ทดสอบข้อมูลลูกค้าในแบบฟอร์มเสนอราคาโดยไม่เชื่อมต่อฐานข้อมูลบัญชีจริง</value></data>
+  <data name="Continue as test customer" xml:space="preserve"><value>ดำเนินการด้วยข้อมูลลูกค้าทดสอบ</value></data>
 </root>

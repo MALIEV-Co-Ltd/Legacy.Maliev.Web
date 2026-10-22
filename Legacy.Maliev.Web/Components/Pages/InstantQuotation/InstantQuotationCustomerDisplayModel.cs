@@ -25,6 +25,8 @@ public sealed record InstantQuotationCustomerDisplayModel(
     // be materialized by System.Text.Json; a concrete set retains ordinal locks.
     public HashSet<string> LockedFields { get; init; } = new(StringComparer.Ordinal);
     public bool ProfileUnavailable { get; init; }
+    /// <summary>Shows the local fixture preview controls; this display flag never authorizes a submission.</summary>
+    public bool IsDevelopmentCustomerFixture { get; init; }
     public bool IsLocked(string field) => LockedFields.Contains(field);
 
     public static InstantQuotationCustomerDisplayModel FromProfile(InstantQuotationCustomerDisplayModel model,

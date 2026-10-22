@@ -1,5 +1,6 @@
 @page "/Account/Login"
 @using System.Globalization
+@using Legacy.Maliev.Web.Infrastructure
 @using Microsoft.AspNetCore.Antiforgery
 @using Microsoft.AspNetCore.Mvc.ViewFeatures
 @inject IHttpContextAccessor HttpContextAccessor
@@ -46,6 +47,7 @@
                 }
                 <LoginContent Model="model" />
             </form>
+            <DevelopmentCustomerFixtureEntry />
             <footer class="auth-card__footer">
                 <p class="auth-card__footer-lead">@Localizer["New to MALIEV?"]</p>
                 <div class="maliev-actions">
@@ -71,6 +73,11 @@
     {
         var context = HttpContextAccessor.HttpContext
             ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+        if (DevelopmentCustomerFixture.IsActive(context))
+        {
+            Navigation.NavigateTo("/InstantQuotation/3D-Printing");
+            return;
+        }
         if (context.User.Identity?.IsAuthenticated == true)
         {
             Navigation.NavigateTo("/Account");

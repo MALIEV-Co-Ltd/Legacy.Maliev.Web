@@ -1,4 +1,6 @@
 using System.Net;
+using System.Runtime.ExceptionServices;
+using Microsoft.AspNetCore.TestHost;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -271,11 +273,18 @@ public sealed class RedisRuntimeFixture : IAsyncLifetime
 
     public Task DisposeAsync() => redis.DisposeAsync().AsTask();
 
-    public WebApplicationFactory<Program> CreateFactory() =>
+    public WebApplicationFactory<Program> CreateFactory() => CreateFactory("RedisIntegration");
+
+    internal WebApplicationFactory<Program> CreateFactory(string environmentName, Action<IWebHostBuilder>? configure = null) =>
         new RedisWebApplicationFactory(
             redis.GetConnectionString(),
             certificatePfxBase64,
-            CertificatePassword);
+            CertificatePassword,
+            environmentName,
+            configure);
+
+    internal X509Certificate2 CreateCertificate() => X509CertificateLoader.LoadPkcs12(
+        Convert.FromBase64String(certificatePfxBase64), CertificatePassword, X509KeyStorageFlags.EphemeralKeySet);
 
     private static string CreateCertificatePfxBase64()
     {
@@ -294,18 +303,64 @@ public sealed class RedisRuntimeFixture : IAsyncLifetime
     private sealed class RedisWebApplicationFactory(
         string redisConnectionString,
         string pfxBase64,
-        string pfxPassword) : WebApplicationFactory<Program>
+        string pfxPassword,
+        string environmentName,
+        Action<IWebHostBuilder>? configure) : WebApplicationFactory<Program>
     {
+        private IConnectionMultiplexer? ownedMultiplexer;
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder
-                .UseEnvironment("RedisIntegration")
+                .UseEnvironment(environmentName)
                 .UseSetting("Recaptcha:ProjectId", "test-project")
                 .UseSetting("Recaptcha:SiteKey", "test-site-key")
                 .UseSetting("ConnectionStrings:redis", redisConnectionString)
                 .UseSetting("DataProtection:CertificatePfxBase64", pfxBase64)
                 .UseSetting("DataProtection:CertificatePassword", pfxPassword)
                 .UseSetting("ServiceAuthentication:ClientSecret", "redis-integration-secret");
+            // Program creates and registers this instance before test callbacks can replace it.
+            // Do not resolve the final provider: its multiplexer may be borrowed.
+            builder.ConfigureTestServices(services =>
+            {
+                if (environmentName == "Testing") return;
+                var registration = services.Single(service => service.ServiceType == typeof(IConnectionMultiplexer));
+                ownedMultiplexer = registration.ImplementationInstance as ConnectionMultiplexer
+                    ?? throw new InvalidOperationException("Program-created Redis instance was not available at the ownership boundary.");
+            });
+            configure?.Invoke(builder);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            var failures = new List<Exception>();
+            try { base.Dispose(disposing); }
+            catch (Exception exception) { failures.Add(exception); }
+            if (disposing)
+            {
+                try { Interlocked.Exchange(ref ownedMultiplexer, null)?.Dispose(); }
+                catch (Exception exception) { failures.Add(exception); }
+            }
+            ThrowFailures(failures);
+        }
+
+        public override async ValueTask DisposeAsync()
+        {
+            var failures = new List<Exception>();
+            try { await base.DisposeAsync(); }
+            catch (Exception exception) { failures.Add(exception); }
+            var owned = Interlocked.Exchange(ref ownedMultiplexer, null);
+            if (owned is not null)
+            {
+                try { await owned.DisposeAsync(); }
+                catch (Exception exception) { failures.Add(exception); }
+            }
+            ThrowFailures(failures);
+        }
+
+        private static void ThrowFailures(List<Exception> failures)
+        {
+            if (failures.Count == 1) ExceptionDispatchInfo.Capture(failures[0]).Throw();
+            if (failures.Count > 1) throw new AggregateException(failures);
         }
     }
 }

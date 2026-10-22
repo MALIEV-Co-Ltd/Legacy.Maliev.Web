@@ -13,6 +13,15 @@
     <p id="instant-quote-status" class="instant-quote__sr-only" aria-live="polite" aria-atomic="true">@StatusMessage</p>
     <p data-workflow-preview-status class="instant-quote__sr-only" role="status">@PreviewStatusMessage</p>
 
+    @if (CustomerModel.IsDevelopmentCustomerFixture && !VisibleSections.CustomerDetails && !VisibleSections.Submitted && !IsBusy)
+    {
+        <button type="button" class="maliev-button maliev-button--secondary"
+                data-development-customer-preview @ref="developmentPreviewButton" @onclick="ShowDevelopmentCustomerPreview">
+            <i class="fas fa-flask" aria-hidden="true"></i>
+            @Localizer["Preview customer details"]
+        </button>
+    }
+
     @if (VisibleSections.Upload)
     {
         <section data-workflow-upload

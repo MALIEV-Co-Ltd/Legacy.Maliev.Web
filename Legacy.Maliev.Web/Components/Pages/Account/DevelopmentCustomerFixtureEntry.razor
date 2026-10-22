@@ -1,0 +1,27 @@
+@using Legacy.Maliev.Web.Infrastructure
+@using System.Globalization
+@using Microsoft.AspNetCore.Antiforgery
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IAntiforgery Antiforgery
+@inject IStringLocalizer<LoginContent> Localizer
+
+@if (HttpContextAccessor.HttpContext is { } context && DevelopmentCustomerFixture.IsAvailable(context))
+{
+    var tokens = Antiforgery.GetAndStoreTokens(context);
+    <div class="maliev-alert mt-3" role="note" data-development-customer-fixture>
+        <i class="fas fa-flask" aria-hidden="true"></i>
+        <div>
+            <strong>@Localizer["Local customer fixture"]</strong>
+            <p>@Localizer["Test the logged-in quotation profile without connecting to the production identity database."]</p>
+            <form method="post" action="@EntryAction">
+                <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" />
+                <button type="submit" class="maliev-button maliev-button--secondary">@Localizer["Continue as test customer"]</button>
+            </form>
+        </div>
+    </div>
+}
+
+@code {
+    private static string EntryAction => "/Account/Login?handler=DevelopmentCustomerFixture&culture="
+        + Uri.EscapeDataString(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+}

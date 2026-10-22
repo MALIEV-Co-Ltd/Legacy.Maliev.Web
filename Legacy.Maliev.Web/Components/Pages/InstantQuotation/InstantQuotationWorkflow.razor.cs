@@ -27,6 +27,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool initializationFailed;
     private InputFile? fileInput;
     private ElementReference workflowSection;
+    private ElementReference developmentPreviewButton;
+    private bool developmentCustomerPreview;
     private ElementReference previewCanvas;
     private ElementReference incompletePreviewCanvas;
     private string? incompletePreviewKey;
@@ -70,7 +72,9 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool ThicknessNeedsAttention => thicknessStatuses.Values.Any(
         status => status.Warning || status.Incomplete);
 
-    private InstantQuotationWorkflowState State => initializationFailed
+    private InstantQuotationWorkflowState State => developmentCustomerPreview && CustomerModel.IsDevelopmentCustomerFixture
+        ? InstantQuotationWorkflowState.CustomerDetails
+        : initializationFailed
         ? InstantQuotationWorkflowState.Error
         : workflow?.State ?? InitialState;
 
@@ -1133,6 +1137,14 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         pendingFocus = PendingWorkflowFocus.Review;
     }
 
+    private void ShowDevelopmentCustomerPreview()
+    {
+        if (!CustomerModel.IsDevelopmentCustomerFixture || IsBusy
+            || State is InstantQuotationWorkflowState.Submitted) return;
+        developmentCustomerPreview = true;
+        pendingFocus = PendingWorkflowFocus.CustomerDetails;
+    }
+
     private void EnterCustomerDetails()
     {
         workflow?.EnterCustomerDetails();
@@ -1147,6 +1159,12 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private void ReturnToReview()
     {
+        if (developmentCustomerPreview)
+        {
+            developmentCustomerPreview = false;
+            pendingFocus = PendingWorkflowFocus.DevelopmentPreview;
+            return;
+        }
         workflow?.ReturnToReview();
         pendingFocus = PendingWorkflowFocus.Review;
     }
@@ -1158,6 +1176,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             PendingWorkflowFocus.Configuration => configurationSection,
             PendingWorkflowFocus.Review => reviewSection,
             PendingWorkflowFocus.CustomerDetails => customerDetailsSection,
+            PendingWorkflowFocus.DevelopmentPreview => developmentPreviewButton,
             _ => default,
         };
         if (pendingFocus is PendingWorkflowFocus.None)
@@ -1320,6 +1339,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         Configuration,
         Review,
         CustomerDetails,
+        DevelopmentPreview,
     }
 
     internal sealed record WorkflowSectionVisibility(
