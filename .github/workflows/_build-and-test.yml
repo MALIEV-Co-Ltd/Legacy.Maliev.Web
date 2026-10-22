@@ -14,6 +14,8 @@ jobs:
       DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: '1'
       MSBUILDDISABLENODEREUSE: '1'
       UseSharedCompilation: 'false'
+      # Preserve file change notifications without exhausting hosted inotify instances.
+      DOTNET_USE_POLLING_FILE_WATCHER: '1'
       MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
       MALIEV_WEB_STARTUP_PROOF: hosted-owned
       MALIEV_BILLING_CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
