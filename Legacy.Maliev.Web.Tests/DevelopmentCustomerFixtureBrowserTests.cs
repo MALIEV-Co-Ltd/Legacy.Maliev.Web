@@ -55,6 +55,7 @@ public sealed class DevelopmentCustomerFixtureBrowserTests(CncNativeBrowserFixtu
         if (await consent.CountAsync() > 0) await consent.ClickAsync();
         Assert.Equal("empty", await page.Locator(".instant-quote__workflow").GetAttributeAsync("data-workflow-state"));
         await page.Locator("[data-development-customer-preview]").ClickAsync();
+        await Assertions.Expect(page.Locator("[data-workflow-customer-details]")).ToBeVisibleAsync();
         Assert.True(await page.Locator("[data-workflow-customer-details]").IsVisibleAsync());
         Assert.Equal("customerdetails", await page.Locator(".instant-quote__workflow").GetAttributeAsync("data-workflow-state"));
         Assert.Equal("ทดสอบ", await page.Locator("[name=FirstName]").InputValueAsync());
