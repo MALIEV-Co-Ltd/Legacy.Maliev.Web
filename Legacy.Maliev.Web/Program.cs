@@ -25,8 +25,10 @@ return await PrivateWebLogging.RunHostAsync(
     {
         var builder = WebApplication.CreateBuilder(args);
         preserveTestingException = builder.Environment.IsEnvironment("Testing");
+        using var testingWebRoot = TestingWebRootLease.Create(builder.Environment);
         if (builder.Environment.IsEnvironment("Testing"))
         {
+            if (testingWebRoot is not null) builder.Services.AddSingleton(testingWebRoot);
             builder.WebHost.UseStaticWebAssets();
         }
 

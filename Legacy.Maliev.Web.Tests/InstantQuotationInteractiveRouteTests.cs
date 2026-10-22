@@ -44,7 +44,7 @@ public sealed class InstantQuotationInteractiveRouteTests : IDisposable
     {
         try
         {
-            ownedParent = resources.Own(new WebApplicationFactory<Program>());
+            ownedParent = resources.Own(new TestingWebApplicationFactory());
             var factory = ownedParent;
             ownedFactory = resources.Own(factory.WithWebHostBuilder(builder =>
             {

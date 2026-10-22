@@ -1,5 +1,6 @@
 using System.Net;
 using System.Reflection;
+using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,8 +22,8 @@ public sealed class InstantQuotationInteractiveRouteLifetimeTests
         var secondChild = second.LifetimeFactory;
         var secondClient = second.LifetimeClient;
 
-        Assert.IsType<WebApplicationFactory<Program>>(firstParent);
-        Assert.IsType<WebApplicationFactory<Program>>(secondParent);
+        Assert.IsType<TestingWebApplicationFactory>(firstParent);
+        Assert.IsType<TestingWebApplicationFactory>(secondParent);
         Assert.NotSame(firstParent, secondParent);
         Assert.NotSame(firstChild, secondChild);
         Assert.NotSame(firstClient, secondClient);
@@ -35,9 +36,15 @@ public sealed class InstantQuotationInteractiveRouteLifetimeTests
         var configuration = firstChild.Services.GetRequiredService<IConfiguration>();
         Assert.Equal("test-project", configuration["Recaptcha:ProjectId"]);
         Assert.Equal("test-site-key", configuration["Recaptcha:SiteKey"]);
+        var firstLease = firstChild.Services.GetRequiredService<TestingWebRootLease>();
+        var secondLease = secondChild.Services.GetRequiredService<TestingWebRootLease>();
+        Assert.False(firstLease.IsDisposed);
+        Assert.False(secondLease.IsDisposed);
 
         first.Dispose();
         first.Dispose();
+        Assert.True(firstLease.IsDisposed);
+        Assert.False(secondLease.IsDisposed);
         Assert.Equal(0, first.RemainingOwnedResources);
         AssertDisposedFactory(firstChild);
         AssertDisposedFactory(firstParent);
