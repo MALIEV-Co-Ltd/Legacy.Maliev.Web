@@ -47,7 +47,8 @@ ROSTERS = {'fdm': {'Legacy.Maliev.Web.Tests.FdmOriginalServiceEligibilityBoundar
                                                                'Build_SupportOff_ReportsDemandInsteadOfZeroSuccess': 1,
                                                                'Build_VerticalCube_ProducesNoSupport': 1,
                                                                'CalculateMass_UsesDepositedVolumesAndSeparateDensities': 1}},
- 'sidebar': {'Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests': {'RealPartsRailExposesLongNamesAndKeyboardActions': 12}}}
+ 'sidebar': {'Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests': {'RealPartsRailExposesLongNamesAndKeyboardActions': 12,
+                                                                             'CompactPartsRailKeepsFullNamesAndKeyboardActionsReachable': 2}}}
 
 
 def verify(path, suite, assembly):
@@ -115,8 +116,10 @@ def verify(path, suite, assembly):
         cls = "Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests"
         exact = {f'{cls}.RealPartsRailExposesLongNamesAndKeyboardActions(culture: "{culture}", width: {width})'
                  for culture in ("en", "th") for width in (320, 375, 820, 992, 1280, 1600)}
+        exact.update(f'{cls}.CompactPartsRailKeepsFullNamesAndKeyboardActionsReachable(culture: "{culture}")'
+                     for culture in ("en", "th"))
         if names != exact:
-            raise ValueError("Exact twelve sidebar culture/viewport rows required")
+            raise ValueError("Exact fourteen sidebar original and compact culture/viewport rows required")
     return counts
 
 

@@ -1806,6 +1806,20 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     }
 }
 
+/* Compact panes reserve 4.5625rem for navigation, 24rem for configuration and
+   8rem for parts. From 48rem height, let names size the parts row; unusually
+   long content can use the existing workflow scroll instead of clipping. */
+@media (min-width: 62rem) and (min-height: 48rem) {
+    .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) {
+        grid-template-rows: auto max-content minmax(24rem, 3fr);
+    }
+
+    .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] > [data-workflow-parts] {
+        flex: 0 0 auto;
+        max-height: none;
+    }
+}
+
 @media (min-width: 48rem) {
     .instant-quote__workflow [data-workflow-build-preference] {
         grid-template-columns: repeat(3, minmax(0, 1fr));

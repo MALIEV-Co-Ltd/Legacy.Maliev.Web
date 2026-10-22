@@ -45,6 +45,46 @@ public sealed class InstantQuotationResponsiveCssTests
         Assert.Contains("flex-wrap: wrap", css, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Desktop_height_regimes_keep_compact_native_scroll_and_tall_intrinsic_parts()
+    {
+        var css = ReadCss();
+        const string compactLayout = """
+            .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) {
+                grid-template-rows: auto minmax(8rem, 1fr) minmax(24rem, 3fr);
+                overflow-y: auto;
+            }
+        """;
+        const string compactRail = """
+            .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] > [data-workflow-parts] {
+                flex: 1 1 auto;
+                min-height: 44px;
+            }
+        """;
+        const string tallLayout = """
+        @media (min-width: 62rem) and (min-height: 48rem) {
+            .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) {
+                grid-template-rows: auto max-content minmax(24rem, 3fr);
+            }
+
+            .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] > [data-workflow-parts] {
+                flex: 0 0 auto;
+                max-height: none;
+            }
+        }
+        """;
+        const string configurationMinimum = """
+            .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-configuration] > [data-workflow-configuration-content] {
+                min-height: 8rem;
+            }
+        """;
+
+        Assert.Contains(compactLayout, css, StringComparison.Ordinal);
+        Assert.Contains(compactRail, css, StringComparison.Ordinal);
+        Assert.Contains(tallLayout, css, StringComparison.Ordinal);
+        Assert.Contains(configurationMinimum, css, StringComparison.Ordinal);
+    }
+
     private static string ReadCss() => File.ReadAllText(Path.Combine(
         RepositoryRoot,
         "Legacy.Maliev.Web",

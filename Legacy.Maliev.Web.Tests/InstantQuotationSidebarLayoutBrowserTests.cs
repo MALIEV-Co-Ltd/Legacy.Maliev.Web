@@ -54,15 +54,29 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
     [InlineData("th", 1600)]
     public async Task RealPartsRailExposesLongNamesAndKeyboardActions(string culture, int width)
     {
+        await RunPartsRailAsync(culture, width, 800);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task CompactPartsRailKeepsFullNamesAndKeyboardActionsReachable(string culture)
+    {
+        await RunPartsRailAsync(culture, 1280, 720, expectCompact: true);
+    }
+
+    private async Task RunPartsRailAsync(string culture, int width, int height, bool expectCompact = false)
+    {
         await using var factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
         var port = ReserveFreePort();
+        var evidencePrefix = height == 800 ? $"sidebar-{culture}-{width}" : $"sidebar-{culture}-{width}-h{height}";
         var origin = new Uri($"http://127.0.0.1:{port}");
         factory.UseKestrel(port);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
         await using var context = await browser.NewContextAsync(new()
-        { ViewportSize = new() { Width = width, Height = 800 }, HasTouch = width <= 375 });
+        { ViewportSize = new() { Width = width, Height = height }, HasTouch = width <= 375 });
         await using var page = await context.NewPageAsync();
         await using var failureEvidence = new BrowserFailureEvidence(page,
             metadata => output.WriteLine("[sidebar-evidence-cleanup] " + metadata));
@@ -146,7 +160,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
                     Directory.CreateDirectory(evidenceDirectory);
                     using var evidenceDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(2));
                     await File.WriteAllTextAsync(
-                        Path.Combine(evidenceDirectory, $"sidebar-{culture}-{width}-initial-navigation-timeout.json"),
+                        Path.Combine(evidenceDirectory, $"{evidencePrefix}-initial-navigation-timeout.json"),
                         evidence,
                         evidenceDeadline.Token);
                 }
@@ -202,6 +216,9 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         failureEvidence.Stage("Reload");
         await page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle });
         failureEvidence.Stage("PartsRail");
+        var compactDesktop = await page.EvaluateAsync<bool>(
+            "() => matchMedia('(min-width: 62rem)').matches && !matchMedia('(min-height: 48rem)').matches");
+        if (expectCompact) Assert.True(compactDesktop, "The compact cases must exercise the existing native-scroll height regime.");
         var rail = page.Locator("[data-workflow-parts]");
         await Assertions.Expect(rail.Locator("[data-workflow-part]")).ToHaveCountAsync(names.Length);
         await Assertions.Expect(page.Locator("[data-workflow-parts-panel] .instant-quote__parts-header [data-workflow-select-all]")).ToHaveCountAsync(1);
@@ -264,7 +281,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
             if (string.IsNullOrWhiteSpace(directory)) return;
             Directory.CreateDirectory(directory);
             failureEvidence.AwaitBoundary(state + "-screenshot", false);
-            await page.ScreenshotAsync(new() { Path = Path.Combine(directory, $"sidebar-{culture}-{width}-{state}.png"), FullPage = true });
+            await page.ScreenshotAsync(new() { Path = Path.Combine(directory, $"{evidencePrefix}-{state}.png"), FullPage = true });
             failureEvidence.AwaitBoundary(state + "-screenshot", true);
             failureEvidence.AwaitBoundary(state + "-geometry", false);
             var geometry = await rail.EvaluateAsync<JsonElement>("""
@@ -277,7 +294,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
                 """);
             failureEvidence.AwaitBoundary(state + "-geometry", true);
             failureEvidence.AwaitBoundary(state + "-write", false);
-            await File.WriteAllTextAsync(Path.Combine(directory, $"sidebar-{culture}-{width}-{state}.json"), geometry.GetRawText());
+            await File.WriteAllTextAsync(Path.Combine(directory, $"{evidencePrefix}-{state}.json"), geometry.GetRawText());
             failureEvidence.AwaitBoundary(state + "-write", true);
         }
         await rail.ScrollIntoViewIfNeededAsync();
@@ -294,6 +311,27 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
             var card = rail.Locator("[data-workflow-part]").Filter(new() { HasText = name });
             await card.ScrollIntoViewIfNeededAsync();
             await Assertions.Expect(card.Locator("h4")).ToBeVisibleAsync();
+            if (compactDesktop)
+            {
+                var heading = card.Locator("h4");
+                await heading.ScrollIntoViewIfNeededAsync();
+                Assert.True(await heading.EvaluateAsync<bool>("""
+                    heading => {
+                      const card=heading.closest('[data-workflow-part]').getBoundingClientRect();
+                      const rail=heading.closest('[data-workflow-parts]').getBoundingClientRect();
+                      const panel=heading.closest('[data-workflow-parts-panel]').getBoundingClientRect();
+                      const range=document.createRange(); range.selectNodeContents(heading);
+                      const lines=[...range.getClientRects()];
+                      return lines.length>0 && lines.every(r=>r.left>=Math.max(card.left,rail.left,panel.left,0)-1
+                        && r.right<=Math.min(card.right,rail.right,panel.right,innerWidth)+1
+                        && r.top>=Math.max(card.top,rail.top,panel.top,0)-1
+                        && r.bottom<=Math.min(card.bottom,rail.bottom,panel.bottom,innerHeight)+1);
+                    }
+                    """), "Every full part-name line must be reachable through the compact rail's native vertical scrolling.");
+                var compactScroll = await rail.EvaluateAsync<double[]>("rail => [rail.scrollTop, rail.clientHeight, rail.scrollHeight]");
+                Assert.True(compactScroll[0] > 0 && compactScroll[2] > compactScroll[1],
+                    "A compact long-name case must exercise the rail's native vertical scrolling.");
+            }
             var nameGeometry = await card.Locator("h4").EvaluateAsync<JsonElement>("""
                 heading => {
                   const card=heading.closest('[data-workflow-part]').getBoundingClientRect();
@@ -350,6 +388,13 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
             failureEvidence.AwaitBoundary(keyboardOperation, true);
             await Capture(name == names[0] ? "first-focused" : "second-focused");
         }
+        if (compactDesktop)
+        {
+            var selectAll = page.Locator("[data-workflow-parts-panel] [data-workflow-select-all]");
+            await selectAll.FocusAsync();
+            await Assertions.Expect(selectAll).ToBeFocusedAsync();
+            await Assertions.Expect(selectAll).ToBeInViewportAsync();
+        }
         // Historical inputs have no live FileService deletion capability. Test Remove reachability,
         // and exercise real View/Review/Customer transitions without claiming upload deletion proof.
         Assert.Equal(names, (await store.GetAsync(sessionId, null, default))!.Parts.Select(part => part.DisplayFileName));
@@ -375,7 +420,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         Assert.True(await firstName.EvaluateAsync<bool>("input => { const r=input.getBoundingClientRect(); return r.width>=44 && r.left>=0 && r.right<=innerWidth; }"));
         Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
         if (!string.IsNullOrWhiteSpace(directory))
-            await page.ScreenshotAsync(new() { Path = Path.Combine(directory, $"sidebar-{culture}-{width}-customer.png"), FullPage = true });
+            await page.ScreenshotAsync(new() { Path = Path.Combine(directory, $"{evidencePrefix}-customer.png"), FullPage = true });
         failureEvidence.AwaitBoundary("customer-input", true);
         try
         {
