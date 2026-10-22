@@ -65,7 +65,7 @@ public sealed class MeasurementTempDataHandoffHttpTests(TestingWebApplicationFac
         var readyIndex = html.IndexOf(readyMarker, StringComparison.Ordinal);
         Assert.True(consentIndex >= 0);
         Assert.True(readyIndex > consentIndex);
-        Assert.Equal(1, Regex.Matches(html, Regex.Escape(readyMarker), RegexOptions.CultureInvariant).Count);
+        Assert.Single(Regex.Matches(html, Regex.Escape(readyMarker), RegexOptions.CultureInvariant));
         Assert.True(html.IndexOf("window.malievLoadGoogleTagManager =", StringComparison.Ordinal) > readyIndex);
         var events = SerializedApplicationEvents(html);
         Assert.Equal(new[] { "maliev_lead_submitted", "generate_lead", "maliev_quote_decision" },
