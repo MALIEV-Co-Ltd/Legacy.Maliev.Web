@@ -155,6 +155,52 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Both route owners retain the verified social cards, decorative icons, and localized descriptions.
+    /// </summary>
+    /// <param name="culture">The requested public-page culture.</param>
+    /// <param name="active">Whether the static SSR route owns the request.</param>
+    /// <param name="tikTokDescription">The expected localized short-video description.</param>
+    /// <param name="threadsDescription">The expected localized conversation description.</param>
+    /// <returns>A task that completes after the real HTTP response is inspected.</returns>
+    [Theory]
+    [InlineData("en", true, "Short manufacturing videos and process updates", "Manufacturing conversations and company updates")]
+    [InlineData("th", true, "วิดีโอการผลิตแบบสั้นและข่าวกระบวนการ", "บทสนทนาด้านการผลิตและข่าวสารบริษัท")]
+    [InlineData("en", false, "Short manufacturing videos and process updates", "Manufacturing conversations and company updates")]
+    [InlineData("th", false, "วิดีโอการผลิตแบบสั้นและข่าวกระบวนการ", "บทสนทนาด้านการผลิตและข่าวสารบริษัท")]
+    public async Task SocialProfileCards_PreserveVerifiedIconsAndLocalizedDescriptions(
+        string culture,
+        bool active,
+        string tikTokDescription,
+        string threadsDescription)
+    {
+        using var routeFactory = factory.WithWebHostBuilder(builder => builder.UseSetting("BlazorRouting:SocialMedia", active.ToString()));
+        using var client = CreateClient(routeFactory);
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using var response = await client.GetAsync($"/about/socialmedia?culture={culture}", timeout.Token);
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(timeout.Token));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains($"<html lang=\"{culture}\"", source, StringComparison.Ordinal);
+        Assert.Equal(active, source.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        foreach (var (destination, icon, label, description) in new[]
+        {
+            ("https://www.tiktok.com/@maliev.marketing", "fa-tiktok", "TikTok", tikTokDescription),
+            ("https://www.threads.com/@maliev.manufacturing", "fa-threads", "Threads", threadsDescription),
+        })
+        {
+            var card = Assert.Single(
+                Regex.Matches(source, "<a\\b[^>]*class=\"maliev-panel social-link-card\"[^>]*>.*?</a>", RegexOptions.CultureInvariant | RegexOptions.Singleline)
+                    .Cast<Match>()
+                    .Where(match => match.Value.Contains($"href=\"{destination}\"", StringComparison.Ordinal))).Value;
+
+            Assert.Contains("target=\"_blank\" rel=\"noopener\"", card, StringComparison.Ordinal);
+            Assert.Contains($"<i class=\"fab {icon}\" aria-hidden=\"true\"></i>", card, StringComparison.Ordinal);
+            Assert.Contains($"<strong>{label}</strong>", card, StringComparison.Ordinal);
+            Assert.Contains($"<span>{description}</span>", card, StringComparison.Ordinal);
+        }
+    }
+
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) => sourceFactory.CreateClient(
         new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
 
