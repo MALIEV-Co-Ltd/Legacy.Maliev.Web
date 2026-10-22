@@ -151,6 +151,7 @@ test('enterprise recaptcha form obtains a token before native submission', async
         dataset: { recaptchaSiteKey: 'site-key', recaptchaAction: 'contact_submit' },
         querySelector: selector => selector === '[data-recaptcha-response]' ? tokenInput : null,
         addEventListener: (event, handler) => listeners.set(event, handler),
+        checkValidity: () => true,
         submit: () => { nativeSubmissions += 1; },
     };
     const document = createDocument({
@@ -200,6 +201,7 @@ test('quotation upload emits the controlled analytics event before native submis
             '[data-upload-service]': serviceInput,
         })[selector] ?? null,
         addEventListener: (event, handler) => listeners.set(event, handler),
+        checkValidity: () => true,
         submit: () => { nativeSubmissions += 1; },
     };
     const document = createDocument({ '[data-recaptcha-enterprise-form]': [form] });
@@ -219,6 +221,156 @@ test('quotation upload emits the controlled analytics event before native submis
     assert.equal(events[0].service, 'cnc_machining');
     assert.equal(events[0].file_count, 2);
 });
+
+
+for (const row of [
+    { name: 'native refusal', native: false, jquery: null, allowed: false, checks: ['native', 'report'] },
+    { name: 'ambient jQuery refusal does not replace native validation', native: true, jquery: false, allowed: true, checks: ['native'] },
+    { name: 'ambient jQuery success cannot admit native refusal', native: false, jquery: true, allowed: false, checks: ['native', 'report'] },
+    { name: 'native success ignores ambient jQuery', native: true, jquery: true, allowed: true, checks: ['native'] },
+    { name: 'native-only success', native: true, jquery: null, allowed: true, checks: ['native'] },
+    { name: 'ambient jQuery success cannot replace absent native validation', native: null, jquery: true, allowed: false, checks: [] },
+    { name: 'no validation mechanism', native: null, jquery: null, allowed: false, checks: [] },
+]) {
+    test(`native submit-once guard validates before locking: ${row.name}`, () => {
+        const probe = createSubmissionProbe();
+        probe.state.valid = row.native;
+        if (row.native === null) delete probe.form.checkValidity;
+        const context = createBrowserContext(probe.document);
+        if (row.jquery !== null) {
+            context.jQuery = form => {
+                assert.equal(form, probe.form);
+                return { valid: () => { probe.state.checks.push('jquery'); return row.jquery; } };
+            };
+            context.jQuery.fn = { valid() {} };
+        }
+        vm.runInContext(appSource, context);
+
+        assert.equal(context.SubmitFormOnce('source-form', 'source-submit', ''), row.allowed);
+        assert.deepEqual(probe.state.checks, row.checks);
+        assert.equal(probe.state.posts, row.allowed ? 1 : 0);
+        assert.equal(probe.submit.disabled, row.allowed);
+        assert.equal(probe.form.dataset.submitting, row.allowed ? 'true' : undefined);
+        assert.equal(probe.attributes.get('aria-busy'), row.allowed ? 'true' : undefined);
+        if (row.allowed) {
+            assert.equal(probe.state.lockedAtPost, true);
+            assert.equal(context.SubmitFormOnce('source-form', 'source-submit', ''), false);
+            assert.equal(probe.state.posts, 1);
+        }
+    });
+}
+
+test('enterprise recaptcha refuses to request a token when no validator exists', () => {
+    const probe = createSubmissionProbe();
+    delete probe.form.checkValidity;
+    probe.form.dataset.recaptchaSiteKey = 'site-key';
+    let tokenRequests = 0;
+    const context = createBrowserContext(probe.document, {
+        grecaptcha: { enterprise: {
+            ready: callback => callback(),
+            execute: async () => { tokenRequests += 1; return 'source-token'; },
+        } },
+    });
+    vm.runInContext(appSource, context);
+    probe.listeners.get('submit')({ preventDefault() {} });
+
+    assert.equal(tokenRequests, 0);
+    assert.equal(probe.state.posts, 0);
+    assert.equal(probe.submit.disabled, false);
+    assert.equal(probe.form.dataset.recaptchaPending, undefined);
+});
+
+for (const mode of ['active fallback', 'retained callback', 'active upload delay']) {
+    test(`recaptcha revalidates changed fields before native POST: ${mode}`, async () => {
+        const probe = createSubmissionProbe();
+        probe.form.dataset.recaptchaSiteKey = 'site-key';
+        probe.form.dataset.recaptchaAction = 'submit';
+        let releaseToken;
+        const token = new Promise(resolve => { releaseToken = resolve; });
+        const delayed = [];
+        let tokenRequests = 0;
+        const context = createBrowserContext(probe.document, {
+            grecaptcha: { enterprise: {
+                ready: callback => callback(),
+                execute: (siteKey, options) => {
+                    assert.equal(siteKey, 'site-key');
+                    assert.equal(options.action, 'submit');
+                    tokenRequests += 1;
+                    return token;
+                },
+            } },
+            setTimeout: callback => delayed.push(callback),
+            malievAnalytics: { emit() {} },
+        });
+        if (mode === 'retained callback') probe.document.querySelectorAll = () => [];
+        if (mode === 'active upload delay') {
+            probe.form.dataset.uploadAnalytics = 'true';
+            const originalQuery = probe.form.querySelector;
+            probe.form.querySelector = selector => {
+                if (selector === '[data-upload-files]') return { files: [{}] };
+                if (selector === '[data-upload-service]') return { value: 'custom_manufacturing' };
+                return originalQuery(selector);
+            };
+            probe.form.requestSubmit = () => probe.listeners.get('submit')({ preventDefault() {} });
+        }
+        vm.runInContext(appSource, context);
+        if (mode === 'retained callback') {
+            context.GuardRecaptchaSubmit('source-form', 'source-submit', 'site-key', 'submit', '', null);
+        }
+        probe.listeners.get('submit')({ preventDefault() {} });
+        assert.equal(tokenRequests, 1);
+        assert.equal(probe.form.dataset.recaptchaPending, 'true');
+        assert.equal(probe.submit.disabled, true);
+        assert.equal(probe.state.posts, 0);
+
+        if (mode !== 'active upload delay') probe.state.valid = false;
+        releaseToken('source-token');
+        await new Promise(resolve => setImmediate(resolve));
+        if (mode === 'active upload delay') {
+            assert.equal(delayed.length, 1);
+            probe.state.valid = false;
+            delayed[0]();
+        }
+
+        assert.equal(probe.state.posts, 0);
+        assert.equal(probe.state.checks.at(-1), 'report');
+        assert.equal(probe.tokenInput.value, '');
+        assert.equal(probe.form.dataset.recaptchaPending, undefined);
+        assert.equal(probe.form.dataset.recaptchaVerified, undefined);
+        assert.equal(probe.form.dataset.submitting, undefined);
+        assert.equal(probe.submit.disabled, false);
+        assert.equal(probe.attributes.has('aria-busy'), false);
+    });
+}
+
+function createSubmissionProbe() {
+    const listeners = new Map();
+    const attributes = new Map();
+    const state = { valid: true, posts: 0, lockedAtPost: false, checks: [] };
+    const tokenInput = { value: '' };
+    const submit = {
+        disabled: false,
+        setAttribute() {},
+        removeAttribute() {},
+    };
+    const form = {
+        dataset: {},
+        addEventListener: (event, handler) => listeners.set(event, handler),
+        querySelector: selector => selector === '[data-recaptcha-response]' ? tokenInput
+            : selector === 'button[type="submit"], input[type="submit"]' ? submit : null,
+        checkValidity: () => { state.checks.push('native'); return state.valid; },
+        reportValidity: () => state.checks.push('report'),
+        setAttribute: (name, value) => attributes.set(name, value),
+        removeAttribute: name => attributes.delete(name),
+        submit: () => {
+            state.lockedAtPost = form.dataset.submitting === 'true' && submit.disabled;
+            state.posts += 1;
+        },
+    };
+    const document = createDocument({ '[data-recaptcha-enterprise-form]': [form] });
+    document.getElementById = id => id === 'source-form' ? form : id === 'source-submit' ? submit : null;
+    return { form, submit, tokenInput, document, state, listeners, attributes };
+}
 
 function createBrowserContext(document, windowOverrides = {}) {
     const context = vm.createContext({

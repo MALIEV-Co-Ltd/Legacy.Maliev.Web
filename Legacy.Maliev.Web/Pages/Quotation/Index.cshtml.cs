@@ -76,7 +76,7 @@ public sealed class Index(
 
     [BindProperty]
     [Required(ErrorMessage = "Email address is required")]
-    [EmailAddress]
+    [EmailAddress(ErrorMessage = "Please enter a valid email address")]
     [StringLength(50)]
     public string Email { get; set; } = string.Empty;
 

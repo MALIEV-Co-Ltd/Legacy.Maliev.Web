@@ -446,6 +446,10 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
 
         private async Task ObserveNavigationAsync(string phase, Uri origin, ITestOutputHelper output, Func<Task<IResponse?>> navigate)
         {
+            using var responseProbe = Factory.Services.GetRequiredService<TestResponseProbeRegistry>()
+                .TryBeginNavigation(origin, TestResponseRequestLabel.BaseQuotation);
+            using var milestones = new MaterialInitialNavigationDiagnostics(
+                Page, origin, responseProbe?.Probe, phase, "domcontentloaded");
             var gate = new object();
             var pending = new Dictionary<IRequest, string>();
             int started = 0, finished = 0, failed = 0, omitted = 0;
@@ -477,14 +481,19 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
             Page.Response += onResponse;
             try
             {
-                var response = await navigate();
-                Assert.NotNull(response);
-                Assert.Equal(200, response.Status);
-                // InputFile.init runs through JS interop after the real Interactive Server circuit renders.
-                // SSR markup alone cannot set this binding; global network quiet is not session readiness.
-                await Page.WaitForFunctionAsync(
-                    "() => typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'number'",
-                    options: new() { Timeout = Math.Max(1, 30000 - timer.ElapsedMilliseconds) });
+                await milestones.RunAsync(async () =>
+                {
+                    var response = await navigate();
+                    Assert.NotNull(response);
+                    Assert.Equal(200, response.Status);
+                    // InputFile.init runs through JS interop after the real Interactive Server circuit renders.
+                    // SSR markup alone cannot set this binding; global network quiet is not session readiness.
+                    await Page.WaitForFunctionAsync(
+                        "() => typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'number'",
+                        options: new() { Timeout = Math.Max(1, 30000 - timer.ElapsedMilliseconds) });
+                    milestones.ObserveInputFileReady();
+                    return response;
+                }, output.WriteLine);
             }
             finally
             {

@@ -4,17 +4,25 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationAnalyticsIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class InstantQuotationAnalyticsIntegrationTests : IClassFixture<TestingWebApplicationFactory>, IAsyncLifetime
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public InstantQuotationAnalyticsIntegrationTests(WebApplicationFactory<Program> factory)
+    public InstantQuotationAnalyticsIntegrationTests(TestingWebApplicationFactory factory)
     {
         this.factory = factory.WithWebHostBuilder(builder => builder
             .UseSetting("environment", "Testing")
             .UseSetting("Recaptcha:ProjectId", "test-project")
             .UseSetting("Recaptcha:SiteKey", "test-site-key"));
     }
+
+    /// <summary>Completes setup after the per-test child factory has been created.</summary>
+    /// <returns>A completed setup task.</returns>
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    /// <summary>Releases this test's child host and its tracked clients without disposing the borrowed parent.</summary>
+    /// <returns>A task that completes after the owned child factory has been disposed.</returns>
+    public async Task DisposeAsync() => await factory.DisposeAsync();
 
     [Fact]
     public void DefaultRuntimeRegistration_ActivatesReviewedTrackerAndJsSinkPerCircuitScope()

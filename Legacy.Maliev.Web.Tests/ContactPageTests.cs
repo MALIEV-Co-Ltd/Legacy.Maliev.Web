@@ -121,6 +121,41 @@ public sealed class ContactPageTests
             error => error.ErrorMessage.Contains("profile", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Theory]
+    [InlineData("en", "Please enter a valid email address")]
+    [InlineData("th", "กรุณากรอกอีเมลที่ถูกต้อง")]
+    public async Task Post_InvalidEmailPreservesOriginalLocalizedMessageWithoutWriting(
+        string culture, string expected)
+    {
+        var previousCulture = System.Globalization.CultureInfo.CurrentUICulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+            var contactClient = new RecordingContactClient();
+            var notifications = new RecordingNotificationClient();
+            var page = CreatePage(contactClient, new StubAntiBotVerifier(true), notifications);
+            page.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity());
+            page.Email = "not-an-email";
+            var validation = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
+            Assert.False(System.ComponentModel.DataAnnotations.Validator.TryValidateProperty(
+                page.Email,
+                new System.ComponentModel.DataAnnotations.ValidationContext(page) { MemberName = nameof(page.Email) },
+                validation));
+            var error = Assert.Single(validation);
+            Assert.Equal("Please enter a valid email address", error.ErrorMessage);
+            page.ModelState.AddModelError(nameof(page.Email), error.ErrorMessage!);
+
+            Assert.IsType<PageResult>(await page.OnPostSubmitRequestAsync(CancellationToken.None));
+            Assert.Equal(expected, Assert.Single(page.DisplayModel.ErrorsFor(nameof(page.Email))));
+            Assert.Equal(0, contactClient.CallCount);
+            Assert.Empty(notifications.Messages);
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = previousCulture;
+        }
+    }
+
     private static ContactPage CreatePage(
         RecordingContactClient contactClient,
         IAntiBotVerifier antiBotVerifier,

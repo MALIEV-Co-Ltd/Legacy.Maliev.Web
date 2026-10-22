@@ -47,6 +47,177 @@ public sealed class PublicContactFormBrowserTests(PublicContactBrowserFixture fi
         Assert.Contains("browser-submission%40example.test", posted, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("/contact?culture=en", "#contact-us")]
+    [InlineData("/quotation?culture=en", "#quotation-form")]
+    public async Task InquiryForms_RetainSourceFocusAndReducedMotionStyles(string route, string formSelector)
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ReducedMotion = ReducedMotion.Reduce,
+        });
+        await using var page = await context.NewPageAsync();
+        var response = await page.GotoAsync(new Uri(fixture.Origin, route).ToString());
+        Assert.NotNull(response);
+        Assert.True(response.Ok, $"Inquiry returned HTTP {response.Status}.");
+        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+
+        Assert.Equal(1, await page.Locator(".inquiry-page .inquiry-hero").CountAsync());
+        Assert.Equal(1, await page.Locator($".inquiry-page {formSelector}").CountAsync());
+        Assert.True(await page.EvaluateAsync<bool>("matchMedia('(prefers-reduced-motion: reduce)').matches"));
+        var firstName = page.Locator($"{formSelector} #FirstName");
+        await firstName.FocusAsync();
+        Assert.True(await firstName.EvaluateAsync<bool>("input => input.matches(':focus-visible')"));
+        Assert.Equal("3px", await firstName.EvaluateAsync<string>("input => getComputedStyle(input).outlineWidth"));
+        Assert.Equal("solid", await firstName.EvaluateAsync<string>("input => getComputedStyle(input).outlineStyle"));
+        Assert.Equal("rgb(114, 169, 255)", await firstName.EvaluateAsync<string>("input => getComputedStyle(input).outlineColor"));
+        Assert.Equal("3px", await firstName.EvaluateAsync<string>("input => getComputedStyle(input).outlineOffset"));
+        var durations = await page.Locator($"{formSelector} #submit-button").EvaluateAsync<double[]>(
+            "button => getComputedStyle(button).transitionDuration.split(',').map(value => parseFloat(value) * (value.trim().endsWith('ms') ? 0.001 : 1))");
+        Assert.NotEmpty(durations);
+        Assert.All(durations, seconds => Assert.Equal(0.00001, seconds, precision: 8));
+    }
+
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task QuotationFiles_KeepAggregateLimitAndIndependentSubmitGuards(bool countryServiceAvailable)
+    {
+        var submitted = new TaskCompletionSource<IRequest>(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.SetCountryLookupAvailability(countryServiceAvailable);
+        try
+        {
+            await using var context = await fixture.Browser.NewContextAsync();
+            await context.AddInitScriptAsync("""
+                window.grecaptcha = { enterprise: {
+                    ready: callback => callback(),
+                    execute: () => new Promise((resolve, reject) => {
+                        window.resolveUploadCaptcha = resolve;
+                        window.rejectUploadCaptcha = reject;
+                    })
+                } };
+                """);
+            await using var page = await context.NewPageAsync();
+            await page.RouteAsync("https://www.google.com/recaptcha/**", route => route.AbortAsync());
+            var response = await page.GotoAsync(new Uri(fixture.Origin, "/quotation?culture=en").ToString());
+            Assert.NotNull(response);
+            Assert.True(response.Ok);
+            await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+
+            var action = new Uri(await page.Locator("#quotation-form").EvaluateAsync<string>("form => form.action"));
+            await page.RouteAsync("**/*", async route =>
+            {
+                if (route.Request.Method == "POST" && new Uri(route.Request.Url).Equals(action))
+                {
+                    await route.FulfillAsync(new RouteFulfillOptions { Status = 204 });
+                    submitted.TrySetResult(route.Request);
+                    return;
+                }
+                await route.ContinueAsync();
+            });
+
+            var input = page.Locator("#Files");
+            var submit = page.Locator("#submit-button");
+            var gate = page.Locator("[data-upload-size-gate]");
+            var error = page.Locator("[data-upload-size-error]");
+            Assert.Equal(!countryServiceAvailable, await submit.EvaluateAsync<bool>("button => button.disabled"));
+
+            await SetQuotationFilesAsync(page, [62914560, 41943040]);
+            Assert.Equal(2, await page.Locator("[data-upload-file-list] li").CountAsync());
+            Assert.Equal("<b>drawing</b>.stl (60.00 MB)", await page.Locator("[data-upload-file-list] li:first-child span").InnerTextAsync());
+            Assert.Equal(0, await page.Locator("[data-upload-file-list] b").CountAsync());
+            Assert.False(await error.IsVisibleAsync());
+            Assert.True(await input.EvaluateAsync<bool>("input => input.validity.valid"));
+            Assert.False(await gate.EvaluateAsync<bool>("gate => gate.disabled"));
+            Assert.Equal(!countryServiceAvailable, await submit.EvaluateAsync<bool>("button => button.matches(':disabled')"));
+
+            await SetQuotationFilesAsync(page, [62914560, 41943041]);
+            Assert.True(await error.IsVisibleAsync());
+            Assert.Contains("100.00 MB", await error.InnerTextAsync(), StringComparison.Ordinal);
+            Assert.Equal("true", await input.GetAttributeAsync("aria-invalid"));
+            Assert.False(await input.EvaluateAsync<bool>("input => input.validity.valid"));
+            Assert.True(await submit.EvaluateAsync<bool>("button => button.matches(':disabled')"));
+            Assert.Equal(!countryServiceAvailable, await submit.EvaluateAsync<bool>("button => button.disabled"));
+
+            await SetQuotationFilesAsync(page, [62914560, 42991616], drop: true);
+            Assert.Contains("101.00 MB", await error.InnerTextAsync(), StringComparison.Ordinal);
+            Assert.Equal(2, await page.Locator("[data-upload-file-list] li").CountAsync());
+            await page.Locator("[data-upload-file-list] li:last-child button").ClickAsync();
+            Assert.Equal(1, await page.Locator("[data-upload-file-list] li").CountAsync());
+            Assert.False(await error.IsVisibleAsync());
+            Assert.Equal("false", await input.GetAttributeAsync("aria-invalid"));
+            Assert.True(await input.EvaluateAsync<bool>("input => input.validity.valid"));
+            Assert.Equal(!countryServiceAvailable, await submit.EvaluateAsync<bool>("button => button.matches(':disabled')"));
+
+            await SetQuotationFilesAsync(page, [], drop: true);
+            await input.DispatchEventAsync("cancel");
+            Assert.Equal(1, await page.Locator("[data-upload-file-list] li").CountAsync());
+            Assert.True(await input.EvaluateAsync<bool>("input => input.validity.valid"));
+            await SetQuotationFilesAsync(page, []);
+            Assert.True(await page.Locator("[data-upload-file-list]").EvaluateAsync<bool>("list => list.hidden"));
+            if (!countryServiceAvailable) return;
+
+            await page.Locator("#FirstName").FillAsync("Browser");
+            await page.Locator("#LastName").FillAsync("Upload");
+            await page.Locator("#Email").FillAsync("browser-upload@example.test");
+            await page.Locator("#Message").FillAsync("Please quote a manufacturing project.");
+            await page.Locator("#Country").SelectOptionAsync("Thailand");
+            await submit.ClickAsync();
+            await page.WaitForFunctionAsync("document.querySelector('#quotation-form').dataset.recaptchaPending === 'true'");
+
+            await SetQuotationFilesAsync(page, [1]);
+            Assert.True(await submit.EvaluateAsync<bool>("button => button.disabled"));
+            Assert.True(await submit.EvaluateAsync<bool>("button => button.matches(':disabled')"));
+            await SetQuotationFilesAsync(page, [104857601]);
+            await page.EvaluateAsync("window.resolveUploadCaptcha('source-upload-token')");
+            await page.WaitForFunctionAsync("document.querySelector('#quotation-recaptcha-error').hidden === false");
+            Assert.False(await submit.EvaluateAsync<bool>("button => button.disabled"));
+            Assert.True(await submit.EvaluateAsync<bool>("button => button.matches(':disabled')"));
+            Assert.True(await gate.EvaluateAsync<bool>("gate => gate.disabled"));
+            Assert.False(submitted.Task.IsCompleted);
+
+            await SetQuotationFilesAsync(page, []);
+            Assert.False(await submit.EvaluateAsync<bool>("button => button.matches(':disabled')"));
+            await submit.ClickAsync();
+            await page.WaitForFunctionAsync("document.querySelector('#quotation-form').dataset.recaptchaPending === 'true'");
+            await page.EvaluateAsync("window.resolveUploadCaptcha('source-upload-token')");
+            var posted = await submitted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.Equal("document", posted.ResourceType);
+            Assert.Equal("true", await page.Locator("#quotation-form").GetAttributeAsync("data-recaptcha-verified"));
+            await SetQuotationFilesAsync(page, [1]);
+            Assert.False(await gate.EvaluateAsync<bool>("gate => gate.disabled"));
+            Assert.True(await submit.EvaluateAsync<bool>("button => button.disabled"));
+            Assert.True(await submit.EvaluateAsync<bool>("button => button.matches(':disabled')"));
+        }
+        finally
+        {
+            submitted.TrySetCanceled();
+            fixture.SetCountryLookupAvailability(true);
+        }
+    }
+
+    private static Task SetQuotationFilesAsync(IPage page, int[] sizes, bool drop = false) =>
+        page.Locator("#Files").EvaluateAsync("""
+            (input, selection) => {
+                const unit = new Blob([new Uint8Array(1048576)]);
+                const transfer = new DataTransfer();
+                selection.sizes.forEach((size, index) => {
+                    const parts = Array(Math.floor(size / 1048576)).fill(unit);
+                    parts.push(new Uint8Array(size % 1048576));
+                    transfer.items.add(new File(parts, index === 0 ? '<b>drawing</b>.stl' : 'drawing-' + index + '.stl'));
+                });
+                if (selection.drop) {
+                    input.closest('[data-upload-dropzone]').dispatchEvent(new DragEvent('drop', {
+                        dataTransfer: transfer, bubbles: true, cancelable: true
+                    }));
+                } else {
+                    input.files = transfer.files;
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+            """, new { sizes, drop });
+
     private static async Task<IRequest> CaptureFormPostAsync(IPage page, string formSelector)
     {
         var action = new Uri(await page.Locator(formSelector).EvaluateAsync<string>("form => form.action"));
@@ -94,6 +265,10 @@ public sealed class PublicContactBrowserFixture : IAsyncLifetime
     internal string GetRenderedContactScript(string culture) =>
         (renderedScripts ?? throw new InvalidOperationException("The owned contact scripts must be captured first."))
             .Get(culture);
+
+    internal void SetCountryLookupAvailability(bool available) =>
+        ((StubCountryClient)(factory ?? throw new InvalidOperationException("The owned host must be initialized."))
+            .Services.GetRequiredService<ICountryClient>()).Available = available;
 
     public async Task InitializeAsync()
     {
@@ -182,9 +357,11 @@ public sealed class PublicContactBrowserFixture : IAsyncLifetime
 
     private sealed class StubCountryClient : ICountryClient
     {
+        public bool Available { get; set; } = true;
+
         public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken cancellationToken) =>
             Task.FromResult(new ServiceResponse<IReadOnlyList<Country>>(
-                [new Country(764, "Thailand", "Asia", "66", "TH", "THA", null, null)], true));
+                [new Country(764, "Thailand", "Asia", "66", "TH", "THA", null, null)], Available));
     }
 }
 
