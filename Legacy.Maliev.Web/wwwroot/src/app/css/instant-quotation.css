@@ -1820,6 +1820,24 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     }
 }
 
+/* Compact desktop rails use the existing single-column card flow so complete
+   names and native keyboard scrolling do not compete with the panel header. */
+@media (min-width: 62rem) and (height < 48rem) {
+    .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] > [data-workflow-parts] {
+        flex-wrap: wrap;
+        overflow-x: hidden;
+    }
+
+    .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] > [data-workflow-parts] > :is(.iq-compact-dropzone, [data-workflow-upload-item], [data-workflow-pending-parse], [data-workflow-part]) {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] > [data-workflow-parts] > [data-workflow-part] > h4 {
+        line-height: 1.5;
+    }
+}
+
 @media (min-width: 48rem) {
     .instant-quote__workflow [data-workflow-build-preference] {
         grid-template-columns: repeat(3, minmax(0, 1fr));
