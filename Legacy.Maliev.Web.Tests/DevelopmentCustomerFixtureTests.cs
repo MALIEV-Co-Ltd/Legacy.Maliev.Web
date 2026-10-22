@@ -339,6 +339,32 @@ public sealed class DevelopmentCustomerFixtureTests(RedisRuntimeFixture redis)
             || (exception is AggregateException aggregate && aggregate.InnerExceptions.Any(ContainsPrimary));
     }
 
+    /// <summary>Leaves unmarked bare controller contexts inactive without consulting missing request services or changing their state.</summary>
+    /// <param name="authenticated">Whether the ordinary principal has an authenticated identity.</param>
+    /// <param name="owner">The ordinary owner claim, including missing and blank fail-closed inputs.</param>
+    [Theory]
+    [InlineData(false, null)]
+    [InlineData(true, null)]
+    [InlineData(true, "")]
+    [InlineData(true, "customer:42")]
+    public void IsActive_UnmarkedBareContextDoesNotResolveServicesOrMutateItems(bool authenticated, string? owner)
+    {
+        Claim[] claims = owner is null ? [] : [new Claim(ClaimTypes.NameIdentifier, owner)];
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims,
+            authenticated ? CookieAuthenticationDefaults.AuthenticationScheme : null));
+        var context = new DefaultHttpContext { User = principal };
+        var key = new object();
+        var value = new object();
+        context.Items[key] = value;
+
+        Assert.False(DevelopmentCustomerFixture.IsActive(context));
+
+        Assert.Same(principal, context.User);
+        var item = Assert.Single(context.Items);
+        Assert.Same(key, item.Key);
+        Assert.Same(value, item.Value);
+    }
+
     /// <summary>Requires a genuine default principal to take precedence over a previously authenticated local UI fixture.</summary>
     /// <returns>A task representing the real middleware's principal precedence.</returns>
     [Fact]

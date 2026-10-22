@@ -39,8 +39,8 @@ internal static class DevelopmentCustomerFixture
         && context.User.Identity?.IsAuthenticated is not true;
 
     internal static bool IsActive(HttpContext context) =>
-        IsAvailable(context) && context.Items.TryGetValue(PrincipalKey, out var value)
-        && value is ClaimsPrincipal principal && IsFixturePrincipal(principal);
+        context.Items.TryGetValue(PrincipalKey, out var value)
+        && value is ClaimsPrincipal principal && IsFixturePrincipal(principal) && IsAvailable(context);
 
     internal static async Task ObserveAsync(HttpContext context, Func<Task> next)
     {
