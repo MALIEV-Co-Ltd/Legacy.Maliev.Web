@@ -36,6 +36,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool disposed;
     private IDisposable? materialDisplaySubscription;
     private long minimumDisplayGeneration;
+    private MaterialDisplayRenderProjection? materialDisplayRender;
     private readonly Dictionary<Guid, InstantQuotationPartConfiguration> displayIntents = [];
     private readonly Dictionary<Guid, (long Revision, string Raw)> quantityDrafts = [];
     private long quantityDraftRevision;
@@ -95,6 +96,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         if (quantityEdits.IsPending(part.PartId) && !displayIntents.ContainsKey(part.PartId)
             || displayIntents.TryGetValue(part.PartId, out var intended) && intended != part.Configuration)
             return [];
+        if (!IsRepricing && DisplayQuote(part) is not null) return [];
         var snapshot = workflow?.MaterialPriceDisplay;
         if (snapshot is not null && snapshot.Generation > minimumDisplayGeneration)
             return snapshot.Entries.Where(row => row.PartId == part.PartId).ToArray();
@@ -120,8 +122,29 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         {
             if (disposed || token.IsCancellationRequested || workflow is null
                 || workflow.MaterialPriceDisplay.Generation != snapshot.Generation) return;
+            var sections = VisibleSections;
+            InstantQuotationWorkflowPartViewModel[] parts = sections.Configuration ? ConfigurationParts.ToArray() : [];
+            var projection = new MaterialDisplayRenderProjection(snapshot.Generation, State, sections,
+                HasMaterialDisplay, IsRepricing, parts, parts.SelectMany(DisplayRows).ToArray());
+            if (materialDisplayRender is { } previous && projection.Matches(previous)) return;
             StateHasChanged();
+            materialDisplayRender = projection;
         }));
+    }
+
+    private sealed record MaterialDisplayRenderProjection(
+        long Generation,
+        InstantQuotationWorkflowState State,
+        WorkflowSectionVisibility Sections,
+        bool HasDisplay,
+        bool Repricing,
+        InstantQuotationWorkflowPartViewModel[] Parts,
+        InstantQuotationMaterialPricingProgress[] Rows)
+    {
+        public bool Matches(MaterialDisplayRenderProjection other) =>
+            Generation == other.Generation && State == other.State && Sections == other.Sections
+            && HasDisplay == other.HasDisplay && Repricing == other.Repricing
+            && Parts.SequenceEqual(other.Parts) && Rows.SequenceEqual(other.Rows);
     }
 
     private bool InputDisabled => IsBusy || batchInProgress;

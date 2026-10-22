@@ -14,8 +14,8 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -161,8 +161,7 @@ public sealed class SharedSelectorValidationOriginalParityTests(TestingWebApplic
     public async Task RetainedFooter_ActualRazorPartialPreservesOriginalCultureAndPlainSelect(
         string uiCulture, string culture, string? featureCulture, bool upperNames, string? expected)
     {
-        // Qualify the retained partial in the application's existing fallback Razor host.
-        // The separate caller-graph case records the default live layout without claiming retirement.
+        // Qualifies the retained partial only; default live-footer delivery is a separate obligation.
         await using var host = factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("BlazorRouting:Home", "false");
