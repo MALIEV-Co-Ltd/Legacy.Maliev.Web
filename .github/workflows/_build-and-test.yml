@@ -256,7 +256,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~InstantQuotationAuthenticatedProfileTests|FullyQualifiedName~InstantQuotationAuthenticatedPreparationTests|FullyQualifiedName~InstantQuotationSubmissionEndpointTests"
+          --filter "FullyQualifiedName~InstantQuotationAuthenticatedProfileTests|FullyQualifiedName~InstantQuotationAuthenticatedPreparationTests|FullyQualifiedName~InstantQuotationSubmissionEndpointTests|FullyQualifiedName~InstantQuotationLocalizedValidationBrowserTests"
           --logger trx --results-directory ./authenticated-profile-test-results
       - name: Verify resolved material identity across Catalog and Order boundaries
         run: >-
@@ -483,6 +483,7 @@ jobs:
           name: web-combined-native-${{ github.sha }}
           path: |
             Legacy.Maliev.Web/wwwroot/dist/route-instant-quotation.css
+            Legacy.Maliev.Web/wwwroot/dist/route-instant-quotation.js
             Legacy.Maliev.Web.Tests/TestResults/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml

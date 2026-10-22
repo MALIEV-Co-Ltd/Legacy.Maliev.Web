@@ -95,6 +95,34 @@ public sealed class InstantQuotationLocalizedValidationBrowserTests(CncNativeBro
         Assert.True(await page.EvaluateAsync<bool>("() => window.__validationDocumentSentinel === document"));
         Assert.Equal("#instant-quote-taxnumber", await page.EvaluateAsync<string>("() => location.hash"));
         await Assertions.Expect(tax).ToBeFocusedAsync();
+        Assert.Equal("123", await tax.InputValueAsync());
+        await validationLink.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(tax).ToBeFocusedAsync();
+        Assert.Equal(resolvedLink.AbsoluteUri, page.Url);
+        Assert.True(await page.EvaluateAsync<bool>("() => window.__validationDocumentSentinel === document"));
+        Assert.Equal("123", await tax.InputValueAsync());
+        var historyState = await page.EvaluateAsync<string>("() => JSON.stringify(history.state)");
+        await tax.EvaluateAsync("""
+            oldField => {
+              window.__detachedValidationTax = oldField;
+              const oldForm = oldField.form;
+              const replacement = oldForm.cloneNode(true);
+              replacement.elements.namedItem('TaxNumber').value = '456';
+              oldForm.replaceWith(replacement);
+            }
+            """);
+        await validationLink.ClickAsync();
+        await Assertions.Expect(tax).ToBeFocusedAsync();
+        Assert.Equal("456", await tax.InputValueAsync());
+        Assert.True(await page.EvaluateAsync<bool>("() => !window.__detachedValidationTax.isConnected && document.activeElement !== window.__detachedValidationTax"));
+        await validationLink.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(tax).ToBeFocusedAsync();
+        Assert.Equal("456", await tax.InputValueAsync());
+        Assert.Equal(resolvedLink.AbsoluteUri, page.Url);
+        Assert.Equal(historyState, await page.EvaluateAsync<string>("() => JSON.stringify(history.state)"));
+        Assert.True(await page.EvaluateAsync<bool>("() => window.__validationDocumentSentinel === document"));
     }
 
     private static async Task<string> RenderCustomerAsync(string culture, string documentUrl)
