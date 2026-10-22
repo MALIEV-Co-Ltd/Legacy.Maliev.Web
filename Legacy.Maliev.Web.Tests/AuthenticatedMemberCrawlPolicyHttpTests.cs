@@ -319,7 +319,7 @@ public sealed class MemberAuthorityFixture : IAsyncLifetime
     private readonly RedisContainer redis = new RedisBuilder("redis:8.4-alpine").Build();
     private readonly RSA rsa = RSA.Create(2048);
     private readonly string certificatePassword = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
-    private readonly List<Process> children = [];
+    private readonly List<MemberAuthorityChild> children = [];
     private readonly Dictionary<string, string> connections = [];
     private string certificate = "";
     private Uri origin = null!;
@@ -329,9 +329,9 @@ public sealed class MemberAuthorityFixture : IAsyncLifetime
     {
         var authDll = Environment.GetEnvironmentVariable("MALIEV_MEMBER_AUTH_DLL");
         var seedDll = Environment.GetEnvironmentVariable("MALIEV_MEMBER_AUTH_SEED_DLL");
-        Assert.True(File.Exists(authDll) && File.Exists(seedDll), "Run the mandatory private member proof preparation script before building/testing this lane.");
         try
         {
+            Assert.True(File.Exists(authDll) && File.Exists(seedDll), "Run the mandatory private member proof preparation script before building/testing this lane.");
             await postgres.StartAsync();
             await redis.StartAsync();
             var containerConnection = new NpgsqlConnectionStringBuilder(postgres.GetConnectionString()) { Pooling = false };
@@ -398,7 +398,11 @@ public sealed class MemberAuthorityFixture : IAsyncLifetime
                 await Task.Delay(100);
             }
         }
-        catch { await DisposeAsync(); throw; }
+        catch (Exception primary)
+        {
+            await MemberAuthorityCleanup.CompleteAsync(primary, [DisposeAsync]);
+            throw;
+        }
     }
 
     public WebApplicationFactory<Program> Web(bool retained) => new MemberWebFactory(origin, redis.GetConnectionString(), certificate, certificatePassword, retained);
@@ -505,7 +509,10 @@ public sealed class MemberAuthorityFixture : IAsyncLifetime
 
     private Process Child(string dll, Dictionary<string, string> environment, Dictionary<string, string>? hostileAmbient = null)
     {
-        var process = new Process { StartInfo = new ProcessStartInfo("dotnet") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true } };
+        var child = new MemberAuthorityChild();
+        children.Add(child); // Register creation custody before any start or identity observation can fail.
+        var process = child.Process;
+        process.StartInfo = new ProcessStartInfo("dotnet") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
         process.StartInfo.ArgumentList.Add(dll);
         if (hostileAmbient is not null)
             foreach (var item in hostileAmbient) process.StartInfo.Environment[item.Key] = item.Value;
@@ -519,26 +526,19 @@ public sealed class MemberAuthorityFixture : IAsyncLifetime
         foreach (var item in inheritedEssentials) process.StartInfo.Environment[item.Key] = item.Value;
         foreach (var item in environment) process.StartInfo.Environment[item.Key] = item.Value;
         process.StartInfo.Environment["LEGACY_DEPLOY_ENABLED"] = "false";
-        process.OutputDataReceived += (_, _) => { };
-        process.ErrorDataReceived += (_, _) => { };
-        Assert.True(process.Start());
-        children.Add(process);
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
+        child.Start(process.StartInfo);
         return process;
     }
 
     public async Task DisposeAsync()
     {
-        foreach (var process in children)
-        {
-            try { if (!process.HasExited) process.Kill(entireProcessTree: true); await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10)); }
-            finally { process.Dispose(); }
-        }
+        var actions = children.AsEnumerable().Reverse()
+            .Select<MemberAuthorityChild, Func<Task>>(child => () => child.DisposeAsync().AsTask()).ToList();
+        actions.Add(() => redis.DisposeAsync().AsTask());
+        actions.Add(() => postgres.DisposeAsync().AsTask());
+        actions.Add(() => { rsa.Dispose(); return Task.CompletedTask; });
+        await MemberAuthorityCleanup.CompleteAsync(null, actions);
         children.Clear();
-        await redis.DisposeAsync();
-        await postgres.DisposeAsync();
-        rsa.Dispose();
     }
 
     private sealed class MemberWebFactory(Uri auth, string redis, string certificate, string password, bool retained) : WebApplicationFactory<Program>
