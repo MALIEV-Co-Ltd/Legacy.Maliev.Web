@@ -11,6 +11,80 @@ public sealed class InstantQuotationSubmissionTests
     private const string SubmissionId = "ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789";
     private const string UploadFileIdText = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 
+    [Theory]
+    [InlineData(null, InstantQuotationSubmissionCheckpointStatus.Persisted)]
+    [InlineData(null, InstantQuotationSubmissionCheckpointStatus.Completed)]
+    [InlineData(Owner, InstantQuotationSubmissionCheckpointStatus.Persisted)]
+    [InlineData(Owner, InstantQuotationSubmissionCheckpointStatus.Completed)]
+    public async Task StartAnother_KeepsPersistedRequestAndCreatesEmptyOwnedSession(
+        string? owner, InstantQuotationSubmissionCheckpointStatus status)
+    {
+        var original = Session(Part());
+        var sessions = new RecordingSessionStore(original, owner);
+        var checkpoint = new InstantQuotationSubmissionCheckpoint(SubmissionId, 417, status, "snapshot");
+        var persisted = new RecordingSubmissionStore { ReadOverride = checkpoint };
+        var quotation = new RecordingQuotationClient(_ => throw new InvalidOperationException("Restart must not submit."));
+        var pricing = new RecordingPricingService();
+        var events = new List<string>();
+        var service = new InstantQuotationSubmissionService(sessions, pricing, quotation, persisted,
+            new RecordingUploadClient(events, SuccessfulFinalization()), SuccessfulRequestFileClient.Instance);
+
+        var next = await service.StartAnotherAsync(SessionId, owner, default);
+
+        Assert.NotNull(next);
+        Assert.NotEqual(original.SessionId, next.SessionId);
+        Assert.NotEqual(original.SubmissionId, next.SubmissionId);
+        Assert.Equal(owner, next.OwnerIdentity);
+        Assert.Empty(next.Parts);
+        Assert.Null(next.QuoteAuthorization);
+        Assert.Null(next.PhysicalReceipts);
+        Assert.Same(original, sessions.CurrentSession);
+        Assert.Same(checkpoint, persisted.ReadOverride);
+        Assert.Empty(persisted.ExpectedPriorStatuses);
+        Assert.Single(sessions.CreatedSessions);
+        Assert.Equal(0, pricing.CallCount);
+        Assert.Empty(quotation.Calls);
+        Assert.Empty(events);
+    }
+
+    [Theory]
+    [InlineData(false, 417, true)]
+    [InlineData(true, 0, true)]
+    [InlineData(true, 417, false)]
+    public async Task StartAnother_RequiresPersistedReferenceAndLiveLease(
+        bool hasCheckpoint, int reference, bool acceptsRenewal)
+    {
+        var sessions = new RecordingSessionStore(Session(Part()), Owner);
+        var persisted = new RecordingSubmissionStore
+        {
+            ReadOverride = hasCheckpoint
+                ? new(SubmissionId, reference, InstantQuotationSubmissionCheckpointStatus.Persisted, "snapshot")
+                : null,
+            AcceptRenewals = acceptsRenewal,
+        };
+        var service = new InstantQuotationSubmissionService(sessions, new RecordingPricingService(),
+            new RecordingQuotationClient(_ => throw new InvalidOperationException("Restart must not submit.")),
+            persisted, new RecordingUploadClient([], SuccessfulFinalization()), SuccessfulRequestFileClient.Instance);
+
+        Assert.Null(await service.StartAnotherAsync(SessionId, Owner, default));
+        Assert.Empty(sessions.CreatedSessions);
+        Assert.Empty(persisted.ExpectedPriorStatuses);
+    }
+
+    [Fact]
+    public async Task StartAnother_WrongOwnerCannotReadCheckpointOrCreateSession()
+    {
+        var sessions = new RecordingSessionStore(Session(Part()), Owner);
+        var persisted = new RecordingSubmissionStore();
+        var service = new InstantQuotationSubmissionService(sessions, new RecordingPricingService(),
+            new RecordingQuotationClient(_ => throw new InvalidOperationException("Restart must not submit.")),
+            persisted, new RecordingUploadClient([], SuccessfulFinalization()), SuccessfulRequestFileClient.Instance);
+
+        Assert.Null(await service.StartAnotherAsync(SessionId, "another-owner", default));
+        Assert.Empty(persisted.OwnerIdentities);
+        Assert.Empty(sessions.CreatedSessions);
+    }
+
     [Fact]
     public async Task AuthenticatedDurableQuote_CheckpointConflictKeepsKnownTerminalReferenceWithoutProfileEffects()
     {
@@ -1033,8 +1107,16 @@ public sealed class InstantQuotationSubmissionTests
 
         public List<string?> RequestedOwners { get; } = [];
 
-        public Task<InstantQuotationSessionState> CreateAsync(string? ownerIdentity, InstantQuotationOrderState requestState, CancellationToken cancellationToken) =>
-            throw new NotSupportedException();
+        public List<InstantQuotationSessionState> CreatedSessions { get; } = [];
+
+        public Task<InstantQuotationSessionState> CreateAsync(string? ownerIdentity, InstantQuotationOrderState requestState, CancellationToken cancellationToken)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var created = new InstantQuotationSessionState(new string('B', 64), new string('C', 64), requestState,
+                now, now, OwnerIdentity: ownerIdentity);
+            CreatedSessions.Add(created);
+            return Task.FromResult(created);
+        }
 
         public Task<InstantQuotationSessionState?> GetAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken)
         {

@@ -251,6 +251,9 @@ public sealed class LocalizedCanonicalCookieHttpTests(TestingWebApplicationFacto
 
     private sealed class UnusedSubmissionService : IInstantQuotationSubmissionService
     {
+        public Task<InstantQuotationSessionState?> StartAnotherAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("A legacy JSON read must not restart a quotation.");
+
         public Task<InstantQuotationSubmissionResult> SubmitAsync(string sessionId, string? ownerIdentity,
             InstantQuotationCustomerSubmission customer, CancellationToken cancellationToken) =>
             throw new InvalidOperationException("A legacy JSON read must not submit a quotation.");

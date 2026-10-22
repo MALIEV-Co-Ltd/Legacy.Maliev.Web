@@ -317,6 +317,9 @@ public sealed class AdditiveFxHandlerContractTests(TestingWebApplicationFactory 
 
     private sealed class UnusedSubmissionService : IInstantQuotationSubmissionService
     {
+        public Task<InstantQuotationSessionState?> StartAnotherAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("FX handler reads must not restart a quotation.");
+
         public Task<InstantQuotationSubmissionResult> SubmitAsync(string sessionId, string? ownerIdentity, InstantQuotationCustomerSubmission customer, CancellationToken cancellationToken) =>
             throw new InvalidOperationException("FX handler reads must not submit an order.");
     }

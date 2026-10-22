@@ -219,6 +219,26 @@ public sealed class ThreeDimensionalPrinting : PageModel
         return new JsonResult(result.Payload) { StatusCode = result.StatusCode };
     }
 
+    public async Task<IActionResult> OnPostStartAnotherAsync(CancellationToken cancellationToken)
+    {
+        var identityCookie = HttpContext.RequestServices.GetRequiredService<InstantQuotationSessionIdentityCookie>();
+        var sessionId = identityCookie.TryRead(HttpContext);
+        var owner = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!IsValidSessionIdentity(sessionId)
+            || (User.Identity?.IsAuthenticated is true && string.IsNullOrWhiteSpace(owner)))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        var next = submissionService is null ? null : await submissionService.StartAnotherAsync(
+            sessionId!, User.Identity?.IsAuthenticated is true ? owner : null, cancellationToken);
+        if (next is null) return StatusCode(StatusCodes.Status409Conflict);
+
+        identityCookie.Write(HttpContext, next.SessionId, next.CreatedAt.Add(InstantQuotationSessionIdentityCookie.Lifetime));
+        var culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName is "th" ? "th" : "en";
+        return LocalRedirect($"/InstantQuotation/3D-Printing?culture={culture}");
+    }
+
     public async Task<IActionResult> OnPostSubmitRequestAsync(CancellationToken cancellationToken)
     {
         var wantsJson = Request.Headers.Accept.ToString().Contains("application/json", StringComparison.OrdinalIgnoreCase);
