@@ -123,7 +123,8 @@ internal static class DevelopmentCustomerFixture
         }
         catch (Exception exception) when (exception is HttpRequestException or TimeoutException
             or Polly.Timeout.TimeoutRejectedException
-            || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested)) { }
+            || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        { }
         var options = countries.Where(country => !string.IsNullOrWhiteSpace(country.Name))
             .Select(country => new InstantQuotationCountryOption(country.Name,
                 InstantQuotationCountryLabels.DisplayName(country, System.Globalization.CultureInfo.CurrentUICulture)))

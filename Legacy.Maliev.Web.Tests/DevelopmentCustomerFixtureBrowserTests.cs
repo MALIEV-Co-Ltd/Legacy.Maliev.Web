@@ -103,7 +103,8 @@ public sealed class DevelopmentCustomerFixtureBrowserTests(CncNativeBrowserFixtu
         ParameterView.FromDictionary(new Dictionary<string, object?>
         {
             [nameof(InstantQuotationWorkflow.CustomerModel)] = DevelopmentCustomerFixture.ApplyProfile(InstantQuotationCustomerDisplayModel.Empty)
-                with { IsDevelopmentCustomerFixture = fixture },
+                with
+            { IsDevelopmentCustomerFixture = fixture },
             [nameof(InstantQuotationWorkflow.InitialState)] = InstantQuotationWorkflowState.Uploaded,
         }).SetParameterProperties(component);
         var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
