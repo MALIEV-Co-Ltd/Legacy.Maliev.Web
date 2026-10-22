@@ -15,14 +15,15 @@ using Microsoft.JSInterop;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<TestingWebApplicationFactory>, IAsyncLifetime
 {
     private const string WorkflowNamespace = "Legacy.Maliev.Web.Components.Pages.InstantQuotation";
     private readonly HttpClient client;
+    private readonly WebApplicationFactory<Program> ownedFactory;
 
-    public InstantQuotationInteractiveRouteTests(WebApplicationFactory<Program> factory)
+    public InstantQuotationInteractiveRouteTests(TestingWebApplicationFactory factory)
     {
-        client = factory.WithWebHostBuilder(builder =>
+        ownedFactory = factory.WithWebHostBuilder(builder =>
             {
                 builder.UseSetting("environment", "Testing");
                 builder.UseSetting("Recaptcha:ProjectId", "test-project");
@@ -32,13 +33,30 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
                     services.RemoveAll<ICountryClient>();
                     services.AddSingleton<ICountryClient, StubCountryClient>();
                 });
-            })
-            .CreateClient(new WebApplicationFactoryClientOptions
+            });
+        try
+        {
+            client = ownedFactory.CreateClient(new WebApplicationFactoryClientOptions
             {
                 AllowAutoRedirect = false,
                 BaseAddress = new Uri("https://localhost"),
             });
+        }
+        catch (Exception original)
+        {
+            try { ownedFactory.Dispose(); }
+            catch (Exception cleanup) { OwnedWebSurfaceResources.RecordFailureTypes(original, [cleanup]); }
+            throw;
+        }
     }
+
+    /// <summary>Completes setup after the per-test child factory has been created.</summary>
+    /// <returns>A completed setup task.</returns>
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    /// <summary>Releases this test's child host and its tracked clients without disposing the borrowed parent.</summary>
+    /// <returns>A task that completes after the owned child factory has been disposed.</returns>
+    public async Task DisposeAsync() => await ownedFactory.DisposeAsync();
 
     [Fact]
     public void Route_RemainsStaticSsr_WithExactlyOneInteractiveServerWorkflowIsland()
