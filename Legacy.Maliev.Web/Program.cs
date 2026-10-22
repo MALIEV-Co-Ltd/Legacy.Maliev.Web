@@ -19,8 +19,10 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+using var testingWebRoot = TestingWebRootLease.Create(builder.Environment);
 if (builder.Environment.IsEnvironment("Testing"))
 {
+    if (testingWebRoot is not null) builder.Services.AddSingleton(testingWebRoot);
     builder.WebHost.UseStaticWebAssets();
 }
 
@@ -521,6 +523,7 @@ builder.Services.AddHttpClient<Legacy.Maliev.Web.Application.ICustomerDocumentCl
 }).RemoveAllResilienceHandlers()
   .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 #pragma warning restore EXTEXP0001
+builder.Services.AddWebForwardedHeaderTrust();
 var app = builder.Build();
 app.UseMiddleware<BuildIdentityHeaderMiddleware>();
 app.Use(async (context, next) =>
