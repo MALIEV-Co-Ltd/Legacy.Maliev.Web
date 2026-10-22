@@ -47,6 +47,88 @@ public sealed class PublicContactFormBrowserTests(PublicContactBrowserFixture fi
         Assert.Contains("browser-submission%40example.test", posted, StringComparison.OrdinalIgnoreCase);
     }
 
+
+    /// <summary>Checks the served Additional services submenu stays readable and keyboard-reachable in both public languages and navigation layouts.</summary>
+    /// <param name="culture">The public page language whose real labels are rendered.</param>
+    /// <param name="width">The viewport width selecting the existing desktop or collapsed navigation.</param>
+    /// <param name="height">The viewport height in which every submenu destination must remain reachable.</param>
+    /// <returns>A task completing after the real dropdown, scrolling, focus and Escape controls are checked.</returns>
+    [Theory]
+    [InlineData("en", 1600, 900)]
+    [InlineData("th", 1600, 900)]
+    [InlineData("en", 390, 640)]
+    [InlineData("th", 390, 640)]
+    public async Task AdditionalServices_MenuWrapsAndRetainsKeyboardAndScrollAccess(string culture, int width, int height)
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+        });
+        await using var page = await context.NewPageAsync();
+        var response = await page.GotoAsync(new Uri(fixture.Origin, $"/contact?culture={culture}").ToString());
+        Assert.NotNull(response);
+        Assert.True(response.Ok, $"Contact returned HTTP {response.Status}.");
+        Assert.Equal(culture, await page.Locator("html").GetAttributeAsync("lang"));
+        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+
+        var collapseToggle = page.Locator(".landing-nav-toggle");
+        if (width < 1440)
+        {
+            await collapseToggle.ClickAsync();
+            await Assertions.Expect(collapseToggle).ToHaveAttributeAsync("aria-expanded", "true");
+        }
+
+        var toggle = page.Locator("#landing-services-menu");
+        var menu = page.Locator(".landing-nav-services-menu");
+        var links = menu.Locator(".dropdown-item");
+        Assert.Equal(6, await links.CountAsync());
+        Assert.Equal(1, await page.Locator(".landing-nav a[href^='https://shop.maliev.com/']").CountAsync());
+        var destinations = await links.EvaluateAllAsync<string[]>("elements => elements.map(element => element.getAttribute('href'))");
+        Assert.Equal(6, destinations.Distinct(StringComparer.Ordinal).Count());
+        Assert.All(destinations, destination => Assert.False(string.IsNullOrWhiteSpace(destination)));
+
+        await toggle.FocusAsync();
+        await toggle.PressAsync("Enter");
+        await Assertions.Expect(toggle).ToHaveAttributeAsync("aria-expanded", "true");
+        await Assertions.Expect(menu).ToBeVisibleAsync();
+        Assert.Equal(width < 1440 ? "static" : "absolute",
+            await menu.EvaluateAsync<string>("element => getComputedStyle(element).position"));
+
+        await toggle.PressAsync("ArrowDown");
+        for (var index = 0; index < 6; index++)
+        {
+            var link = links.Nth(index);
+            await Assertions.Expect(link).ToBeFocusedAsync();
+            Assert.False(string.IsNullOrWhiteSpace(await link.InnerTextAsync()));
+            Assert.Equal("normal", await link.EvaluateAsync<string>("element => getComputedStyle(element).whiteSpace"));
+            Assert.Equal("rgb(237, 244, 255)", await link.EvaluateAsync<string>("element => getComputedStyle(element).backgroundColor"));
+            await link.ScrollIntoViewIfNeededAsync();
+            Assert.True(await link.EvaluateAsync<bool>("""
+                element => {
+                    const rect = element.getBoundingClientRect();
+                    const menu = element.closest('.landing-nav-services-menu').getBoundingClientRect();
+                    return rect.width > 0 && rect.height > 0
+                        && rect.left >= menu.left - 1 && rect.right <= menu.right + 1
+                        && rect.left >= -1 && rect.right <= innerWidth + 1
+                        && rect.top >= -1 && rect.bottom <= innerHeight + 1
+                        && element.scrollWidth <= element.clientWidth + 1;
+                }
+                """), "Each full localized submenu label must fit its menu and be scrollable into the visible viewport.");
+            if (index < 5)
+            {
+                await link.PressAsync("ArrowDown");
+            }
+        }
+
+        await links.Last.PressAsync("ArrowUp");
+        await Assertions.Expect(links.Nth(4)).ToBeFocusedAsync();
+        await links.Nth(4).PressAsync("Escape");
+        await Assertions.Expect(toggle).ToBeFocusedAsync();
+        await Assertions.Expect(toggle).ToHaveAttributeAsync("aria-expanded", "false");
+        await Assertions.Expect(menu).ToBeHiddenAsync();
+        Assert.Equal(destinations, await links.EvaluateAllAsync<string[]>("elements => elements.map(element => element.getAttribute('href'))"));
+    }
+
     private static async Task<IRequest> CaptureFormPostAsync(IPage page, string formSelector)
     {
         var action = new Uri(await page.Locator(formSelector).EvaluateAsync<string>("form => form.action"));

@@ -334,7 +334,7 @@ jobs:
           --configuration Release --no-build --no-restore
           -p:UseLocalMalievDependencies=true
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~InquiryLocalization_"
+          --filter "FullyQualifiedName~InquiryLocalization_|FullyQualifiedName~PublicContactFormBrowserTests.AdditionalServices_MenuWrapsAndRetainsKeyboardAndScrollAccess"
           --logger trx --results-directory ./localized-inquiry-test-results
       - name: Verify localized review and printable DFM through actual uploaded meshes
         run: >-
@@ -482,6 +482,7 @@ jobs:
         with:
           name: web-combined-native-${{ github.sha }}
           path: |
+            Legacy.Maliev.Web/wwwroot/dist/site.min.css
             Legacy.Maliev.Web/wwwroot/dist/route-service-toc.js
             Legacy.Maliev.Web/wwwroot/dist/route-service-printing.js
             Legacy.Maliev.Web/wwwroot/dist/route-service-cnc.js

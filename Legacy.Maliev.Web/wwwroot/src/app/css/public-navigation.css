@@ -8,6 +8,11 @@
 .landing-nav-links > li, .landing-nav-account > li { display: flex; align-items: center; }
 .landing-nav-links a, .landing-nav-account .nav-link, .landing-nav-account button { color: #111f33; font-size: .91rem; text-decoration: none; }
 .landing-nav-links a:hover, .landing-nav-links a:focus-visible, .landing-nav-account a:hover, .landing-nav-account a:focus-visible { color: #075de8; }
+.landing-nav-services > .landing-nav-services-toggle { display: inline-flex; align-items: center; gap: .35rem; }
+.landing-nav-services-menu { min-width: 15rem; margin-top: .45rem; padding: .45rem; border: 1px solid #dce4ee; border-radius: .6rem; box-shadow: 0 .85rem 2rem rgba(4, 23, 45, .14); }
+.landing-nav-services-menu .dropdown-item { display: block; width: 100%; padding: .65rem .75rem; border-radius: .35rem; color: #111f33; white-space: normal; }
+.landing-nav-services-menu .dropdown-item:hover, .landing-nav-services-menu .dropdown-item:focus-visible { background: #edf4ff; color: #075de8; }
+.landing-nav-services-menu li + li { margin-top: 0; }
 .landing-nav-account .nav-item { list-style: none; }
 .landing-nav-account .maliev-account-link { display: inline-flex; align-items: center; gap: .6rem; }
 .landing-nav-account .maliev-account-link i, .landing-nav-account .maliev-account-link .svg-inline--fa { flex: 0 0 auto; width: 1.15rem; color: #111f33; font-size: 1rem; text-align: center; }
@@ -34,5 +39,10 @@
     .landing-nav-content { position: absolute; top: 100%; left: 0; width: 100%; padding: 1rem 1.25rem; background: #fff; border-bottom: 1px solid #dce4ee; box-shadow: 0 1rem 2rem rgba(4, 23, 45, .12); }
     .landing-nav-links li + li, .landing-nav-account li + li { margin-top: .35rem; }
     .landing-nav-links a, .landing-nav-account a, .landing-nav-account button { display: flex; width: 100%; padding: .65rem 0; }
+    .landing-nav-services { flex-wrap: wrap; }
+    /* Bootstrap's dynamic Popper writes inline positioning outside .navbar; keep the collapsed submenu in flow. */
+    .landing-nav-services-menu { position: static !important; inset: auto !important; transform: none !important; width: 100%; margin: .2rem 0 0; border: 0; border-radius: .45rem; box-shadow: none; background: #f7f9fc; }
+    .landing-nav-services-menu .dropdown-item { padding: .65rem .85rem; }
+    .landing-nav-services-menu li + li { margin-top: 0; }
     .landing-nav-account { margin-top: .7rem; padding-top: .7rem; border-top: 1px solid #dce4ee; }
 }
