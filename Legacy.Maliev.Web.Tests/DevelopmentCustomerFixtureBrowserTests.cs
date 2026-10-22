@@ -40,6 +40,10 @@ public sealed class DevelopmentCustomerFixtureBrowserTests(CncNativeBrowserFixtu
         });
         await using var page = await context.NewPageAsync();
         await page.GotoAsync(origin + "/Account/Login?culture=" + culture);
+        var loginConsent = page.Locator("#cookieConsent");
+        await Assertions.Expect(loginConsent).ToBeVisibleAsync();
+        await loginConsent.Locator("[data-consent-action='reject']").ClickAsync();
+        await Assertions.Expect(loginConsent).ToBeHiddenAsync();
         await page.Locator("[data-development-customer-fixture] button").ClickAsync();
         await page.WaitForURLAsync("**/InstantQuotation/3D-Printing");
         await page.GotoAsync(origin + "/InstantQuotation/3D-Printing?culture=" + culture);
