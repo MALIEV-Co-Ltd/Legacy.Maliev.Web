@@ -3,15 +3,19 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly HttpClient client;
+    private readonly TestingWebApplicationFactory factory;
 
     public PublicBusinessStructuredDataMigrationTests(TestingWebApplicationFactory factory)
     {
+        this.factory = factory;
         client = factory.CreateClient();
     }
 
@@ -148,6 +152,53 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<T
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>Verifies the independently rendered Contact and footer schedules against the confirmed source hours in both route owners.</summary>
+    /// <param name="useBlazorRoute">Whether the request uses the active component route or retained Razor page.</param>
+    /// <param name="culture">The English or Thai presentation culture.</param>
+    /// <param name="weekdayHours">The exact confirmed localized weekday interval.</param>
+    /// <param name="weekendHours">The exact confirmed localized weekend closure.</param>
+    /// <returns>A task that completes after the actual HTTP document exposes the correct hours on both visible surfaces.</returns>
+    [Theory]
+    [InlineData(true, "en", "Monday-Friday: 09:00-18:00", "Saturday-Sunday: Closed")]
+    [InlineData(true, "th", "จันทร์-ศุกร์: 09:00-18:00 น.", "เสาร์-อาทิตย์: ปิด")]
+    [InlineData(false, "en", "Monday-Friday: 09:00-18:00", "Saturday-Sunday: Closed")]
+    [InlineData(false, "th", "จันทร์-ศุกร์: 09:00-18:00 น.", "เสาร์-อาทิตย์: ปิด")]
+    public async Task BusinessHours_VisibleContactAndFooterKeepTheConfirmedSchedule(
+        bool useBlazorRoute, string culture, string weekdayHours, string weekendHours)
+    {
+        await using var hoursFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:Contact", useBlazorRoute ? "true" : "false");
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<ICountryClient>();
+                services.AddSingleton<ICountryClient, HealthyCountryClient>();
+            });
+        });
+        using var hoursClient = hoursFactory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using var response = await hoursClient.GetAsync($"/contact?culture={culture}", deadline.Token);
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(deadline.Token));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var contact = Regex.Match(source, "<main\\b[^>]*\\bclass=\"inquiry-page\"[^>]*>[\\s\\S]*?</main>",
+            RegexOptions.CultureInvariant);
+        var footer = Regex.Match(source, "<footer\\b[^>]*\\bdata-migration-component=\"public-footer\"[^>]*>[\\s\\S]*?</footer>",
+            RegexOptions.CultureInvariant);
+        Assert.True(contact.Success);
+        Assert.True(footer.Success);
+        Assert.Contains("contact-method-grid", contact.Value, StringComparison.Ordinal);
+        Assert.Equal(useBlazorRoute,
+            contact.Value.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        foreach (var surface in new[] { contact.Value, footer.Value })
+        {
+            Assert.Contains(weekdayHours, surface, StringComparison.Ordinal);
+            Assert.Contains(weekendHours, surface, StringComparison.Ordinal);
+            Assert.DoesNotContain("10:00-19:00", surface, StringComparison.Ordinal);
+        }
+    }
+
     private static Dictionary<string, JsonDocument> ExtractSchemas(string source) => Regex.Matches(
             source,
             "<script[^>]*type=\"application/ld\\+json\"[^>]*>(?<json>[\\s\\S]*?)</script>",
@@ -178,6 +229,16 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<T
                 SocialNetworks.Threads
             },
             sameAs.EnumerateArray().Select(link => link.GetString()));
+    }
+
+    private sealed class HealthyCountryClient : ICountryClient
+    {
+        public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(new ServiceResponse<IReadOnlyList<Country>>(
+                [new Country(764, "Thailand", "Asia", "66", "TH", "THA", null, null)], true));
+        }
     }
 
     private static string FindRepositoryRoot()
