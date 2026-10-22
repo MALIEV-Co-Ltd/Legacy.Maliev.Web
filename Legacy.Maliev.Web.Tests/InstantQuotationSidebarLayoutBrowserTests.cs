@@ -285,12 +285,27 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
             failureEvidence.AwaitBoundary(state + "-screenshot", true);
             failureEvidence.AwaitBoundary(state + "-geometry", false);
             var geometry = await rail.EvaluateAsync<JsonElement>("""
-                rail => ({ viewport:innerWidth, document:document.documentElement.scrollWidth,
-                  rail:{client:rail.clientWidth,scroll:rail.scrollWidth},
-                  cards:[...rail.querySelectorAll('[data-workflow-part]')].map(card=>({
-                    width:card.clientWidth,scroll:card.scrollWidth,name:card.querySelector('h4').textContent,
-                    bounds:card.getBoundingClientRect().toJSON(),
-                    buttons:[...card.querySelectorAll('button')].map(button=>({text:button.textContent,bounds:button.getBoundingClientRect().toJSON()}))})) })
+                rail => {
+                  const panel=rail.closest('[data-workflow-parts-panel]');
+                  const workflow=rail.closest('.instant-quote__workflow');
+                  const style=getComputedStyle(rail);
+                  return { viewport:innerWidth, document:document.documentElement.scrollWidth,
+                    viewportHeight:innerHeight,workflowBounds:workflow.getBoundingClientRect().toJSON(),
+                    panelBounds:panel.getBoundingClientRect().toJSON(),
+                    headerBounds:panel.querySelector('.instant-quote__parts-header').getBoundingClientRect().toJSON(),
+                    rail:{client:rail.clientWidth,scroll:rail.scrollWidth,clientHeight:rail.clientHeight,
+                      scrollHeight:rail.scrollHeight,scrollLeft:rail.scrollLeft,scrollTop:rail.scrollTop,
+                      paddingTop:parseFloat(style.paddingTop)||0,paddingBottom:parseFloat(style.paddingBottom)||0,
+                      bounds:rail.getBoundingClientRect().toJSON()},
+                    cards:[...rail.querySelectorAll('[data-workflow-part]')].slice(0,8).map(card=>{
+                      const heading=card.querySelector('h4'),range=document.createRange();
+                      range.selectNodeContents(heading);
+                      return {width:card.clientWidth,scroll:card.scrollWidth,bounds:card.getBoundingClientRect().toJSON(),
+                        headingBounds:heading.getBoundingClientRect().toJSON(),
+                        nameLines:[...range.getClientRects()].slice(0,16).map(r=>[r.left,r.top,r.right,r.bottom]),
+                        buttons:[...card.querySelectorAll('button')].slice(0,8).map(button=>({bounds:button.getBoundingClientRect().toJSON()}))};
+                    }) };
+                }
                 """);
             failureEvidence.AwaitBoundary(state + "-geometry", true);
             failureEvidence.AwaitBoundary(state + "-write", false);
@@ -315,7 +330,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
             {
                 var heading = card.Locator("h4");
                 await heading.ScrollIntoViewIfNeededAsync();
-                Assert.True(await heading.EvaluateAsync<bool>("""
+                var fullNameReachable = await heading.EvaluateAsync<bool>("""
                     heading => {
                       const card=heading.closest('[data-workflow-part]').getBoundingClientRect();
                       const rail=heading.closest('[data-workflow-parts]').getBoundingClientRect();
@@ -327,7 +342,35 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
                         && r.top>=Math.max(card.top,rail.top,panel.top,0)-1
                         && r.bottom<=Math.min(card.bottom,rail.bottom,panel.bottom,innerHeight)+1);
                     }
-                    """), "Every full part-name line must be reachable through the compact rail's native vertical scrolling.");
+                    """);
+                var compactFailureGeometry = fullNameReachable ? string.Empty
+                    : (await heading.EvaluateAsync<JsonElement>("""
+                        heading => {
+                          const rect = element => {
+                            const r=element.getBoundingClientRect();
+                            return [r.left,r.top,r.right,r.bottom];
+                          };
+                          const box = element => {
+                            const style=getComputedStyle(element);
+                            return {bounds:rect(element),client:[element.clientWidth,element.clientHeight],
+                              scroll:[element.scrollLeft,element.scrollTop,element.scrollWidth,element.scrollHeight],
+                              padding:[parseFloat(style.paddingTop)||0,parseFloat(style.paddingBottom)||0],
+                              border:[parseFloat(style.borderTopWidth)||0,parseFloat(style.borderBottomWidth)||0]};
+                          };
+                          const rail=heading.closest('[data-workflow-parts]');
+                          const panel=heading.closest('[data-workflow-parts-panel]');
+                          const workflow=heading.closest('.instant-quote__workflow');
+                          const range=document.createRange(); range.selectNodeContents(heading);
+                          const lines=[...range.getClientRects()];
+                          return {viewport:[innerWidth,innerHeight],workflow:box(workflow),panel:box(panel),
+                            header:rect(panel.querySelector('.instant-quote__parts-header')),
+                            rail:box(rail),card:box(heading.closest('[data-workflow-part]')),heading:box(heading),
+                            lineCount:lines.length,lines:lines.slice(0,16).map(r=>[r.left,r.top,r.right,r.bottom])};
+                        }
+                        """)).GetRawText();
+                Assert.True(fullNameReachable,
+                    "Every full part-name line must be reachable through the compact rail's native vertical scrolling. "
+                    + compactFailureGeometry);
                 var compactScroll = await rail.EvaluateAsync<double[]>("rail => [rail.scrollTop, rail.clientHeight, rail.scrollHeight]");
                 Assert.True(compactScroll[0] > 0 && compactScroll[2] > compactScroll[1],
                     "A compact long-name case must exercise the rail's native vertical scrolling.");

@@ -409,6 +409,8 @@ jobs:
             quotation-conversion-test-results/**/*.trx
             cnc-literal-producer-test-results/**/*.trx
             sidebar-navigation-test-results/sidebar-*-initial-navigation-timeout.json
+            sidebar-navigation-test-results/sidebar-en-1280-h720-initial.json
+            sidebar-navigation-test-results/sidebar-th-1280-h720-initial.json
             sidebar-focused-test-results/**/*.trx
             publisher-mesh-test-results/**/*.trx
             physical-result-test-results/**/*.trx
