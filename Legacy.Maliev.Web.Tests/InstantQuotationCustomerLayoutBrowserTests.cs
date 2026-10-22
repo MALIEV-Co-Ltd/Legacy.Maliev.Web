@@ -1,3 +1,11 @@
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 using Xunit.Abstractions;
 
@@ -126,7 +134,13 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         {
             ViewportSize = new ViewportSize { Width = 1920, Height = 1080 },
         });
-        var origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
+        var probe = new SubmitBoundaryProbe();
+        await using var application = new SubmitBoundaryFactory(probe);
+        application.UseKestrel(0);
+        application.ClientOptions.AllowAutoRedirect = false;
+        using var hostClient = application.CreateClient();
+        var origin = hostClient.BaseAddress!.GetLeftPart(UriPartial.Authority);
+        probe.ObserveRoutes(application.Services.GetRequiredService<EndpointDataSource>());
         await context.AddCookiesAsync(
         [
             new Cookie { Name = ".AspNetCore.Culture", Value = $"c={culture}|uic={culture}", Url = origin },
@@ -162,7 +176,7 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
                 && string.IsNullOrEmpty(redirect.Fragment);
             try
             {
-                output.WriteLine($"[customer-layout-submit] status={response.Status}; redirectsToQuotation={redirectsToQuotation}");
+                output.WriteLine($"[customer-layout-submit] status={response.Status}; redirectsToQuotation={redirectsToQuotation}; routes={probe.PrintingRoutes}; postRoutes={probe.PrintingPostRoutes}; razorPostRoutes={probe.PrintingRazorPostRoutes}; observed={probe.Observed}; originalStatus={probe.OriginalStatus}; reExecuted={probe.ReExecuted}; razorEndpoint={probe.RazorEndpoint}; allowsPost={probe.AllowsPost}; antiforgery={probe.Antiforgery}; observerFailed={probe.ObserverFailed}");
             }
             catch { /* Secondary diagnostic output must not replace the original test failure. */ }
             Assert.Equal(302, response.Status);
@@ -274,5 +288,84 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         }
         Assert.Equal(1, Volatile.Read(ref submissions));
         Assert.False(await page.Locator("[data-workflow-submitted]").IsVisibleAsync());
+    }
+
+    private sealed class SubmitBoundaryFactory(SubmitBoundaryProbe probe)
+        : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+            builder.ConfigureServices(services => services.AddSingleton<IStartupFilter>(probe));
+        }
+    }
+
+    private sealed class SubmitBoundaryProbe : IStartupFilter
+    {
+        internal int PrintingRoutes { get; private set; }
+        internal int PrintingPostRoutes { get; private set; }
+        internal int PrintingRazorPostRoutes { get; private set; }
+        internal bool Observed { get; private set; }
+        internal int OriginalStatus { get; private set; }
+        internal bool ReExecuted { get; private set; }
+        internal bool RazorEndpoint { get; private set; }
+        internal bool AllowsPost { get; private set; }
+        internal int Antiforgery { get; private set; }
+        internal bool ObserverFailed { get; private set; }
+
+        internal void ObserveRoutes(EndpointDataSource source)
+        {
+            foreach (var endpoint in source.Endpoints.OfType<RouteEndpoint>().Where(endpoint =>
+                string.Equals(endpoint.RoutePattern.RawText?.Trim('/'),
+                    "InstantQuotation/3D-Printing", StringComparison.OrdinalIgnoreCase)))
+            {
+                PrintingRoutes++;
+                if (!AcceptsPost(endpoint)) continue;
+                PrintingPostRoutes++;
+                if (IsPrintingPage(endpoint)) PrintingRazorPostRoutes++;
+            }
+        }
+
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => application =>
+        {
+            application.Use(async (context, requestNext) =>
+            {
+                if (HttpMethods.IsPost(context.Request.Method)
+                    && context.Request.Path.Equals("/InstantQuotation/3D-Printing", StringComparison.OrdinalIgnoreCase)
+                    && context.Request.Query["handler"] == "SubmitRequest")
+                {
+                    context.Response.OnStarting(() =>
+                    {
+                        try
+                        {
+                            var reExecute = context.Features.Get<IStatusCodeReExecuteFeature>();
+                            var endpoint = reExecute?.Endpoint ?? context.GetEndpoint();
+                            var antiforgery = context.Features.Get<IAntiforgeryValidationFeature>();
+                            OriginalStatus = reExecute?.OriginalStatusCode ?? context.Response.StatusCode;
+                            ReExecuted = reExecute is not null;
+                            RazorEndpoint = endpoint is not null && IsPrintingPage(endpoint);
+                            AllowsPost = endpoint is RouteEndpoint && AcceptsPost(endpoint);
+                            Antiforgery = antiforgery is null ? 0 : antiforgery.IsValid ? 1 : 2;
+                            Observed = true;
+                        }
+                        catch
+                        {
+                            ObserverFailed = true;
+                        }
+                        return Task.CompletedTask;
+                    });
+                }
+                await requestNext(context);
+            });
+            next(application);
+        };
+
+        private static bool AcceptsPost(Endpoint endpoint) =>
+            endpoint.Metadata.GetMetadata<IHttpMethodMetadata>() is not { HttpMethods.Count: > 0 } methods
+            || methods.HttpMethods.Contains(HttpMethods.Post, StringComparer.OrdinalIgnoreCase);
+
+        private static bool IsPrintingPage(Endpoint endpoint) =>
+            string.Equals(endpoint.Metadata.GetMetadata<PageActionDescriptor>()?.ViewEnginePath,
+                "/InstantQuotation/3D-Printing", StringComparison.OrdinalIgnoreCase);
     }
 }
