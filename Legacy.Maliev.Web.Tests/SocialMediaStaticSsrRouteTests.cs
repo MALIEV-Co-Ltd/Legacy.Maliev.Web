@@ -191,8 +191,8 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
         {
             var card = Assert.Single(
                 Regex.Matches(source, "<a\\b[^>]*class=\"maliev-panel social-link-card\"[^>]*>.*?</a>", RegexOptions.CultureInvariant | RegexOptions.Singleline)
-                    .Cast<Match>()
-                    .Where(match => match.Value.Contains($"href=\"{destination}\"", StringComparison.Ordinal))).Value;
+                    .Cast<Match>(),
+                match => match.Value.Contains($"href=\"{destination}\"", StringComparison.Ordinal)).Value;
 
             Assert.Contains("target=\"_blank\" rel=\"noopener\"", card, StringComparison.Ordinal);
             Assert.Contains($"<i class=\"fab {icon}\" aria-hidden=\"true\"></i>", card, StringComparison.Ordinal);
