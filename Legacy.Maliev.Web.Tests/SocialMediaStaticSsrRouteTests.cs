@@ -75,9 +75,9 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
         Assert.Contains(culture == "th"
-            ? "ชมตัวอย่างงานผลิต โปรเจกต์สแกน 3 มิติ ชิ้นงานพิมพ์ และข้อมูลการผลิตที่นำไปใช้ได้จริง"
+            ? "ชมตัวอย่างงานผลิต โครงการสแกน 3 มิติ ชิ้นงานพิมพ์ และข้อมูลการผลิตที่นำไปใช้ได้จริง"
             : "See production examples, 3D scanning projects, printed parts, and practical manufacturing updates.", source, StringComparison.Ordinal);
-        Assert.Contains(culture == "th" ? "วิดีโอกระบวนการและตัวอย่างโปรเจกต์" : "Process videos and project demonstrations", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "วิดีโอกระบวนการและตัวอย่างโครงการ" : "Process videos and project demonstrations", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Equal(SocialDestinations.Length, Regex.Matches(source, "class=\"maliev-panel social-link-card\"", RegexOptions.CultureInvariant).Count);
         foreach (var destination in SocialDestinations)
