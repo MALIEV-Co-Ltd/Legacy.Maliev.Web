@@ -380,7 +380,7 @@ internal sealed class BillingProofLifetime : IAsyncDisposable
                 try { await host.CloseAsync(); } catch (Exception failure) { failures.Add("final-host:" + failure.GetType().Name); }
             if (failures.Count != 0) throw new BillingProofQuarantineException(failures) { Receipt = OwnershipReceipt() };
             foreach (var child in children.AsEnumerable().Reverse())
-                try { await child.CloseAsync(); } catch (Exception failure) { failures.Add("child:" + failure.GetType().Name); }
+                try { await child.CloseAsync(); } catch (Exception failure) { failures.Add("child:" + failure.GetType().Name + ":" + child.CleanupStage); }
             if (failures.Count != 0) throw new BillingProofQuarantineException(failures) { Receipt = OwnershipReceipt() };
             // Remove an action only after successful completion. Failed release stays owned for retry.
             while (dependencies.Count != 0)
@@ -776,7 +776,8 @@ internal sealed class BillingChildLease(IBillingChildProcess process)
     private bool readersClosed;
     private bool released;
     private Task? readerJoin;
-    internal object Receipt => new { dispatched, identityCaptured, exitVerified, noChildVerified, readersClosed, released, process = process.Receipt };
+    internal string CleanupStage { get; private set; } = "not-started";
+    internal object Receipt => new { dispatched, identityCaptured, exitVerified, noChildVerified, readersClosed, released, cleanupStage = CleanupStage, process = process.Receipt };
     internal bool HasExited => process.HasExited;
     internal int ExitCode => process.ExitCode;
     internal bool ReaderFailed => process.ReaderFailed;
@@ -798,28 +799,38 @@ internal sealed class BillingChildLease(IBillingChildProcess process)
             if (dispatched && !identityCaptured)
             {
                 // Metadata acquisition may have failed after successful Start; recover only the original handle.
+                CleanupStage = "verify-no-live-child";
                 if (process.VerifyNoLiveChild()) { noChildVerified = process.StartRefused; exitVerified = !noChildVerified; }
-                else { process.CaptureIdentity(); identityCaptured = true; }
+                else { CleanupStage = "capture-identity"; process.CaptureIdentity(); identityCaptured = true; }
             }
             if (!exitVerified && !noChildVerified)
             {
+                CleanupStage = "observe-exit";
                 if (!process.HasExited)
                 {
+                    CleanupStage = "request-graceful-stop";
                     process.RequestGracefulStop();
+                    CleanupStage = "wait-graceful-exit";
                     try { await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(2)); }
                     catch (TimeoutException) { /* Exact retained process is still owned. */ }
-                    if (!process.HasExited) process.KillExact();
+                    CleanupStage = "observe-exit";
+                    if (!process.HasExited) { CleanupStage = "kill-exact"; process.KillExact(); }
+                    CleanupStage = "wait-exit";
                     await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
                 }
+                CleanupStage = "verify-exit";
                 if (!process.HasExited) throw new InvalidOperationException("Owned process exit remains unverified.");
                 exitVerified = true;
             }
+            CleanupStage = "join-readers";
             if (readerJoin is null || readerJoin.IsFaulted || readerJoin.IsCanceled)
                 readerJoin = process.JoinReadersAsync();
             await readerJoin.WaitAsync(TimeSpan.FromSeconds(5));
-            if (!readersClosed) { process.CloseReaders(); readersClosed = true; }
+            if (!readersClosed) { CleanupStage = "close-readers"; process.CloseReaders(); readersClosed = true; }
+            CleanupStage = "close-handle";
             process.CloseHandle();
             released = true;
+            CleanupStage = "released";
         }
         finally { cleanup.Release(); }
     }

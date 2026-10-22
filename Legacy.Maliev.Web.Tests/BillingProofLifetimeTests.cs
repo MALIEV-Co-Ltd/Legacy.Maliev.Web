@@ -166,6 +166,51 @@ public sealed class BillingProofLifetimeTests
         Assert.Equal(1, process.Starts);
     }
 
+    [Theory]
+    [InlineData("identity", "capture-identity", "IOException")]
+    [InlineData("graceful-stop", "request-graceful-stop", "IOException")]
+    [InlineData("kill", "kill-exact", "IOException")]
+    [InlineData("reap", "wait-exit", "TimeoutException")]
+    [InlineData("readers", "join-readers", "TimeoutException")]
+    [InlineData("reader-close", "close-readers", "IOException")]
+    [InlineData("handle-close", "close-handle", "IOException")]
+    public async Task ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(string failure, string stage, string exceptionType)
+    {
+        var owner = new BillingProofLifetime();
+        var process = new ControlledChild { AcquisitionFailure = failure == "identity" ? "identity" : null };
+        var dependencies = 0;
+        owner.OwnDependency(() => { dependencies++; return ValueTask.CompletedTask; });
+        try
+        {
+            if (failure == "identity")
+                Assert.Throws<IOException>(() => owner.StartChild(process));
+            else
+                owner.StartChild(process);
+            process.AcquisitionFailure = null;
+            process.CleanupFailure = failure;
+
+            var quarantine = await Assert.ThrowsAsync<BillingProofQuarantineException>(() => owner.DisposeAsync().AsTask());
+
+            Assert.Contains("child:" + exceptionType + ":" + stage, quarantine.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("Controlled cleanup fault.", quarantine.Message, StringComparison.Ordinal);
+            using var receipt = System.Text.Json.JsonDocument.Parse(quarantine.Receipt!);
+            Assert.Equal(stage, receipt.RootElement.GetProperty("children")[0].GetProperty("cleanupStage").GetString());
+            Assert.True(owner.IsRetained);
+            Assert.False(process.HandleClosed);
+            Assert.Equal(0, dependencies);
+        }
+        finally
+        {
+            process.AcquisitionFailure = null;
+            process.CleanupFailure = null;
+            await owner.DisposeAsync();
+        }
+        Assert.False(owner.IsRetained);
+        Assert.True(process.HandleClosed);
+        Assert.Equal(1, dependencies);
+        Assert.Equal(1, process.Starts);
+    }
+
     [Fact]
     public async Task FailedHostDisposal_IsStickyAndCannotBecomeNoOpClearance()
     {
@@ -451,10 +496,10 @@ public sealed class BillingProofLifetimeTests
         public int ExitCode => 0;
         public void Start() { Starts++; if (ProvenStartState == "refused") { refused = true; throw new IOException("Controlled explicit Start refusal."); } if (ProvenStartState == "exited") Exited = true; FailAcquisition("start"); }
         public bool VerifyNoLiveChild() => refused || Exited;
-        public void CaptureIdentity() => FailAcquisition("identity");
+        public void CaptureIdentity() { FailAcquisition("identity"); FailCleanup("identity"); }
         public void StartReaders() => FailAcquisition("readers");
         public Task WaitForExitAsync() => Exited && CleanupFailure != "reap" ? Task.CompletedTask : Task.FromException(new TimeoutException());
-        public void RequestGracefulStop() { }
+        public void RequestGracefulStop() => FailCleanup("graceful-stop");
         public void KillExact() { FailCleanup("kill"); Kills++; if (CleanupFailure != "reap") Exited = true; }
         public Task JoinReadersAsync() => CleanupFailure == "readers" ? Task.FromException(new TimeoutException()) : Task.CompletedTask;
         public void CloseReaders() { FailCleanup("reader-close"); ReadersClosed = true; Events?.Add("readers"); }
