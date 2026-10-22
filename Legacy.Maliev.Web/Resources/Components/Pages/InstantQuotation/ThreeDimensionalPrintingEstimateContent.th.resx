@@ -680,6 +680,8 @@
   <data name="Other materials" xml:space="preserve">
     <value>วัสดุอื่น ๆ</value>
   </data>
+  <data name="Smooth, highly detailed appearance for resin-suitable parts · suitability is confirmed during review" xml:space="preserve"><value>ผิวเรียบและรายละเอียดคมชัดสำหรับงานที่เหมาะกับเรซิน · วิศวกรจะตรวจสอบความเหมาะสม</value></data>
+
   <data name="Start another quotation" xml:space="preserve">
     <value>เริ่มขอใบเสนอราคาใหม่</value>
   </data>
