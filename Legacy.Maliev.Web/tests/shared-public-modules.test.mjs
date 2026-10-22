@@ -176,6 +176,11 @@ test('TOC abandons navigation after its destination is detached', async () => {
     harness.targets[1].isConnected = false;
     harness.flush();
     assert.deepEqual(harness.actions, []);
+    harness.positionSection(0, 0);
+    harness.windowEvent('scroll');
+    harness.flush();
+    assert.equal(harness.links()[0].getAttribute('aria-current'), 'true');
+    assert.equal(harness.links()[1].getAttribute('aria-current'), null);
 });
 
 test('TOC cancels its owned navigation frame on pagehide', async () => {
@@ -224,6 +229,86 @@ test('TOC resumes after back-forward cache restore and cancels the next pagehide
     assert.equal(harness.frames.size, 0);
 });
 
+test('TOC keeps the requested section current through intermediate smooth-scroll sections, then resumes the physical spy', async () => {
+    const harness = await tocHarness();
+    harness.open();
+    harness.activate(1);
+    harness.flush();
+    harness.positionSection(0, 0);
+    harness.positionSection(1, 700);
+    harness.windowEvent('scroll');
+    harness.flush();
+    assert.equal(harness.links()[1].getAttribute('aria-current'), 'true');
+    assert.equal(harness.links()[0].getAttribute('aria-current'), null);
+    harness.positionSection(1, 60);
+    harness.windowEvent('scroll');
+    harness.flush();
+    assert.equal(harness.links()[1].getAttribute('aria-current'), 'true');
+    harness.positionSection(1, 700);
+    harness.windowEvent('scroll');
+    harness.flush();
+    assert.equal(harness.links()[0].getAttribute('aria-current'), 'true');
+    assert.equal(harness.links()[1].getAttribute('aria-current'), null);
+});
+
+test('TOC yields its requested section to subsequent user scroll gestures', async () => {
+    for (const gesture of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
+        const harness = await tocHarness();
+        harness.open();
+        harness.activate(1);
+        harness.flush();
+        harness.positionSection(0, 0);
+        harness.positionSection(1, 700);
+        harness.windowEvent(gesture);
+        harness.windowEvent('scroll');
+        harness.flush();
+        assert.equal(harness.links()[0].getAttribute('aria-current'), 'true');
+        assert.equal(harness.links()[1].getAttribute('aria-current'), null);
+    }
+});
+
+test('TOC retains the activated native fragment but yields to another history destination', async () => {
+    for (const [hash, matchingFragment] of [
+        ['#section-2', true], ['#%73ection-2', true], ['#section-1', false], ['#%invalid', false],
+    ]) {
+        const harness = await tocHarness();
+        harness.open();
+        harness.activate(1);
+        harness.flush();
+        harness.positionSection(0, 0);
+        harness.positionSection(1, 700);
+        harness.changeHash(hash);
+        harness.windowEvent('scroll');
+        harness.flush();
+        assert.equal(harness.links()[1].getAttribute('aria-current'), matchingFragment ? 'true' : null);
+        assert.equal(harness.links()[0].getAttribute('aria-current'), matchingFragment ? null : 'true');
+    }
+});
+
+test('TOC panel autofocus preserves a link deliberately focused before its opening frame', async () => {
+    for (const intentionalFocus of [false, true]) {
+        const harness = await tocHarness();
+        harness.openPending();
+        if (intentionalFocus) harness.links()[1].focus({ preventScroll: true });
+        harness.flush();
+        assert.equal(harness.activeElement(), harness.links()[intentionalFocus ? 1 : 0]);
+    }
+});
+
+test('TOC closing or pagehide cancels an unpainted panel focus request', async () => {
+    for (const closing of [true, false]) {
+        const harness = await tocHarness();
+        harness.openPending();
+        assert.equal(harness.frames.size, 1);
+        if (closing) harness.activate(1);
+        else harness.pagehide();
+        assert.equal(harness.frames.size, closing ? 1 : 0);
+        harness.flush();
+        assert.deepEqual(harness.actions.map(action => action.target),
+            closing ? ['section-2', 'section-2'] : []);
+    }
+});
+
 // Executes the real source module with an explicit frame clock. This verifies DOM/event
 // sequencing only; actual browser tests remain the proof of native URL/history and scroll.
 async function tocHarness({ reducedMotion = false, headingTarget = false } = {}) {
@@ -249,6 +334,7 @@ async function tocHarness({ reducedMotion = false, headingTarget = false } = {})
             addEventListener(name, callback) { this.listeners[name] = callback; },
             append(child) { this.children.push(child); },
             focus(options) {
+                document.activeElement = this;
                 actions.push({ kind: 'focus', target: this.id, panelOpen: toc.dataset.tocOpen === 'true',
                     preventScroll: options?.preventScroll === true });
             },
@@ -317,6 +403,19 @@ async function tocHarness({ reducedMotion = false, headingTarget = false } = {})
     actions.length = 0;
     return {
         toc, toggle, targets, frames, actions, links, flush,
+        activeElement: () => document.activeElement,
+        positionSection(index, top) {
+            sections[index].getBoundingClientRect = () => ({
+                top, bottom: top + 100, left: 0, right: 200, height: 100,
+            });
+        },
+        windowEvent(name) { windowListeners.get(name)?.(); },
+        changeHash(hash) { window.location.hash = hash; windowListeners.get('hashchange')?.(); },
+        openPending() {
+            toggle.focus({ preventScroll: true });
+            actions.length = 0;
+            toggle.listeners.click({});
+        },
         open() { toggle.listeners.click({}); flush(); actions.length = 0; },
         activate(index, properties = {}) {
             const event = {

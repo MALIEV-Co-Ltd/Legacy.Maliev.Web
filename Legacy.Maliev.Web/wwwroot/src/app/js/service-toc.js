@@ -59,21 +59,46 @@
             let previewLink = null;
             let activeUpdateScheduled = false;
             let navigationFrame = null;
+            let panelFocusFrame = null;
+            let navigationTargetId = null;
             let navigationDisposed = false;
 
             const cancelNavigation = () => {
+                navigationTargetId = null;
                 if (navigationFrame !== null) {
                     window.cancelAnimationFrame(navigationFrame);
                     navigationFrame = null;
                 }
             };
 
+            const cancelPanelFocus = () => {
+                if (panelFocusFrame !== null) {
+                    window.cancelAnimationFrame(panelFocusFrame);
+                    panelFocusFrame = null;
+                }
+            };
+
             window.addEventListener('pagehide', () => {
                 navigationDisposed = true;
                 cancelNavigation();
+                cancelPanelFocus();
             });
             window.addEventListener('pageshow', () => {
                 navigationDisposed = false;
+            });
+            // A new user gesture or native history destination owns subsequent scrolling.
+            ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach((eventName) => {
+                window.addEventListener(eventName, cancelNavigation, { passive: true });
+            });
+            window.addEventListener('hashchange', () => {
+                if (!navigationTargetId) return;
+                try {
+                    if (decodeURIComponent(window.location.hash.slice(1)) !== navigationTargetId) {
+                        cancelNavigation();
+                    }
+                } catch {
+                    cancelNavigation();
+                }
             });
 
             const setPreviewSection = (targetId) => {
@@ -101,6 +126,7 @@
             // The rail can only ever show a few destinations, and none at all on a phone.
             // The panel is the reliable way to reach every section, so it owns the full list.
             const setPanelOpen = (open) => {
+                cancelPanelFocus();
                 if (open) {
                     cancelNavigation();
                 }
@@ -112,7 +138,14 @@
                     const targetId = activeTargetId || links.keys().next().value;
                     if (targetId) {
                         setPreviewSection(targetId);
-                        window.requestAnimationFrame(() => links.get(targetId)?.focus({ preventScroll: true }));
+                        const openingFocus = document.activeElement;
+                        panelFocusFrame = window.requestAnimationFrame(() => {
+                            panelFocusFrame = null;
+                            if (!navigationDisposed && page.isConnected && toc.isConnected && isPanelOpen()
+                                && document.activeElement === openingFocus) {
+                                links.get(targetId)?.focus({ preventScroll: true });
+                            }
+                        });
                     }
                 } else {
                     previewLink?.classList.remove('is-preview');
@@ -188,6 +221,7 @@
                     cancelNavigation();
                     setPanelOpen(false);
                     setActiveSection(targetId, false);
+                    navigationTargetId = targetId;
                     // Keep the native href/default action for URL, history and fragment semantics.
                     // On mobile the collapsed panel hides the activated link. Move focus and
                     // scroll the bound destination after that layout change, not the hidden link.
@@ -196,6 +230,7 @@
                         const destination = section.id === targetId ? section : heading;
                         if (navigationDisposed || !page.isConnected || !toc.isConnected
                             || !destination?.isConnected || destination.id !== targetId) {
+                            cancelNavigation();
                             return;
                         }
                         if (!destination.hasAttribute('tabindex')) {
@@ -249,6 +284,13 @@
                     });
 
                     const currentTargetId = currentSection ? sectionTargets.get(currentSection) : null;
+                    // Intermediate smooth-scroll sections must not replace the requested destination.
+                    // Release the selection when that destination physically reaches the activation line.
+                    if (navigationTargetId && currentTargetId !== navigationTargetId) {
+                        setActiveSection(navigationTargetId, false);
+                        return;
+                    }
+                    navigationTargetId = null;
                     if (currentTargetId) {
                         setActiveSection(currentTargetId);
                     }
