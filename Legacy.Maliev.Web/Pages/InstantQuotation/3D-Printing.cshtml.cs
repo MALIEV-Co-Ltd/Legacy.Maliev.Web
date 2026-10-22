@@ -556,10 +556,19 @@ public sealed class ThreeDimensionalPrinting : PageModel
     }
 
 
+    /// <summary>
+    /// Builds final navigation for persisted, partial, rejected, or unconfirmed submission outcomes that must not invite blind resubmission.
+    /// </summary>
+    /// <param name="wantsJson">Whether the browser requested the tagged JSON response instead of the ordinary post/redirect/get response.</param>
+    /// <returns>A JSON terminal outcome and redirect URL, or a local redirect to the page that renders the stored submission outcome.</returns>
     private IActionResult TerminalOrRedirect(bool wantsJson) => wantsJson
         ? new JsonResult(new { outcome = "terminal", redirectUrl = "/InstantQuotation/3D-Printing" })
         : LocalRedirect("/InstantQuotation/3D-Printing");
 
+    /// <summary>
+    /// Builds a retry response for failures proven safe before request creation, including validation and customer-profile preparation failures, so the customer can correct errors without losing uploaded parts or wizard state.
+    /// </summary>
+    /// <returns>A JSON retry outcome with validation errors and controlled invalid-field names.</returns>
     private JsonResult RetryJson() => new(new
     {
         outcome = "retry",

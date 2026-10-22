@@ -46,10 +46,15 @@ public sealed class BuildArtifactIsolationTests
     }
 
     /// <summary>
-    /// Reads real compiler-emitted XML next to the loaded Web assembly and verifies a documented public member.
+    /// Reads real compiler-emitted XML next to the loaded Web assembly and verifies the retained public and private member descriptions.
     /// </summary>
-    [Fact]
-    public void WebDocumentationFile_ContainsCompiledAssemblyAndPublicMember()
+    /// <param name="memberId">The exact compiler member identifier for the mapped Web method.</param>
+    /// <param name="expectedSummaryFragment">The source contract text required in the emitted summary.</param>
+    [Theory]
+    [InlineData("M:Legacy.Maliev.Web.CanonicalUrlPolicy.GetCanonicalUrl(Microsoft.AspNetCore.Http.PathString)", "Builds an absolute canonical URL")]
+    [InlineData("M:Legacy.Maliev.Web.Pages.InstantQuotation.ThreeDimensionalPrinting.RetryJson", "without losing uploaded parts or wizard state")]
+    [InlineData("M:Legacy.Maliev.Web.Pages.InstantQuotation.ThreeDimensionalPrinting.TerminalOrRedirect(System.Boolean)", "must not invite blind resubmission")]
+    public void WebDocumentationFile_ContainsCompiledAssemblyAndPublicMember(string memberId, string expectedSummaryFragment)
     {
         var assembly = typeof(Program).Assembly;
         var documentationPath = Path.ChangeExtension(assembly.Location, ".xml");
@@ -61,9 +66,9 @@ public sealed class BuildArtifactIsolationTests
         var documentation = XDocument.Load(documentationPath);
         Assert.Equal(assembly.GetName().Name, documentation.Root?.Element("assembly")?.Element("name")?.Value);
         var member = Assert.Single(documentation.Descendants("member"), element =>
-            (string?)element.Attribute("name") ==
-            "M:Legacy.Maliev.Web.CanonicalUrlPolicy.GetCanonicalUrl(Microsoft.AspNetCore.Http.PathString)");
+            (string?)element.Attribute("name") == memberId);
         Assert.False(string.IsNullOrWhiteSpace(member.Element("summary")?.Value));
+        Assert.Contains(expectedSummaryFragment, member.Element("summary")?.Value ?? string.Empty, StringComparison.Ordinal);
     }
 
     private static IEnumerable<string> FindProjectFiles(string directory)
