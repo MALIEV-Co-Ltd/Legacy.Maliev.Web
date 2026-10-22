@@ -474,6 +474,51 @@ public sealed class ServiceGalleryHistoricalBrowserTests(CncNativeBrowserFixture
         Assert.True(visibleFraction >= 0.8, $"The CNC scale tablet tile preserves only {visibleFraction:F3} of its source frame.");
     }
 
+    /// <summary>Checks the real printing-page check-circle glyph resolves through the owned Font Awesome solid face.</summary>
+    /// <returns>A task completing after the rendered glyph and loaded-font assertions.</returns>
+    [Fact]
+    public async Task PrintingPage_LoadsFontAwesomeSolidGlyphFromTheOwnedBundle()
+    {
+        await using IBrowserContext context = await fixture.Browser.NewContextAsync(
+            new BrowserNewContextOptions
+            {
+                Locale = "en-US",
+                ViewportSize = new ViewportSize { Width = 1280, Height = 800 },
+            });
+        IPage page = await context.NewPageAsync();
+        page.SetDefaultTimeout(30000);
+        string origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
+        var response = await page.GotoAsync(
+            origin + "/services/3d-printing?culture=en",
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30000 });
+        Assert.NotNull(response);
+        Assert.True(response.Ok, $"3D-printing service page returned HTTP {response.Status}.");
+        await AssertActiveRendererAsync(page);
+
+        string[] iconState = await page.Locator(".service-hero-points .fa-check-circle").First
+            .EvaluateAsync<string[]>("""
+                async element => {
+                    await document.fonts.ready;
+                    const style = getComputedStyle(element, '::before');
+                    const faces = Array.from(document.fonts).filter(face =>
+                        face.family.replaceAll('"', '').replaceAll("'", '') === 'Font Awesome 7 Free'
+                        && face.weight === '900');
+                    return [
+                        style.content,
+                        style.fontFamily,
+                        style.fontWeight,
+                        faces.some(face => face.status === 'loaded') ? 'loaded' : 'unavailable'
+                    ];
+                }
+                """).WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(4, iconState.Length);
+        Assert.Contains("\uf058", iconState[0], StringComparison.Ordinal);
+        Assert.Contains("Font Awesome 7 Free", iconState[1], StringComparison.Ordinal);
+        Assert.Equal("900", iconState[2]);
+        Assert.Equal("loaded", iconState[3]);
+    }
+
     private static async Task AssertActiveRendererAsync(IPage page)
     {
         Assert.Equal(1, await page.Locator(

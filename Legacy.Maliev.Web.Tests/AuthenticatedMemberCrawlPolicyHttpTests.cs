@@ -236,6 +236,56 @@ public sealed class AuthenticatedMemberCrawlPolicyHttpTests : IAsyncLifetime
             && cookies.Any(value => value.StartsWith(".AspNetCore.Culture=", StringComparison.Ordinal)));
     }
 
+    /// <summary>Checks genuine Development serves the rendered owned stylesheet and both Font Awesome WOFF2 faces with their exact bytes.</summary>
+    /// <returns>A task completing after real Development page, CSS and font HTTP assertions.</returns>
+    [Fact]
+    public async Task DevelopmentPrintingPage_ServesOwnedFontAwesomeCssAndBothWoff2Faces()
+    {
+        await using var host = authority.Web(false);
+        using var client = Client(host);
+        Assert.Equal("Development", host.Services.GetRequiredService<IWebHostEnvironment>().EnvironmentName);
+        using var page = await client.GetAsync("/services/3d-printing?culture=en");
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        var html = await page.Content.ReadAsStringAsync();
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", html, StringComparison.Ordinal);
+        var stylesheet = Assert.Single(Regex.Matches(html,
+            @"href=""(?<href>/dist/site\.min\.css\?v=[^""]+)""", RegexOptions.CultureInvariant));
+        var stylesheetUri = new Uri(client.BaseAddress!, WebUtility.HtmlDecode(stylesheet.Groups["href"].Value));
+        Assert.Equal(client.BaseAddress!.Authority, stylesheetUri.Authority);
+        Assert.Equal(client.BaseAddress.Scheme, stylesheetUri.Scheme);
+        Assert.Equal("/dist/site.min.css", stylesheetUri.AbsolutePath);
+        Assert.StartsWith("?v=", stylesheetUri.Query, StringComparison.Ordinal);
+        using var stylesheetResponse = await client.GetAsync(stylesheetUri.PathAndQuery);
+        Assert.Equal(HttpStatusCode.OK, stylesheetResponse.StatusCode);
+        Assert.Equal("text/css", stylesheetResponse.Content.Headers.ContentType?.MediaType);
+        var stylesheetBytes = await stylesheetResponse.Content.ReadAsByteArrayAsync();
+        var expectedStylesheet = await File.ReadAllBytesAsync(Path.Combine(Root(), "Legacy.Maliev.Web", "wwwroot", "dist", "site.min.css"));
+        Assert.True(expectedStylesheet.AsSpan().SequenceEqual(stylesheetBytes), "Development must serve the owned stylesheet bytes.");
+        var css = System.Text.Encoding.UTF8.GetString(stylesheetBytes);
+        var fonts = Regex.Matches(css,
+                @"url\(""(?<path>\./assets/fa-(?:regular-400|solid-900)-[A-Z0-9]+\.woff2)""\)", RegexOptions.CultureInvariant)
+            .Select(match => match.Groups["path"].Value)
+            .Distinct(StringComparer.Ordinal).ToArray();
+        Assert.Equal(2, fonts.Length);
+        Assert.Single(fonts, path => Path.GetFileName(path).StartsWith("fa-regular-400-", StringComparison.Ordinal));
+        Assert.Single(fonts, path => Path.GetFileName(path).StartsWith("fa-solid-900-", StringComparison.Ordinal));
+        foreach (var font in fonts)
+        {
+            var fontUri = new Uri(stylesheetUri, font);
+            Assert.Equal(stylesheetUri.Authority, fontUri.Authority);
+            Assert.Equal(stylesheetUri.Scheme, fontUri.Scheme);
+            Assert.Equal("/dist/assets/" + Path.GetFileName(fontUri.AbsolutePath), fontUri.AbsolutePath);
+            using var fontResponse = await client.GetAsync(fontUri.PathAndQuery);
+            Assert.Equal(HttpStatusCode.OK, fontResponse.StatusCode);
+            Assert.Equal("font/woff2", fontResponse.Content.Headers.ContentType?.MediaType);
+            var fontBytes = await fontResponse.Content.ReadAsByteArrayAsync();
+            Assert.True(fontBytes.Length >= 4, "The owned WOFF2 response must contain its signature.");
+            Assert.True(fontBytes.AsSpan(0, 4).SequenceEqual("wOF2"u8), "The font response must be a WOFF2 payload.");
+            var expectedFont = await File.ReadAllBytesAsync(Path.Combine(Root(), "Legacy.Maliev.Web", "wwwroot", "dist", "assets", Path.GetFileName(fontUri.AbsolutePath)));
+            Assert.True(expectedFont.AsSpan().SequenceEqual(fontBytes), "Development must serve the owned Font Awesome bytes.");
+        }
+    }
+
     private async Task<Lineage> Login(WebApplicationFactory<Program> host, HttpClient client)
     {
         var form = await Form(client, "/Account/Login");
