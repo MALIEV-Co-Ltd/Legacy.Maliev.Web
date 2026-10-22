@@ -1,6 +1,7 @@
 using System.Net;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Legacy.Maliev.Web.Infrastructure;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
@@ -92,12 +93,13 @@ public sealed class DevelopmentCustomerFixtureBrowserTests(CncNativeBrowserFixtu
     [InlineData(true)]
     public void Preview_OnlyOverlaysPresentationAndBackRestoresPreviousState(bool fixture)
     {
-        var component = new InstantQuotationWorkflow
+        var component = new InstantQuotationWorkflow();
+        ParameterView.FromDictionary(new Dictionary<string, object?>
         {
-            CustomerModel = DevelopmentCustomerFixture.ApplyProfile(InstantQuotationCustomerDisplayModel.Empty)
+            [nameof(InstantQuotationWorkflow.CustomerModel)] = DevelopmentCustomerFixture.ApplyProfile(InstantQuotationCustomerDisplayModel.Empty)
                 with { IsDevelopmentCustomerFixture = fixture },
-            InitialState = InstantQuotationWorkflowState.Uploaded,
-        };
+            [nameof(InstantQuotationWorkflow.InitialState)] = InstantQuotationWorkflowState.Uploaded,
+        }).SetParameterProperties(component);
         var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
         var coordinatorField = typeof(InstantQuotationWorkflow).GetField("workflow", flags)!;
         var originalCoordinator = coordinatorField.GetValue(component);
