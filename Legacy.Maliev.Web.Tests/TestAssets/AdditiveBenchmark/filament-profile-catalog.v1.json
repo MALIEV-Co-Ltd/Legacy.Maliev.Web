@@ -14,8 +14,8 @@
       "resolvedSha256": "D315501326D599268B4AFB112A75A8ECAAAC4F73E437D5279A58781AC0D30582",
       "exactMaterialMatch": true,
       "operatorApproved": true,
-      "automationEligible": false,
-      "blockers": ["isolated_worker_not_active"]
+      "automationEligible": true,
+      "blockers": []
     },
     {
       "materialKey": "PLA-CF",
@@ -25,8 +25,8 @@
       "resolvedSha256": "9A70238012258EE72E63D9BEDA8BE48260410B96C140C54DD785F60EDBD2CFEE",
       "exactMaterialMatch": true,
       "operatorApproved": true,
-      "automationEligible": false,
-      "blockers": ["isolated_worker_not_active"]
+      "automationEligible": true,
+      "blockers": []
     },
     {
       "materialKey": "PETG",
@@ -36,8 +36,8 @@
       "resolvedSha256": "BD8C690628C2EDB18AF6C275F9867A0C756C7724098A26BD5087B773E7A195DE",
       "exactMaterialMatch": true,
       "operatorApproved": true,
-      "automationEligible": false,
-      "blockers": ["isolated_worker_not_active"]
+      "automationEligible": true,
+      "blockers": []
     },
     {
       "materialKey": "PETG-CF",
@@ -47,8 +47,8 @@
       "resolvedSha256": "7D6BB55E8DD266A87E2CE6E8DDA116F959E7E161519E86A56894C10527B2D18E",
       "exactMaterialMatch": true,
       "operatorApproved": true,
-      "automationEligible": false,
-      "blockers": ["isolated_worker_not_active"]
+      "automationEligible": true,
+      "blockers": []
     },
     {
       "materialKey": "PETG-ESD",
@@ -58,8 +58,8 @@
       "resolvedSha256": "ADF365349E5840261F58BE2E48C8A60F3D547D2C27B1629A692CB02BEF75166F",
       "exactMaterialMatch": true,
       "operatorApproved": true,
-      "automationEligible": false,
-      "blockers": ["isolated_worker_not_active"]
+      "automationEligible": true,
+      "blockers": []
     },
     {
       "materialKey": "PET-CF",
@@ -69,8 +69,8 @@
       "resolvedSha256": "624BDBB4431F62FA425243922F3A40D7C72CA9C7CAC51D17A051B543A3971112",
       "exactMaterialMatch": true,
       "operatorApproved": true,
-      "automationEligible": false,
-      "blockers": ["isolated_worker_not_active"]
+      "automationEligible": true,
+      "blockers": []
     },
     {
       "materialKey": "ABS",
@@ -80,8 +80,8 @@
       "resolvedSha256": "C899F8FC1C67D4F08D78483C7F2AF3EA22CC9D2D357D57DF3FDB78931734D407",
       "exactMaterialMatch": true,
       "operatorApproved": true,
-      "automationEligible": false,
-      "blockers": ["isolated_worker_not_active"]
+      "automationEligible": true,
+      "blockers": []
     },
     {
       "materialKey": "ABS-FR",
@@ -91,8 +91,8 @@
       "resolvedSha256": "83D2F3A3D467822F9A6506142F5227F97F156D5DF40363508D997FC5AC4D1668",
       "exactMaterialMatch": true,
       "operatorApproved": true,
-      "automationEligible": false,
-      "blockers": ["isolated_worker_not_active"]
+      "automationEligible": true,
+      "blockers": []
     },
     {
       "materialKey": "ASA",
@@ -102,8 +102,8 @@
       "resolvedSha256": "090D4CE3C15FC0035AEEAD049B0A0B254A55E564E0BF6D40BBEE8BE2E78B4226",
       "exactMaterialMatch": true,
       "operatorApproved": true,
-      "automationEligible": false,
-      "blockers": ["isolated_worker_not_active"]
+      "automationEligible": true,
+      "blockers": []
     },
     {
       "materialKey": "ASA-CF",
@@ -114,7 +114,7 @@
       "exactMaterialMatch": true,
       "operatorApproved": true,
       "automationEligible": false,
-      "blockers": ["isolated_worker_not_active", "vendor_profile_substitution"]
+      "blockers": ["vendor_profile_substitution"]
     },
     {
       "materialKey": "HIPS",
@@ -125,7 +125,7 @@
       "exactMaterialMatch": true,
       "operatorApproved": true,
       "automationEligible": false,
-      "blockers": ["isolated_worker_not_active", "vendor_profile_substitution"]
+      "blockers": ["vendor_profile_substitution"]
     },
     {
       "materialKey": "PC",
@@ -135,8 +135,8 @@
       "resolvedSha256": "62B0488C429CF5BDF63B610F7DCDFEE4B15250E7EA8656B97E793142BD72C12A",
       "exactMaterialMatch": true,
       "operatorApproved": true,
-      "automationEligible": false,
-      "blockers": ["isolated_worker_not_active"]
+      "automationEligible": true,
+      "blockers": []
     },
     {
       "materialKey": "PC-FR",
@@ -147,7 +147,7 @@
       "exactMaterialMatch": true,
       "operatorApproved": true,
       "automationEligible": false,
-      "blockers": ["isolated_worker_not_active", "vendor_profile_substitution"]
+      "blockers": ["vendor_profile_substitution"]
     },
     {
       "materialKey": "PA612-ESD",
@@ -179,8 +179,8 @@
       "resolvedSha256": "B643FCDED86B00F91F12834F760EAD107320FEB790F8EDBA7DD77BD451CA566D",
       "exactMaterialMatch": true,
       "operatorApproved": true,
-      "automationEligible": false,
-      "blockers": ["isolated_worker_not_active"]
+      "automationEligible": true,
+      "blockers": []
     },
     {
       "materialKey": "PA12",
@@ -191,7 +191,7 @@
       "exactMaterialMatch": false,
       "operatorApproved": true,
       "automationEligible": false,
-      "blockers": ["isolated_worker_not_active", "vendor_profile_substitution"]
+      "blockers": ["vendor_profile_substitution"]
     },
     {
       "materialKey": "PA-CF",
@@ -201,8 +201,8 @@
       "resolvedSha256": "CBB72ACC7A23E5D9C14AE807C4B8A2FEABF54451FCBE9E124665AF56998B881B",
       "exactMaterialMatch": true,
       "operatorApproved": true,
-      "automationEligible": false,
-      "blockers": ["isolated_worker_not_active"]
+      "automationEligible": true,
+      "blockers": []
     },
     {
       "materialKey": "TPU",
@@ -212,8 +212,8 @@
       "resolvedSha256": "11BF29312DECDDBA989FE3DBA61B1A277DE6582D2D110D0786AAC68AAB1F14A6",
       "exactMaterialMatch": true,
       "operatorApproved": true,
-      "automationEligible": false,
-      "blockers": ["isolated_worker_not_active"]
+      "automationEligible": true,
+      "blockers": []
     },
     {
       "materialKey": "PVA",
@@ -223,8 +223,8 @@
       "resolvedSha256": "2DDF1EFFBF772BA4F15511D5695606CC82F75AE2A8B19270541815D76FB5E58D",
       "exactMaterialMatch": true,
       "operatorApproved": true,
-      "automationEligible": false,
-      "blockers": ["isolated_worker_not_active"]
+      "automationEligible": true,
+      "blockers": []
     }
   ]
 }
