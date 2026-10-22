@@ -1749,12 +1749,12 @@ public sealed class InstantQuotationResinPresentationTests
             string operationId, CancellationToken cancellationToken) => throw new InvalidOperationException("No finalization expected.");
     }
 
-    private sealed class SyntheticBrowserFile(string name = "new.stl") : IBrowserFile
+    private sealed class SyntheticBrowserFile(string name = "new.stl", string contentType = "model/stl") : IBrowserFile
     {
         public string Name => name;
         public DateTimeOffset LastModified => DateTimeOffset.UnixEpoch;
         public long Size => 4;
-        public string ContentType => "model/stl";
+        public string ContentType => contentType;
         public Stream OpenReadStream(long maxAllowedSize = 512000, CancellationToken cancellationToken = default) =>
             new MemoryStream(new byte[] { 1, 2, 3, 4 }, writable: false);
     }
@@ -1814,7 +1814,7 @@ public sealed class InstantQuotationResinPresentationTests
             Set("previewInterop", preview);
             Set("fileInput", new InputFile());
             var uploading = (Task)Invoke("UploadFilesAsync", new InputFileChangeEventArgs(
-                Enumerable.Range(0, 9).Select(index => (IBrowserFile)new SyntheticBrowserFile($"batch-{index}.glb")).ToArray()))!;
+                Enumerable.Range(0, 9).Select(index => (IBrowserFile)new SyntheticBrowserFile($"batch-{index}.glb", "model/gltf-binary")).ToArray()))!;
             Exception? primary = null;
             try
             {
@@ -1919,7 +1919,7 @@ public sealed class InstantQuotationResinPresentationTests
             var uploading = (Task)typeof(InstantQuotationWorkflow)
                 .GetMethod("UploadFilesAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
                 .Invoke(component, [new InputFileChangeEventArgs(Enumerable.Range(0, 9)
-                    .Select(index => (IBrowserFile)new SyntheticBrowserFile($"batch-{index}.glb")).ToArray())])!;
+                    .Select(index => (IBrowserFile)new SyntheticBrowserFile($"batch-{index}.glb", "model/gltf-binary")).ToArray())])!;
             Exception? primary = null;
             try
             {
@@ -1971,8 +1971,15 @@ public sealed class InstantQuotationResinPresentationTests
             BeforeUpload?.Invoke();
             StartedCount++;
             if (fileName == "batch-8.glb") LastFileEntered.TrySetResult();
-            return inner.UploadAsync(sessionId, ownerIdentity, content, fileName, contentType, contentLength,
-                geometryClaim, operationId, cancellationToken);
+            Assert.Equal(BatchClaimPreviewReference.SelectedUnitPolicy, geometryClaim.GltfUnitPolicy);
+            Assert.Equal("model/gltf-binary", contentType);
+            return Task.FromResult(InstantQuotationUploadResult.Succeeded(
+                operationId, new InstantQuotationUploadReference("synthetic-new-upload"), geometryClaim.Sha256,
+                new InstantQuotationPhysicalAnalysisUpload(
+                    Guid.Parse(operationId), fileName, contentType, contentLength, geometryClaim.Sha256, "clean")
+                {
+                    GltfUnitPolicy = geometryClaim.GltfUnitPolicy,
+                }));
         }
         public Task<InstantQuotationRemoveResult> RemoveAsync(string sessionId, string? ownerIdentity,
             InstantQuotationUploadReference reference, string operationId, CancellationToken cancellationToken) =>
@@ -1984,6 +1991,9 @@ public sealed class InstantQuotationResinPresentationTests
 
     private sealed class BatchClaimPreviewReference(CancellationToken lease) : IJSObjectReference
     {
+        // This renderer fixture models a new selection explicitly made in printing millimetres.
+        internal static InstantQuotationGltfUnitPolicy SelectedUnitPolicy { get; } =
+            new(1, InstantQuotationGltfLengthUnit.Millimetres);
         internal string[] Keys { get; } = Enumerable.Range(0, 9).Select(index => $"source-local-{index}").ToArray();
         private readonly TaskCompletionSource<InstantQuotationGeometryClaim>[] completions =
             Enumerable.Range(0, 9).Select(_ => new TaskCompletionSource<InstantQuotationGeometryClaim>(
@@ -1994,7 +2004,10 @@ public sealed class InstantQuotationResinPresentationTests
         internal void CompleteAt(int index) => completions[index].TrySetResult(
             new InstantQuotationGeometryClaim(1, new string('a', 64), 10, 10, 10, 1000, 600,
                 Enumerable.Repeat(100d, 64).ToArray(), Enumerable.Repeat(40d, 64).ToArray(),
-                12, 1, true, false, false, 1));
+                12, 1, true, false, false, 1)
+            {
+                GltfUnitPolicy = SelectedUnitPolicy,
+            });
         internal void FailAt(int index) => completions[index].TrySetException(new JSException("Controlled invalid model."));
         internal void CompleteAll()
         {
