@@ -410,11 +410,49 @@ public sealed class ScbPaymentServiceBoundaryTests(ScbPaymentAccountingFixture f
         Assert.False(Directory.Exists(Path.Combine(root, "outside-boundary")));
     }
 
-    [Fact]
-    public void RequiredWorkflow_PreparesScbBinaryBeforeWebBuildWithoutConditionalOrFailOpenStep()
+    [Theory]
+    [InlineData("focused")]
+    [InlineData("validate")]
+    public void RequiredWorkflow_PreparesScbBinaryBeforeWebBuildWithoutConditionalOrFailOpenStep(string job)
     {
         var workflow = File.ReadAllText(Path.Combine(FindRoot(), ".github", "workflows", "_build-and-test.yml"));
-        var steps = Regex.Matches(workflow, @"(?ms)^      - name: (?<name>[^\r\n]+)\r?\n(?<body>.*?)(?=^      - |\z)");
+        AssertRequiredScbPreparation(workflow, job);
+    }
+
+    [Theory]
+    [InlineData("focused", "duplicate-preparation")]
+    [InlineData("validate", "duplicate-preparation")]
+    [InlineData("focused", "conditional-preparation")]
+    [InlineData("validate", "conditional-preparation")]
+    [InlineData("focused", "preparation-after-build")]
+    [InlineData("validate", "preparation-after-build")]
+    [InlineData("focused", "duplicate-build")]
+    [InlineData("validate", "duplicate-build")]
+    public void RequiredWorkflow_RejectsUnsafePreparationInsideEitherJob(string job, string scenario)
+    {
+        const string preparation = "      - name: Build exact-pinned disposable SCB payment boundary service\n"
+            + "        shell: pwsh\n        run: ./scripts/prepare-scb-payment-boundary.ps1\n";
+        const string build = "      - name: Build browser acceptance host\n"
+            + "        run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj --configuration Release\n";
+        var invalid = scenario switch
+        {
+            "duplicate-preparation" => preparation + preparation + build,
+            "conditional-preparation" => preparation.Replace("        shell:", "        if: success()\n        shell:", StringComparison.Ordinal) + build,
+            "preparation-after-build" => build + preparation,
+            "duplicate-build" => preparation + build + build,
+            _ => throw new ArgumentOutOfRangeException(nameof(scenario)),
+        };
+        var otherJob = job == "focused" ? "validate" : "focused";
+        var workflow = $"jobs:\n  {otherJob}:\n    steps:\n{preparation}{build}  {job}:\n    steps:\n{invalid}";
+        Assert.ThrowsAny<Xunit.Sdk.XunitException>(() => AssertRequiredScbPreparation(workflow, job));
+    }
+
+    private static void AssertRequiredScbPreparation(string workflow, string job)
+    {
+        // The focused and full jobs each own a preparation step; uniqueness is per job.
+        var jobs = Regex.Matches(workflow, @"(?ms)^  (?<id>[A-Za-z_][A-Za-z0-9_-]*):\r?\n(?<body>.*?)(?=^  [A-Za-z_][A-Za-z0-9_-]*:|\z)");
+        var owner = Assert.Single(jobs.Cast<Match>(), candidate => candidate.Groups["id"].Value == job);
+        var steps = Regex.Matches(owner.Groups["body"].Value, @"(?ms)^      - name: (?<name>[^\r\n]+)\r?\n(?<body>.*?)(?=^      - |\z)");
         var preparation = Assert.Single(steps.Cast<Match>(), step => step.Groups["name"].Value == "Build exact-pinned disposable SCB payment boundary service");
         var properties = preparation.Groups["body"].Value.Split('\n', StringSplitOptions.RemoveEmptyEntries)
             .Select(line => line.Trim()).Select(line => line.Split(':', 2)).ToDictionary(parts => parts[0], parts => parts[1].Trim(), StringComparer.Ordinal);

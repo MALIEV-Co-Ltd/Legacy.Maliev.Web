@@ -14,8 +14,8 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -162,7 +162,8 @@ public sealed class SharedSelectorValidationOriginalParityTests(TestingWebApplic
         string uiCulture, string culture, string? featureCulture, bool upperNames, string? expected)
     {
         // Qualifies the retained partial only; default live-footer delivery is a separate obligation.
-        await using var host = factory.WithWebHostBuilder(builder =>
+        await using var parent = new OwnedWebSurfaceParent();
+        await using var host = parent.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("BlazorRouting:Home", "false");
             builder.ConfigureServices(services => services.PostConfigure<RequestLocalizationOptions>(options =>

@@ -15,9 +15,13 @@ public sealed class ThreeDimensionalPrintingQuoteRouteBrowserTests(CncNativeBrow
         await using var page = await context.NewPageAsync();
         var origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
         await page.GotoAsync($"{origin}/services/3d-printing?culture={culture}");
-        await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-
         var routes = page.Locator("[data-quote-route][data-quote-placement]");
+        await Assertions.Expect(routes).ToHaveCountAsync(10);
+        await page.WaitForFunctionAsync("""
+            () => Array.isArray(window.dataLayer)
+                && typeof window.malievAnalytics?.emit === 'function'
+                && typeof window.malievAnalytics?.setConsent === 'function'
+            """);
         Assert.Equal(10, await routes.CountAsync());
         await page.AddScriptTagAsync(new PageAddScriptTagOptions { Url = "/src/app/js/inquiry-pages.js" });
         await ClickWithoutNavigatingAsync(page.Locator("[data-quote-route='instant'][data-quote-placement='hero']"));

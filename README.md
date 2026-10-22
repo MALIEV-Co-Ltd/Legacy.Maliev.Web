@@ -73,6 +73,54 @@ Production deployment is intentionally deferred for owner review in Aspire and e
 
 ## Current shared dependency and private observation
 
-Web adopts Legacy.Maliev.ServiceDefaults at `3c790ba6414b2a539f24aabb6948549ffd81a86b` in the normal build, Dockerfile and joined Web graph. CompatibilityContracts remains `78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7`; dedicated historical producer proof graphs retain their own pins.
+Web adopts Legacy.Maliev.ServiceDefaults at `4ffba0639620e7e923d331317f3f28501526b573` in the normal build, Dockerfile and joined Web graph. CompatibilityContracts remains `78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7`; dedicated historical producer proof graphs retain their own pins.
 
 Actual Program registers `AddPrivateRequestObservation("web")`. GET `/web/liveness` and `/web/readiness` identify the serving host with an uncached process marker. The private `/internal/diagnostics/observability` probe requires the original connection peer to be loopback and exactly one valid nonce; forwarded headers cannot grant access. This source draft requires hosted consumer and joined validation before acceptance.
+
+
+### Private error-observation source disposition
+
+Source [8175e8f3](https://github.com/MALIEV-Co-Ltd/maliev-web/commit/8175e8f3383d31030de2321c480bf6f5bc0fbb2b)
+and the later privacy change [f14d3ef9](https://github.com/MALIEV-Co-Ltd/maliev-web/commit/f14d3ef9c294783a34d1196050f51f682aab8316)
+are mapped to the current Program, private Web console formatter, incident boundary
+and pinned request-observation producer. The source operational document is
+[docs/production-observability.md at 8175e8f3](https://github.com/MALIEV-Co-Ltd/maliev-web/blob/8175e8f3383d31030de2321c480bf6f5bc0fbb2b/docs/production-observability.md).
+The mapping below preserves its future operational requirements without running
+the diagnostic against production or enabling deployment or Cloud collection.
+
+| Source document lines | Current contract and disposition |
+| --- | --- |
+| 1–8 | Native console JSON maps warning/error/critical to WARNING/ERROR/CRITICAL. The private formatter retains bounded code/type/location, trace and assembly-version metadata, omits rendered messages/customer values, and keeps successful activity quiet. |
+| 10–19 | The diagnostic uses the original socket peer before forwarding, GET and exactly one canonicalizable 32-hex nonce. Denial is quiet 404; repeats within one minute are quiet 429. Admission emits Warning, the real SDK Error and Critical with validated synthetic correlation, bypassing business work. |
+| 21–26 | The source per-pod loopback forwarding/stdout/Cloud readback procedure remains an inactive operational requirement. Any future authorized proof must own and release each forward on success/failure, inspect every ready serving pod, and independently join the nonce and revision across stdout and Cloud records within the source 180-second window. No production ingestion is established here. |
+| 28–33 | A future operational visibility check must fail closed on unverified pods, mixed revisions, public admission, missing correlation or missing/misclassified records. Quiet natural logs alone cannot establish ingestion. Historical LogLevel overlays remain a readback concern. |
+| 35–42 | Only the exact controlled diagnostic exception or warning event plus validated synthetic flag/nonce qualifies as synthetic. Real failures remain separate; any future 24-hour/seven-day comparison must deduplicate trace/incident identities and reject truncation. Diagnostic ingestion does not establish customer-workflow success. |
+
+The shared producer deliberately returns an empty 500 with
+application/problem+json, canonical X-Maliev-Diagnostic-Id and a stable
+X-Maliev-Health-Instance for the admitted synthetic branch, without inventing an
+X-Incident-Id. Ordinary Web failures retain the separate opaque incident owner.
+This preserves the accepted producer/consumer response contract rather than
+copying the source application's synthetic incident body. Completed health
+failures use the fixed HealthProbeFailure/Readiness-or-Liveness grammar, retain
+five-minute same-status suppression, log a status change immediately, and reset
+after any response below 500. Other completed 5xx use
+HandledOperationFailure/HttpResponse; thrown failures retain one incident owner.
+
+The source deployment-script revision change is covered by the existing, gated
+publisher: [.github/workflows/publish-image.yml](.github/workflows/publish-image.yml)
+pins the shared publisher at d583f55473f47f72d33b51060fa5d14e0974daf5. Its source
+validates a full 40-hex commit, uses that commit as the image tag and OCI revision
+label, verifies the packaged label, and records the immutable image digest and
+source revision. The original short revision tag is superseded by the full SHA.
+These are inactive source/build contracts; no image publication, deployment or
+serving-pod revision is claimed.
+
+The existing console-exclusive regression collection adds one real Kestrel
+socket case alongside the retained Program/privacy cases. It uses an OS-assigned
+loopback port, no injected connection peer, actual native console JSON, the
+registered health marker, method/nonce denial, canonical admission and quiet
+throttling. The new case is authored, NOT RUN at this documentation revision.
+Existing TestServer controls remain separate; exact-head hosted build/tests,
+unchanged full/format/security/coverage gates and protected-main acceptance are
+still required before source closure.

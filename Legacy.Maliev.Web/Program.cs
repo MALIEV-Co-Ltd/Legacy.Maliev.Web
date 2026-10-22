@@ -5,6 +5,7 @@ using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Components;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Legacy.Maliev.Web.Middleware;
+using Legacy.Maliev.Web.Pages.Shared;
 using Maliev.Aspire.ServiceDefaults;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Antiforgery;
@@ -18,625 +19,639 @@ using System.Globalization;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 
-var builder = WebApplication.CreateBuilder(args);
-if (builder.Environment.IsEnvironment("Testing"))
-{
-    builder.WebHost.UseStaticWebAssets();
-}
-
-var useBlazorHomeRoute = builder.Configuration.GetValue("BlazorRouting:Home", true);
-var useBlazorAboutRoute = builder.Configuration.GetValue("BlazorRouting:About", true);
-var useBlazorSocialMediaRoute = builder.Configuration.GetValue("BlazorRouting:SocialMedia", true);
-var useBlazorLegalRoute = builder.Configuration.GetValue("BlazorRouting:Legal", true);
-var useBlazorNonDisclosureAgreementRoute = builder.Configuration.GetValue("BlazorRouting:NonDisclosureAgreement", true);
-var useBlazorNoWeaponsRoute = builder.Configuration.GetValue("BlazorRouting:NoWeapons", true);
-var useBlazorAccessDeniedRoute = builder.Configuration.GetValue("BlazorRouting:AccessDenied", true);
-var useBlazorErrorRoute = builder.Configuration.GetValue("BlazorRouting:Error", true);
-var useBlazorAccountIndexRoute = builder.Configuration.GetValue("BlazorRouting:AccountIndex", true);
-var useBlazorLoginRoute = builder.Configuration.GetValue("BlazorRouting:Login", true);
-var useBlazorSignupRoute = builder.Configuration.GetValue("BlazorRouting:Signup", true);
-var useBlazorForgotPasswordRoute = builder.Configuration.GetValue("BlazorRouting:ForgotPassword", true);
-var useBlazorResetPasswordRoute = builder.Configuration.GetValue("BlazorRouting:ResetPassword", true);
-var useBlazorLogoutRoute = builder.Configuration.GetValue("BlazorRouting:Logout", true);
-var useBlazorEmailConfirmationRoute = builder.Configuration.GetValue("BlazorRouting:EmailConfirmation", true);
-var useBlazorChangeEmailConfirmationRoute = builder.Configuration.GetValue("BlazorRouting:ChangeEmailConfirmation", true);
-var useBlazorContactRoute = builder.Configuration.GetValue("BlazorRouting:Contact", true);
-var useBlazorQuotationRoute = builder.Configuration.GetValue("BlazorRouting:Quotation", true);
-var useBlazorInstantQuotationRoute = builder.Configuration.GetValue("BlazorRouting:InstantQuotation", true);
-var useBlazorMemberOverviewRoute = builder.Configuration.GetValue("BlazorRouting:MemberOverview", true);
-var useBlazorMemberAccountIndexRoute = builder.Configuration.GetValue("BlazorRouting:MemberAccountIndex", true);
-var useBlazorMemberOrdersIndexRoute = builder.Configuration.GetValue("BlazorRouting:MemberOrdersIndex", true);
-var useBlazorMemberOrderHistoryRoute = builder.Configuration.GetValue("BlazorRouting:MemberOrderHistory", true);
-var useBlazorMemberQuotationsIndexRoute = builder.Configuration.GetValue("BlazorRouting:MemberQuotationsIndex", true);
-var useBlazorMemberOrderDetailRoute = builder.Configuration.GetValue("BlazorRouting:MemberOrderDetail", true);
-var useBlazorMemberQuotationDetailRoute = builder.Configuration.GetValue("BlazorRouting:MemberQuotationDetail", true);
-var useBlazorMemberProfileRoute = builder.Configuration.GetValue("BlazorRouting:MemberProfile", true);
-var useBlazorMemberAddressRoute = builder.Configuration.GetValue("BlazorRouting:MemberAddress", true);
-var useBlazorMemberChangeEmailRoute = builder.Configuration.GetValue("BlazorRouting:MemberChangeEmail", true);
-var useBlazorMemberChangePasswordRoute = builder.Configuration.GetValue("BlazorRouting:MemberChangePassword", true);
-var useBlazorPrivacyPolicyRoute = builder.Configuration.GetValue("BlazorRouting:PrivacyPolicy", true);
-var useBlazorTermsConditionsRoute = builder.Configuration.GetValue("BlazorRouting:TermsConditions", true);
-var useBlazorCareerIndexRoute = builder.Configuration.GetValue("BlazorRouting:CareerIndex", true);
-var useBlazorCareerDetailRoute = builder.Configuration.GetValue("BlazorRouting:CareerDetail", true);
-var useBlazorServicesRoute = builder.Configuration.GetValue("BlazorRouting:Services", true);
-var useBlazorKnowledgesIndexRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesIndex", true);
-var useBlazorKnowledgesWorkflowRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesWorkflow", true);
-var useBlazorKnowledgesGuidelinesRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesGuidelines", true);
-var useBlazorKnowledgesSpecificationsRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications", true);
-var useBlazorKnowledgesSpecifications3DPrintingRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications3DPrinting", true);
-var useBlazorKnowledgesSpecifications3DScanningRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications3DScanning", true);
-var useBlazorKnowledgesSpecificationsCncMachiningRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecificationsCncMachining", true);
-var useBlazorRouteHost = useBlazorHomeRoute
-    && useBlazorAboutRoute
-    && useBlazorSocialMediaRoute
-    && useBlazorLegalRoute
-    && useBlazorNonDisclosureAgreementRoute
-    && useBlazorNoWeaponsRoute
-    && useBlazorAccessDeniedRoute
-    && useBlazorErrorRoute
-    && useBlazorAccountIndexRoute
-    && useBlazorLoginRoute
-    && useBlazorSignupRoute
-    && useBlazorForgotPasswordRoute
-    && useBlazorResetPasswordRoute
-    && useBlazorLogoutRoute
-    && useBlazorEmailConfirmationRoute
-    && useBlazorChangeEmailConfirmationRoute
-    && useBlazorContactRoute
-    && useBlazorQuotationRoute
-    && useBlazorInstantQuotationRoute
-    && useBlazorMemberOverviewRoute
-    && useBlazorMemberAccountIndexRoute
-    && useBlazorMemberOrdersIndexRoute
-    && useBlazorMemberOrderHistoryRoute
-    && useBlazorMemberQuotationsIndexRoute
-    && useBlazorMemberOrderDetailRoute
-    && useBlazorMemberQuotationDetailRoute
-    && useBlazorMemberProfileRoute
-    && useBlazorMemberAddressRoute
-    && useBlazorMemberChangeEmailRoute
-    && useBlazorMemberChangePasswordRoute
-    && useBlazorPrivacyPolicyRoute
-    && useBlazorTermsConditionsRoute
-    && useBlazorCareerIndexRoute
-    && useBlazorCareerDetailRoute
-    && useBlazorServicesRoute
-    && useBlazorKnowledgesIndexRoute
-    && useBlazorKnowledgesWorkflowRoute
-    && useBlazorKnowledgesGuidelinesRoute
-    && useBlazorKnowledgesSpecificationsRoute
-    && useBlazorKnowledgesSpecifications3DPrintingRoute
-    && useBlazorKnowledgesSpecifications3DScanningRoute
-    && useBlazorKnowledgesSpecificationsCncMachiningRoute;
-builder.AddServiceDefaults();
-builder.AddPrivateRequestObservation("web");
-builder.AddStandardCors();
-builder.AddStandardMiddleware(options => options.EnableRequestLogging = true);
-builder.AddStandardOpenApi(
-    title: "Legacy MALIEV Web BFF",
-    description: "Server-rendered compatibility frontend and BFF for the independently deployable legacy services.");
-builder.Services.AddSingleton(BuildIdentity.FromConfiguration(builder.Configuration));
-builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
-builder.Services.Configure<RequestLocalizationOptions>(options =>
-{
-    var supportedCultures = new[] { new CultureInfo("th"), new CultureInfo("en") };
-    options.DefaultRequestCulture = new RequestCulture("th");
-    options.SupportedCultures = supportedCultures;
-    options.SupportedUICultures = supportedCultures;
-    options.RequestCultureProviders =
-    [
-        new QueryStringRequestCultureProvider(),
-        new CookieRequestCultureProvider()
-    ];
-});
-builder.Services.Configure<CookiePolicyOptions>(options =>
-{
-    options.CheckConsentNeeded = static _ => true;
-    options.MinimumSameSitePolicy = SameSiteMode.Lax;
-    options.Secure = CookieSecurePolicy.Always;
-});
-builder.Services.AddRazorPages(options =>
-{
-    if (useBlazorRouteHost)
+var preserveTestingException = false;
+return await PrivateWebLogging.RunHostAsync(
+    async () =>
     {
-        options.Conventions.AddPageRouteModelConvention(
-            "/Index",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/About/Index",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/About/SocialMedia",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Legal/Index",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Legal/NonDisclosureAgreement",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Legal/NoWeapons",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Account/AccessDenied",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Error",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Account/Index",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Account/Login",
-            model =>
-            {
-                foreach (var selector in model.Selectors)
-                {
-                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
-                }
-            });
-        options.Conventions.AddPageRouteModelConvention(
-            "/Account/Signup",
-            model =>
-            {
-                foreach (var selector in model.Selectors)
-                {
-                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
-                }
-            });
-        options.Conventions.AddPageRouteModelConvention(
-            "/Account/ForgotPassword",
-            model =>
-            {
-                foreach (var selector in model.Selectors)
-                {
-                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
-                }
-            });
-        options.Conventions.AddPageRouteModelConvention(
-            "/Account/ResetPassword",
-            model =>
-            {
-                foreach (var selector in model.Selectors)
-                {
-                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
-                }
-            });
-        options.Conventions.AddPageRouteModelConvention(
-            "/Account/Logout",
-            model =>
-            {
-                foreach (var selector in model.Selectors)
-                {
-                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
-                }
-            });
-        options.Conventions.AddPageRouteModelConvention(
-            "/Account/EmailConfirmation",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Account/ChangeEmailConfirmation",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Contact/Index",
-            model =>
-            {
-                foreach (var selector in model.Selectors)
-                {
-                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
-                }
-            });
-        options.Conventions.AddPageRouteModelConvention(
-            "/Quotation/Index",
-            model =>
-            {
-                foreach (var selector in model.Selectors)
-                {
-                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
-                }
-            });
-        options.Conventions.AddPageRouteModelConvention(
-            "/InstantQuotation/3D-Printing",
-            model =>
-            {
-                foreach (var selector in model.Selectors)
-                {
-                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
-                }
-            });
-        options.Conventions.AddPageRouteModelConvention(
-            "/Legal/PrivacyPolicy",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Legal/TermsConditions",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Career/Index",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Career/View",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Services/Index",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Services/Custom-Manufacturing",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Services/CNC-Machining",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Services/3D-Printing",
-            model => model.Selectors.Clear());
-        options.Conventions.AddPageRouteModelConvention(
-            "/Services/3D-Scanning",
-            model => model.Selectors.Clear());
-    }
-
-    if (useBlazorRouteHost)
-    {
-        options.Conventions.AddAreaPageRouteModelConvention(
-            "Member",
-            "/Index",
-            model =>
-            {
-                foreach (var selector in model.Selectors)
-                {
-                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
-                }
-            });
-        options.Conventions.AddAreaPageRouteModelConvention(
-            "Member",
-            "/Account/Index",
-            model => model.Selectors.Clear());
-        options.Conventions.AddAreaPageRouteModelConvention(
-            "Member",
-            "/Orders/Index",
-            model => model.Selectors.Clear());
-        options.Conventions.AddAreaPageRouteModelConvention(
-            "Member",
-            "/Orders/History",
-            model => model.Selectors.Clear());
-        foreach (var page in new[]
+        var builder = WebApplication.CreateBuilder(args);
+        preserveTestingException = builder.Environment.IsEnvironment("Testing");
+        using var testingWebRoot = TestingWebRootLease.Create(builder.Environment);
+        if (builder.Environment.IsEnvironment("Testing"))
         {
-            "/Orders/3D-Printing",
-            "/Orders/3D-Scanning",
-            "/Orders/CNC-Machining",
-        })
-        {
-            options.Conventions.AddAreaPageRouteModelConvention(
-                "Member",
-                page,
-                model =>
-                {
-                    foreach (var selector in model.Selectors)
-                    {
-                        selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
-                    }
-                });
+            if (testingWebRoot is not null) builder.Services.AddSingleton(testingWebRoot);
+            builder.WebHost.UseStaticWebAssets();
         }
-        options.Conventions.AddAreaPageRouteModelConvention(
-            "Member",
-            "/Quotations/Index",
-            model => model.Selectors.Clear());
-        options.Conventions.AddAreaPageRouteModelConvention(
-            "Member",
-            "/Orders/View",
-            model =>
-            {
-                foreach (var selector in model.Selectors)
-                {
-                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
-                }
-            });
-        options.Conventions.AddAreaPageRouteModelConvention(
-            "Member",
-            "/Quotations/View",
-            model =>
-            {
-                foreach (var selector in model.Selectors)
-                {
-                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
-                }
-            });
-        foreach (var page in new[]
+
+        var useBlazorHomeRoute = builder.Configuration.GetValue("BlazorRouting:Home", true);
+        var useBlazorAboutRoute = builder.Configuration.GetValue("BlazorRouting:About", true);
+        var useBlazorSocialMediaRoute = builder.Configuration.GetValue("BlazorRouting:SocialMedia", true);
+        var useBlazorLegalRoute = builder.Configuration.GetValue("BlazorRouting:Legal", true);
+        var useBlazorNonDisclosureAgreementRoute = builder.Configuration.GetValue("BlazorRouting:NonDisclosureAgreement", true);
+        var useBlazorNoWeaponsRoute = builder.Configuration.GetValue("BlazorRouting:NoWeapons", true);
+        var useBlazorAccessDeniedRoute = builder.Configuration.GetValue("BlazorRouting:AccessDenied", true);
+        var useBlazorErrorRoute = builder.Configuration.GetValue("BlazorRouting:Error", true);
+        var useBlazorAccountIndexRoute = builder.Configuration.GetValue("BlazorRouting:AccountIndex", true);
+        var useBlazorLoginRoute = builder.Configuration.GetValue("BlazorRouting:Login", true);
+        var useBlazorSignupRoute = builder.Configuration.GetValue("BlazorRouting:Signup", true);
+        var useBlazorForgotPasswordRoute = builder.Configuration.GetValue("BlazorRouting:ForgotPassword", true);
+        var useBlazorResetPasswordRoute = builder.Configuration.GetValue("BlazorRouting:ResetPassword", true);
+        var useBlazorLogoutRoute = builder.Configuration.GetValue("BlazorRouting:Logout", true);
+        var useBlazorEmailConfirmationRoute = builder.Configuration.GetValue("BlazorRouting:EmailConfirmation", true);
+        var useBlazorChangeEmailConfirmationRoute = builder.Configuration.GetValue("BlazorRouting:ChangeEmailConfirmation", true);
+        var useBlazorContactRoute = builder.Configuration.GetValue("BlazorRouting:Contact", true);
+        var useBlazorQuotationRoute = builder.Configuration.GetValue("BlazorRouting:Quotation", true);
+        var useBlazorInstantQuotationRoute = builder.Configuration.GetValue("BlazorRouting:InstantQuotation", true);
+        var useBlazorMemberOverviewRoute = builder.Configuration.GetValue("BlazorRouting:MemberOverview", true);
+        var useBlazorMemberAccountIndexRoute = builder.Configuration.GetValue("BlazorRouting:MemberAccountIndex", true);
+        var useBlazorMemberOrdersIndexRoute = builder.Configuration.GetValue("BlazorRouting:MemberOrdersIndex", true);
+        var useBlazorMemberOrderHistoryRoute = builder.Configuration.GetValue("BlazorRouting:MemberOrderHistory", true);
+        var useBlazorMemberQuotationsIndexRoute = builder.Configuration.GetValue("BlazorRouting:MemberQuotationsIndex", true);
+        var useBlazorMemberOrderDetailRoute = builder.Configuration.GetValue("BlazorRouting:MemberOrderDetail", true);
+        var useBlazorMemberQuotationDetailRoute = builder.Configuration.GetValue("BlazorRouting:MemberQuotationDetail", true);
+        var useBlazorMemberProfileRoute = builder.Configuration.GetValue("BlazorRouting:MemberProfile", true);
+        var useBlazorMemberAddressRoute = builder.Configuration.GetValue("BlazorRouting:MemberAddress", true);
+        var useBlazorMemberChangeEmailRoute = builder.Configuration.GetValue("BlazorRouting:MemberChangeEmail", true);
+        var useBlazorMemberChangePasswordRoute = builder.Configuration.GetValue("BlazorRouting:MemberChangePassword", true);
+        var useBlazorPrivacyPolicyRoute = builder.Configuration.GetValue("BlazorRouting:PrivacyPolicy", true);
+        var useBlazorTermsConditionsRoute = builder.Configuration.GetValue("BlazorRouting:TermsConditions", true);
+        var useBlazorCareerIndexRoute = builder.Configuration.GetValue("BlazorRouting:CareerIndex", true);
+        var useBlazorCareerDetailRoute = builder.Configuration.GetValue("BlazorRouting:CareerDetail", true);
+        var useBlazorServicesRoute = builder.Configuration.GetValue("BlazorRouting:Services", true);
+        var useBlazorKnowledgesIndexRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesIndex", true);
+        var useBlazorKnowledgesWorkflowRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesWorkflow", true);
+        var useBlazorKnowledgesGuidelinesRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesGuidelines", true);
+        var useBlazorKnowledgesSpecificationsRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications", true);
+        var useBlazorKnowledgesSpecifications3DPrintingRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications3DPrinting", true);
+        var useBlazorKnowledgesSpecifications3DScanningRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecifications3DScanning", true);
+        var useBlazorKnowledgesSpecificationsCncMachiningRoute = builder.Configuration.GetValue("BlazorRouting:KnowledgesSpecificationsCncMachining", true);
+        var useBlazorRouteHost = useBlazorHomeRoute
+            && useBlazorAboutRoute
+            && useBlazorSocialMediaRoute
+            && useBlazorLegalRoute
+            && useBlazorNonDisclosureAgreementRoute
+            && useBlazorNoWeaponsRoute
+            && useBlazorAccessDeniedRoute
+            && useBlazorErrorRoute
+            && useBlazorAccountIndexRoute
+            && useBlazorLoginRoute
+            && useBlazorSignupRoute
+            && useBlazorForgotPasswordRoute
+            && useBlazorResetPasswordRoute
+            && useBlazorLogoutRoute
+            && useBlazorEmailConfirmationRoute
+            && useBlazorChangeEmailConfirmationRoute
+            && useBlazorContactRoute
+            && useBlazorQuotationRoute
+            && useBlazorInstantQuotationRoute
+            && useBlazorMemberOverviewRoute
+            && useBlazorMemberAccountIndexRoute
+            && useBlazorMemberOrdersIndexRoute
+            && useBlazorMemberOrderHistoryRoute
+            && useBlazorMemberQuotationsIndexRoute
+            && useBlazorMemberOrderDetailRoute
+            && useBlazorMemberQuotationDetailRoute
+            && useBlazorMemberProfileRoute
+            && useBlazorMemberAddressRoute
+            && useBlazorMemberChangeEmailRoute
+            && useBlazorMemberChangePasswordRoute
+            && useBlazorPrivacyPolicyRoute
+            && useBlazorTermsConditionsRoute
+            && useBlazorCareerIndexRoute
+            && useBlazorCareerDetailRoute
+            && useBlazorServicesRoute
+            && useBlazorKnowledgesIndexRoute
+            && useBlazorKnowledgesWorkflowRoute
+            && useBlazorKnowledgesGuidelinesRoute
+            && useBlazorKnowledgesSpecificationsRoute
+            && useBlazorKnowledgesSpecifications3DPrintingRoute
+            && useBlazorKnowledgesSpecifications3DScanningRoute
+            && useBlazorKnowledgesSpecificationsCncMachiningRoute;
+        builder.AddServiceDefaults();
+        builder.AddPrivateWebConsoleLogging();
+        builder.AddPrivateRequestObservation("web");
+        builder.AddStandardCors();
+        builder.AddStandardMiddleware(options => options.EnableRequestLogging = true);
+        builder.AddStandardOpenApi(
+            title: "Legacy MALIEV Web BFF",
+            description: "Server-rendered compatibility frontend and BFF for the independently deployable legacy services.");
+        builder.Services.AddSingleton(BuildIdentity.FromConfiguration(builder.Configuration));
+        builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+        builder.Services.Configure<RequestLocalizationOptions>(options =>
         {
-            "/Account/Manage/Profile",
-            "/Account/Manage/Address",
-            "/Account/Manage/ChangeEmail",
-            "/Account/Manage/ChangePassword",
-        })
+            var supportedCultures = new[] { new CultureInfo("th"), new CultureInfo("en") };
+            options.DefaultRequestCulture = new RequestCulture("th");
+            options.SupportedCultures = supportedCultures;
+            options.SupportedUICultures = supportedCultures;
+            options.RequestCultureProviders =
+            [
+                new QueryStringRequestCultureProvider(),
+                new CookieRequestCultureProvider()
+            ];
+        });
+        builder.Services.Configure<CookiePolicyOptions>(options =>
         {
-            options.Conventions.AddAreaPageRouteModelConvention(
-                "Member",
-                page,
-                model =>
-                {
-                    foreach (var selector in model.Selectors)
+            options.CheckConsentNeeded = static _ => true;
+            options.MinimumSameSitePolicy = SameSiteMode.Lax;
+            options.Secure = CookieSecurePolicy.Always;
+        });
+        builder.Services.AddRazorPages(options =>
+        {
+            if (useBlazorRouteHost)
+            {
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Index",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/About/Index",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/About/SocialMedia",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Legal/Index",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Legal/NonDisclosureAgreement",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Legal/NoWeapons",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Account/AccessDenied",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Error",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Account/Index",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Account/Login",
+                    model =>
                     {
-                        selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
-                    }
-                });
-        }
-        options.Conventions.AddAreaPageRouteModelConvention(
-            "Knowledges",
-            "/Index",
-            model => model.Selectors.Clear());
-        options.Conventions.AddAreaPageRouteModelConvention(
-            "Knowledges",
-            "/Workflow",
-            model => model.Selectors.Clear());
-        options.Conventions.AddAreaPageRouteModelConvention(
-            "Knowledges",
-            "/Guidelines",
-            model => model.Selectors.Clear());
-        options.Conventions.AddAreaPageRouteModelConvention(
-            "Knowledges",
-            "/Specifications/Index",
-            model => model.Selectors.Clear());
-        options.Conventions.AddAreaPageRouteModelConvention(
-            "Knowledges",
-            "/Specifications/3D-Printing",
-            model => model.Selectors.Clear());
-        options.Conventions.AddAreaPageRouteModelConvention(
-            "Knowledges",
-            "/Specifications/3D-Scanning",
-            model => model.Selectors.Clear());
-        options.Conventions.AddAreaPageRouteModelConvention(
-            "Knowledges",
-            "/Specifications/CNC-Machining",
-            model => model.Selectors.Clear());
-    }
-})
-    .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
-    .AddDataAnnotationsLocalization();
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
-builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddSingleton(FdmRuntimeProfileCatalog.LoadEmbedded());
-builder.Services.AddSingleton<InstantQuotationPricingService>();
-builder.Services.AddSingleton<IInstantQuotationPricingService>(services =>
-    services.GetRequiredService<InstantQuotationPricingService>());
-builder.Services.AddSingleton<AdditiveQuoteTicketService>();
-builder.Services.AddSingleton<IInstantQuotationQuoteTicketService>(services =>
-    services.GetRequiredService<AdditiveQuoteTicketService>());
-builder.Services.AddScoped<IInstantQuotationAnalyticsSink, JsInstantQuotationAnalyticsSink>();
-builder.Services.AddScoped<IInstantQuotationAnalyticsTracker, InstantQuotationAnalyticsTracker>();
-builder.Services.AddScoped<IInstantQuotationSubmissionService, InstantQuotationSubmissionService>();
-builder.Services.AddScoped<IInstantQuotationAuthenticatedPreparationService, InstantQuotationAuthenticatedPreparationService>();
-builder.Services.AddSingleton<InstantQuotationSessionIdentityCookie>();
-builder.Services.AddScoped<InstantQuotationFxHandler>();
-builder.Services.AddScoped<
-    IInstantQuotationWorkflowSessionIdentityAccessor,
-    AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor>();
-builder.Services.AddResponseCompression();
-builder.Services.AddOutputCache();
-builder.Services.Configure<CookieTempDataProviderOptions>(options =>
-{
-    options.Cookie.HttpOnly = true;
-    options.Cookie.IsEssential = true;
-    options.Cookie.Name = "__Host-Maliev.Legacy.TempData";
-    options.Cookie.Path = "/";
-    options.Cookie.SameSite = SameSiteMode.Lax;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-});
-builder.Services.AddLegacyServiceClients(builder.Configuration);
-builder.Services.AddThaiLookupClient();
-builder.Services.AddThaiLookupBoundary();
-builder.Services.AddLegacyAccountAuthentication();
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddPolicy("account", context => RateLimitPartition.GetFixedWindowLimiter(
-        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        static _ => new FixedWindowRateLimiterOptions
+                        foreach (var selector in model.Selectors)
+                        {
+                            selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                        }
+                    });
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Account/Signup",
+                    model =>
+                    {
+                        foreach (var selector in model.Selectors)
+                        {
+                            selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                        }
+                    });
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Account/ForgotPassword",
+                    model =>
+                    {
+                        foreach (var selector in model.Selectors)
+                        {
+                            selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                        }
+                    });
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Account/ResetPassword",
+                    model =>
+                    {
+                        foreach (var selector in model.Selectors)
+                        {
+                            selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                        }
+                    });
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Account/Logout",
+                    model =>
+                    {
+                        foreach (var selector in model.Selectors)
+                        {
+                            selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                        }
+                    });
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Account/EmailConfirmation",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Account/ChangeEmailConfirmation",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Contact/Index",
+                    model =>
+                    {
+                        foreach (var selector in model.Selectors)
+                        {
+                            selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                        }
+                    });
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Quotation/Index",
+                    model =>
+                    {
+                        foreach (var selector in model.Selectors)
+                        {
+                            selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                        }
+                    });
+                options.Conventions.AddPageRouteModelConvention(
+                    "/InstantQuotation/3D-Printing",
+                    model =>
+                    {
+                        foreach (var selector in model.Selectors)
+                        {
+                            selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                        }
+                    });
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Legal/PrivacyPolicy",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Legal/TermsConditions",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Career/Index",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Career/View",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Services/Index",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Services/Custom-Manufacturing",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Services/CNC-Machining",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Services/3D-Printing",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddPageRouteModelConvention(
+                    "/Services/3D-Scanning",
+                    model => model.Selectors.Clear());
+            }
+
+            if (useBlazorRouteHost)
+            {
+                options.Conventions.AddAreaPageRouteModelConvention(
+                    "Member",
+                    "/Index",
+                    model =>
+                    {
+                        foreach (var selector in model.Selectors)
+                        {
+                            selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                        }
+                    });
+                options.Conventions.AddAreaPageRouteModelConvention(
+                    "Member",
+                    "/Account/Index",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddAreaPageRouteModelConvention(
+                    "Member",
+                    "/Orders/Index",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddAreaPageRouteModelConvention(
+                    "Member",
+                    "/Orders/History",
+                    model => model.Selectors.Clear());
+                foreach (var page in new[]
+                {
+                    "/Orders/3D-Printing",
+                    "/Orders/3D-Scanning",
+                    "/Orders/CNC-Machining",
+                })
+                {
+                    options.Conventions.AddAreaPageRouteModelConvention(
+                        "Member",
+                        page,
+                        model =>
+                        {
+                            foreach (var selector in model.Selectors)
+                            {
+                                selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                            }
+                        });
+                }
+                options.Conventions.AddAreaPageRouteModelConvention(
+                    "Member",
+                    "/Quotations/Index",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddAreaPageRouteModelConvention(
+                    "Member",
+                    "/Orders/View",
+                    model =>
+                    {
+                        foreach (var selector in model.Selectors)
+                        {
+                            selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                        }
+                    });
+                options.Conventions.AddAreaPageRouteModelConvention(
+                    "Member",
+                    "/Quotations/View",
+                    model =>
+                    {
+                        foreach (var selector in model.Selectors)
+                        {
+                            selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                        }
+                    });
+                foreach (var page in new[]
+                {
+                    "/Account/Manage/Profile",
+                    "/Account/Manage/Address",
+                    "/Account/Manage/ChangeEmail",
+                    "/Account/Manage/ChangePassword",
+                })
+                {
+                    options.Conventions.AddAreaPageRouteModelConvention(
+                        "Member",
+                        page,
+                        model =>
+                        {
+                            foreach (var selector in model.Selectors)
+                            {
+                                selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                            }
+                        });
+                }
+                options.Conventions.AddAreaPageRouteModelConvention(
+                    "Knowledges",
+                    "/Index",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddAreaPageRouteModelConvention(
+                    "Knowledges",
+                    "/Workflow",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddAreaPageRouteModelConvention(
+                    "Knowledges",
+                    "/Guidelines",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddAreaPageRouteModelConvention(
+                    "Knowledges",
+                    "/Specifications/Index",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddAreaPageRouteModelConvention(
+                    "Knowledges",
+                    "/Specifications/3D-Printing",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddAreaPageRouteModelConvention(
+                    "Knowledges",
+                    "/Specifications/3D-Scanning",
+                    model => model.Selectors.Clear());
+                options.Conventions.AddAreaPageRouteModelConvention(
+                    "Knowledges",
+                    "/Specifications/CNC-Machining",
+                    model => model.Selectors.Clear());
+            }
+        })
+            .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
+            .AddDataAnnotationsLocalization();
+        builder.Services.AddRazorComponents()
+            .AddInteractiveServerComponents();
+        builder.Services.AddCascadingAuthenticationState();
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddSingleton(FdmRuntimeProfileCatalog.LoadEmbedded());
+        builder.Services.AddSingleton<InstantQuotationPricingService>();
+        builder.Services.AddSingleton<IInstantQuotationPricingService>(services =>
+            services.GetRequiredService<InstantQuotationPricingService>());
+        builder.Services.AddSingleton<AdditiveQuoteTicketService>();
+        builder.Services.AddSingleton<IInstantQuotationQuoteTicketService>(services =>
+            services.GetRequiredService<AdditiveQuoteTicketService>());
+        builder.Services.AddScoped<IInstantQuotationAnalyticsSink, JsInstantQuotationAnalyticsSink>();
+        builder.Services.AddScoped<IInstantQuotationAnalyticsTracker, InstantQuotationAnalyticsTracker>();
+        builder.Services.AddScoped<IInstantQuotationSubmissionService, InstantQuotationSubmissionService>();
+        builder.Services.AddScoped<IInstantQuotationAuthenticatedPreparationService, InstantQuotationAuthenticatedPreparationService>();
+        builder.Services.AddSingleton<InstantQuotationSessionIdentityCookie>();
+        builder.Services.AddScoped<InstantQuotationFxHandler>();
+        builder.Services.AddScoped<
+            IInstantQuotationWorkflowSessionIdentityAccessor,
+            AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor>();
+        builder.Services.AddResponseCompression();
+        builder.Services.AddOutputCache();
+        builder.Services.Configure<CookieTempDataProviderOptions>(options =>
         {
-            AutoReplenishment = true,
-            PermitLimit = 30,
-            QueueLimit = 0,
-            Window = TimeSpan.FromMinutes(1),
-        }));
-});
+            options.Cookie.HttpOnly = true;
+            options.Cookie.IsEssential = true;
+            options.Cookie.Name = "__Host-Maliev.Legacy.TempData";
+            options.Cookie.Path = "/";
+            options.Cookie.SameSite = SameSiteMode.Lax;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        });
+        builder.Services.AddLegacyServiceClients(builder.Configuration);
+        builder.Services.AddThaiLookupClient();
+        builder.Services.AddThaiLookupBoundary();
+        builder.Services.AddLegacyAccountAuthentication();
+        builder.Services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddPolicy("account", context => RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                static _ => new FixedWindowRateLimiterOptions
+                {
+                    AutoReplenishment = true,
+                    PermitLimit = 30,
+                    QueueLimit = 0,
+                    Window = TimeSpan.FromMinutes(1),
+                }));
+        });
 
-var dataProtection = builder.Services.AddDataProtection()
-    .SetApplicationName(builder.Environment.IsDevelopment()
-        ? "Legacy.Maliev.Web.Development"
-        : "Legacy.Maliev.Web");
-if (builder.Environment.IsEnvironment("Testing"))
-{
-    builder.Services.AddDistributedMemoryCache();
-}
-else
-{
-    var redisConnectionString = builder.Configuration.GetConnectionString("redis");
-    if (string.IsNullOrWhiteSpace(redisConnectionString))
-    {
-        throw new InvalidOperationException(
-            "Redis connection string 'redis' is required for encrypted customer sessions.");
-    }
+        var dataProtection = builder.Services.AddDataProtection()
+            .SetApplicationName(builder.Environment.IsDevelopment()
+                ? "Legacy.Maliev.Web.Development"
+                : "Legacy.Maliev.Web");
+        if (builder.Environment.IsEnvironment("Testing"))
+        {
+            builder.Services.AddDistributedMemoryCache();
+        }
+        else
+        {
+            var redisConnectionString = builder.Configuration.GetConnectionString("redis");
+            if (string.IsNullOrWhiteSpace(redisConnectionString))
+            {
+                throw new InvalidOperationException(
+                    "Redis connection string 'redis' is required for encrypted customer sessions.");
+            }
 
-    var certificatePfxBase64 = builder.Configuration["DataProtection:CertificatePfxBase64"];
-    var certificatePassword = builder.Configuration["DataProtection:CertificatePassword"];
-    if (string.IsNullOrWhiteSpace(certificatePfxBase64)
-        || string.IsNullOrWhiteSpace(certificatePassword))
-    {
-        throw new InvalidOperationException(
-            "A data-protection certificate is required to encrypt the Redis key ring.");
-    }
+            var certificatePfxBase64 = builder.Configuration["DataProtection:CertificatePfxBase64"];
+            var certificatePassword = builder.Configuration["DataProtection:CertificatePassword"];
+            if (string.IsNullOrWhiteSpace(certificatePfxBase64)
+                || string.IsNullOrWhiteSpace(certificatePassword))
+            {
+                throw new InvalidOperationException(
+                    "A data-protection certificate is required to encrypt the Redis key ring.");
+            }
 
-    var keyEncryptionCertificate = X509CertificateLoader.LoadPkcs12(
-        Convert.FromBase64String(certificatePfxBase64),
-        certificatePassword,
-        X509KeyStorageFlags.EphemeralKeySet);
-    builder.Services.AddSingleton(keyEncryptionCertificate);
-    dataProtection.ProtectKeysWithCertificate(keyEncryptionCertificate);
+            var keyEncryptionCertificate = X509CertificateLoader.LoadPkcs12(
+                Convert.FromBase64String(certificatePfxBase64),
+                certificatePassword,
+                X509KeyStorageFlags.EphemeralKeySet);
+            builder.Services.AddSingleton(keyEncryptionCertificate);
+            dataProtection.ProtectKeysWithCertificate(keyEncryptionCertificate);
 
-    var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
-    redisOptions.AbortOnConnectFail = false;
-    redisOptions.ConnectRetry = 5;
-    redisOptions.ConnectTimeout = 10_000;
-    redisOptions.AsyncTimeout = 10_000;
-    redisOptions.SyncTimeout = 10_000;
-    redisOptions.Protocol = RedisProtocol.Resp2;
-    var redis = ConnectionMultiplexer.Connect(redisOptions);
-    builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
-    builder.Services.AddStackExchangeRedisCache(options =>
-    {
-        options.ConnectionMultiplexerFactory = () => Task.FromResult<IConnectionMultiplexer>(redis);
-        options.InstanceName = "legacy:web:";
-    });
-    dataProtection.PersistKeysToStackExchangeRedis(redis, "legacy:web:data-protection-keys");
-    builder.Services.AddHealthChecks().AddRedis(
-        redis,
-        name: "redis-sessions",
-        tags: ["ready"],
-        timeout: TimeSpan.FromSeconds(10));
-}
+            var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
+            redisOptions.AbortOnConnectFail = false;
+            redisOptions.ConnectRetry = 5;
+            redisOptions.ConnectTimeout = 10_000;
+            redisOptions.AsyncTimeout = 10_000;
+            redisOptions.SyncTimeout = 10_000;
+            redisOptions.Protocol = RedisProtocol.Resp2;
+            var redis = ConnectionMultiplexer.Connect(redisOptions);
+            builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+            builder.Services.AddStackExchangeRedisCache(options =>
+            {
+                options.ConnectionMultiplexerFactory = () => Task.FromResult<IConnectionMultiplexer>(redis);
+                options.InstanceName = "legacy:web:";
+            });
+            dataProtection.PersistKeysToStackExchangeRedis(redis, "legacy:web:data-protection-keys");
+            builder.Services.AddHealthChecks().AddRedis(
+                redis,
+                name: "redis-sessions",
+                tags: ["ready"],
+                timeout: TimeSpan.FromSeconds(10));
+        }
 
-builder.Services.AddScoped<CncProtectedUploadBindings>();
-builder.Services.AddScoped<CncQuotationSession>();
-builder.Services.AddScoped<CncUploadHandler>();
-builder.Services.AddScoped<CncNotificationCoordinator>();
-builder.Services.AddScoped<CncAuthenticatedProfileLoader>();
-builder.Services.AddScoped<CncSubmissionPersistenceCoordinator>();
-builder.Services.AddScoped<CncSubmissionEndpoint>();
+        builder.Services.AddScoped<CncProtectedUploadBindings>();
+        builder.Services.AddScoped<CncQuotationSession>();
+        builder.Services.AddScoped<CncUploadHandler>();
+        builder.Services.AddScoped<CncNotificationCoordinator>();
+        builder.Services.AddScoped<CncAuthenticatedProfileLoader>();
+        builder.Services.AddScoped<CncSubmissionPersistenceCoordinator>();
+        builder.Services.AddScoped<CncSubmissionEndpoint>();
 
-if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"))
-{
-    builder.Services.AddSingleton<ICncUploadReceiptStore, InMemoryCncUploadReceiptStore>();
-}
-else
-{
-    builder.Services.AddSingleton<ICncUploadReceiptStore, RedisCncUploadReceiptStore>();
-}
+        if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"))
+        {
+            builder.Services.AddSingleton<ICncUploadReceiptStore, InMemoryCncUploadReceiptStore>();
+        }
+        else
+        {
+            builder.Services.AddSingleton<ICncUploadReceiptStore, RedisCncUploadReceiptStore>();
+        }
 
-builder.Services.AddScoped<CncReceiptClaimCoordinator>();
+        builder.Services.AddScoped<CncReceiptClaimCoordinator>();
 
 #pragma warning disable EXTEXP0001 // Document mutations must not inherit automatic retries.
-builder.Services.AddHttpClient<Legacy.Maliev.Web.Application.ICustomerDocumentClient, Legacy.Maliev.Web.Infrastructure.CustomerDocumentClient>(client =>
-{
-    client.BaseAddress = new Uri(builder.Configuration["Services:File"]
-        ?? throw new InvalidOperationException("Services:File is required."));
-}).RemoveAllResilienceHandlers()
-  .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
+        builder.Services.AddHttpClient<Legacy.Maliev.Web.Application.ICustomerDocumentClient, Legacy.Maliev.Web.Infrastructure.CustomerDocumentClient>(client =>
+        {
+            client.BaseAddress = new Uri(builder.Configuration["Services:File"]
+                ?? throw new InvalidOperationException("Services:File is required."));
+        }).RemoveAllResilienceHandlers()
+          .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 #pragma warning restore EXTEXP0001
-var app = builder.Build();
-app.UseMiddleware<BuildIdentityHeaderMiddleware>();
-app.Use(async (context, next) =>
-{
-    if (context.Request.Path.StartsWithSegments("/account", StringComparison.OrdinalIgnoreCase)
-        || context.Request.Path.StartsWithSegments("/member", StringComparison.OrdinalIgnoreCase))
-    {
-        context.Response.OnStarting(() =>
+        var app = builder.Build();
+        app.UseMiddleware<BuildIdentityHeaderMiddleware>();
+        app.Use(async (context, next) =>
         {
-            context.Response.Headers["X-Robots-Tag"] = "noindex, follow";
-            return Task.CompletedTask;
-        });
-    }
-
-    await next();
-});
-app.UseStandardMiddleware();
-app.UseMiddleware<WebContentSecurityPolicyMiddleware>();
-app.UseExceptionHandler("/Error");
-app.UseMiddleware<ErrorIncidentMiddleware>();
-app.UseWhen(
-    static context => !context.Request.Path.StartsWithSegments("/Error", StringComparison.OrdinalIgnoreCase)
-        && !(HttpMethods.IsPost(context.Request.Method)
-            && context.Request.Path.Equals("/InstantQuotation/CNC-Machining", StringComparison.OrdinalIgnoreCase)),
-    branch => branch.UseStatusCodePagesWithReExecute("/Error", "?code={0}"));
-app.UseMiddleware<ErrorResponseContractMiddleware>();
-app.UseResponseCompression();
-app.UseStaticFiles();
-app.UseCookiePolicy();
-app.UseRequestLocalization();
-app.UseMiddleware<CanonicalUrlRedirectMiddleware>();
-app.UseMiddleware<QuotationRouteRedirectMiddleware>();
-app.UseMiddleware<Legacy.Maliev.Web.CncUploadAdmissionMiddleware>();
-app.UseRouting();
-app.UseCors();
-app.UseRateLimiter();
-app.UseAuthentication();
-app.UseMiddleware<InstantQuotationSessionIdentityMiddleware>();
-app.UseAuthorization();
-app.UseAntiforgery();
-app.UseOutputCache();
-if (useBlazorRouteHost)
-{
-    app.UseWhen(
-        InstantQuotationCompatibilityEndpoint.Matches,
-        branch => branch.Run(InstantQuotationCompatibilityEndpoint.HandleAsync));
-}
-app.MapDefaultEndpoints("web");
-app.MapBuildIdentity();
-app.MapLegacySitemap();
-app.MapGet("/instantquotation", () => Results.LocalRedirect("/InstantQuotation/3D-Printing"))
-    .ExcludeFromDescription();
-app.MapGet("/instant-quotation/fdm-profiles.v1.json", (FdmRuntimeProfileCatalog profiles, HttpContext context) =>
-{
-    context.Response.Headers.CacheControl = "no-store";
-    return Results.Text(profiles.BrowserManifestJson, "application/json; charset=utf-8");
-});
-app.MapMemberCompatibilityEndpoints();
-if (builder.Configuration.GetValue<bool>("CustomerDocuments:Enabled")) app.MapCustomerDocumentEndpoints();
-app.MapThaiLookupEndpoints();
-app.MapPost("/InstantQuotation/CNC-Machining", async (
-    HttpContext context,
-    CncUploadHandler uploadHandler,
-    CncSubmissionEndpoint submissionHandler) =>
-{
-    var requestedHandler = context.Request.Query["handler"];
-    if (requestedHandler.Count != 1)
-    {
-        return Results.NotFound();
-    }
-
-    if (string.Equals(requestedHandler[0], "UploadFile", StringComparison.OrdinalIgnoreCase))
-    {
-        return await uploadHandler.HandleAsync(context);
-    }
-
-    return string.Equals(requestedHandler[0], "SubmitRequest", StringComparison.OrdinalIgnoreCase)
-        ? await submissionHandler.HandleAsync(context)
-        : Results.NotFound();
-}).WithMetadata(new RequireAntiforgeryTokenAttribute(true));
-if (useBlazorRouteHost)
-{
-    app.MapStaticAssets();
-    var razorComponents = app.MapRazorComponents<App>()
-        .AddInteractiveServerRenderMode();
-    razorComponents.Add(endpointBuilder =>
-    {
-        if (endpointBuilder.Metadata.OfType<ComponentTypeMetadata>().Any())
-        {
-            endpointBuilder.Metadata.Add(new HttpMethodMetadata(["GET", "HEAD"]));
-        }
-    });
-    app.MapPost(
-            "/",
-            ([FromForm] string? culture, [FromQuery] string? returnUrl, HttpContext context) =>
+            if (context.Request.Path.StartsWithSegments("/account", StringComparison.OrdinalIgnoreCase)
+                || context.Request.Path.StartsWithSegments("/member", StringComparison.OrdinalIgnoreCase))
             {
-                culture = CanonicalUrlPolicy.NormalizeSupportedCulture(culture);
+                context.Response.OnStarting(() =>
+                {
+                    context.Response.Headers["X-Robots-Tag"] = "noindex, follow";
+                    return Task.CompletedTask;
+                });
+            }
 
-                context.Response.Cookies.Append(
-                    CookieRequestCultureProvider.DefaultCookieName,
-                    CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
-                    new CookieOptions
+            await next();
+        });
+        app.UseStandardMiddleware();
+        app.UseMiddleware<WebContentSecurityPolicyMiddleware>();
+        app.UseExceptionHandler("/Error");
+        app.UseMiddleware<ErrorIncidentMiddleware>();
+        app.UseWhen(
+            static context => !context.Request.Path.StartsWithSegments("/Error", StringComparison.OrdinalIgnoreCase)
+                && !(HttpMethods.IsPost(context.Request.Method)
+                    && context.Request.Path.Equals("/InstantQuotation/CNC-Machining", StringComparison.OrdinalIgnoreCase)),
+            branch => branch.UseStatusCodePagesWithReExecute("/Error", "?code={0}"));
+        app.UseMiddleware<ErrorResponseContractMiddleware>();
+        app.UseResponseCompression();
+        app.UseStaticFiles();
+        app.UseCookiePolicy();
+        app.UseRequestLocalization();
+        app.UseMiddleware<CanonicalUrlRedirectMiddleware>();
+        app.UseMiddleware<QuotationRouteRedirectMiddleware>();
+        app.UseMiddleware<Legacy.Maliev.Web.CncUploadAdmissionMiddleware>();
+        app.UseRouting();
+        app.UseCors();
+        app.UseRateLimiter();
+        app.UseAuthentication();
+        app.UseMiddleware<InstantQuotationSessionIdentityMiddleware>();
+        app.UseAuthorization();
+        app.UseAntiforgery();
+        app.UseOutputCache();
+        if (useBlazorRouteHost)
+        {
+            app.UseWhen(
+                InstantQuotationCompatibilityEndpoint.Matches,
+                branch => branch.Run(InstantQuotationCompatibilityEndpoint.HandleAsync));
+        }
+        app.MapDefaultEndpoints("web");
+        app.UseWhen(
+            CareerSearchCompatibilityEndpoint.Matches,
+            branch => branch.Run(CareerSearchCompatibilityEndpoint.HandleAsync));
+        app.MapBuildIdentity();
+        app.MapLegacySitemap();
+        app.MapGet("/instantquotation", () => Results.LocalRedirect("/InstantQuotation/3D-Printing"))
+            .ExcludeFromDescription();
+        app.MapGet("/instant-quotation/fdm-profiles.v1.json", (FdmRuntimeProfileCatalog profiles, HttpContext context) =>
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            return Results.Text(profiles.BrowserManifestJson, "application/json; charset=utf-8");
+        });
+        app.MapMemberCompatibilityEndpoints();
+        if (builder.Configuration.GetValue<bool>("CustomerDocuments:Enabled")) app.MapCustomerDocumentEndpoints();
+        app.MapThaiLookupEndpoints();
+        app.MapPost("/InstantQuotation/CNC-Machining", async (
+            HttpContext context,
+            CncUploadHandler uploadHandler,
+            CncSubmissionEndpoint submissionHandler) =>
+        {
+            var requestedHandler = context.Request.Query["handler"];
+            if (requestedHandler.Count != 1)
+            {
+                return Results.NotFound();
+            }
+
+            if (string.Equals(requestedHandler[0], "UploadFile", StringComparison.OrdinalIgnoreCase))
+            {
+                return await uploadHandler.HandleAsync(context);
+            }
+
+            return string.Equals(requestedHandler[0], "SubmitRequest", StringComparison.OrdinalIgnoreCase)
+                ? await submissionHandler.HandleAsync(context)
+                : Results.NotFound();
+        }).WithMetadata(new RequireAntiforgeryTokenAttribute(true));
+        if (useBlazorRouteHost)
+        {
+            app.MapStaticAssets();
+            var razorComponents = app.MapRazorComponents<App>()
+                .AddInteractiveServerRenderMode();
+            razorComponents.Add(endpointBuilder =>
+            {
+                if (endpointBuilder.Metadata.OfType<ComponentTypeMetadata>().Any())
+                {
+                    endpointBuilder.Metadata.Add(new HttpMethodMetadata(["GET", "HEAD"]));
+                }
+            });
+            app.MapPost(
+                    "/",
+                    ([FromForm] string? culture, [FromQuery] string? returnUrl, HttpContext context) =>
                     {
-                        Expires = DateTimeOffset.UtcNow.AddYears(1),
-                        HttpOnly = true,
-                        IsEssential = true,
-                        SameSite = SameSiteMode.Lax,
-                        Secure = true
-                    });
+                        culture = CanonicalUrlPolicy.NormalizeSupportedCulture(culture);
 
-                return Results.LocalRedirect(CanonicalUrlPolicy.GetLocalizedReturnUrl(returnUrl, culture));
-            })
-        .WithMetadata(new RequireAntiforgeryTokenAttribute(true));
-}
-app.MapRazorPages();
-app.MapApiDocumentation(servicePrefix: "web");
-await app.RunAsync();
+                        context.Response.Cookies.Append(
+                            CookieRequestCultureProvider.DefaultCookieName,
+                            CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+                            new CookieOptions
+                            {
+                                Expires = DateTimeOffset.UtcNow.AddYears(1),
+                                HttpOnly = true,
+                                IsEssential = true,
+                                SameSite = SameSiteMode.Lax,
+                                Secure = true
+                            });
+
+                        return Results.LocalRedirect(CanonicalUrlPolicy.GetLocalizedReturnUrl(returnUrl, culture));
+                    })
+                .WithMetadata(new RequireAntiforgeryTokenAttribute(true));
+        }
+        app.MapRazorPages();
+        app.MapApiDocumentation(servicePrefix: "web");
+        await app.RunAsync();
+
+    },
+    preserveTestingException: () => preserveTestingException);
 
 public partial class Program;

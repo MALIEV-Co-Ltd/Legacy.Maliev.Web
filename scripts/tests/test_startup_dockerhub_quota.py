@@ -90,8 +90,11 @@ class QuotaTests(unittest.TestCase):
     def test_unknown_quota_stops(self):
         opener = Mock();opener.open.side_effect = [Response(body=b'{"token":"x"}'), Response()]
         result = q.probe_http(opener)
-        self.assertFalse(result['eligible'])
-        self.assertEqual(result['reason'], 'QuotaUnknown')
+        self.assertTrue(result['eligible'])
+        self.assertEqual(result['reason'], 'QuotaNotMetered')
+        for field in ('limit', 'remaining', 'windowSeconds', 'retryAfter', 'rateLimitReset'):
+            self.assertIsNone(result[field])
+        q.validate(result)
 
     def test_malformed_quota_inverse_matrix(self):
         for remaining, limit in [('x','100;w=21600'), ('99;w=1','100;w=21600'), ('101;w=21600','100;w=21600'), ('1;w=0','100;w=0'), ('1;w=21600,PRIVATE','100;w=21600')]:
@@ -317,6 +320,96 @@ class QuotaTests(unittest.TestCase):
                 with self.subTest(state=state,reason=reason), self.assertRaises(ValueError):q.validate(result)
             result=probe()[0];result.update(cache=state,cacheInspection=inspection)
             q.validate(result)
+
+    def test_absent_quota_with_throttle_metadata_remains_unknown(self):
+        for extra in ({'Retry-After': '0'}, {'Retry-After': '12'},
+                      {'Retry-After': 'Fri, 09 Oct 2026 22:00:00 GMT'}, {'RateLimit-Reset': '1791580000'}):
+            with self.subTest(extra=extra):
+                opener = Mock()
+                opener.open.side_effect = [Response(body=b'{"token":"x"}'), Response(fields=headers(**extra))]
+                result = q.probe_http(opener)
+                self.assertFalse(result['eligible'])
+                self.assertEqual(result['reason'], 'QuotaUnknown')
+                q.validate(result)
+
+    def test_partial_duplicate_and_malformed_quota_never_become_not_metered(self):
+        for pairs in ([('RateLimit-Limit', '100;w=21600')],
+                      [('RateLimit-Remaining', '99;w=21600')],
+                      [('RateLimit-Limit', ''), ('RateLimit-Remaining', '')],
+                      [('RateLimit-Limit', '100;w=21600'), ('RateLimit-Limit', '100;w=21600')],
+                      [('RateLimit-Remaining', '99;w=21600'), ('RateLimit-Remaining', '99;w=21600')]):
+            with self.subTest(pairs=pairs):
+                fields = headers()
+                for key, value in pairs:
+                    fields[key] = value
+                opener = Mock()
+                opener.open.side_effect = [Response(body=b'{"token":"x"}'), Response(fields=fields)]
+                result = q.probe_http(opener)
+                self.assertFalse(result['eligible'])
+                self.assertEqual(result['reason'], 'MalformedResponse')
+                q.validate(result)
+
+    def test_absent_quota_non200_registry_never_admits(self):
+        for status in (301, 302, 401, 403, 429, 500):
+            with self.subTest(status=status):
+                opener = Mock()
+                opener.open.side_effect = [Response(body=b'{"token":"x"}'), Response(status=status)]
+                result = q.probe_http(opener)
+                self.assertFalse(result['eligible'])
+                self.assertEqual(result['reason'], 'QuotaRejected' if status == 429 else 'HttpFailure')
+                q.validate(result)
+
+    def test_not_metered_receipt_rejects_false_metered_foreign_status_image_and_fields(self):
+        good = q.empty()
+        good.update(eligible=True, reason='QuotaNotMetered', authHttpStatus=200, registryHttpStatus=200)
+        q.validate(good)
+        changes = [('eligible', False), ('image', 'redis:other'), ('authHttpStatus', None),
+                   ('authHttpStatus', 401), ('authHttpStatus', True), ('registryHttpStatus', None),
+                   ('registryHttpStatus', 429), ('registryHttpStatus', True), ('limit', 100),
+                   ('remaining', 99), ('remaining', 0), ('windowSeconds', 21600),
+                   ('rateLimitReset', 0), ('retryAfter', 0),
+                   ('retryAfter', '2026-10-09T22:00:00+00:00'), ('extra', 'PRIVATE')]
+        for field, value in changes:
+            with self.subTest(field=field, value=value):
+                result = dict(good)
+                result[field] = value
+                with self.assertRaises(ValueError):
+                    q.validate(result)
+
+    def test_not_metered_receipt_cache_join_is_only_notchecked_or_absent(self):
+        for state, category, code in (('NotChecked', 'NotChecked', None), ('Absent', 'ImageAbsent', 1),
+                                      ('Present', 'ImagePresent', 0), ('Unavailable', 'Timeout', None)):
+            with self.subTest(state=state):
+                result = q.empty()
+                result.update(eligible=True, reason='QuotaNotMetered', authHttpStatus=200,
+                              registryHttpStatus=200, cache=state,
+                              cacheInspection={'category': category, 'exitCode': code})
+                if state in {'NotChecked', 'Absent'}:
+                    q.validate(result)
+                else:
+                    with self.assertRaises(ValueError):
+                        q.validate(result)
+
+    def test_not_metered_worker_and_absent_cache_main_preserve_null_snapshot(self):
+        opener = Mock()
+        opener.open.side_effect = [Response(body=b'{"token":"x"}'), Response()]
+        snapshot = q.probe_http(opener)
+        run = Mock(return_value=SimpleNamespace(returncode=0, stdout=json.dumps(snapshot).encode()))
+        self.assertEqual(q.bounded_probe(run), snapshot)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'receipt.json'
+            network = Mock(return_value=snapshot)
+            cache = Mock(return_value=('Absent', {'category': 'ImageAbsent', 'exitCode': 1}))
+            self.assertEqual(q.main(['--receipt', str(path), '--check-local-cache'], network, cache), 0)
+            receipt = json.loads(path.read_text())
+            self.assertEqual(receipt['reason'], 'QuotaNotMetered')
+            self.assertTrue(receipt['eligible'])
+            self.assertEqual(receipt['cacheInspection'], {'category': 'ImageAbsent', 'exitCode': 1})
+            for field in ('limit', 'remaining', 'windowSeconds', 'retryAfter', 'rateLimitReset'):
+                self.assertIsNone(receipt[field])
+            network.assert_called_once()
+            cache.assert_called_once()
+            q.validate(receipt)
 
     def test_unknown_or_abbreviated_cli_no_probe_or_receipt(self):
         network=Mock()

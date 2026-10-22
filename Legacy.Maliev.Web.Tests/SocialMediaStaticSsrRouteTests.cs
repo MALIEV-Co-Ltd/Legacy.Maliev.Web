@@ -78,6 +78,20 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
             Assert.Contains($"href=\"{destination}\" target=\"_blank\" rel=\"noopener\"", source, StringComparison.Ordinal);
         }
 
+        // Source 3879b78 resolves the temporary LINE incident, not the contact channels.
+        Assert.DoesNotContain("maliev-service-notice", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Our LINE Official Account has been compromised", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("บัญชี LINE Official Account ของเราถูกเข้าถึงโดยไม่ได้รับอนุญาต", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("check the site notice", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("โปรดตรวจสอบประกาศบนเว็บไซต์", source, StringComparison.Ordinal);
+        var lineDescription = culture == "th"
+            ? "แชตกับทีมงานผ่าน LINE Official Account"
+            : "Chat with our team through LINE Official Account";
+        Assert.Contains($">{lineDescription}<", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://line.me/ti/p/@maliev\" target=\"_blank\" rel=\"noopener\" aria-label=\"Contact MALIEV through LINE Official Account\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://m.me/maliev.manufacturing/\" target=\"_blank\" rel=\"noopener noreferrer\" aria-label=\"Contact MALIEV through Messenger\"", source, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://wa.me/66898950690\" target=\"_blank\" rel=\"noopener\" aria-label=\"Contact MALIEV through WhatsApp\"", source, StringComparison.Ordinal);
+
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-footer\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-cookie-consent\"", source, StringComparison.Ordinal);

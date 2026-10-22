@@ -131,7 +131,10 @@ def probe_http(opener=None):
             result["reason"] = "QuotaRejected"
         elif result["registryHttpStatus"] == 200:
             if result["remaining"] is None:
-                result["reason"] = "QuotaUnknown"
+                if all(result[key] is None for key in ("limit", "remaining", "windowSeconds", "retryAfter", "rateLimitReset")):
+                    result.update(eligible=True, reason="QuotaNotMetered")
+                else:
+                    result["reason"] = "QuotaUnknown"
             elif result["remaining"] == 0:
                 result["reason"] = "QuotaExhausted"
             else:
@@ -166,7 +169,7 @@ def inspect_cache(run=subprocess.run):
 
 
 REASONS = {"Unknown", "AuthHttpFailure", "AuthUnavailable", "MalformedResponse", "TransportUnavailable",
-           "HttpFailure", "QuotaRejected", "QuotaUnknown", "QuotaExhausted", "QuotaAvailable",
+           "HttpFailure", "QuotaRejected", "QuotaUnknown", "QuotaExhausted", "QuotaAvailable", "QuotaNotMetered",
            "CacheAvailable", "CacheUnavailable", "WorkerUnavailable"}
 
 
@@ -218,7 +221,7 @@ def validate(result):
             raise ValueError("CacheReceiptCoherence")
     elif result["reason"] in {"CacheAvailable", "CacheUnavailable"}:
         raise ValueError("CacheReceiptCoherence")
-    if result["reason"] == "QuotaAvailable" and not result["eligible"]:
+    if result["reason"] in {"QuotaAvailable", "QuotaNotMetered"} and not result["eligible"]:
         raise ValueError("ReceiptAdmission")
     if result["eligible"]:
         cache = result["reason"] == "CacheAvailable" and result["cache"] == "Present"
@@ -227,7 +230,11 @@ def validate(result):
                      and result["registryHttpStatus"] == 200 and type(result["remaining"]) is int
                      and type(result["limit"]) is int and 0 < result["remaining"] <= result["limit"]
                      and type(result["windowSeconds"]) is int and result["windowSeconds"] > 0)
-        if not cache and not available:
+        not_metered = (result["cache"] in {"NotChecked", "Absent"}
+                       and result["reason"] == "QuotaNotMetered" and result["authHttpStatus"] == 200
+                       and result["registryHttpStatus"] == 200
+                       and all(result[key] is None for key in ("limit", "remaining", "windowSeconds", "retryAfter", "rateLimitReset")))
+        if not cache and not available and not not_metered:
             raise ValueError("ReceiptAdmission")
     return result
 

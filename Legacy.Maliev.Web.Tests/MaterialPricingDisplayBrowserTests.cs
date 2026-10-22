@@ -105,9 +105,12 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         await using var fixture = await Fixture.CreateAsync(output, culture, 1280, scheme, height: 720,
             displayFileName: "maliev-one-millimeter-fdm-00000000000000000000000000000000.stl");
         var card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='ABS']");
-        await card.ScrollIntoViewIfNeededAsync();
-        var hitArea = await card.EvaluateAsync<double[]>("""
-            card => {
+        await Assertions.Expect(card).ToBeVisibleAsync();
+        var hitArea = await fixture.Page.EvaluateAsync<double[]>("""
+            () => {
+                const card = document.querySelector('[data-material-selector] [role="radio"][data-material-key="ABS"]');
+                if (!card) throw new Error('The current ABS material card is missing.');
+                card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
                 const bounds = card.getBoundingClientRect();
                 const content = card.closest('[data-workflow-configuration-content]').getBoundingClientRect();
                 const footer = card.closest('[data-workflow-configuration]').querySelector('.instant-quote__configuration-footer').getBoundingClientRect();
