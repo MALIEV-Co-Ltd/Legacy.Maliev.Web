@@ -273,7 +273,8 @@ public sealed class MaterialPricingDisplayRendererContractTests
             Assert.Equal("M68", part.Configuration.MaterialKey);
             Assert.Equal(2, part.Configuration.Quantity);
             var quote = Assert.IsType<InstantQuotationOrderQuote>(fixture.CurrentQuote);
-            Assert.True(fixture.Tickets.Validate(stored, quote, stored.QuoteAuthorization, DateTimeOffset.UtcNow));
+            var authorization = Assert.IsType<InstantQuotationQuoteAuthorization>(stored.QuoteAuthorization);
+            Assert.True(fixture.Tickets.Validate(stored, quote, authorization, DateTimeOffset.UtcNow));
             var html = await fixture.HtmlAsync();
             Assert.Contains("data-workflow-review-content", html, StringComparison.Ordinal);
             var color = Regex.Match(html, $"<select[^>]*id=\"review-color-{part.PartId}\"[^>]*>(.*?)</select>",
