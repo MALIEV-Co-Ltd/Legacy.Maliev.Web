@@ -28,10 +28,10 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
     public async Task BillingTuple_NormalSave_ApiReadbackAndReloadPreserveManualFields(string culture, int width)
     {
         var database = $"profile_contract_{Guid.NewGuid():N}";
-        await using var resources = new BillingProofLifetime(proofCulture: culture);
+        var resources = new BillingProofLifetime(proofCulture: culture);
         try { output.WriteLine("billing-attempt-run " + resources.AttemptRun); }
         catch (Exception) { /* Missing output fails the proof verifier; it must not change the actual journey. */ }
-        await resources.RunAsync(async () =>
+        try { await resources.RunAsync(async () =>
         {
             var postgres = resources.Postgres(database);
             using var startup = new CancellationTokenSource(TimeSpan.FromSeconds(120));
@@ -256,7 +256,27 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
                     auth = "Pinned Auth normal login, encrypted cookie, Redis session; synthetic scoped service JWT",
                 });
             }
-        });
+        }); }
+        catch (Exception failure)
+        {
+            try { output.WriteLine("billing-body-failure type={0}; stack={1}", failure.GetType().FullName, failure.StackTrace); }
+            catch (Exception) { /* Diagnostic output cannot replace the original failure. */ }
+            throw;
+        }
+        finally
+        {
+            try { await resources.DisposeAsync(); }
+            catch (Exception failure)
+            {
+                try
+                {
+                    output.WriteLine("billing-cleanup-failure type={0}; stack={1}", failure.GetType().FullName, failure.StackTrace);
+                    output.WriteLine("billing-owned-custody " + resources.OwnershipReceipt());
+                }
+                catch (Exception) { /* Diagnostic output cannot replace the cleanup failure. */ }
+                throw;
+            }
+        }
     }
 
     private static string Required(string name) => Environment.GetEnvironmentVariable(name) is { } value && File.Exists(value)
