@@ -15,14 +15,17 @@ using Microsoft.JSInterop;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<TestingWebApplicationFactory>, IDisposable
 {
     private const string WorkflowNamespace = "Legacy.Maliev.Web.Components.Pages.InstantQuotation";
     private readonly HttpClient client;
+    private readonly OwnedWebSurfaceResources owned = new();
 
-    public InstantQuotationInteractiveRouteTests(WebApplicationFactory<Program> factory)
+    public InstantQuotationInteractiveRouteTests(TestingWebApplicationFactory factory)
     {
-        client = factory.WithWebHostBuilder(builder =>
+        try
+        {
+            var configuredFactory = owned.Own(factory.WithWebHostBuilder(builder =>
             {
                 builder.UseSetting("environment", "Testing");
                 builder.UseSetting("Recaptcha:ProjectId", "test-project");
@@ -32,13 +35,21 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
                     services.RemoveAll<ICountryClient>();
                     services.AddSingleton<ICountryClient, StubCountryClient>();
                 });
-            })
-            .CreateClient(new WebApplicationFactoryClientOptions
+            }));
+            client = owned.Own(configuredFactory.CreateClient(new WebApplicationFactoryClientOptions
             {
                 AllowAutoRedirect = false,
                 BaseAddress = new Uri("https://localhost"),
-            });
+            }));
+        }
+        catch (Exception original)
+        {
+            owned.ReleasePreserving(original);
+            throw;
+        }
     }
+
+    public void Dispose() => owned.Dispose();
 
     [Fact]
     public void Route_RemainsStaticSsr_WithExactlyOneInteractiveServerWorkflowIsland()

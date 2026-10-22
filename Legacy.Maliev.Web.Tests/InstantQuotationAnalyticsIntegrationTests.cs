@@ -4,17 +4,19 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationAnalyticsIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class InstantQuotationAnalyticsIntegrationTests : IClassFixture<TestingWebApplicationFactory>, IDisposable
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public InstantQuotationAnalyticsIntegrationTests(WebApplicationFactory<Program> factory)
+    public InstantQuotationAnalyticsIntegrationTests(TestingWebApplicationFactory factory)
     {
         this.factory = factory.WithWebHostBuilder(builder => builder
             .UseSetting("environment", "Testing")
             .UseSetting("Recaptcha:ProjectId", "test-project")
             .UseSetting("Recaptcha:SiteKey", "test-site-key"));
     }
+
+    public void Dispose() => factory.Dispose();
 
     [Fact]
     public void DefaultRuntimeRegistration_ActivatesReviewedTrackerAndJsSinkPerCircuitScope()

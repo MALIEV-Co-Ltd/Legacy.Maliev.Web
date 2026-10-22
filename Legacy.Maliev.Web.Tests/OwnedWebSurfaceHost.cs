@@ -136,10 +136,19 @@ internal sealed class OwnedWebSurfaceBuiltHost : IHost
     internal OwnedWebSurfaceBuiltHost(IHost host)
     {
         this.host = host;
-        if (host.Services.GetService<IWebHostEnvironment>() is { } environment)
+        try
         {
-            var seen = new HashSet<IFileProvider>(ReferenceEqualityComparer.Instance);
-            Capture(environment.WebRootFileProvider, environment.ContentRootFileProvider, seen);
+            if (host.Services.GetService<IWebHostEnvironment>() is { } environment)
+            {
+                var seen = new HashSet<IFileProvider>(ReferenceEqualityComparer.Instance);
+                Capture(environment.WebRootFileProvider, environment.ContentRootFileProvider, seen);
+            }
+        }
+        catch (Exception original)
+        {
+            resources.Own(host);
+            resources.ReleasePreserving(original);
+            throw;
         }
         // Reverse disposal stops the host's consumers before releasing their web-root providers.
         resources.Own(host);
