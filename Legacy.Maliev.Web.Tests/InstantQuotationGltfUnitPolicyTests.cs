@@ -191,7 +191,7 @@ public sealed class InstantQuotationGltfUnitPolicyTests
         Assert.Equal(raw, bytes);
     }
 
-    private static byte[] BinaryFixture(JsonObject document)
+    internal static byte[] BinaryFixture(JsonObject document)
     {
         var buffer = document["buffers"]![0]!;
         var content = Convert.FromBase64String(buffer["uri"]!.GetValue<string>().Split(',')[1]);
