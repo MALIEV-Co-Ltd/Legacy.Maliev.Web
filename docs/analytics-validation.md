@@ -41,6 +41,9 @@ non-JavaScript fallback conversion.
 | `upload_failure` | Stable | A terminal non-cancellation upload failure | Secondary only |
 | `estimate_shown` | Stable | A complete authoritative estimate becomes visible | Secondary only |
 | `review_reached` | Stable | A complete authoritative quote enters Review | Secondary only |
+| `quote_started` | Controlled diagnostic | First size/extension accepted model before parsing | Diagnostic only, non-biddable |
+| `quote_submit_attempt` | Controlled diagnostic | Deliberate valid final submit, before persistence | Diagnostic only, non-biddable |
+| `quote_submission_error` | Controlled diagnostic | Final form validation or unconfirmed transport outcome | Diagnostic only, non-biddable |
 | `phone_click` | Stable | Business telephone click | Secondary only |
 | `email_click` | Stable | Business email click | Secondary only |
 | `line_click` | Stable | LINE Official Account click | Secondary only |
@@ -77,6 +80,33 @@ The `request_quote` data-layer payload is non-PII and contains only:
 - `transaction_id`: an opaque persisted reference such as `message-913` or `quotation-713`;
 - `submission_status`: always `persisted`;
 - `has_files` and `file_upload_completed`: booleans.
+
+The source c050 quote-intent milestones remain distinct from authoritative upload and persisted
+lead events. `quote_started` contains exactly `event` and `service=3d_printing`; it fires once
+per workflow at the first size/extension accepted file before parsing/hashing, including an
+unreadable model, and never for an oversized or unsupported selection. Parser retries and later
+batches do not emit it again. This is not proof of upload or a persisted lead.
+
+`quote_submit_attempt` contains exactly `event`, `service=3d_printing`, `has_files` and
+`file_upload_completed` booleans. It fires for each deliberate valid final attempt, including
+a safe validation retry, but never for a pending/terminal duplicate. The rendered form receives
+only booleans from the actual workflow upload states and matching authoritative parts:
+completion requires a positive upload count, every entry Uploaded and the matching part count.
+An SSR fallback without that workflow evidence renders false, never fabricated success.
+These flags describe pre-submit upload evidence, not persisted request/file linkage.
+
+`quote_submission_error` contains exactly `event`, `service=3d_printing` and
+`failure_category=validation|network`. Invalid final clicks/native constraints and explicit
+server validation retry use validation. Failed/malformed/unconfirmed responses use network;
+this diagnostic does not prove whether persistence happened. Existing unknown-outcome locking
+still prevents blind resubmission. No server error string, customer field, filename, exception,
+session identifier or response body is copied into measurement.
+
+All three use the existing consent-gated `malievAnalytics.emit` sink; English and Thai share
+the exact contract. Source constant intent=instant_quote is implicit in these fixed event
+names; service_id is mapped to canonical service, and locale remains absent under the existing
+privacy contract. They are diagnostics only and never authorize Ads conversion changes, GTM
+publication or deployment. `request_quote` remains persisted-only.
 
 `file_upload_start` contains exactly `event`, a controlled `service`, and a positive `file_count`.
 `file_upload_complete` contains exactly `event`, the same controlled `service`, and the persisted

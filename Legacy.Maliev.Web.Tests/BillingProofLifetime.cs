@@ -781,6 +781,21 @@ internal sealed class BillingChildLease(IBillingChildProcess process)
     internal int ExitCode => process.ExitCode;
     internal bool ReaderFailed => process.ReaderFailed;
     internal Task WaitForExitAsync() => process.WaitForExitAsync();
+    internal async Task<string> StartupFailureAsync(CancellationToken token)
+    {
+        const string suppressed = "Disposable service startup failed; credential-bearing output suppressed.";
+        if (!process.HasExited) return suppressed;
+        var startup = "NotObserved";
+        try
+        {
+            await process.JoinReadersAsync().WaitAsync(token);
+            if (process is BillingSystemChild child && child.StartupFailure != BillingStartupFailure.NotObserved)
+                startup = "StartupFailure/HostInitialization/" + child.StartupFailure;
+        }
+        catch (Exception) { startup = "ReadersUnsettled"; } // Preserve the original failed readiness assertion.
+        try { return $"Disposable service startup failed; exitCode={process.ExitCode}; startup={startup}; credential-bearing output suppressed."; }
+        catch (Exception) { return suppressed + " Exit metadata unavailable."; }
+    }
     internal void Start()
     {
         dispatched = true;
@@ -825,6 +840,19 @@ internal sealed class BillingChildLease(IBillingChildProcess process)
     }
 }
 
+internal enum BillingStartupFailure
+{
+    NotObserved,
+    IOException,
+    SocketException,
+    AddressInUseException,
+    OptionsValidationException,
+    InvalidOperationException,
+    NpgsqlException,
+    PostgresException,
+    OtherException,
+}
+
 internal sealed class BillingSystemChild(ProcessStartInfo start) : IBillingChildProcess
 {
     // This original object is allocated before registration/Start; it is never replaced by a PID lookup.
@@ -842,6 +870,8 @@ internal sealed class BillingSystemChild(ProcessStartInfo start) : IBillingChild
     private bool stdoutClosed;
     private bool stderrClosed;
     private bool startRefused;
+    private int startupFailure;
+    internal BillingStartupFailure StartupFailure => (BillingStartupFailure)Volatile.Read(ref startupFailure);
     public bool HasExited => process.HasExited;
     public int ExitCode => process.ExitCode;
     public void Start()
@@ -870,19 +900,66 @@ internal sealed class BillingSystemChild(ProcessStartInfo start) : IBillingChild
     public void StartReaders()
     {
         stdout = DrainAsync(process.StandardOutput);
-        stderr = DrainAsync(process.StandardError);
+        stderr = DrainAsync(process.StandardError, observeStartupFailure: true);
     }
-    private static async Task DrainAsync(StreamReader reader)
+    internal async Task DrainAsync(StreamReader reader, bool observeStartupFailure = false)
     {
         var buffer = new char[2048];
+        var line = observeStartupFailure ? new StringBuilder() : null;
+        var oversized = false;
         long count = 0;
+        void CompleteLine()
+        {
+            if (line is null) return;
+            if (!oversized)
+                Interlocked.CompareExchange(ref startupFailure, (int)ClassifyStartupFailure(line.ToString()), (int)BillingStartupFailure.NotObserved);
+            line.Clear();
+            oversized = false;
+        }
         while (true)
         {
             var read = await reader.ReadAsync(buffer.AsMemory());
-            if (read == 0) return;
+            if (read == 0) { CompleteLine(); return; }
             count += read;
             if (count > 16L * 1024 * 1024) throw new InvalidOperationException("Owned child output quota exceeded; raw output suppressed.");
+            if (line is null) continue;
+            for (var index = 0; index < read; index++)
+            {
+                if (buffer[index] == '\n') { CompleteLine(); continue; }
+                if (oversized) continue;
+                if (line.Length == 4096) { line.Clear(); oversized = true; continue; }
+                line.Append(buffer[index]);
+            }
         }
+    }
+    internal static BillingStartupFailure ClassifyStartupFailure(string line)
+    {
+        if (line.Length > 4096) return BillingStartupFailure.NotObserved;
+        try
+        {
+            using var document = JsonDocument.Parse(line, new JsonDocumentOptions { MaxDepth = 4 });
+            var value = document.RootElement;
+            if (value.ValueKind != JsonValueKind.Object
+                || !value.TryGetProperty("eventId", out var id) || id.ValueKind != JsonValueKind.Number || !id.TryGetInt32(out var number) || number != 5102
+                || !value.TryGetProperty("severity", out var severity) || severity.ValueKind != JsonValueKind.String || severity.GetString() != "CRITICAL"
+                || !value.TryGetProperty("logger", out var logger) || logger.ValueKind != JsonValueKind.String || logger.GetString() != "Maliev.Aspire.ServiceDefaults.Diagnostics.PrivateStartupBoundary"
+                || !value.TryGetProperty("EventName", out var name) || name.ValueKind != JsonValueKind.String || name.GetString() != "StartupFailure"
+                || !value.TryGetProperty("Operation", out var operation) || operation.ValueKind != JsonValueKind.String || operation.GetString() != "HostInitialization"
+                || !value.TryGetProperty("exceptionType", out var exception) || exception.ValueKind != JsonValueKind.String)
+                return BillingStartupFailure.NotObserved;
+            return exception.GetString() switch
+            {
+                "System.IO.IOException" => BillingStartupFailure.IOException,
+                "System.Net.Sockets.SocketException" => BillingStartupFailure.SocketException,
+                "Microsoft.AspNetCore.Connections.AddressInUseException" => BillingStartupFailure.AddressInUseException,
+                "Microsoft.Extensions.Options.OptionsValidationException" => BillingStartupFailure.OptionsValidationException,
+                "System.InvalidOperationException" => BillingStartupFailure.InvalidOperationException,
+                "Npgsql.NpgsqlException" => BillingStartupFailure.NpgsqlException,
+                "Npgsql.PostgresException" => BillingStartupFailure.PostgresException,
+                _ => BillingStartupFailure.OtherException,
+            };
+        }
+        catch (JsonException) { return BillingStartupFailure.NotObserved; }
     }
     public Task WaitForExitAsync() => exitWait ??= process.WaitForExitAsync();
     public void RequestGracefulStop() { CaptureIdentity(); process.CloseMainWindow(); }

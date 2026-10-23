@@ -1,0 +1,64 @@
+@inject IStringLocalizer<CncCuttingToolsContent> Localizer
+
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+<h1>@Localizer["CNC cutting tools: select the whole cutting system"]</h1>
+<p class="docs-lead">@Localizer["Match tool material, geometry, coating and holding to the workpiece and operation. A useful selection balances edge strength, chip space, access and a stable cutting process."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/cutting-tools.webp" srcset="/src/images/knowledge/photos/cutting-tools-small.webp 768w, /src/images/knowledge/photos/cutting-tools.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["A selection of cutting tools and precision tool holders on a setting bench."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Tool geometry, coating, reach and holder support are separate selection decisions. Illustrative image."]</figcaption>
+</figure>
+<nav class="docs-toc" aria-label="@Localizer["On this page"]"><h2>@Localizer["In this guide"]</h2><ul><li><a href="#selection">@Localizer["Choose for a defined operation"]</a></li><li><a href="#substrate">@Localizer["Carbide and high-speed steel"]</a></li><li><a href="#geometry">@Localizer["Geometry and coating follow the material"]</a></li><li><a href="#flutes">@Localizer["Flute count is also a chip-space decision"]</a></li><li><a href="#holding">@Localizer["Runout, overhang and holder clearance"]</a></li><li><a href="#ballnose">@Localizer["Ball nose tools need the effective diameter"]</a></li><li><a href="#direction">@Localizer["Climb or conventional milling?"]</a></li><li><a href="#coolant-wear">@Localizer["Plan chip removal and read the wear"]</a></li></ul></nav>
+<section class="docs-section" id="selection"><h2>@Localizer["Choose for a defined operation"]</h2>
+<p>@Localizer["Start with material grade, hardness or temper, feature dimensions and required finish. Separate roughing, finishing, slotting, drilling and profiling requirements. Confirm the tool’s permitted entry method: an end mill that cuts on its periphery is not automatically suitable for plunging. Record diameter, usable cutting length, neck clearance and holder envelope before considering a faster cutting recipe."]</p>
+<aside class="docs-note">@Localizer["These are general selection principles, not a list of MALIEV stock tools or guaranteed machining capabilities. Validate the exact tool, machine and workholding combination with current manufacturer data."]</aside>
+</section>
+<section class="docs-section" id="substrate"><h2>@Localizer["Carbide and high-speed steel"]</h2>
+<p>@Localizer["Carbide generally offers greater stiffness and hot wear resistance, supporting productive cutting in a rigid setup. It is also sensitive to impact and poor alignment. High-speed steel, including cobalt-alloyed HSS grades, can offer useful toughness where flexibility or interrupted loading matters, usually at lower cutting speeds. Neither label determines the whole result: substrate grade, edge preparation, diameter and application still matter."]</p>
+<p class="docs-source"><a href="https://www.dormerpramet.com/us/en/what-cutting-data-should-I-use-and-where-can-I-find-it/">@Localizer["Dormer Pramet: tool materials and cutting-data selection"]</a></p>
+</section>
+<section class="docs-section" id="geometry"><h2>@Localizer["Geometry and coating follow the material"]</h2>
+<p>@Localizer["For aluminium, a sharp edge, generous chip space and a surface that discourages adhesion can help prevent built-up edge. Harvey describes TiB2 as one option with low affinity for aluminium. This is a material-specific choice, not a rule that every coated tool suits aluminium. For steels and harder materials, select the maker’s matching substrate, coating and edge-strength recommendation rather than choosing by coating colour."]</p>
+<p class="docs-source"><a href="https://www.harveyperformance.com/in-the-loupe/tib2-coating/">@Localizer["Harvey Performance: TiB2 coating for aluminium applications"]</a></p>
+<p>@Localizer["Stainless steel, titanium and heat-resistant alloys each require their own tool family and data. A stronger honed edge can resist damage but may raise cutting forces; a keen edge can lower forces but sacrifice strength. Ask how the geometry manages the actual material’s adhesion, heat and work-hardening behaviour. A coating cannot compensate for unsuitable geometry, chatter or recutting trapped chips."]</p>
+<p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/milling/milling-different-materials">@Localizer["Sandvik Coromant: milling different material groups"]</a></p>
+</section>
+<section class="docs-section" id="flutes"><h2>@Localizer["Flute count is also a chip-space decision"]</h2>
+<p>@Localizer["More flutes can support a higher table feed at the same RPM and feed per tooth, but leave less space for chips in a comparable diameter. Fewer flutes can help with bulky chips and full-width slots. Light radial finishing permits different choices from deep slotting. Use the specified effective tooth count in feed calculations; do not increase feed simply because another cutter has more flutes."]</p>
+<p class="docs-source"><a href="https://www.harveyperformance.com/in-the-loupe/flute-count-matters/">@Localizer["Harvey Performance: flute count and chip evacuation"]</a></p>
+</section>
+<section class="docs-section" id="holding"><h2>@Localizer["Runout, overhang and holder clearance"]</h2>
+<p>@Localizer["Tool runout makes edge loading unequal, especially when the intended chip load is small. Inspect the clean tool shank, collet, holder and spindle interface, and measure the assembled system using an appropriate method. Keep overhang only as long as access requires. Extra flute length is not a substitute for a relieved neck; check that non-cutting portions and the holder clear the part throughout the path."]</p>
+<p class="docs-source"><a href="https://www.harveyperformance.com/in-the-loupe/reducing-tool-runout/">@Localizer["Harvey Performance: measuring and reducing assembled tool runout"]</a></p>
+<figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["A tool section distinguishes exposed overhang, cutting length, smooth shank and flutes."]">
+        <img src="/src/images/knowledge/visual-cutting-tool-reach.svg" alt="@Localizer["A tool section distinguishes exposed overhang, cutting length, smooth shank and flutes."]" width="960" height="480" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>@Localizer["1: Lₒ is exposed tool overhang from the holder face to the tip. 2: Lc is the cutting length. 3: the smooth shank is not a cutting edge. 4: flutes remove material and evacuate chips. Keep overhang only as long as access requires; check the holder and non-cutting surfaces throughout the path. Proportions are schematic."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-cutting-tool-reach.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
+</section>
+<section class="docs-section" id="ballnose"><h2>@Localizer["Ball nose tools need the effective diameter"]</h2>
+<p>@Localizer["On a ball nose, contact near the tip occurs at a smaller diameter than the nominal tool size. Surface speed approaches zero at the centre. Use the effective diameter for the actual contact position and cutting depth when setting RPM. Surface slope, tool tilt and path direction change that contact. Check the CAM strategy and supplier guidance rather than increasing RPM without checking the tool and holder limits."]</p>
+<p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/milling/profile-milling">@Localizer["Sandvik Coromant: profile milling and ball nose contact"]</a></p>
+</section>
+<section class="docs-section" id="direction"><h2>@Localizer["Climb or conventional milling?"]</h2>
+<p>@Localizer["Climb milling produces a chip that generally thins toward exit in peripheral cutting. It is often preferred where the machine, fixture and workpiece allow it. Backlash can permit the cutter to pull into the work unexpectedly; conventional milling may be appropriate on equipment that cannot control this movement. Review machine condition and cutting forces before selecting a direction. A CAM default is not evidence of mechanical suitability."]</p>
+<p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/milling/down-milling-vs-up-milling">@Localizer["Sandvik Coromant: down milling, up milling and backlash"]</a></p>
+</section>
+<section class="docs-section" id="coolant-wear"><h2>@Localizer["Plan chip removal and read the wear"]</h2>
+<p>@Localizer["Choose coolant or dry machining from the tool’s application guidance. Lubrication, chip removal and thermal cycling all matter; intermittent or poorly directed coolant can create problems. Check delivery into the actual cutting zone, especially in deep pockets and holes. Follow the material and machine requirements for dust, mist and chip management."]</p>
+<p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/milling/dry-milling-or-with-cutting-fluid">@Localizer["Sandvik Coromant: coolant and temperature cycling in milling"]</a></p>
+<div class="docs-table-wrap" role="region" tabindex="0" aria-label="@Localizer["Wear observations and first checks"]"><table><caption>@Localizer["Wear observations and first checks"]</caption><thead><tr><th scope="col">@Localizer["Observation"]</th><th scope="col">@Localizer["Investigate before changing settings"]</th></tr></thead><tbody>
+<tr><th scope="row">@Localizer["Uneven edge wear"]</th><td>@Localizer["Runout, seating and uneven engagement"]</td></tr>
+<tr><th scope="row">@Localizer["Built-up material on the edge"]</th><td>@Localizer["Material adhesion, geometry, lubrication and cutting data"]</td></tr>
+<tr><th scope="row">@Localizer["Chipping or rapid failure"]</th><td>@Localizer["Stability, entry load, trapped chips and tool suitability"]</td></tr>
+</tbody></table></div>
+<p>@Localizer["Stop for sudden damage or instability. Photograph the edge, note cutting time and retain the exact tool code and settings. Compare symptoms with the tool maker’s troubleshooting guide, then change one cause at a time. Replace damaged tooling before evaluating surface finish or dimensions."]</p>
+<p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/milling/troubleshooting-milling">@Localizer["Sandvik Coromant: examples of wear mechanisms and troubleshooting"]</a></p>
+<aside class="docs-example">@Localizer["Example: if just one flute chips repeatedly, inspect runout and seating before buying a harder grade. Record what changed and whether the same wear pattern returns."]</aside>
+</section>
+</article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}

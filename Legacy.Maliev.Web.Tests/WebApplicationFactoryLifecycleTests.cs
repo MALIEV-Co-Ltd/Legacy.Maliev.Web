@@ -1,3 +1,5 @@
+using Legacy.Maliev.Web.Infrastructure;
+
 namespace Legacy.Maliev.Web.Tests;
 
 public sealed class WebApplicationFactoryLifecycleTests
@@ -63,7 +65,7 @@ public sealed class WebApplicationFactoryLifecycleTests
     [InlineData("static-ssr-route")]
     public async Task InstantQuotationConstructorOwner_DisposesItsHostAndClientsBeforeParentFixture(string ownerKind)
     {
-        using var parent = new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>();
+        await using var parent = new TestingWebApplicationFactory();
         object owner = ownerKind switch
         {
             "interactive-route" => new InstantQuotationInteractiveRouteTests(parent),
@@ -72,24 +74,25 @@ public sealed class WebApplicationFactoryLifecycleTests
             "static-ssr-route" => new InstantQuotationStaticSsrRouteTests(parent),
             _ => throw new ArgumentOutOfRangeException(nameof(ownerKind)),
         };
-        IDisposable? lifetimeOwner = null;
+        IAsyncLifetime? lifetimeOwner = null;
         try
         {
-            lifetimeOwner = Assert.IsAssignableFrom<IDisposable>(owner);
+            lifetimeOwner = Assert.IsAssignableFrom<IAsyncLifetime>(owner);
+            await lifetimeOwner.InitializeAsync();
             var child = Assert.Single(parent.Factories);
             using var client = child.CreateClient();
             var lifetime = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
                 .GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>(child.Services);
             Assert.False(lifetime.ApplicationStopped.IsCancellationRequested);
 
-            lifetimeOwner.Dispose();
+            await lifetimeOwner.DisposeAsync();
 
             Assert.True(lifetime.ApplicationStopped.IsCancellationRequested);
             await Assert.ThrowsAsync<ObjectDisposedException>(() => client.GetAsync("https://localhost/"));
         }
         finally
         {
-            lifetimeOwner?.Dispose();
+            if (lifetimeOwner is not null) await lifetimeOwner.DisposeAsync();
         }
     }
 
@@ -108,19 +111,25 @@ public sealed class WebApplicationFactoryLifecycleTests
             Assert.Equal(System.Net.HttpStatusCode.OK, parentResponse.StatusCode);
             var parentEnvironment = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
                 .GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(parent.Services);
-            var parentLeaf = Assert.Single(PhysicalLeaves(parentEnvironment.WebRootFileProvider));
+            var parentLease = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+                .GetRequiredService<TestingWebRootLease>(parent.Services);
+            var parentLeaf = parentLease.Provider;
+            Assert.Contains(parentLeaf, PhysicalLeaves(parentEnvironment.WebRootFileProvider));
             cleanup.Add(parentLeaf);
+            Assert.True(parentLeaf.Watch("dist/site.min.css").ActiveChangeCallbacks);
             var parentWatcher = ActiveWatcher(parentLeaf);
 
             await using var child = parent.WithWebHostBuilder(builder =>
             {
                 builder.UseSetting("BlazorRouting:Home", active.ToString());
-                builder.ConfigureAppConfiguration((context, _) =>
+                builder.ConfigureServices((context, services) =>
                 {
-                    // Borrow the live parent provider twice to prove identity ownership, not path-based cleanup.
+                    // Borrow the live parent twice after Program created this child's explicit lease.
+                    var childLease = Assert.IsType<TestingWebRootLease>(Assert.Single(services,
+                        descriptor => descriptor.ServiceType == typeof(TestingWebRootLease)).ImplementationInstance);
                     context.HostingEnvironment.WebRootFileProvider =
                         new Microsoft.Extensions.FileProviders.CompositeFileProvider(
-                            context.HostingEnvironment.WebRootFileProvider,
+                            childLease.Provider,
                             parentEnvironment.WebRootFileProvider, parentEnvironment.WebRootFileProvider);
                 });
             });
@@ -131,11 +140,14 @@ public sealed class WebApplicationFactoryLifecycleTests
             var childEnvironment = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
                 .GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(child.Services);
             Assert.False(childEnvironment.WebRootFileProvider is IDisposable);
+            var childLease = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+                .GetRequiredService<TestingWebRootLease>(child.Services);
             var childLeaf = Assert.Single(PhysicalLeaves(childEnvironment.WebRootFileProvider),
-                provider => !ReferenceEquals(provider, parentLeaf));
+                provider => ReferenceEquals(provider, childLease.Provider));
             cleanup.Add(childLeaf);
             Assert.NotSame(parentLeaf, childLeaf);
             Assert.Equal(parentLeaf.Root, childLeaf.Root);
+            Assert.True(childLeaf.Watch("dist/site.min.css").ActiveChangeCallbacks);
             var childWatcher = ActiveWatcher(childLeaf);
             var versioner = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
                 .GetRequiredService<Microsoft.AspNetCore.Mvc.ViewFeatures.IFileVersionProvider>(child.Services);
@@ -146,8 +158,10 @@ public sealed class WebApplicationFactoryLifecycleTests
             await child.DisposeAsync();
 
             Assert.True(IsDisposed(childLeaf));
+            Assert.True(childLease.IsDisposed);
             Assert.False(childWatcher.EnableRaisingEvents);
             Assert.False(IsDisposed(parentLeaf));
+            Assert.False(parentLease.IsDisposed);
             Assert.True(parentWatcher.EnableRaisingEvents);
             using var stillHealthy = await parentClient.GetAsync("/?culture=th");
             Assert.Equal(System.Net.HttpStatusCode.OK, stillHealthy.StatusCode);

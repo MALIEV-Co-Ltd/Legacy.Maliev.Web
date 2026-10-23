@@ -1,9 +1,9 @@
-using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -20,49 +20,39 @@ public class TestingWebApplicationFactory : WebApplicationFactory<Program>
         this.contentRoot = contentRoot;
     }
 
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    protected override IHost CreateHost(IHostBuilder builder)
     {
-        var ownedWebRoots = new HashSet<PhysicalFileProvider>(ReferenceEqualityComparer.Instance);
-        builder.UseEnvironment("Testing");
-        builder.ConfigureAppConfiguration((context, configuration) =>
+        var ownedBuilder = new OwnedTestWebHostBuilder(builder);
+        try
         {
-            // Capture this host's default leaves before derived fixtures can add borrowed providers.
-            CaptureWebRoots(context.HostingEnvironment.WebRootFileProvider, ownedWebRoots);
-            configuration.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Recaptcha:ProjectId"] = "test-project",
-                ["Recaptcha:SiteKey"] = "test-site-key",
-            });
-        });
-        builder.ConfigureServices(services => services.AddSingleton<IStartupFilter>(
-            _ => new OwnedWebRootFiles(ownedWebRoots.ToArray())));
-        if (contentRoot is not null)
+            // Keep the framework's normal TestServer/Kestrel port setup and startup sequence.
+            return base.CreateHost(ownedBuilder);
+        }
+        catch (Exception original)
         {
-            builder.UseContentRoot(contentRoot);
+            try { ownedBuilder.BuiltHost?.Dispose(); }
+            catch (Exception cleanup) { OwnedWebSurfaceResources.RecordFailureTypes(original, [cleanup]); }
+            throw;
         }
     }
 
-    private static void CaptureWebRoots(IFileProvider provider, ISet<PhysicalFileProvider> owned)
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        if (provider is PhysicalFileProvider physical) owned.Add(physical);
-        if (provider is CompositeFileProvider composite)
-            foreach (var child in composite.FileProviders) CaptureWebRoots(child, owned);
-    }
-
-    // The host owns content-root providers, but its non-disposable web-root composite owns no lifetime.
-    private sealed class OwnedWebRootFiles(PhysicalFileProvider[] providers) : IStartupFilter, IDisposable
-    {
-        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => next;
-
-        public void Dispose()
+        builder.UseEnvironment("Testing");
+        builder.ConfigureServices(services =>
         {
-            Exception? failure = null;
-            foreach (var provider in providers)
+            services.TryAddSingleton<TestResponseProbeRegistry>();
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IStartupFilter, TestResponseProbeStartupFilter>());
+        });
+        builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
+            new Dictionary<string, string?>
             {
-                try { provider.Dispose(); }
-                catch (Exception exception) { failure ??= exception; }
-            }
-            if (failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+                ["Recaptcha:ProjectId"] = "test-project",
+                ["Recaptcha:SiteKey"] = "test-site-key",
+            }));
+        if (contentRoot is not null)
+        {
+            builder.UseContentRoot(contentRoot);
         }
     }
 }
