@@ -428,6 +428,25 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     else adapter.fit?.(next.object);
   }
 
+  function clearSelection() {
+    assertActive();
+    if (activeId === null) return;
+    const current = requirePart(activeId);
+    current.camera = clone(adapter.getCameraState?.());
+    adapter.setThickness?.(current.object, false, { thinMm: 0.8 });
+    adapter.hide?.(current.object);
+    activeId = null;
+  }
+
+  function promotePart(localId, partId) {
+    assertActive();
+    const part = requirePart(localId);
+    if (!partId || parts.has(partId)) throw new TypeError('A unique admitted render key is required.');
+    parts.delete(localId);
+    parts.set(partId, part);
+    if (activeId === localId) activeId = partId;
+  }
+
   function remove(id) {
     assertActive();
     const part = requirePart(id);
@@ -485,14 +504,17 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     return adapter.fullscreen?.();
   }
 
-  function snapshot(id) {
+  function snapshot(id, maximumDimension = null) {
     assertActive();
+    if (maximumDimension !== null && (!Number.isSafeInteger(maximumDimension)
+        || maximumDimension < 1 || maximumDimension > 192)) throw new RangeError('Invalid thumbnail dimensions.');
     const previousId = activeId;
     select(id);
     try {
-      return adapter.snapshot?.() ?? null;
+      return adapter.snapshot?.(maximumDimension) ?? null;
     } finally {
-      if (previousId !== null && previousId !== id) select(previousId);
+      if (previousId === null) clearSelection();
+      else if (previousId !== id && parts.has(previousId)) select(previousId);
     }
   }
 
@@ -539,7 +561,7 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     return part;
   }
 
-  return Object.freeze({ addPart, select, remove, setColor, setThicknessEvidence,
+  return Object.freeze({ addPart, select, clearSelection, promotePart, remove, setColor, setThicknessEvidence,
     setThicknessVisible, reset, fit, fullscreen, snapshot, handleKey, dispose });
 }
 
@@ -561,15 +583,25 @@ export function createPreviewScene() {
 }
 
 /** Captures a white-card thumbnail without leaving the live canvas white. */
-export function capturePreviewSnapshot({ scene, camera, renderer, canvas }) {
+export function capturePreviewSnapshot({ scene, camera, renderer, canvas, maximumDimension = null }) {
   const liveBackground = scene.background;
   let failed = false;
   let primary;
   try {
     scene.background = new THREE.Color(0xffffff);
     renderer.render(scene, camera);
-    const image = canvas.toDataURL('image/png');
-    return image === 'data:,' ? null : image;
+    let capture = canvas;
+    if (maximumDimension !== null) {
+      capture = canvas.ownerDocument.createElement('canvas');
+      const scale = Math.min(1, maximumDimension / canvas.width, maximumDimension / canvas.height);
+      capture.width = Math.max(1, Math.floor(canvas.width * scale));
+      capture.height = Math.max(1, Math.floor(canvas.height * scale));
+      const context = capture.getContext('2d');
+      if (!context) throw new Error('Thumbnail rendering is unavailable.');
+      context.drawImage(canvas, 0, 0, capture.width, capture.height);
+    }
+    const image = capture.toDataURL('image/webp');
+    return image.startsWith('data:image/webp;base64,') ? image : null;
   } catch (error) {
     failed = true;
     primary = error;
@@ -626,10 +658,10 @@ export function createThreeModelViewer(canvas) {
     reset(object) { frameObject(object, camera, controls); },
     fit(object) { frameObject(object, camera, controls); },
     fullscreen() { return canvas.requestFullscreen?.(); },
-    snapshot() {
+    snapshot(maximumDimension) {
       resize.sync();
       controls.update();
-      return capturePreviewSnapshot({ scene, camera, renderer, canvas });
+      return capturePreviewSnapshot({ scene, camera, renderer, canvas, maximumDimension });
     },
     setColor(object, color) {
       object.traverse(child => {
@@ -666,8 +698,11 @@ export function createThreeModelViewer(canvas) {
 }
 
 /** Loads one standalone model. GLTF companion files and OBJ MTL are not claimed. */
-export async function loadStandaloneModel(file, { signal } = {}) {
+export async function loadStandaloneModel(file, { signal, gltfUnitPolicy } = {}) {
   const extension = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
+  if (['glb', 'gltf'].includes(extension)
+      && (gltfUnitPolicy?.version !== 1 || ![0, 1].includes(gltfUnitPolicy.unit)))
+    throw new TypeError('Choose GLB/GLTF units before importing.');
   const buffer = await file.arrayBuffer();
   if (signal?.aborted) throw new DOMException('Operation cancelled.', 'AbortError');
   let object;
@@ -681,8 +716,12 @@ export async function loadStandaloneModel(file, { signal } = {}) {
   } else if (extension === 'glb' || extension === 'gltf') {
     const input = extension === 'gltf' ? new TextDecoder().decode(buffer) : buffer;
     if (extension === 'gltf') validateStandaloneGltfDocument(input);
-    const result = await new GLTFLoader().parseAsync(input, '');
+    const loader = new GLTFLoader();
+    if (extension === 'gltf') loader.register(embeddedGltfBufferViews);
+    const result = await loader.parseAsync(input, '');
     object = orientGltfForPrinting(result.scene);
+    // Scale the freshly loaded scene once, before preview, geometry and thickness consumers.
+    object.scale.multiplyScalar(gltfUnitPolicy.unit === 1 ? 1000 : 1);
   } else if (['stp', 'step', 'igs', 'iges'].includes(extension)) {
     object = await loadCadModel(buffer, extension, signal);
   } else {
@@ -693,13 +732,47 @@ export async function loadStandaloneModel(file, { signal } = {}) {
   return object;
 }
 
+// Geometry is already in the selected file. Decode it locally instead of asking
+// FileLoader to fetch a data URI through the site's unchanged connect-src policy.
+function embeddedGltfBufferViews(parser) {
+  const buffers = new Map();
+  return {
+    name: 'MALIEV_embedded_buffer_views',
+    loadBufferView(index) {
+      const view = parser.json.bufferViews?.[index];
+      const definition = parser.json.buffers?.[view?.buffer];
+      if (!view || !definition) throw new TypeError('Invalid embedded glTF buffer view.');
+      let buffer = buffers.get(view.buffer);
+      if (!buffer) {
+        const match = /^data:application\/(?:octet-stream|gltf-buffer);base64,(.*)$/is.exec(definition.uri ?? '');
+        const length = definition.byteLength;
+        if (!match || !Number.isSafeInteger(length) || length <= 0)
+          throw new TypeError('Invalid embedded glTF buffer.');
+        const payload = decodeURIComponent(match[1]);
+        if (payload.length > Math.ceil(length / 3) * 4)
+          throw new TypeError('Invalid embedded glTF buffer length.');
+        const decoded = atob(payload);
+        if (decoded.length !== length) throw new TypeError('Invalid embedded glTF buffer length.');
+        buffer = Uint8Array.from(decoded, character => character.charCodeAt(0)).buffer;
+        buffers.set(view.buffer, buffer);
+      }
+      const offset = view.byteOffset ?? 0;
+      const length = view.byteLength;
+      if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(length)
+          || length <= 0 || offset > buffer.byteLength - length)
+        throw new TypeError('Invalid embedded glTF buffer view bounds.');
+      return Promise.resolve(buffer.slice(offset, offset + length));
+    },
+  };
+}
+
 async function loadCadModel(buffer, extension, signal) {
   const occt = await ensureOcct();
   if (signal?.aborted) throw new DOMException('Operation cancelled.', 'AbortError');
   const bytes = new Uint8Array(buffer);
   const result = validateCadTessellation(extension === 'igs' || extension === 'iges'
     ? occt.ReadIgesFile(bytes, null)
-    : occt.ReadStepFile(bytes, null));
+    : occt.ReadStepFile(bytes, { linearDeflection: 0.02 }));
   return buildCadModel(result);
 }
 

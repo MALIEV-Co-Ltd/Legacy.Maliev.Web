@@ -206,7 +206,7 @@ jobs:
             --logger 'trx;LogFileName=source-integration-regressions.trx' \
             --results-directory ./source-integration-regression-test-results
           python3 -B -c 'import xml.etree.ElementTree as E; r=E.parse("source-integration-regression-test-results/source-integration-regressions.trx").getroot(); c=r.find(".//{*}Counters"); assert c is not None and all(c.get(k)==v for k,v in {"total":"27","executed":"27","passed":"27","failed":"0","notExecuted":"0"}.items()), "All 27 source integration regression rows must pass"'
-      - name: Verify all twelve sidebar culture and viewport browser cases
+      - name: Verify all sixteen retained sidebar culture and viewport browser cases
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
@@ -537,6 +537,8 @@ jobs:
             quotation-conversion-test-results/**/*.trx
             cnc-literal-producer-test-results/**/*.trx
             sidebar-navigation-test-results/sidebar-*-initial-navigation-timeout.json
+            sidebar-navigation-test-results/sidebar-en-1280-h720-initial.json
+            sidebar-navigation-test-results/sidebar-th-1280-h720-initial.json
             sidebar-focused-test-results/**/*.trx
             publisher-mesh-test-results/**/*.trx
             physical-result-test-results/**/*.trx

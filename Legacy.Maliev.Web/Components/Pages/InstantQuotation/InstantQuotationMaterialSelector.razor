@@ -87,6 +87,8 @@
     private IJSObjectReference? module;
     private IJSObjectReference? controller;
     private DotNetObjectReference<InstantQuotationMaterialSelector>? reference;
+    private bool disposed;
+    private Task renderWork = Task.CompletedTask;
     private IReadOnlyList<MaterialCardPresentation> Catalogue => MaterialCardPresentationCatalog.ForMaterials(Materials);
     private bool ShowAll => expanded || Catalogue.Take(previewCount).All(material => material.Key != SelectedMaterialKey);
     private IEnumerable<MaterialCardPresentation> VisibleMaterials => Catalogue
@@ -100,7 +102,7 @@
     [JSInvokable]
     public Task SetPreviewCount(int count)
     {
-        if (count is 4 or 6 or 8 or 10 && previewCount != count)
+        if (!disposed && count is 4 or 6 or 8 or 10 && previewCount != count)
         {
             previewCount = count;
             return InvokeAsync(StateHasChanged);
@@ -108,30 +110,49 @@
         return Task.CompletedTask;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (disposed) return Task.CompletedTask;
+        return renderWork = CompleteRenderAsync(renderWork, firstRender);
+    }
+
+    private async Task CompleteRenderAsync(Task previous, bool firstRender)
+    {
+        await previous;
+        if (disposed) return;
+        try
         {
-            module = await JavaScript.InvokeAsync<IJSObjectReference>("import", "/dist/instant-quotation-workflow.mjs");
-            reference = DotNetObjectReference.Create(this);
-            controller = await module.InvokeAsync<IJSObjectReference>("createMaterialCardSelector", root, reference);
+            if (firstRender)
+            {
+                module = await JavaScript.InvokeAsync<IJSObjectReference>("import", "/dist/instant-quotation-workflow.mjs");
+                if (disposed) return;
+                reference = DotNetObjectReference.Create(this);
+                controller = await module.InvokeAsync<IJSObjectReference>("createMaterialCardSelector", root, reference);
+            }
+            else if (controller is not null)
+            {
+                // Complete selected-card visibility repair before this render settles.
+                await controller.InvokeVoidAsync("refresh");
+            }
         }
-        else if (controller is not null)
-        {
-            // Complete selected-card visibility repair before this render settles.
-            await controller.InvokeVoidAsync("refresh");
-        }
+        catch (JSException) when (disposed) { }
     }
 
     /// <summary>Releases selector observers and circuit references.</summary>
     public async ValueTask DisposeAsync()
     {
+        if (disposed) return;
+        disposed = true;
         try
         {
-            if (controller is not null)
+            try { await renderWork; }
+            finally
             {
-                try { await controller.InvokeVoidAsync("dispose"); }
-                finally { await controller.DisposeAsync(); }
+                if (controller is not null)
+                {
+                    try { await controller.InvokeVoidAsync("dispose"); }
+                    finally { await controller.DisposeAsync(); }
+                }
             }
         }
         catch (JSDisconnectedException) { }

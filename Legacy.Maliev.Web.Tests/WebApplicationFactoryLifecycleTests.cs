@@ -56,6 +56,44 @@ public sealed class WebApplicationFactoryLifecycleTests
             $"Do not clone a WebApplicationFactory in a per-test constructor. Put the configuration on the xUnit-owned fixture instead. Violations: {string.Join(", ", violations)}");
     }
 
+    [Theory]
+    [InlineData("interactive-route")]
+    [InlineData("analytics-integration")]
+    [InlineData("runtime-integration")]
+    [InlineData("static-ssr-route")]
+    public async Task InstantQuotationConstructorOwner_DisposesItsHostAndClientsBeforeParentFixture(string ownerKind)
+    {
+        await using var parent = new TestingWebApplicationFactory();
+        object owner = ownerKind switch
+        {
+            "interactive-route" => new InstantQuotationInteractiveRouteTests(parent),
+            "analytics-integration" => new InstantQuotationAnalyticsIntegrationTests(parent),
+            "runtime-integration" => new InstantQuotationRuntimeIntegrationTests(parent),
+            "static-ssr-route" => new InstantQuotationStaticSsrRouteTests(parent),
+            _ => throw new ArgumentOutOfRangeException(nameof(ownerKind)),
+        };
+        IAsyncLifetime? lifetimeOwner = null;
+        try
+        {
+            lifetimeOwner = Assert.IsAssignableFrom<IAsyncLifetime>(owner);
+            await lifetimeOwner.InitializeAsync();
+            var child = Assert.Single(parent.Factories);
+            using var client = child.CreateClient();
+            var lifetime = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+                .GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>(child.Services);
+            Assert.False(lifetime.ApplicationStopped.IsCancellationRequested);
+
+            await lifetimeOwner.DisposeAsync();
+
+            Assert.True(lifetime.ApplicationStopped.IsCancellationRequested);
+            await Assert.ThrowsAsync<ObjectDisposedException>(() => client.GetAsync("https://localhost/"));
+        }
+        finally
+        {
+            if (lifetimeOwner is not null) await lifetimeOwner.DisposeAsync();
+        }
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

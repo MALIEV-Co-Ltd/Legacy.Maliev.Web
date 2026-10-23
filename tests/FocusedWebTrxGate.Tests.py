@@ -36,9 +36,12 @@ class FocusedGateControls(unittest.TestCase):
         for cls, methods in gate.ROSTERS[suite].items():
             for method, rows in methods.items():
                 for index in range(rows):
-                    if suite == "sidebar":
-                        culture, width = [(c, w) for c in ("en", "th") for w in (320, 375, 820, 992, 1024, 1280)][index]
+                    if suite == "sidebar" and method == "RealPartsRailExposesLongNamesAndKeyboardActions":
+                        culture, width = [(c, w) for c in ("en", "th") for w in (320, 375, 820, 992, 1024, 1280, 1600)][index]
                         name = f'{cls}.{method}(culture: "{culture}", width: {width})'
+                    elif suite == "sidebar" and method == "CompactPartsRailKeepsFullNamesAndKeyboardActionsReachable":
+                        culture = ("en", "th")[index]
+                        name = f'{cls}.{method}(culture: "{culture}")'
                     elif suite == "billing-lifetime":
                         cases = [name for name in gate.BILLING_LIFETIME_CASES
                                  if name == f"{cls}.{method}" or name.startswith(f"{cls}.{method}(")]
@@ -64,10 +67,13 @@ class FocusedGateControls(unittest.TestCase):
             for cls in ("FdmSimulationModelPathsTests", "FdmSimulationSupportTests",
                         "FdmSimulationScenarioTests", "FdmSimulationProfileTests",
                         "FdmOriginalServiceEligibilityBoundaryTests")])
-        self.assertEqual(12, sum(next(iter(gate.ROSTERS["sidebar"].values())).values()))
+        self.assertEqual(16, sum(next(iter(gate.ROSTERS["sidebar"].values())).values()))
+        self.assertEqual({"RealPartsRailExposesLongNamesAndKeyboardActions": 14,
+                          "CompactPartsRailKeepsFullNamesAndKeyboardActionsReachable": 2},
+                         gate.ROSTERS["sidebar"]["Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests"])
 
     def test_both_complete_suites_accept_lowercase_native_storage(self):
-        for suite, total in (("fdm", 59), ("sidebar", 12), ("migration-consumers", 147), ("billing-lifetime", 43)):
+        for suite, total in (("fdm", 59), ("sidebar", 16), ("migration-consumers", 147), ("billing-lifetime", 43)):
             with self.subTest(suite=suite), tempfile.TemporaryDirectory() as temp:
                 directory = Path(temp)
                 root, dll = self.fixture(directory, suite)
@@ -197,6 +203,91 @@ class FocusedGateControls(unittest.TestCase):
             definition.set("name", gate.native_definition_display(changed))
             with self.assertRaisesRegex(ValueError, "Exact lifecycle control identities"):
                 self.verify(root, directory, dll, "billing-lifetime")
+
+    def test_each_1600_sidebar_identity_rejects_missing_duplicate_foreign_and_nonpassed_rows(self):
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            baseline, dll = self.fixture(directory, "sidebar")
+            for culture in ("en", "th"):
+                required = f'culture: "{culture}", width: 1600)'
+                index = next(i for i, row in enumerate(baseline.find(NS + "Results"))
+                             if row.get("testName").endswith(required))
+                for mutation in ("missing", "duplicate", "foreign-culture", "foreign-viewport", "failed", "not-executed"):
+                    with self.subTest(culture=culture, mutation=mutation):
+                        root = copy.deepcopy(baseline)
+                        results = root.find(NS + "Results")
+                        definitions = root.find(NS + "TestDefinitions")
+                        entries = root.find(NS + "TestEntries")
+                        if mutation == "missing":
+                            for rows in (results, definitions, entries):
+                                rows.remove(rows[index])
+                            counters = root.find(NS + "ResultSummary/" + NS + "Counters")
+                            for field in ("total", "executed", "passed"):
+                                counters.set(field, "13")
+                        elif mutation in ("failed", "not-executed"):
+                            results[index].set("outcome", "Failed" if mutation == "failed" else "NotExecuted")
+                        else:
+                            name = results[index].get("testName")
+                            if mutation == "duplicate":
+                                name = name.replace("width: 1600", "width: 1280")
+                            elif mutation == "foreign-culture":
+                                name = name.replace(f'culture: "{culture}"', 'culture: "fr"')
+                            else:
+                                name = name.replace("width: 1600", "width: 1601")
+                            results[index].set("testName", name)
+                            definitions[index].set("name", name)
+                        with self.assertRaises(ValueError):
+                            self.verify(root, directory, dll, "sidebar")
+
+    def test_sidebar_fixture_has_all_fourteen_retained_and_two_exact_compact_names(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root, _ = self.fixture(Path(temp), "sidebar")
+            cls = "Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests"
+            expected = {f'{cls}.RealPartsRailExposesLongNamesAndKeyboardActions(culture: "{culture}", width: {width})'
+                        for culture in ("en", "th") for width in (320, 375, 820, 992, 1024, 1280, 1600)}
+            expected.update(f'{cls}.CompactPartsRailKeepsFullNamesAndKeyboardActionsReachable(culture: "{culture}")'
+                            for culture in ("en", "th"))
+            self.assertEqual(expected, {row.get("testName") for row in root.find(NS + "Results")})
+
+    def test_each_compact_sidebar_identity_rejects_missing_duplicate_foreign_and_nonpassed_rows(self):
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            baseline, dll = self.fixture(directory, "sidebar")
+            cls = "Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests"
+            method = "CompactPartsRailKeepsFullNamesAndKeyboardActionsReachable"
+            for culture in ("en", "th"):
+                required = f'{cls}.{method}(culture: "{culture}")'
+                index = next(i for i, row in enumerate(baseline.find(NS + "Results"))
+                             if row.get("testName") == required)
+                for mutation in ("missing", "duplicate", "foreign-culture", "foreign-arguments", "foreign-method", "failed", "not-executed"):
+                    with self.subTest(culture=culture, mutation=mutation):
+                        root = copy.deepcopy(baseline)
+                        results = root.find(NS + "Results")
+                        definitions = root.find(NS + "TestDefinitions")
+                        entries = root.find(NS + "TestEntries")
+                        if mutation == "missing":
+                            for rows in (results, definitions, entries):
+                                rows.remove(rows[index])
+                            counters = root.find(NS + "ResultSummary/" + NS + "Counters")
+                            for field in ("total", "executed", "passed"):
+                                counters.set(field, "13")
+                        elif mutation in ("failed", "not-executed"):
+                            results[index].set("outcome", "Failed" if mutation == "failed" else "NotExecuted")
+                        else:
+                            if mutation == "duplicate":
+                                other = "th" if culture == "en" else "en"
+                                name = f'{cls}.{method}(culture: "{other}")'
+                            elif mutation == "foreign-culture":
+                                name = f'{cls}.{method}(culture: "fr")'
+                            elif mutation == "foreign-arguments":
+                                name = f'{cls}.{method}(culture: "{culture}", width: 1280)'
+                            else:
+                                name = f'{cls}.{method}Unknown(culture: "{culture}")'
+                                definitions[index].find(NS + "TestMethod").set("name", method + "Unknown")
+                            results[index].set("testName", name)
+                            definitions[index].set("name", name)
+                        with self.assertRaises(ValueError):
+                            self.verify(root, directory, dll, "sidebar")
 
     def test_unknown_sidebar_viewport_cannot_replace_required_row(self):
         for culture, width in (("en", 320), ("en", 1024), ("th", 1024)):

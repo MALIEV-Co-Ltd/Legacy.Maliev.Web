@@ -186,7 +186,7 @@ public sealed class MaterialPricingDisplayRendererContractTests
             await fixture.CompleteAsync();
             var old = fixture.Snapshot;
             var beforeEdit = fixture.RenderCount;
-            fixture.BeginQuantityChange();
+            await fixture.BeginQuantityChangeAsync();
             await fixture.Pricing.FirstSelected.Task.WaitAsync(TimeSpan.FromSeconds(5));
             Assert.True(fixture.Snapshot.Generation > old.Generation);
             Assert.True(fixture.RenderCount > beforeEdit);
@@ -551,18 +551,15 @@ public sealed class MaterialPricingDisplayRendererContractTests
             reviewChanges.Add(change);
             return change;
         }
-        public void BeginQuantityChange()
+        public Task BeginQuantityChangeAsync() => renderer!.Dispatcher.InvokeAsync(() =>
         {
             Pricing.ResetProjection();
-            quantityChange = renderer!.Dispatcher.InvokeAsync(() =>
-            {
-                var first = Coordinator.Parts.First();
-                Func<Task> update = () => Coordinator.UpdateConfigurationAsync(
-                    first.PartId, "M68", "White", 3, default);
-                return (Task)typeof(InstantQuotationWorkflow).GetMethod("RepriceAsync",
-                    BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(counter!.Workflow, [update, null])!;
-            });
-        }
+            var first = Coordinator.Parts.First();
+            Func<Task> update = () => Coordinator.UpdateConfigurationAsync(
+                first.PartId, "M68", "White", 3, default);
+            quantityChange = (Task)typeof(InstantQuotationWorkflow).GetMethod("RepriceAsync",
+                BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(counter!.Workflow, [update, null, null])!;
+        });
         private readonly CultureInfo previousCulture = CultureInfo.CurrentCulture;
         private readonly CultureInfo previousUiCulture = CultureInfo.CurrentUICulture;
         public IInstantQuotationSessionStore Store { get; }
@@ -658,6 +655,8 @@ public sealed class MaterialPricingDisplayRendererContractTests
         {
             if (renderer is null) return;
             await renderer.DisposeAsync();
+            // Disposal cancels initialization, whose framework lifecycle continuation is still owned by the root.
+            if (rootCreated) await root.QuiescenceTask.WaitAsync(TimeSpan.FromSeconds(10));
             renderer = null;
         }
         public async ValueTask DisposeAsync()

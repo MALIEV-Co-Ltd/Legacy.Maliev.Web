@@ -287,6 +287,7 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
         var binding = evidence.Binding;
         var upload = part.PhysicalAnalysisUpload;
         return binding is not null && upload is not null
+            && binding.GltfUnitPolicy == upload.GltfUnitPolicy
             && binding.PartId == part.PartId && binding.FileId == upload.FileId
             && string.Equals(binding.UploadSha256, upload.Sha256, StringComparison.OrdinalIgnoreCase)
             && string.Equals(binding.MaterialKey, candidateMaterialKey, StringComparison.Ordinal)
