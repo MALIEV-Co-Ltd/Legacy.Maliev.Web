@@ -249,7 +249,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~ServiceGalleryHistoricalBrowserTests"
+          --filter "FullyQualifiedName~ServiceGalleryHistoricalBrowserTests|FullyQualifiedName~ServiceResponsiveImageBrowserParityTests|FullyQualifiedName~ServiceOriginalImageRenderedParityTests|FullyQualifiedName~ResponsiveServiceImageDeliveryTests|FullyQualifiedName~ServiceHeroResourceHintsParityTests|FullyQualifiedName~ThreeDimensionalPrintingParityTests|FullyQualifiedName~PublicWebpImageContractTests"
           --logger trx --results-directory ./service-gallery-test-results
       - name: Verify authenticated profile preparation and submission boundaries
         run: >-
