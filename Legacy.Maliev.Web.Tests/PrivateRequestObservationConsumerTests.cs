@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -121,24 +122,45 @@ public sealed class PrivateRequestObservationConsumerTests
     }
 
     [Theory]
-    [InlineData("en", "Application error", "Please include this incident ID when contacting support.", "Error page preview")]
-    [InlineData("th", "ข้อผิดพลาดของระบบ", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ", "ตัวอย่างหน้าข้อผิดพลาด")]
+    [InlineData("en", "GET", false, "Application error", "Please include this incident ID when contacting support.", "Error page preview")]
+    [InlineData("th", "GET", false, "ข้อผิดพลาดของระบบ", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ", "ตัวอย่างหน้าข้อผิดพลาด")]
+    [InlineData("en", "POST", false, "Application error", "Please include this incident ID when contacting support.", "Error page preview")]
+    [InlineData("th", "POST", false, "ข้อผิดพลาดของระบบ", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ", "ตัวอย่างหน้าข้อผิดพลาด")]
+    [InlineData("en", "POST", true, "Application error", "Please include this incident ID when contacting support.", "Error page preview")]
+    [InlineData("th", "POST", true, "ข้อผิดพลาดของระบบ", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ", "ตัวอย่างหน้าข้อผิดพลาด")]
     public async Task ActualProgram_OrdinaryRazorThrowReexecutesErrorWithExactlyOneSanitizedWebIncident(
-        string culture, string applicationError, string incidentInstruction, string previewLabel)
+        string culture, string method, bool staticSsrError, string applicationError, string incidentInstruction, string previewLabel)
     {
-        using var factory = new ObservationFactory("127.0.0.1", ordinaryFailure: true);
+        using var factory = new ObservationFactory("127.0.0.1", ordinaryFailure: true,
+            failureMethod: method, staticSsrError: staticSsrError);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false,
             BaseAddress = new Uri("https://localhost"),
         });
+        using var request = new HttpRequestMessage(new HttpMethod(method),
+            "/contact?handler=SubmitRequest&token=" + Sensitive + "&culture=" + culture);
+        if (method == "POST")
+        {
+            var bootstrap = await client.GetStringAsync("/?culture=" + culture);
+            var token = Regex.Match(bootstrap, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"",
+                RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+            Assert.True(token.Success, "The real page must issue an antiforgery token before the POST.");
+            request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = WebUtility.HtmlDecode(token.Groups[1].Value),
+            });
+        }
         factory.Records.Clear();
-        using var response = await client.GetAsync("/contact?token=" + Sensitive + "&culture=" + culture);
+        using var response = await client.SendAsync(request);
         Assert.Equal(1, factory.PageFilter.Throws);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        var rawDocument = await response.Content.ReadAsStringAsync();
+        Assert.True(response.Headers.Contains("X-Incident-Id"),
+            $"Missing incident header: bodyLength={rawDocument.Length}; errorContent={rawDocument.Contains("error-content", StringComparison.Ordinal)}; locationPresent={response.Headers.Location is not null}; headers={string.Join(',', response.Headers.Select(header => header.Key))}");
         var incident = Assert.Single(response.Headers.GetValues("X-Incident-Id"));
         Assert.Matches("^[a-f0-9]{32}$", incident);
-        var document = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        var document = WebUtility.HtmlDecode(rawDocument);
         Assert.Contains(incident, document, StringComparison.Ordinal);
         Assert.Contains($">{applicationError}<", document, StringComparison.Ordinal);
         Assert.Contains($">{incidentInstruction}<", document, StringComparison.Ordinal);
@@ -151,12 +173,16 @@ public sealed class PrivateRequestObservationConsumerTests
         Assert.DoesNotContain("UrlReferrer", document, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(Sensitive, document, StringComparison.Ordinal);
         Assert.Equal(1, factory.PageFilter.Throws);
-        Assert.Equal(1, factory.PageFilter.ErrorExecutions);
+        Assert.Equal(staticSsrError ? 0 : 1, factory.PageFilter.ErrorExecutions);
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
         var webIncident = Assert.Single(factory.Records.Snapshot, entry =>
             entry.Category == "Legacy.Maliev.Web.Middleware.ErrorIncidentMiddleware"
             && entry.Fields.GetValueOrDefault("EventName") as string == "UnhandledRequestFailure");
         Assert.Equal(LogLevel.Critical, webIncident.Level);
         Assert.Equal(incident, webIncident.Fields["IncidentId"]);
+        Assert.Equal(method, webIncident.Fields["Method"]);
+        Assert.Equal("/contact", webIncident.Fields["Path"]);
         var occurredAtUtc = DateTimeOffset.Parse(
             Assert.IsType<string>(webIncident.Fields["OccurredAtUtc"]), CultureInfo.InvariantCulture);
         Assert.Equal(TimeSpan.Zero, occurredAtUtc.Offset);
@@ -274,11 +300,11 @@ public sealed class PrivateRequestObservationConsumerTests
 
     private sealed class ObservationFactory(string? peer, bool overwriteSynthetic = false,
         bool overwriteHealth = false, bool ordinaryFailure = false, bool handledFailure = false,
-        bool forgedIncidentHeader = false) : TestingWebApplicationFactory
+        bool forgedIncidentHeader = false, string failureMethod = "GET", bool staticSsrError = false) : TestingWebApplicationFactory
     {
         public RecordingProvider Records { get; } = new();
         public ObservationClock Clock { get; } = new();
-        public FailurePageFilter PageFilter { get; } = new(ordinaryFailure, handledFailure, forgedIncidentHeader);
+        public FailurePageFilter PageFilter { get; } = new(ordinaryFailure, handledFailure, forgedIncidentHeader, failureMethod);
         public bool ShouldOverwriteHealth => overwriteHealth;
         public int SyntheticOverwrites;
         public int HealthOverwrites;
@@ -288,8 +314,8 @@ public sealed class PrivateRequestObservationConsumerTests
             base.ConfigureWebHost(builder);
             // Program snapshots route switches during builder creation. Use the
             // same host-setting boundary as the retained Razor route regressions.
-            builder.UseSetting("BlazorRouting:Contact", ordinaryFailure || handledFailure ? "false" : "true");
-            builder.UseSetting("BlazorRouting:Error", ordinaryFailure || handledFailure ? "false" : "true");
+            builder.UseSetting("BlazorRouting:Contact", (ordinaryFailure || handledFailure) && !staticSsrError ? "false" : "true");
+            builder.UseSetting("BlazorRouting:Error", (ordinaryFailure || handledFailure) && !staticSsrError ? "false" : "true");
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
@@ -358,7 +384,7 @@ public sealed class PrivateRequestObservationConsumerTests
         }
     }
 
-    private sealed class FailurePageFilter(bool enabled, bool handled, bool forgedIncidentHeader) : IAsyncPageFilter
+    private sealed class FailurePageFilter(bool enabled, bool handled, bool forgedIncidentHeader, string failureMethod) : IAsyncPageFilter
     {
         public int Throws;
         public int HandledExecutions;
@@ -366,7 +392,8 @@ public sealed class PrivateRequestObservationConsumerTests
         public Task OnPageHandlerSelectionAsync(PageHandlerSelectedContext context) => Task.CompletedTask;
         public async Task OnPageHandlerExecutionAsync(PageHandlerExecutingContext context, PageHandlerExecutionDelegate next)
         {
-            if (enabled && context.HttpContext.Request.Path.Equals(new PathString("/contact")))
+            if (enabled && context.HttpContext.Request.Path.Equals(new PathString("/contact"))
+                && context.HttpContext.Request.Method == failureMethod)
             {
                 Interlocked.Increment(ref Throws);
                 throw new InvalidOperationException(Sensitive);
