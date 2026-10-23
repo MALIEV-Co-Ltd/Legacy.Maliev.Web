@@ -5,10 +5,14 @@ using Microsoft.Extensions.Hosting;
 namespace Legacy.Maliev.Web.Infrastructure;
 
 /// <summary>Owns only the physical web root explicitly created for the Testing application lifetime.</summary>
-internal sealed class TestingWebRootLease(PhysicalFileProvider provider) : IDisposable
+internal sealed class TestingWebRootLease : IDisposable
 {
     private int disposed;
-    internal PhysicalFileProvider Provider { get; } = provider;
+
+    private TestingWebRootLease(PhysicalFileProvider provider) => Provider = provider;
+
+    internal PhysicalFileProvider Provider { get; }
+    internal bool IsDisposed => Volatile.Read(ref disposed) != 0;
 
     internal static TestingWebRootLease? Create(IWebHostEnvironment environment)
     {

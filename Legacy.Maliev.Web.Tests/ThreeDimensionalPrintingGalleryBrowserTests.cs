@@ -112,6 +112,7 @@ public sealed class ThreeDimensionalPrintingGalleryBrowserTests(PublicContactBro
         var toggle = toc.Locator("[data-service-toc-toggle]");
         await toggle.ClickAsync();
         Assert.Equal("true", await toggle.GetAttributeAsync("aria-expanded"));
+        await Assertions.Expect(toc.Locator("[data-service-toc-list] a:focus")).ToHaveCountAsync(1);
         var link = toc.Locator("a[href='#printing-tolerances']");
         await Assertions.Expect(link).ToHaveCountAsync(1);
         await link.PressAsync("Enter");

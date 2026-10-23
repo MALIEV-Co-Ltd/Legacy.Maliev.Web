@@ -20,9 +20,9 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationResinPresentationTests
 {
     [Theory]
-    [InlineData("en", "Standard resin")]
-    [InlineData("th", "การพิมพ์เรซินมาตรฐาน")]
-    public async Task Workflow_DisablesOnlyResinBuildPreferenceControls(string culture, string label)
+    [InlineData("en", "Standard resin", "Review all items")]
+    [InlineData("th", "การพิมพ์เรซินมาตรฐาน", "ตรวจสอบรายการทั้งหมด")]
+    public async Task Workflow_DisablesOnlyResinBuildPreferenceControls(string culture, string label, string reviewLabel)
     {
         using var cultures = new CultureScope(culture);
         foreach (var material in new[] { "M68", "PLA" })
@@ -38,6 +38,12 @@ public sealed class InstantQuotationResinPresentationTests
             await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
             var html = await renderer.Dispatcher.InvokeAsync(async () =>
                 (await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty)).ToHtmlString());
+
+            var reviewAction = Assert.Single(
+                Regex.Matches(html, "<button\\b[^>]*>[\\s\\S]*?</button>").Cast<Match>(),
+                action => WebUtility.HtmlDecode(Regex.Replace(action.Value, "<[^>]+>", "")).Trim() == reviewLabel).Value;
+            Assert.Contains("type=\"button\"", reviewAction, StringComparison.Ordinal);
+            Assert.DoesNotContain("type=\"submit\"", reviewAction, StringComparison.Ordinal);
 
             var fieldsets = Regex.Matches(html, "<fieldset\\b[^>]*data-workflow-build-preference[^>]*>[\\s\\S]*?</fieldset>");
             var fieldset = Assert.Single(fieldsets.Cast<Match>()).Value;
@@ -207,6 +213,7 @@ public sealed class InstantQuotationResinPresentationTests
     private static ServiceProvider Services(CapturingActivator activator, RecordingJavaScript javascript) =>
         new ServiceCollection().AddLogging().AddLocalization(options => options.ResourcesPath = "Resources")
             .AddSingleton<IComponentActivator>(activator).AddSingleton<IJSRuntime>(javascript)
+            .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager())
             .AddSingleton(FdmRuntimeProfileCatalog.LoadEmbedded())
             .AddSingleton<IWebHostEnvironment>(new ComponentEnvironment()).BuildServiceProvider();
 

@@ -2755,7 +2755,7 @@ public sealed class WebSurfaceTests : IDisposable
 
     [Theory]
     [InlineData("en", "FDM, Resin & Industrial Additive", "3D Printing Service in Thailand for Prototypes and Production Parts", "How much does 3D printing cost?")]
-    [InlineData("th", "FDM เรซิ่น และงานพิมพ์อุตสาหกรรม", "รับปริ้น 3D และรับพิมพ์ 3 มิติ อัปโหลดไฟล์ประเมินราคา", "พิมพ์ 3D ราคาเท่าไร?")]
+    [InlineData("th", "FDM เรซิ่น และงานพิมพ์อุตสาหกรรม", "รับปริ้น 3D และรับพิมพ์ 3 มิติ อัปโหลดไฟล์ประเมินราคา", "รับพิมพ์ 3D ราคาเท่าไร และประเมินอย่างไร?")]
     public async Task ThreeDimensionalPrintingRoute_RendersStaticBlazorBodyWithContractParity(
         string culture,
         string eyebrow,
@@ -2821,7 +2821,7 @@ public sealed class WebSurfaceTests : IDisposable
 
     [Theory]
     [InlineData("en", "Member workspace", "Sign in to review quotations, orders, project files, and account details.", "Sign in", "Create an account", "Reset password")]
-    [InlineData("th", "พื้นที่สมาชิก", "เข้าสู่ระบบเพื่อตรวจใบเสนอราคา คำสั่งซื้อ ไฟล์โปรเจกต์ และข้อมูลบัญชี", "เข้าสู่ระบบ", "สร้างบัญชี", "รีเซ็ตรหัสผ่าน")]
+    [InlineData("th", "พื้นที่สมาชิก", "เข้าสู่ระบบเพื่อตรวจใบเสนอราคา คำสั่งซื้อ ไฟล์โครงการ และข้อมูลบัญชี", "เข้าสู่ระบบ", "สร้างบัญชี", "รีเซ็ตรหัสผ่าน")]
     public async Task AccountIndex_RendersLocalizedAnonymousStaticSsrActions(
         string culture,
         string workspaceLabel,

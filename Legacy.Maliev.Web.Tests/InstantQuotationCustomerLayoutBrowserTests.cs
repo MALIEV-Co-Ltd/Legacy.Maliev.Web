@@ -1,9 +1,18 @@
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 [Collection(CncNativeBrowserCollection.Name)]
-public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserFixture fixture)
+public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserFixture fixture, ITestOutputHelper output)
 {
     [Theory]
     [InlineData(320, 700, "en", ColorScheme.Light)]
@@ -114,5 +123,249 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
                 Path = Path.Combine(Path.GetTempPath(), $"legacy-web-276-customer-{culture}-{width}.png"),
             });
         }
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task RealCustomerFormPreservesStructuredSectionsCounterAndResponsiveOrder(string culture)
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1920, Height = 1080 },
+        });
+        var probe = new SubmitBoundaryProbe();
+        await using var application = new SubmitBoundaryFactory(probe);
+        application.UseKestrel(0);
+        application.ClientOptions.AllowAutoRedirect = false;
+        using var hostClient = application.CreateClient();
+        var origin = hostClient.BaseAddress!.GetLeftPart(UriPartial.Authority);
+        probe.ObserveRoutes(application.Services.GetRequiredService<EndpointDataSource>());
+        await context.AddCookiesAsync(
+        [
+            new Cookie { Name = ".AspNetCore.Culture", Value = $"c={culture}|uic={culture}", Url = origin },
+        ]);
+        await using var page = await context.NewPageAsync();
+        var submissions = 0;
+        page.Request += (_, request) =>
+        {
+            if (request.Method == "POST" && request.Url.Contains("handler=SubmitRequest", StringComparison.Ordinal))
+                Interlocked.Increment(ref submissions);
+        };
+        await page.GotoAsync(new Uri(new Uri(origin), $"/instantquotation/3d-printing?culture={culture}").ToString());
+        var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
+        if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+
+        // Read a normal antiforgery form without navigating to or executing the login page.
+        // Missing required customer fields take the existing validation redirect before
+        // the submission service, creating the real customer-details child, not test HTML.
+        var submitResponse = page.WaitForResponseAsync(response =>
+            response.Request.Method == "POST"
+            && Uri.TryCreate(response.Url, UriKind.Absolute, out var responseUri)
+            && responseUri.GetLeftPart(UriPartial.Authority) == origin
+            && string.Equals(responseUri.AbsolutePath, "/InstantQuotation/3D-Printing", StringComparison.OrdinalIgnoreCase)
+            && responseUri.Query == "?handler=SubmitRequest",
+            new() { Timeout = 30000 });
+        async Task ObserveSubmitResponseAsync()
+        {
+            var response = await submitResponse;
+            var location = await response.HeaderValueAsync("location");
+            var redirectsToQuotation = Uri.TryCreate(new Uri(origin), location, out var redirect)
+                && redirect.GetLeftPart(UriPartial.Authority) == origin
+                && string.Equals(redirect.AbsolutePath, "/InstantQuotation/3D-Printing", StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrEmpty(redirect.Fragment);
+            try
+            {
+                output.WriteLine($"[customer-layout-submit] status={response.Status}; redirectsToQuotation={redirectsToQuotation}; routes={probe.PrintingRoutes}; postRoutes={probe.PrintingPostRoutes}; razorPostRoutes={probe.PrintingRazorPostRoutes}; observed={probe.Observed}; originalStatus={probe.OriginalStatus}; reExecuted={probe.ReExecuted}; razorEndpoint={probe.RazorEndpoint}; allowsPost={probe.AllowsPost}; antiforgery={probe.Antiforgery}; observerFailed={probe.ObserverFailed}");
+            }
+            catch { /* Secondary diagnostic output must not replace the original test failure. */ }
+            Assert.Equal(302, response.Status);
+            Assert.True(redirectsToQuotation);
+        }
+
+        await Task.WhenAll(
+            page.WaitForURLAsync(new Uri(new Uri(origin), "/InstantQuotation/3D-Printing" + (culture == "en" ? "?culture=en" : string.Empty)).ToString(), new() { Timeout = 30000 }),
+            page.EvaluateAsync("""
+                async () => {
+                  const response = await fetch('/account/login', { credentials: 'same-origin' });
+                  if (!response.ok) throw new Error('The antiforgery form was not available.');
+                  const documentSource = new DOMParser().parseFromString(await response.text(), 'text/html');
+                  const token = documentSource.querySelector('input[name="__RequestVerificationToken"]');
+                  if (!token?.value) throw new Error('The antiforgery field was not available.');
+                  const form = document.createElement('form');
+                  form.method = 'post';
+                  form.action = '/InstantQuotation/3D-Printing?handler=SubmitRequest';
+                  for (const [name, value] of [[token.name, token.value], ['Country', 'Thailand']]) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden'; input.name = name; input.value = value; form.appendChild(input);
+                  }
+                  document.body.appendChild(form);
+                  HTMLFormElement.prototype.submit.call(form);
+                }
+                """),
+            ObserveSubmitResponseAsync());
+        var content = page.Locator("[data-workflow-customer-details-content]");
+        await Assertions.Expect(content).ToBeVisibleAsync();
+        var form = content.Locator("#instant-quotation-form");
+        await Assertions.Expect(form.Locator(".instant-quote__customer-section")).ToHaveCountAsync(3);
+        foreach (var heading in culture == "th"
+            ? new[] { "ข้อมูลผู้ติดต่อหลัก", "บริษัทและข้อมูลออกใบกำกับภาษี", "รายละเอียดโครงการ" }
+            : new[] { "Primary contact", "Company & billing", "Project details" })
+        {
+            await Assertions.Expect(form.Locator(".instant-quote__customer-section h4").Filter(new() { HasText = heading })).ToHaveCountAsync(1);
+        }
+        await Assertions.Expect(form.Locator(".instant-quote__customer-progress")).ToHaveCountAsync(0);
+        await Assertions.Expect(form.Locator("input[name='FirstName']")).ToHaveAttributeAsync("placeholder", culture == "th" ? "กรอกชื่อ" : "Enter your first name");
+        await Assertions.Expect(form.Locator("input[name='LastName']")).ToHaveAttributeAsync("placeholder", culture == "th" ? "กรอกนามสกุล" : "Enter your last name");
+        await Assertions.Expect(form.Locator("input[name='Company']")).ToHaveAttributeAsync("placeholder", culture == "th" ? "กรอกชื่อบริษัท" : "Enter your company name");
+        await Assertions.Expect(form.Locator("input[name='Email']")).ToHaveAttributeAsync("placeholder", "name@company.com");
+        await Assertions.Expect(form.Locator("input[name='Telephone']")).ToHaveAttributeAsync("placeholder", "e.g. +66 2 123 4567");
+        await Assertions.Expect(form.Locator("input[name='TaxNumber']")).ToHaveAttributeAsync("placeholder", "e.g. 0105559123456");
+        await Assertions.Expect(form).ToHaveAttributeAsync("method", "post");
+        await Assertions.Expect(form).ToHaveAttributeAsync("action", "/InstantQuotation/3D-Printing?handler=SubmitRequest");
+        Assert.Equal(1, await form.Locator("input[name='__RequestVerificationToken']").CountAsync());
+        Assert.True(await form.EvaluateAsync<bool>("form => !form.checkValidity()"));
+        Assert.True(await form.EvaluateAsync<bool>("""
+            form => [...form.querySelectorAll('input[name]:not([type=hidden]), select[name], textarea[name]')]
+              .every(field => field.labels?.length > 0)
+            """));
+        var names = await form.Locator("input[name]:not([type=hidden]), select[name], textarea[name]")
+            .EvaluateAllAsync<string[]>("fields => fields.map(field => field.name)");
+        var description = form.Locator("textarea[name='Description']");
+        await Assertions.Expect(description).ToHaveAttributeAsync("maxlength", "512");
+        var counter = form.Locator("[data-customer-description-count]");
+        await Assertions.Expect(counter).ToHaveTextAsync("0");
+        await description.FillAsync(culture == "th" ? "งานทดสอบ" : "Test project");
+        await Assertions.Expect(counter).ToHaveTextAsync(culture == "th" ? "8" : "12");
+        await description.FillAsync(new string('x', 512));
+        await Assertions.Expect(counter).ToHaveTextAsync("512");
+        Assert.Equal(512, await form.EvaluateAsync<int>("form => new FormData(form).get('Description').length"));
+
+        var desktop = await form.EvaluateAsync<System.Text.Json.JsonElement>("""
+            form => ({
+              workspaceColumns:getComputedStyle(form).gridTemplateColumns.trim().split(/\s+/).length,
+              fieldColumns:getComputedStyle(form.querySelector('.instant-quote__customer-fields')).gridTemplateColumns.trim().split(/\s+/).length,
+              progressRemoved:form.querySelector('.instant-quote__customer-progress') === null
+            })
+            """);
+        Assert.Equal(1, desktop.GetProperty("workspaceColumns").GetInt32());
+        Assert.Equal(2, desktop.GetProperty("fieldColumns").GetInt32());
+        Assert.True(desktop.GetProperty("progressRemoved").GetBoolean());
+        Assert.True(await page.Locator(".instant-quote__customer-actions").EvaluateAsync<bool>("""
+            footer => {
+              const pane=footer.closest('[data-workflow-customer-details]').getBoundingClientRect();
+              const action=footer.getBoundingClientRect();
+              return action.top>=pane.top-1 && action.bottom<=pane.bottom+1;
+            }
+            """));
+        Assert.True(await page.Locator("[data-workflow-customer-order] .instant-quote__pricing-summary").IsVisibleAsync());
+
+        foreach (var width in new[] { 820, 390 })
+        {
+            await page.SetViewportSizeAsync(width, 844);
+            await page.EvaluateAsync("async () => { await document.fonts.ready; await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))); }");
+            var geometry = await form.EvaluateAsync<System.Text.Json.JsonElement>("""
+                form => ({
+                  workspaceColumns:getComputedStyle(form).gridTemplateColumns.trim().split(/\s+/).length,
+                  fieldColumns:getComputedStyle(form.querySelector('.instant-quote__customer-fields')).gridTemplateColumns.trim().split(/\s+/).length,
+                  progressRemoved:form.querySelector('.instant-quote__customer-progress') === null,
+                  formFits:form.scrollWidth<=form.clientWidth+1,
+                  documentFits:document.documentElement.scrollWidth<=innerWidth+1,
+                  controls:[...form.querySelectorAll('input:not([type=hidden]):not([type=checkbox]), select, textarea')]
+                    .filter(field => field.getClientRects().length > 0)
+                    .every(field => { const box=field.getBoundingClientRect(); return box.width>=44 && box.height>=44; })
+                })
+                """);
+            Assert.Equal(1, geometry.GetProperty("workspaceColumns").GetInt32());
+            Assert.Equal(width == 390 ? 1 : 2, geometry.GetProperty("fieldColumns").GetInt32());
+            Assert.True(geometry.GetProperty("progressRemoved").GetBoolean());
+            Assert.True(geometry.GetProperty("formFits").GetBoolean());
+            Assert.True(geometry.GetProperty("documentFits").GetBoolean());
+            Assert.True(geometry.GetProperty("controls").GetBoolean());
+            Assert.Equal(names, await form.Locator("input[name]:not([type=hidden]), select[name], textarea[name]")
+                .EvaluateAllAsync<string[]>("fields => fields.map(field => field.name)"));
+            await Assertions.Expect(counter).ToHaveTextAsync("512");
+        }
+        Assert.Equal(1, Volatile.Read(ref submissions));
+        Assert.False(await page.Locator("[data-workflow-submitted]").IsVisibleAsync());
+    }
+
+    private sealed class SubmitBoundaryFactory(SubmitBoundaryProbe probe)
+        : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+            builder.ConfigureServices(services => services.AddSingleton<IStartupFilter>(probe));
+        }
+    }
+
+    private sealed class SubmitBoundaryProbe : IStartupFilter
+    {
+        internal int PrintingRoutes { get; private set; }
+        internal int PrintingPostRoutes { get; private set; }
+        internal int PrintingRazorPostRoutes { get; private set; }
+        internal bool Observed { get; private set; }
+        internal int OriginalStatus { get; private set; }
+        internal bool ReExecuted { get; private set; }
+        internal bool RazorEndpoint { get; private set; }
+        internal bool AllowsPost { get; private set; }
+        internal int Antiforgery { get; private set; }
+        internal bool ObserverFailed { get; private set; }
+
+        internal void ObserveRoutes(EndpointDataSource source)
+        {
+            foreach (var endpoint in source.Endpoints.OfType<RouteEndpoint>().Where(endpoint =>
+                string.Equals(endpoint.RoutePattern.RawText?.Trim('/'),
+                    "InstantQuotation/3D-Printing", StringComparison.OrdinalIgnoreCase)))
+            {
+                PrintingRoutes++;
+                if (!AcceptsPost(endpoint)) continue;
+                PrintingPostRoutes++;
+                if (IsPrintingPage(endpoint)) PrintingRazorPostRoutes++;
+            }
+        }
+
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => application =>
+        {
+            application.Use(async (context, requestNext) =>
+            {
+                if (HttpMethods.IsPost(context.Request.Method)
+                    && context.Request.Path.Equals("/InstantQuotation/3D-Printing", StringComparison.OrdinalIgnoreCase)
+                    && context.Request.Query["handler"] == "SubmitRequest")
+                {
+                    context.Response.OnStarting(() =>
+                    {
+                        try
+                        {
+                            var reExecute = context.Features.Get<IStatusCodeReExecuteFeature>();
+                            var endpoint = reExecute?.Endpoint ?? context.GetEndpoint();
+                            var antiforgery = context.Features.Get<IAntiforgeryValidationFeature>();
+                            OriginalStatus = reExecute?.OriginalStatusCode ?? context.Response.StatusCode;
+                            ReExecuted = reExecute is not null;
+                            RazorEndpoint = endpoint is not null && IsPrintingPage(endpoint);
+                            AllowsPost = endpoint is RouteEndpoint && AcceptsPost(endpoint);
+                            Antiforgery = antiforgery is null ? 0 : antiforgery.IsValid ? 1 : 2;
+                            Observed = true;
+                        }
+                        catch
+                        {
+                            ObserverFailed = true;
+                        }
+                        return Task.CompletedTask;
+                    });
+                }
+                await requestNext(context);
+            });
+            next(application);
+        };
+
+        private static bool AcceptsPost(Endpoint endpoint) =>
+            endpoint.Metadata.GetMetadata<IHttpMethodMetadata>() is not { HttpMethods.Count: > 0 } methods
+            || methods.HttpMethods.Contains(HttpMethods.Post, StringComparer.OrdinalIgnoreCase);
+
+        private static bool IsPrintingPage(Endpoint endpoint) =>
+            string.Equals(endpoint.Metadata.GetMetadata<PageActionDescriptor>()?.ViewEnginePath,
+                "/InstantQuotation/3D-Printing", StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -333,5 +333,13 @@ public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture, X
         Assert.False(await page.Locator("[data-hero-controls]").IsVisibleAsync());
         Assert.Equal(4, await page.Locator("#landing-process ol > li").CountAsync());
         Assert.Equal($"/Contact?culture={culture}", await page.Locator("#home-hero-assembly a").First.GetAttributeAsync("href"));
+        var directoryLink = page.Locator(".landing-service-card--directory-link");
+        var directoryHref = culture == "en" ? "/services?culture=en" : "/services";
+        Assert.Equal(directoryHref, await directoryLink.GetAttributeAsync("href"));
+        await directoryLink.ClickAsync();
+        Assert.Equal(new Uri(fixture.Origin, directoryHref).ToString(), page.Url);
+        Assert.Equal(culture, await page.Locator("html").GetAttributeAsync("lang"));
+        await Assertions.Expect(page.Locator("main[data-service-finder]")).ToBeVisibleAsync();
+        Assert.Equal(culture == "th" ? "บริการผลิตชิ้นส่วน" : "Manufacturing services", await page.Locator("main[data-service-finder] h1").InnerTextAsync());
     }
 }

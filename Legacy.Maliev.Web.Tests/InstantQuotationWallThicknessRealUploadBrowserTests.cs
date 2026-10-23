@@ -15,6 +15,175 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOutputHelper output)
 {
     [Theory]
+    [InlineData("desktop", "model/x.stl-ascii")]
+    [InlineData("iphone", "application/sla")]
+    [InlineData("ipad", "application/vnd.ms-pki.stl")]
+    public async Task MobileCadPickerPreservesAllowlistAndRejectsPdfBeforeRealStlUpload(
+        string platform, string contentType)
+    {
+        const string expectedTypes = ".stl,.obj,.3mf,.glb,.gltf,.stp,.step,.igs,.iges,model/stl,application/sla,application/vnd.ms-pki.stl,model/x.stl-binary,model/x.stl-ascii,model/obj,model/3mf,model/gltf-binary,model/gltf+json,model/step,model/iges";
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        var quoteUrl = new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString();
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync(quoteUrl);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var context = await browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 390, Height = 844 },
+            HasTouch = platform != "desktop",
+            IsMobile = platform != "desktop",
+            UserAgent = platform == "iphone"
+                ? "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1"
+                : "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15",
+        });
+        if (platform == "ipad")
+        {
+            await context.AddInitScriptAsync("""
+                Object.defineProperty(navigator, 'platform', { configurable: true, get: () => 'MacIntel' });
+                Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, get: () => 2 });
+                """);
+        }
+        await using var page = await context.NewPageAsync();
+        await using var failureEvidence = new BrowserFailureEvidence(page,
+            metadata => output.WriteLine("[mobile-evidence-cleanup] " + metadata));
+        var pageErrors = new List<string>();
+        page.PageError += (_, error) => pageErrors.Add(error);
+        await page.GotoAsync(quoteUrl,
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30_000 });
+        var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
+        if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+        await page.WaitForFunctionAsync(
+            """
+            () => {
+              const zone = document.querySelector('.instant-quote__workflow');
+              const input = document.querySelector('#instant-quote-files');
+              if (!zone || !input || input._blazorInputFileNextFileId === undefined
+                  || input.disabled || zone.getAttribute('aria-busy') === 'true') return false;
+              const transfer = new DataTransfer();
+              transfer.items.add(new File([], 'picker-readiness.stl', { type: 'model/stl' }));
+              const probe = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: transfer });
+              return !zone.dispatchEvent(probe) && probe.defaultPrevented;
+            }
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        var input = page.Locator("#instant-quote-files");
+        if (platform == "desktop")
+        {
+            Assert.Equal(expectedTypes, await input.GetAttributeAsync("accept"));
+        }
+        else
+        {
+            Assert.Null(await input.GetAttributeAsync("accept"));
+            Assert.Equal(expectedTypes, await input.GetAttributeAsync("data-accepted-types"));
+        }
+
+        await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+        {
+            Name = "drawing.pdf",
+            MimeType = "application/pdf",
+            Buffer = System.Text.Encoding.UTF8.GetBytes("%PDF-1.7 unsupported model"),
+        });
+        await page.WaitForFunctionAsync(
+            """
+            () => document.querySelector('[data-workflow-preview-status]')?.textContent
+                .includes('3D preview is unavailable.')
+              && document.querySelector('.instant-quote__workflow')?.getAttribute('aria-busy') === 'false'
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        Assert.Equal(0, upload.StartedUploads);
+        Assert.Equal(0, upload.VerifiedUploads);
+        Assert.Equal(0, upload.FinalizeCalls);
+        Assert.Equal(0, await page.Locator("[data-workflow-part]").CountAsync());
+        Assert.Equal(0, await page.Locator("[data-workflow-review-part]").CountAsync());
+
+        var bytes = WallThicknessParityBrowserFixture.Box(5);
+        var expectedDigest = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+        await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+        {
+            Name = "mobile-picker.stl",
+            MimeType = contentType,
+            Buffer = bytes,
+        });
+        failureEvidence.Stage("UploadAdmission");
+        try
+        {
+            // Upload admission is not a configuration gesture: explicitly accept the initial color.
+            await page.Locator("[data-workflow-configuration] select[id^='color-']").SelectOptionAsync(
+                "Black", new LocatorSelectOptionOptions { Timeout = 30_000 });
+            await page.WaitForFunctionAsync(
+                """
+                () => document.querySelectorAll('[data-workflow-parts] > [data-workflow-part]').length === 1
+                  && document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)') !== null
+                  && document.querySelector('.instant-quote__workflow')?.getAttribute('aria-busy') === 'false'
+                """,
+                null, new PageWaitForFunctionOptions { Timeout = 60_000 });
+        }
+        catch (Exception admissionFailure)
+        {
+            await failureEvidence.AttachAsync(admissionFailure, () => page.EvaluateAsync<string>("""
+                () => {
+                  const zone = document.querySelector(".instant-quote__workflow");
+                  const workflow = zone?.dataset.workflowState;
+                  return JSON.stringify({
+                    workflow:["empty","uploading","uploaded","error","multipart","configured","review","customerdetails","submitted"].includes(workflow) ? workflow : "unavailable",
+                    parts:Math.min(document.querySelectorAll("[data-workflow-parts] > [data-workflow-part]").length,32),
+                    uploadRows:Math.min(document.querySelectorAll("[data-workflow-upload-item]").length,32),
+                    progress:zone?.getAttribute("aria-busy") === "true",
+                    configurationEnabled:document.querySelector("[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)") !== null,
+                    isRepricing:!!document.querySelector("[data-pricing-loading-status]"),
+                    errorVisible:document.querySelector("#blazor-error-ui")?.style.display === "block"
+                  });
+                }
+                """), metadata => output.WriteLine("[mobile-upload-admission] " + metadata));
+            try
+            {
+                output.WriteLine($"[mobile-upload-services] started={Math.Min(upload.StartedUploads, 32)}; verified={Math.Min(upload.VerifiedUploads, 32)}; validationRejected={Math.Min(upload.ValidationRejectedUploads, 32)}");
+            }
+            catch { /* Secondary evidence must preserve the original upload admission failure. */ }
+            throw;
+        }
+        Assert.Equal(1, upload.StartedUploads);
+        Assert.Equal(1, upload.VerifiedUploads);
+        Assert.Equal(0, upload.ValidationRejectedUploads);
+        var partId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
+        await upload.AssertAdmittedMeshMatchesBrowserUploadAsync(partId);
+        var session = await factory.Services.GetRequiredService<IInstantQuotationSessionStore>()
+            .GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+        Assert.NotNull(session);
+        var part = Assert.Single(session.Parts);
+        Assert.Equal(partId, part.PartId);
+        Assert.Equal("mobile-picker.stl", part.DisplayFileName);
+        Assert.Equal(expectedDigest, part.Geometry.Sha256);
+        Assert.NotNull(part.PhysicalAnalysisUpload);
+        Assert.Equal(contentType, part.PhysicalAnalysisUpload.ContentType);
+        Assert.Equal("mobile-picker.stl", part.PhysicalAnalysisUpload.FileName);
+        var original = upload.Read(upload.SessionId, upload.OwnerIdentity, part.PhysicalAnalysisUpload.FileId);
+        Assert.Equal(bytes, original.Content);
+        Assert.NotNull(session.QuoteAuthorization);
+        Assert.Contains(session.PhysicalReceipts!, receipt => receipt.PartId == partId
+            && receipt.UploadSha256 == expectedDigest && receipt.MotionSeconds > 0);
+        await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button").ClickAsync();
+        Assert.Equal(1, await page.Locator("[data-workflow-review-part]").CountAsync());
+        Assert.Contains("mobile-picker.stl",
+            await page.Locator("[data-workflow-review-part]").InnerTextAsync(), StringComparison.Ordinal);
+        Assert.Equal(0, upload.FinalizeCalls);
+        Assert.Empty(pageErrors);
+    }
+
+    [Theory]
     [InlineData(320, "th")]
     [InlineData(375, "en")]
     public async Task UploadedPartShowsOnlyPhysicallyVerifiedQuantityAndReviewActionsReachable(int width, string culture)
@@ -953,7 +1122,9 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                       const images = [...document.querySelectorAll('[data-workflow-review-part] [data-review-thumbnail]')];
                       const workflow = document.querySelector('.instant-quote__workflow')?.dataset.workflowState;
                       const reviewParts = document.querySelectorAll('[data-workflow-review-part]').length;
-                      const pngReady = images.filter(image => image.getAttribute('src')?.startsWith('data:image/png')).length;
+                      const png = image => image.getAttribute('src')?.startsWith('data:image/png') === true;
+                      const placeholder = image => image.getAttribute('src') === '/src/images/3d-canvas-placeholder.svg';
+                      const pngReady = images.filter(png).length;
                       return JSON.stringify({
                         workflow:['empty','uploading','uploaded','error','multipart','configured','review','customerdetails','submitted'].includes(workflow) ? workflow : 'unavailable',
                         expectedThumbnails:Math.min(expected,32),
@@ -962,8 +1133,8 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                         pngReadyThumbnails:Math.min(pngReady,32),
                         reviewImages:Math.min(images.length,32),
                         reviewPngImages:Math.min(pngReady,32),
-                        reviewPlaceholderImages:Math.min(images.filter(image => image.getAttribute('src') === '/src/images/3d-canvas-placeholder.svg').length,32),
-                        reviewOtherImages:Math.min(images.filter(image => !image.getAttribute('src')?.startsWith('data:image/png') && image.getAttribute('src') !== '/src/images/3d-canvas-placeholder.svg').length,32),
+                        reviewPlaceholderImages:Math.min(images.filter(placeholder).length,32),
+                        reviewOtherImages:Math.min(images.filter(image => !png(image) && !placeholder(image)).length,32),
                         reviewCountsCapped:expected > 32 || reviewParts > 32 || images.length > 32,
                         errorVisible:document.querySelector('#blazor-error-ui')?.style.display === 'block'
                       });
@@ -1412,6 +1583,556 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         return port;
     }
 
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task ColorEditingPreservesSourceDefaultsHexRestoreAndMultipartIsolation(string culture)
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        var quoteUrl = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync(quoteUrl);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var context = await browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = 1280, Height = 900 },
+        });
+        await using var page = await context.NewPageAsync();
+        var pageErrors = new List<string>();
+        page.PageError += (_, error) => pageErrors.Add(error);
+        await page.GotoAsync(quoteUrl,
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30_000 });
+        var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
+        if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+        await page.WaitForFunctionAsync(
+            "() => document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId !== undefined",
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+
+        // Two disconnected, individually closed shells: actual mesh analysis owns BodyCount.
+        var shell = WallThicknessParityBrowserFixture.Box(5);
+        var multipart = new byte[84 + (2 * (shell.Length - 84))];
+        Array.Copy(shell, multipart, shell.Length);
+        BitConverter.GetBytes(24u).CopyTo(multipart, 80);
+        Array.Copy(shell, 84, multipart, shell.Length, shell.Length - 84);
+        for (var triangle = 0; triangle < 12; triangle++)
+        {
+            for (var vertex = 0; vertex < 3; vertex++)
+            {
+                var xOffset = shell.Length + (triangle * 50) + 12 + (vertex * 12);
+                BitConverter.GetBytes(BitConverter.ToSingle(multipart, xOffset) + 40f).CopyTo(multipart, xOffset);
+            }
+        }
+        await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+        {
+            Name = "color-single.stl",
+            MimeType = "model/stl",
+            Buffer = shell,
+        });
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll('[data-workflow-part]').length === 1 && !!document.querySelector('[data-workflow-price-tier]')",
+            null, new PageWaitForFunctionOptions { Timeout = 60_000 });
+        var singleId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
+        var singleColor = page.Locator($"#color-{singleId}");
+        await singleColor.SelectOptionAsync("White");
+        await MaterialCardBrowserActions.SelectAsync(page, "PETG");
+        await page.WaitForFunctionAsync(
+            "id => document.querySelector('#color-' + id)?.value === 'Any' && !document.querySelector('[data-pricing-loading-status]')",
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
+        Assert.Equal("Any", await singleColor.InputValueAsync());
+        var singleStrip = page.Locator($"[data-workflow-part][data-part-id='{singleId}']");
+        Assert.Contains("color-single.stl", await singleStrip.InnerTextAsync(), StringComparison.Ordinal);
+        var quantity = page.Locator($"#quantity-{singleId}");
+        await quantity.FillAsync("2");
+        await quantity.DispatchEventAsync("change");
+        await page.WaitForFunctionAsync(
+            """
+            id => {
+              const part = document.querySelector('[data-workflow-part][data-part-id="' + id + '"]');
+              const price = part?.querySelector('[data-workflow-summary-unit-price]')?.textContent?.trim();
+              return part?.querySelector('[data-workflow-summary-configuration]')?.textContent?.trim() === 'PETG 2×'
+                && price && price !== '—' && !document.querySelector('[data-pricing-loading-status]');
+            }
+            """,
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
+        var unitPriceLabel = culture == "th" ? "ราคาต่อชิ้น" : "Unit price";
+        var configuredUnitPrice = page.Locator("[data-workflow-part-price] > div")
+            .Filter(new LocatorFilterOptions { HasText = unitPriceLabel }).Locator("dd");
+        Assert.Equal(await configuredUnitPrice.InnerTextAsync(),
+            await singleStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync());
+        Assert.Equal(0, await page.Locator("[data-workflow-material-picker] input[type='color']").CountAsync());
+        await MaterialCardBrowserActions.SelectAsync(page, "PLA");
+        var custom = page.Locator("[data-workflow-material-picker] input[type='color']");
+        await custom.WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
+        await custom.EvaluateAsync(
+            "(input, color) => { input.value = color; input.dispatchEvent(new Event('change', { bubbles: true })); }",
+            "#123abc");
+        await page.WaitForFunctionAsync(
+            "id => document.querySelector('#color-' + id)?.value?.toLowerCase() === '#123abc' && !document.querySelector('[data-pricing-loading-status]')",
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
+        var store = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
+        var saved = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+        Assert.NotNull(saved);
+        Assert.Equal("#123abc", Assert.Single(saved.Parts).Configuration.Color.ToLowerInvariant());
+
+        Assert.Equal("#123abc", (await singleColor.InputValueAsync()).ToLowerInvariant());
+        Assert.Equal(1, await custom.CountAsync());
+        Assert.Equal(1, upload.VerifiedUploads);
+        Assert.Equal("PLA 2×", (await singleStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        Assert.Equal(await configuredUnitPrice.InnerTextAsync(),
+            await singleStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync());
+        await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+        {
+            Name = "color-multipart.stl",
+            MimeType = "model/stl",
+            Buffer = multipart,
+        });
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll('[data-workflow-part]').length === 2 && !document.querySelector('#instant-quote-files').disabled",
+            null, new PageWaitForFunctionOptions { Timeout = 60_000 });
+        saved = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+        Assert.NotNull(saved);
+        var multi = Assert.Single(saved.Parts, part => part.PartId != singleId);
+        Assert.Equal(2, multi.Geometry.BodyCount);
+        Assert.Equal("Any", multi.Configuration.Color);
+        var multiId = multi.PartId;
+        await page.Locator($"[data-workflow-part][data-part-id='{multiId}'] button[aria-pressed]").ClickAsync();
+        var multiColor = page.Locator($"#color-{multiId}");
+        await multiColor.WaitForAsync();
+        Assert.True(await multiColor.IsDisabledAsync());
+        Assert.Equal("Any", await multiColor.InputValueAsync());
+        Assert.Equal(0, await page.Locator("[data-workflow-material-picker] input[type='color']").CountAsync());
+        await MaterialCardBrowserActions.SelectAsync(page, "M68");
+        await page.WaitForFunctionAsync(
+            "id => document.querySelector('#color-' + id)?.disabled && document.querySelector('#color-' + id)?.value === 'Any' && !document.querySelector('[data-pricing-loading-status]')",
+            multiId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
+        saved = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+        Assert.NotNull(saved);
+        Assert.Equal("M68", Assert.Single(saved.Parts, part => part.PartId == multiId).Configuration.MaterialKey);
+        Assert.Equal("Any", Assert.Single(saved.Parts, part => part.PartId == multiId).Configuration.Color);
+        Assert.Equal("#123abc", Assert.Single(saved.Parts, part => part.PartId == singleId).Configuration.Color.ToLowerInvariant());
+        Assert.Equal(Convert.ToHexString(SHA256.HashData(shell)).ToLowerInvariant(),
+            Assert.Single(saved.Parts, part => part.PartId == singleId).Geometry.Sha256);
+        Assert.Equal(Convert.ToHexString(SHA256.HashData(multipart)).ToLowerInvariant(), multi.Geometry.Sha256);
+        var multiStrip = page.Locator($"[data-workflow-part][data-part-id='{multiId}']");
+        Assert.Equal("PLA 2×", (await singleStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        Assert.Equal("M68 1×", (await multiStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        await page.WaitForFunctionAsync(
+            """
+            () => {
+              const images = [...document.querySelectorAll('[data-workflow-thumbnail]')];
+              return images.length === 2 && images.every(image => image.complete && image.naturalWidth > 0
+                && image.src.startsWith('data:image/png'));
+            }
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        var singleSnapshot = singleStrip.Locator("[data-workflow-thumbnail]");
+        var multiSnapshot = multiStrip.Locator("[data-workflow-thumbnail]");
+        Assert.True(await singleSnapshot.EvaluateAsync<bool>("async image => { await image.decode(); return image.naturalWidth > 0; }"));
+        Assert.True(await multiSnapshot.EvaluateAsync<bool>("async image => { await image.decode(); return image.naturalWidth > 0; }"));
+        Assert.NotEqual(await singleSnapshot.GetAttributeAsync("src"), await multiSnapshot.GetAttributeAsync("src"));
+        Assert.DoesNotContain("data-review-thumbnail", await singleStrip.InnerHTMLAsync(), StringComparison.Ordinal);
+        var singleStripPrice = (await singleStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync()).Trim();
+        var multiStripPrice = (await multiStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync()).Trim();
+        Assert.NotEqual("—", singleStripPrice);
+        Assert.NotEqual("—", multiStripPrice);
+        Assert.Equal(await configuredUnitPrice.InnerTextAsync(), multiStripPrice);
+        var reviewButton = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+        await reviewButton.ClickAsync(new LocatorClickOptions { Timeout = 60_000 });
+        var singleReview = page.Locator($"[data-review-part-id='{singleId}'][data-workflow-review-part]");
+        var multiReview = page.Locator($"[data-review-part-id='{multiId}'][data-workflow-review-part]");
+        await singleReview.WaitForAsync();
+        Assert.Equal(singleStripPrice, (await singleReview.Locator(".instant-quote__review-prices > div:first-child dd").InnerTextAsync()).Trim());
+        Assert.Equal(multiStripPrice, (await multiReview.Locator(".instant-quote__review-prices > div:first-child dd").InnerTextAsync()).Trim());
+        Assert.Equal("#123abc", (await singleReview.Locator($"#review-color-{singleId}").InputValueAsync()).ToLowerInvariant());
+        Assert.True(await multiReview.Locator($"#review-color-{multiId}").IsDisabledAsync());
+        Assert.Equal("Any", await multiReview.Locator($"#review-color-{multiId}").InputValueAsync());
+        Assert.Equal(0, await multiReview.Locator("input[type='color']").CountAsync());
+        await singleReview.Locator("[data-review-select-part]").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "id => document.querySelector('[data-workflow-review-part][data-review-part-id=\"' + id + '\"]')?.dataset.selected === 'true'",
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 30_000 });
+        await page.WaitForFunctionAsync(
+            "() => [...document.querySelectorAll('[data-review-thumbnail]')].length === 2 && [...document.querySelectorAll('[data-review-thumbnail]')].every(image => image.complete && image.naturalWidth > 0 && image.src.startsWith('data:image/png'))",
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        var beforeSingle = await singleReview.Locator("[data-review-thumbnail]").GetAttributeAsync("src");
+        var beforeMulti = await multiReview.Locator("[data-review-thumbnail]").GetAttributeAsync("src");
+        // Two native changes may overlap server repricing; the visible result must use the final accepted configuration.
+        await singleReview.Locator("input[type='color']").EvaluateAsync(
+            """
+            input => {
+              for (const color of ['#1122ee', '#ee1122']) {
+                input.value = color;
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+            }
+            """);
+        await page.WaitForFunctionAsync(
+            """
+            args => {
+              const single = document.querySelector('[data-workflow-review-part][data-review-part-id="' + args.id + '"]');
+              return single?.querySelector('select[id^="review-color-"]')?.value?.toLowerCase() === '#ee1122'
+                && single.querySelector('[data-review-thumbnail]')?.src !== args.before
+                && !document.querySelector('[data-pricing-loading-status]');
+            }
+            """,
+            new { id = singleId.ToString(), before = beforeSingle },
+            new PageWaitForFunctionOptions { Timeout = 60_000 });
+        await page.WaitForFunctionAsync(
+            """
+            async id => {
+              const article = document.querySelector('[data-workflow-review-part][data-review-part-id="' + id + '"]');
+              const thumbnail = article?.querySelector('[data-review-thumbnail]');
+              if (!thumbnail?.src.startsWith('data:image/png') || document.querySelector('[data-pricing-loading-status]')) return false;
+              const image = new Image();
+              image.src = thumbnail.src;
+              await image.decode();
+              const canvas = document.createElement('canvas');
+              canvas.width = image.naturalWidth;
+              canvas.height = image.naturalHeight;
+              const context = canvas.getContext('2d');
+              context.drawImage(image, 0, 0);
+              const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+              let red = 0;
+              let blue = 0;
+              for (let index = 0; index < pixels.length; index += 4) {
+                if (pixels[index] > pixels[index + 2] * 1.5 && pixels[index] > pixels[index + 1] * 1.5) red++;
+                if (pixels[index + 2] > pixels[index] * 1.5 && pixels[index + 2] > pixels[index + 1] * 1.5) blue++;
+              }
+              return red > 20 && red > blue;
+            }
+            """,
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 30_000 });
+        Assert.Equal(beforeMulti, await multiReview.Locator("[data-review-thumbnail]").GetAttributeAsync("src"));
+        Assert.Equal("true", await singleReview.GetAttributeAsync("data-selected"));
+        saved = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+        Assert.NotNull(saved);
+        Assert.Equal("#ee1122", Assert.Single(saved.Parts, part => part.PartId == singleId).Configuration.Color.ToLowerInvariant());
+        Assert.Equal("Any", Assert.Single(saved.Parts, part => part.PartId == multiId).Configuration.Color);
+        Assert.Equal(2, upload.VerifiedUploads);
+        Assert.Equal(0, upload.ValidationRejectedUploads);
+
+        // Browser model bytes live only until reload. Verify real PNG/pixel behavior above,
+        // then verify protected configuration restoration without inventing durable mesh fetch.
+        await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        await page.WaitForFunctionAsync(
+            "() => document.querySelectorAll('[data-workflow-part]').length === 2 && !document.querySelector('[data-pricing-loading-status]')",
+            null, new PageWaitForFunctionOptions { Timeout = 60_000 });
+        await singleStrip.Locator("button[aria-pressed]").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "id => document.querySelector('#color-' + id)?.value?.toLowerCase() === '#ee1122' && !document.querySelector('[data-pricing-loading-status]')",
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
+        Assert.Equal("#ee1122", (await singleColor.InputValueAsync()).ToLowerInvariant());
+        Assert.Equal("2", await page.Locator($"#quantity-{singleId}").InputValueAsync());
+        Assert.Equal(1, await custom.CountAsync());
+        Assert.Equal("PLA 2×", (await singleStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        Assert.Equal(await configuredUnitPrice.InnerTextAsync(),
+            await singleStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync());
+        await multiStrip.Locator("button[aria-pressed]").ClickAsync();
+        await page.WaitForFunctionAsync(
+            "id => document.querySelector('#color-' + id)?.disabled && document.querySelector('#color-' + id)?.value === 'Any'",
+            multiId.ToString(), new PageWaitForFunctionOptions { Timeout = 30_000 });
+        Assert.True(await multiColor.IsDisabledAsync());
+        Assert.Equal("Any", await multiColor.InputValueAsync());
+        Assert.Equal("1", await page.Locator($"#quantity-{multiId}").InputValueAsync());
+        Assert.Equal(0, await custom.CountAsync());
+        Assert.Equal("M68 1×", (await multiStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        Assert.Equal(await configuredUnitPrice.InnerTextAsync(),
+            await multiStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync());
+        saved = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+        Assert.NotNull(saved);
+        Assert.Equal("#ee1122", Assert.Single(saved.Parts, part => part.PartId == singleId).Configuration.Color.ToLowerInvariant());
+        Assert.Equal("Any", Assert.Single(saved.Parts, part => part.PartId == multiId).Configuration.Color);
+        Assert.Equal(2, upload.VerifiedUploads);
+        Assert.Equal(0, upload.ValidationRejectedUploads);
+        Assert.Empty(pageErrors);
+    }
+
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task FailedUploadDemoIsDevelopmentOnlyAdvisoryAndCannotSubmit(string culture)
+    {
+        var startup = new StartupDataProtectionMigrationFixture();
+        try
+        {
+            await startup.InitializeAsync();
+            foreach (var environment in new[] { "Development", "Production" })
+            {
+                var upload = new HashCheckingUploadClient();
+                upload.FailNextUpload();
+                var pricing = new CountingPricingService();
+                var observation = new MaterialCompletionObservation();
+                await using var factory = startup.CreateFactory(environment, builder => builder.ConfigureServices(services =>
+                {
+                    services.RemoveAll<IInstantQuotationUploadClient>();
+                    services.AddSingleton<IInstantQuotationUploadClient>(upload);
+                    services.RemoveAll<IInstantQuotationPricingService>();
+                    services.AddSingleton<IInstantQuotationPricingService>(pricing);
+                    services.RemoveAll<IInstantQuotationPhysicalAnalysisInputReader>();
+                    services.AddScoped<IInstantQuotationPhysicalAnalysisInputReader>(provider =>
+                        new BrowserMultiUploadInputReader(upload,
+                            provider.GetRequiredService<IInstantQuotationSessionStore>()));
+                    observation.Decorate(services);
+                }));
+                var port = ReserveFreePort();
+                var origin = new Uri($"http://127.0.0.1:{port}");
+                factory.UseKestrel(port);
+                using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+                {
+                    BaseAddress = origin,
+                    AllowAutoRedirect = false,
+                });
+                using var readiness = await client.GetAsync($"/instantquotation/3d-printing?culture={culture}");
+                Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+                Assert.Equal(environment, factory.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostEnvironment>().EnvironmentName);
+                using var playwright = await Playwright.CreateAsync();
+                await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+                await using var page = await browser.NewPageAsync();
+                var submissionRequests = 0;
+                page.Request += (_, request) =>
+                {
+                    if (request.Method == "POST" && request.Url.Contains("handler=SubmitRequest", StringComparison.Ordinal))
+                        Interlocked.Increment(ref submissionRequests);
+                };
+                await page.GotoAsync(new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString(),
+                    new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+                await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+                var path = CreateBoxStl(20, 20, 5, "development-demo");
+                try
+                {
+                    await WaitForUploadInputReadyAsync(page);
+                    await page.SetInputFilesAsync("#instant-quote-files", path);
+                    await Microsoft.Playwright.Assertions.Expect(page.Locator(".instant-quote__workflow"))
+                        .ToHaveAttributeAsync("data-workflow-state", "error",
+                            new LocatorAssertionsToHaveAttributeOptions { Timeout = 30_000 });
+                    Assert.Equal(1, upload.StartedUploads);
+                    Assert.Equal(0, upload.VerifiedUploads);
+                    Assert.Equal(0, pricing.CallCount);
+                    Assert.StartsWith("pricingEntered=0; pricingRunning=0;", observation.Describe(), StringComparison.Ordinal);
+                    var store = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
+                    var failedState = await store.GetAsync(upload.AttemptedSessionId!, upload.AttemptedOwnerIdentity, default);
+                    Assert.NotNull(failedState);
+                    Assert.Empty(failedState.Parts);
+                    Assert.Null(failedState.QuoteAuthorization);
+                    Assert.Empty(failedState.PhysicalReceipts ?? []);
+                    var demo = page.Locator("[data-workflow-local-demo]");
+                    if (environment == "Production")
+                    {
+                        Assert.Equal(0, await demo.CountAsync());
+                        Assert.Equal(0, await page.Locator("[data-local-demo-badge]").CountAsync());
+                        Assert.Equal(0, await page.Locator("#instant-quotation-form").CountAsync());
+                        continue;
+                    }
+
+                    await demo.WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
+                    Assert.Equal(culture == "th" ? "สาธิต" : "Demo",
+                        (await demo.Locator("[data-local-demo-badge]").InnerTextAsync()).Trim());
+                    Assert.Contains(culture == "th" ? "ไม่สามารถส่ง" : "cannot be submitted",
+                        await demo.InnerTextAsync(), StringComparison.Ordinal);
+                    Assert.Equal("configuration", await demo.GetAttributeAsync("data-local-demo-step"));
+                    Assert.Equal(0, await page.Locator("[data-workflow-part]").CountAsync());
+                    await using var canvas = await demo.Locator("[data-local-demo-canvas]").ElementHandleAsync();
+                    Assert.NotNull(canvas);
+                    await Microsoft.Playwright.Assertions.Expect(demo.Locator("[data-local-demo-canvas]"))
+                        .ToHaveAttributeAsync("data-local-demo-ready", "true",
+                            new LocatorAssertionsToHaveAttributeOptions { Timeout = 30_000 });
+                    var oldSubtotal = await demo.Locator("[data-local-demo-subtotal]").InnerTextAsync();
+                    Assert.NotEqual("—", oldSubtotal.Trim());
+                    await demo.Locator("#demo-material").SelectOptionAsync("PETG");
+                    await demo.Locator("#demo-quantity").FillAsync("2");
+                    await demo.Locator("#demo-quantity").DispatchEventAsync("change");
+                    await Microsoft.Playwright.Assertions.Expect(demo.Locator("[data-local-demo-configuration]"))
+                        .ToHaveTextAsync("PETG 2×", new LocatorAssertionsToHaveTextOptions { Timeout = 30_000 });
+                    Assert.NotEqual(oldSubtotal, await demo.Locator("[data-local-demo-subtotal]").InnerTextAsync());
+                    Assert.NotEqual("—", (await demo.Locator("[data-local-demo-lead-time]").InnerTextAsync()).Trim());
+                    await demo.Locator("[data-local-demo-review]").ClickAsync();
+                    await Microsoft.Playwright.Assertions.Expect(demo)
+                        .ToHaveAttributeAsync("data-local-demo-step", "review",
+                            new LocatorAssertionsToHaveAttributeOptions { Timeout = 30_000 });
+                    Assert.Contains(Path.GetFileName(path), await demo.InnerTextAsync(), StringComparison.Ordinal);
+                    await demo.Locator("[data-local-demo-continue]").ClickAsync();
+                    await Microsoft.Playwright.Assertions.Expect(demo)
+                        .ToHaveAttributeAsync("data-local-demo-step", "contact",
+                            new LocatorAssertionsToHaveAttributeOptions { Timeout = 30_000 });
+                    await demo.Locator("#demo-contact-name").FillAsync("Synthetic demo");
+                    await demo.Locator("#demo-contact-email").FillAsync("demo@example.invalid");
+                    var submit = demo.Locator("[data-local-demo-no-submit]");
+                    Assert.Equal("button", await submit.GetAttributeAsync("type"));
+                    Assert.True(await submit.IsDisabledAsync());
+                    Assert.Equal(0, await demo.Locator("form, [form], input[name='__RequestVerificationToken'], input[name*='Ticket']").CountAsync());
+                    await demo.Locator("#demo-contact-email").PressAsync("Enter");
+                    Assert.Equal(0, Volatile.Read(ref submissionRequests));
+                    Assert.Equal(0, upload.FinalizeCalls);
+                    Assert.Equal(0, pricing.CallCount);
+                    Assert.StartsWith("pricingEntered=0; pricingRunning=0;", observation.Describe(), StringComparison.Ordinal);
+                    failedState = await store.GetAsync(upload.AttemptedSessionId!, upload.AttemptedOwnerIdentity, default);
+                    Assert.NotNull(failedState);
+                    Assert.Empty(failedState.Parts);
+                    Assert.Null(failedState.QuoteAuthorization);
+                    Assert.Empty(failedState.PhysicalReceipts ?? []);
+
+                    // The ordinary failed-row action and Demo action must share fresh-key rebinding.
+                    upload.FailNextUpload();
+                    var retryName = culture == "th"
+                        ? $"ลองอัปโหลด {Path.GetFileName(path)} อีกครั้ง"
+                        : $"Try upload again for {Path.GetFileName(path)}";
+                    await page.Locator("[data-workflow-upload-item]").GetByRole(
+                        AriaRole.Button, new LocatorGetByRoleOptions { Name = retryName, Exact = true }).ClickAsync();
+                    await canvas.WaitForElementStateAsync(ElementState.Hidden, new() { Timeout = 30_000 });
+                    await Microsoft.Playwright.Assertions.Expect(demo.Locator("[data-local-demo-canvas]"))
+                        .ToHaveAttributeAsync("data-local-demo-ready", "true",
+                            new LocatorAssertionsToHaveAttributeOptions { Timeout = 30_000 });
+                    Assert.False(await canvas.EvaluateAsync<bool>("element => element.isConnected"));
+                    Assert.Equal(2, upload.StartedUploads);
+                    Assert.Equal(0, upload.VerifiedUploads);
+                    Assert.StartsWith("pricingEntered=0; pricingRunning=0;", observation.Describe(), StringComparison.Ordinal);
+                    await Microsoft.Playwright.Assertions.Expect(demo.Locator("[data-local-demo-configuration]"))
+                        .ToHaveTextAsync("PETG 2×", new LocatorAssertionsToHaveTextOptions { Timeout = 30_000 });
+                    await using var retriedCanvas = await demo.Locator("[data-local-demo-canvas]").ElementHandleAsync();
+                    Assert.NotNull(retriedCanvas);
+                    await demo.Locator("[data-local-demo-retry]").ClickAsync();
+                    await page.Locator("[data-workflow-part]").WaitForAsync(new LocatorWaitForOptions { Timeout = 60_000 });
+                    Assert.Equal(0, await demo.CountAsync());
+                    Assert.False(await retriedCanvas.EvaluateAsync<bool>("element => element.isConnected"));
+                    Assert.Equal(3, upload.StartedUploads);
+                    Assert.Equal(1, upload.VerifiedUploads);
+                    Assert.Equal(1, await page.Locator("[data-workflow-part]").CountAsync());
+                    var admitted = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+                    Assert.NotNull(admitted);
+                    Assert.Single(admitted.Parts);
+                    Assert.NotNull(Assert.Single(admitted.Parts).PhysicalAnalysisUpload);
+                    await page.Locator("[data-workflow-price-tier]").First.WaitForAsync(
+                        new LocatorWaitForOptions { Timeout = 60_000 });
+                    Assert.DoesNotContain("pricingEntered=0;", observation.Describe(), StringComparison.Ordinal);
+                    admitted = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
+                    Assert.NotNull(admitted);
+                    Assert.NotNull(admitted.QuoteAuthorization);
+                    Assert.Equal(0, Volatile.Read(ref submissionRequests));
+                    Assert.Equal(0, upload.FinalizeCalls);
+                }
+                finally
+                {
+                    File.Delete(path);
+                }
+            }
+        }
+        finally
+        {
+            await startup.DisposeAsync();
+        }
+    }
+
+    [Fact]
+    public async Task DevelopmentDemoNeverRetainsCancelledOrMalformedUploads()
+    {
+        var startup = new StartupDataProtectionMigrationFixture();
+        try
+        {
+            await startup.InitializeAsync();
+            var upload = new HashCheckingUploadClient { HoldUploads = true };
+            var pricing = new CountingPricingService();
+            var observation = new MaterialCompletionObservation();
+            await using var factory = startup.CreateFactory("Development", builder => builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IInstantQuotationUploadClient>();
+                services.AddSingleton<IInstantQuotationUploadClient>(upload);
+                services.RemoveAll<IInstantQuotationPricingService>();
+                services.AddSingleton<IInstantQuotationPricingService>(pricing);
+                observation.Decorate(services);
+            }));
+            var port = ReserveFreePort();
+            var origin = new Uri($"http://127.0.0.1:{port}");
+            factory.UseKestrel(port);
+            using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin, AllowAutoRedirect = false });
+            using var readiness = await client.GetAsync("/instantquotation/3d-printing?culture=en");
+            Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+            using var playwright = await Playwright.CreateAsync();
+            await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+            await using var page = await browser.NewPageAsync();
+            await page.GotoAsync(new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString(),
+                new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+            await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+            var path = CreateBoxStl(20, 20, 5, "cancelled-demo");
+            try
+            {
+                await WaitForUploadInputReadyAsync(page);
+                await page.SetInputFilesAsync("#instant-quote-files", path);
+                var cancel = page.Locator("[data-workflow-upload-item]").GetByRole(
+                    AriaRole.Button, new LocatorGetByRoleOptions
+                    {
+                        Name = $"Cancel upload for {Path.GetFileName(path)}",
+                        Exact = true,
+                    });
+                await cancel.WaitForAsync(new LocatorWaitForOptions { Timeout = 30_000 });
+                await upload.UploadEntered.WaitAsync(TimeSpan.FromSeconds(30));
+                await cancel.ClickAsync();
+                await Microsoft.Playwright.Assertions.Expect(page.Locator(".instant-quote__workflow"))
+                    .ToHaveAttributeAsync("aria-busy", "false",
+                        new LocatorAssertionsToHaveAttributeOptions { Timeout = 30_000 });
+                await Microsoft.Playwright.Assertions.Expect(page.Locator("#instant-quote-files"))
+                    .ToBeEnabledAsync(new LocatorAssertionsToBeEnabledOptions { Timeout = 30_000 });
+                Assert.Equal(1, upload.CancellationObserved);
+                Assert.Equal(0, await page.Locator("[data-workflow-local-demo]").CountAsync());
+                Assert.Equal(0, upload.VerifiedUploads);
+                Assert.Equal(0, pricing.CallCount);
+                Assert.StartsWith("pricingEntered=0; pricingRunning=0;", observation.Describe(), StringComparison.Ordinal);
+                await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+                {
+                    Name = "malformed.stl",
+                    MimeType = "model/stl",
+                    Buffer = [1, 2, 3],
+                });
+                await Microsoft.Playwright.Assertions.Expect(page.Locator("[data-workflow-preview-status]"))
+                    .ToContainTextAsync("unavailable", new LocatorAssertionsToContainTextOptions { Timeout = 30_000 });
+                Assert.Equal(0, await page.Locator("[data-workflow-local-demo]").CountAsync());
+                Assert.Equal(0, upload.VerifiedUploads);
+                Assert.Equal(0, pricing.CallCount);
+                Assert.StartsWith("pricingEntered=0; pricingRunning=0;", observation.Describe(), StringComparison.Ordinal);
+                Assert.Equal(0, upload.FinalizeCalls);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+        finally
+        {
+            await startup.DisposeAsync();
+        }
+    }
+
+    private static async Task WaitForUploadInputReadyAsync(IPage page)
+    {
+        // InputFile wiring and preview capture are separate from static HTML readiness.
+        await using var readiness = await page.WaitForFunctionAsync(
+            """
+            () => {
+              const zone = document.querySelector('.instant-quote__workflow');
+              const input = document.querySelector('#instant-quote-files');
+              if (!zone || !input || input._blazorInputFileNextFileId === undefined
+                  || input.disabled || zone.getAttribute('aria-busy') === 'true') return false;
+              const transfer = new DataTransfer();
+              transfer.items.add(new File([], 'picker-readiness.stl', { type: 'model/stl' }));
+              const probe = new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: transfer });
+              return !zone.dispatchEvent(probe) && probe.defaultPrevented;
+            }
+            """,
+            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+    }
+
     private sealed class RealUploadTestingWebApplicationFactory(
         string contentRoot,
         HashCheckingUploadClient upload,
@@ -1508,10 +2229,22 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
     private sealed class HashCheckingUploadClient : IInstantQuotationUploadClient
     {
         private int startedUploads;
+        private int failuresRemaining;
+        private int finalizeCalls;
+        private int cancellationObserved;
+        private readonly TaskCompletionSource<bool> uploadEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private int validationRejectedUploads;
         private int verifiedUploads;
         private BrowserUpload? verifiedUpload;
         private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, BrowserUpload> uploads = new();
+
+        public bool HoldUploads { get; init; }
+        public Task UploadEntered => uploadEntered.Task;
+        public int CancellationObserved => Volatile.Read(ref cancellationObserved);
+        public string? AttemptedSessionId { get; private set; }
+        public string? AttemptedOwnerIdentity { get; private set; }
+        public int FinalizeCalls => Volatile.Read(ref finalizeCalls);
+        public void FailNextUpload() => Interlocked.Exchange(ref failuresRemaining, 1);
 
         public int VerifiedUploads => Volatile.Read(ref verifiedUploads);
         public int StartedUploads => Volatile.Read(ref startedUploads);
@@ -1546,6 +2279,8 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref startedUploads);
+            using var cancellationObservation = cancellationToken.Register(() => Interlocked.Increment(ref cancellationObserved));
+            uploadEntered.TrySetResult(true);
             using var copy = new MemoryStream();
             await content.CopyToAsync(copy, cancellationToken);
             var sha256 = Convert.ToHexString(SHA256.HashData(copy.GetBuffer().AsSpan(0, (int)copy.Length)))
@@ -1559,6 +2294,13 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                     InstantQuotationAuthorizationStatus.Authorized,
                     InstantQuotationProblemCategory.Validation);
             }
+
+            AttemptedSessionId = sessionId;
+            AttemptedOwnerIdentity = ownerIdentity;
+            if (HoldUploads)
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            if (Interlocked.Exchange(ref failuresRemaining, 0) > 0)
+                return InstantQuotationUploadResult.Unavailable(operationId);
 
             var fileId = Guid.NewGuid();
             verifiedUpload = new BrowserUpload(sessionId, ownerIdentity, fileId, fileName,
@@ -1601,7 +2343,11 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
             int quotationRequestId,
             IReadOnlyList<InstantQuotationUploadReference> uploadReferences,
             string operationId,
-            CancellationToken cancellationToken) => Task.FromResult(InstantQuotationFinalizationResult.Unavailable(operationId));
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref finalizeCalls);
+            return Task.FromResult(InstantQuotationFinalizationResult.Unavailable(operationId));
+        }
     }
 
     private sealed record BrowserUpload(

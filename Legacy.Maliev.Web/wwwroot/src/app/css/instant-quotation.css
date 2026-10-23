@@ -763,6 +763,35 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     align-self: center;
 }
 
+/* Keep the whole non-phone footer within its viewport share. Only the details
+   rail scrolls; legal links and configuration actions keep their own rows. */
+@media (min-width: 48rem) {
+    .instant-quote__workflow .instant-quote__configuration-footer {
+        box-sizing: border-box;
+        grid-template-rows: minmax(44px, 1fr) auto auto;
+        min-height: 0;
+        max-height: 40dvh;
+    }
+
+    .instant-quote__configuration-footer .instant-quote__summary-dock {
+        min-height: 0;
+        overflow: auto;
+        overscroll-behavior: contain;
+    }
+
+    .instant-quote__configuration-footer .instant-quote__summary-dock > summary {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: inherit;
+    }
+
+    .instant-quote__configuration-footer [data-workflow-order-total] {
+        max-height: none;
+        overflow: visible;
+    }
+}
+
 @media (max-width: 35.99875rem) {
     .instant-quote__workflow .instant-quote__configuration-footer {
         grid-template-columns: minmax(0, 1fr);
@@ -1672,6 +1701,47 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
         align-items: flex-start;
     }
 
+    /* Source09f04/f506: the part rail belongs below its preview, not above
+       configuration. Review/customer and development-only rails have no pair. */
+    .instant-quote__workflow:has(> [data-workflow-viewer]):has(> [data-workflow-parts]) {
+        grid-template-rows: minmax(0, 1fr) auto;
+    }
+
+    .instant-quote__workflow:has(> [data-workflow-parts]) > [data-workflow-viewer] {
+        grid-row: 1;
+    }
+
+    .instant-quote__workflow:has(> [data-workflow-viewer]) > [data-workflow-parts] {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .instant-quote__workflow:has(> [data-workflow-parts]) > [data-workflow-configuration] {
+        grid-row: 1 / -1;
+    }
+
+    /* A retained-part failure keeps its real alert above both working panes. */
+    .instant-quote__workflow[data-workflow-state="error"]:has(> [data-workflow-viewer]):has(> [data-workflow-parts]) {
+        grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+
+    .instant-quote__workflow[data-workflow-state="error"]:has(> [data-workflow-parts]) > p[role="alert"] {
+        grid-column: 1 / -1;
+        grid-row: 1;
+    }
+
+    .instant-quote__workflow[data-workflow-state="error"]:has(> [data-workflow-parts]) > [data-workflow-viewer] {
+        grid-row: 2;
+    }
+
+    .instant-quote__workflow[data-workflow-state="error"]:has(> [data-workflow-viewer]) > [data-workflow-parts] {
+        grid-row: 3;
+    }
+
+    .instant-quote__workflow[data-workflow-state="error"]:has(> [data-workflow-parts]) > [data-workflow-configuration] {
+        grid-row: 2 / -1;
+    }
+
     .instant-quote__workflow > [data-workflow-parts] > [data-workflow-part] {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1851,4 +1921,120 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     font-size: 3rem;
     font-weight: 400;
     line-height: 1.5;
+}
+
+/* Source customer decisions remain structured inside the existing native POST.
+   The accepted order ledger and sticky action footer retain their ownership. */
+.instant-quote__workflow [data-workflow-customer-details-content] {
+    container: instant-quote-customer / inline-size;
+}
+
+[data-workflow-customer-details-content] form.instant-quote__customer-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 0;
+    min-width: 0;
+    padding: 0;
+    border: 1px solid #dce4ee;
+    border-radius: .75rem;
+    background: #fff;
+}
+
+.instant-quote__customer-sections {
+    min-width: 0;
+    padding: 1rem 1.15rem;
+}
+
+.instant-quote__workflow .instant-quote__customer-section {
+    min-width: 0;
+    margin: 0;
+    padding: 0 0 .85rem;
+    border: 0;
+    border-bottom: 1px solid #dce4ee;
+    border-radius: 0;
+    background: transparent;
+}
+
+.instant-quote__workflow .instant-quote__customer-section + .instant-quote__customer-section {
+    padding-top: .85rem;
+}
+
+.instant-quote__workflow .instant-quote__customer-section:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.instant-quote__customer-section-heading {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    align-items: start;
+    gap: .65rem;
+    margin-bottom: .7rem;
+}
+
+.instant-quote__customer-section-index {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: .45rem;
+    background: #eaf2ff;
+    color: #075de8;
+    font-weight: 600;
+}
+
+.instant-quote__customer-section-heading h4 {
+    margin: 0 0 .1rem;
+    color: #111f33;
+    font-size: .95rem;
+    line-height: 1.35;
+}
+
+.instant-quote__customer-section-heading p {
+    margin: 0;
+    color: #5b6777;
+    font-size: .8125rem;
+    line-height: 1.45;
+}
+
+.instant-quote__customer-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .65rem .8rem;
+    min-width: 0;
+}
+
+.instant-quote__customer-fields > div {
+    min-width: 0;
+}
+
+.instant-quote__customer-fields > fieldset,
+.instant-quote__customer-fields > .instant-quote__checkbox-field,
+.instant-quote__customer-section:last-child .instant-quote__customer-fields > div {
+    grid-column: 1 / -1;
+}
+
+.instant-quote__customer-section textarea[name="Description"] {
+    min-height: 5.25rem;
+    height: 5.25rem;
+    resize: vertical;
+}
+
+.instant-quote__customer-description-meta {
+    display: flex;
+    justify-content: flex-end;
+    min-height: 1rem;
+    color: #5b6777;
+    font-size: .8125rem;
+}
+
+@container instant-quote-customer (max-width: 32.5rem) {
+    .instant-quote__customer-fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .instant-quote__customer-sections {
+        padding: .9rem;
+    }
 }

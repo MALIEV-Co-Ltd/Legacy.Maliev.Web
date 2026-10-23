@@ -489,9 +489,11 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     assertActive();
     const previousId = activeId;
     select(id);
-    const image = adapter.snapshot?.() ?? null;
-    if (previousId !== null && previousId !== id) select(previousId);
-    return image;
+    try {
+      return adapter.snapshot?.() ?? null;
+    } finally {
+      if (previousId !== null && previousId !== id) select(previousId);
+    }
   }
 
   function handleKey(event) {
@@ -541,20 +543,57 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     setThicknessVisible, reset, fit, fullscreen, snapshot, handleKey, dispose });
 }
 
+/** Creates the source-faithful lighting shared by the live viewer and its captures. */
+export function createPreviewScene() {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf7f9fc);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xd6dfe6, 0.56));
+  const key = new THREE.DirectionalLight(0xffffff, 0.64);
+  key.position.set(1, 0.6, 1.2).multiplyScalar(50);
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xdbe6ef, 0.26);
+  fill.position.set(-1, -0.3, 0.6).multiplyScalar(50);
+  scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xb8c8d8, 0.1);
+  rim.position.set(-0.4, 1, -0.6).multiplyScalar(50);
+  scene.add(rim);
+  return scene;
+}
+
+/** Captures a white-card thumbnail without leaving the live canvas white. */
+export function capturePreviewSnapshot({ scene, camera, renderer, canvas }) {
+  const liveBackground = scene.background;
+  let failed = false;
+  let primary;
+  try {
+    scene.background = new THREE.Color(0xffffff);
+    renderer.render(scene, camera);
+    const image = canvas.toDataURL('image/png');
+    return image === 'data:,' ? null : image;
+  } catch (error) {
+    failed = true;
+    primary = error;
+    throw error;
+  } finally {
+    scene.background = liveBackground;
+    try {
+      renderer.render(scene, camera);
+    } catch (error) {
+      if (failed) throw new AggregateError([primary, error], 'Preview capture and live redraw failed.');
+      throw error;
+    }
+  }
+}
+
 /** Creates the production Three.js viewer. Call only inside the quotation island. */
 export function createThreeModelViewer(canvas) {
   if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError('A canvas is required.');
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf4f7fb);
+  const scene = createPreviewScene();
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100000);
   camera.position.set(80, 80, 80);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x334155, 2));
-  const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
-  keyLight.position.set(1, 2, 3);
-  scene.add(keyLight);
   let frame = 0;
   const resize = createCanvasResizeController({
     renderer,
@@ -590,8 +629,7 @@ export function createThreeModelViewer(canvas) {
     snapshot() {
       resize.sync();
       controls.update();
-      renderer.render(scene, camera);
-      return canvas.toDataURL('image/png');
+      return capturePreviewSnapshot({ scene, camera, renderer, canvas });
     },
     setColor(object, color) {
       object.traverse(child => {

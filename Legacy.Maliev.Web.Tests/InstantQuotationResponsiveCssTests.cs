@@ -47,6 +47,13 @@ public sealed class InstantQuotationResponsiveCssTests
         Assert.Contains("[data-workflow-review-total]", css, StringComparison.Ordinal);
         Assert.Contains(".instant-quote__actions", css, StringComparison.Ordinal);
         Assert.Contains("flex-wrap: wrap", css, StringComparison.Ordinal);
+        Assert.Contains(".instant-quote__workflow:has(> [data-workflow-viewer]):has(> [data-workflow-parts])", css, StringComparison.Ordinal);
+        Assert.Contains("grid-template-rows: minmax(0, 1fr) auto", css, StringComparison.Ordinal);
+        Assert.Contains(".instant-quote__workflow:has(> [data-workflow-viewer]) > [data-workflow-parts]", css, StringComparison.Ordinal);
+        Assert.Contains("grid-row: 1 / -1", css, StringComparison.Ordinal);
+        Assert.Contains("grid-template-rows: auto minmax(0, 1fr) auto", css, StringComparison.Ordinal);
+        Assert.Contains("> p[role=\"alert\"]", css, StringComparison.Ordinal);
+        Assert.Contains("grid-row: 2 / -1", css, StringComparison.Ordinal);
     }
 
     private static string ReadCss() => File.ReadAllText(Path.Combine(

@@ -83,8 +83,12 @@ public sealed class FinishingColorParityTests : IClassFixture<TestingWebApplicat
             var faqQuestionCounts = new List<int>();
             foreach (Match match in Regex.Matches(
                 System.Net.WebUtility.HtmlDecode(document),
-                "<script[^>]*type=\"application/ld\\+json\"[^>]*>(?<json>.*?)</script>",
-                RegexOptions.Singleline | RegexOptions.CultureInvariant))
+                "(?<tag><script\\b[^>]*>)(?<json>.*?)</script>",
+                RegexOptions.Singleline | RegexOptions.CultureInvariant)
+                .Where(match => System.Net.WebUtility.HtmlDecode(Regex.Match(
+                    match.Groups["tag"].Value,
+                    "\\btype=[\"'](?<value>[^\"']*)[\"']",
+                    RegexOptions.IgnoreCase).Groups["value"].Value) == "application/ld+json"))
             {
                 using var schema = JsonDocument.Parse(match.Groups["json"].Value);
                 if (schema.RootElement.TryGetProperty("@type", out var type) && type.GetString() == "FAQPage")

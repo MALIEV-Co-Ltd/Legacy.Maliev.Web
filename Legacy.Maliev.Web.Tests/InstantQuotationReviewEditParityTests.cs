@@ -300,11 +300,101 @@ public sealed class InstantQuotationReviewEditParityTests
         }
     }
 
+    [Theory]
+    [InlineData("en", "PLA", 1, true)]
+    [InlineData("th", "PLA", 1, true)]
+    [InlineData("en", "PETG", 1, false)]
+    [InlineData("th", "PETG", 1, false)]
+    [InlineData("en", "M68", 1, false)]
+    [InlineData("th", "M68", 1, false)]
+    [InlineData("en", "PLA", 2, false)]
+    [InlineData("th", "M68", 2, false)]
+    public async Task Review_CustomPickerIsPlaOnlyAndMultipartColorIsDisabled(
+        string culture, string material, int bodies, bool pickerExpected)
+    {
+        var previous = System.Globalization.CultureInfo.CurrentUICulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+            var id = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var color = bodies > 1 ? "Any" : material == "M68" ? "Gray" : "Black";
+            var part = Part(id, "color.stl") with
+            {
+                Geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(10, 1_000, 100, [10], [10], 12, bodies, true),
+                Configuration = new(material, color, 1),
+            };
+
+            var html = WebUtility.HtmlDecode(await RenderReviewAsync(
+                [part], id, colorsForMaterial: materialKey => PricingCatalog.MaterialColors[materialKey]));
+
+            var picker = System.Text.RegularExpressions.Regex.Matches(html, "<input\\b[^>]*\\btype=\"color\"[^>]*>");
+            Assert.Equal(pickerExpected ? 1 : 0, picker.Count);
+            var select = System.Text.RegularExpressions.Regex.Match(html, $"<select\\b[^>]*id=\"review-color-{id}\"[^>]*>");
+            Assert.True(select.Success);
+            Assert.Equal(bodies > 1, System.Text.RegularExpressions.Regex.IsMatch(select.Value, "\\bdisabled(?:[\\s=>])"));
+            Assert.Contains($"value=\"{color}\"", html, StringComparison.Ordinal);
+            Assert.Equal(1, Count(html, "data-review-part-details"));
+            Assert.Equal(1, Count(html, "data-review-edit-part"));
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = previous;
+        }
+    }
+
+    [Theory]
+    [InlineData("en", "PLA")]
+    [InlineData("th", "PLA")]
+    [InlineData("en", "PETG")]
+    [InlineData("th", "PETG")]
+    public async Task Review_RestoredHexRemainsVisibleAndIsolatedFromMultipartResin(string culture, string material)
+    {
+        var previous = System.Globalization.CultureInfo.CurrentUICulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+            var singleId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var multiId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+            var single = Part(singleId, "custom.stl") with { Configuration = new(material, "#00ff7F", 2) };
+            var multi = Part(multiId, "resin.stl") with
+            {
+                Geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(10, 1_000, 100, [10], [10], 12, 2, true),
+                Configuration = new("M68", "Any", 1),
+            };
+            foreach (var parts in new[] { new[] { single, multi }, new[] { multi, single } })
+            {
+                var html = WebUtility.HtmlDecode(await RenderReviewAsync(
+                    parts, singleId, colorsForMaterial: materialKey => PricingCatalog.MaterialColors[materialKey]));
+                var singleArticle = System.Text.RegularExpressions.Regex.Match(
+                    html, $"<article\\b[^>]*data-review-part-id=\"{singleId}\"[^>]*>.*?</article>",
+                    System.Text.RegularExpressions.RegexOptions.Singleline);
+                var multiArticle = System.Text.RegularExpressions.Regex.Match(
+                    html, $"<article\\b[^>]*data-review-part-id=\"{multiId}\"[^>]*>.*?</article>",
+                    System.Text.RegularExpressions.RegexOptions.Singleline);
+                Assert.True(singleArticle.Success);
+                Assert.True(multiArticle.Success);
+                Assert.Contains("<option value=\"#00ff7F\"", singleArticle.Value, StringComparison.Ordinal);
+                Assert.DoesNotContain("#00ff7F", multiArticle.Value, StringComparison.Ordinal);
+                Assert.Contains("<option value=\"Any\"", multiArticle.Value, StringComparison.Ordinal);
+                Assert.Equal(material == "PLA" ? 1 : 0, System.Text.RegularExpressions.Regex.Matches(
+                    singleArticle.Value, "<input\\b[^>]*\\btype=\"color\"[^>]*>").Count);
+                Assert.DoesNotContain("type=\"color\"", multiArticle.Value, StringComparison.Ordinal);
+                Assert.Equal(2, Count(html, "data-review-part-details"));
+                Assert.Equal(2, Count(html, "data-review-edit-part"));
+            }
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = previous;
+        }
+    }
+
     private static async Task<string> RenderReviewAsync(
         IReadOnlyList<InstantQuotationWorkflowPartViewModel> parts,
         Guid selectedPartId,
         Func<Guid, IReadOnlyList<string>>? thicknessWarnings = null,
-        InstantQuotationOrderQuote? quote = null)
+        InstantQuotationOrderQuote? quote = null,
+        Func<string, IReadOnlyList<string>>? colorsForMaterial = null)
     {
         using var services = new ServiceCollection()
             .AddLogging()
@@ -326,6 +416,7 @@ public sealed class InstantQuotationReviewEditParityTests
             {
                 ["Parts"] = parts,
                 ["Quote"] = quote,
+                ["ColorsForMaterial"] = colorsForMaterial ?? (_ => Array.Empty<string>()),
                 ["SelectedPartId"] = selectedPartId,
                 ["ThicknessWarnings"] = thicknessWarnings ?? ((Guid _) => Array.Empty<string>()),
             });

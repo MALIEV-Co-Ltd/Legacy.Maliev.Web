@@ -54,6 +54,161 @@
         <p role="alert">@Localizer["The file could not be uploaded. Try again."]</p>
     }
 
+    @if (HasDevelopmentPreview)
+    {
+        <section data-workflow-local-demo
+                 data-local-demo-step="@developmentStep.ToString().ToLowerInvariant()"
+                 class="instant-quote__configuration"
+                 aria-labelledby="development-preview-heading">
+            <header class="instant-quote__panel-header">
+                <h3 id="development-preview-heading" data-local-demo-badge>@Localizer["Demo"]</h3>
+                <p role="status">@Localizer["Development preview only. Advisory prices cannot be submitted."]</p>
+            </header>
+            <canvas @key="developmentPreviewGeneration" @ref="developmentPreviewCanvas" data-local-demo-canvas tabindex="0"
+                    style="display:block;width:100%;max-width:600px;height:300px"
+                    aria-label="@Localizer["Interactive 3D part preview"]"></canvas>
+            @foreach (var part in developmentPreviews.Values)
+            {
+                <article class="instant-quote__review-parts" data-local-demo-part>
+                    <h4>@part.Name</h4>
+                    <p data-local-demo-configuration>@part.MaterialKey @(part.Quantity)×</p>
+                    <small>@Measurement(part.Claim.DimensionXmm) × @Measurement(part.Claim.DimensionYmm) × @Measurement(part.Claim.DimensionZmm) mm</small>
+                    @if (developmentStep is not DevelopmentPreviewStep.Contact)
+                    {
+                        <div class="instant-quote__review-fields">
+                            <div>
+                                <label for="@DevelopmentInputId("material", part)">@Localizer["Material"]</label>
+                                <select id="@DevelopmentInputId("material", part)" value="@part.MaterialKey"
+                                        @onchange='args => ChangeDevelopmentSettingAsync(part.LocalId, "material", args)'>
+                                    @foreach (var material in Materials)
+                                    {
+                                        <option value="@material.Key">@Localizer[material.DisplayName]</option>
+                                    }
+                                </select>
+                            </div>
+                            <div>
+                                <label for="@DevelopmentInputId("preference", part)">@Localizer["Preference"]</label>
+                                <select id="@DevelopmentInputId("preference", part)" value="@part.Preference.ToString()"
+                                        disabled="@(PricingCatalog.ResolveMaterial(part.MaterialKey)?.Process is PrintProcess.Resin)"
+                                        @onchange='args => ChangeDevelopmentSettingAsync(part.LocalId, "preference", args)'>
+                                    <option value="Quality">@Localizer["Quality"]</option>
+                                    <option value="Standard">@Localizer["Standard"]</option>
+                                    <option value="Strength">@Localizer["Strength"]</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="@DevelopmentInputId("color", part)">@Localizer["Color"]</label>
+                                <select id="@DevelopmentInputId("color", part)" value="@part.Color" disabled="@(part.Claim.BodyCount > 1)"
+                                        @onchange='args => ChangeDevelopmentSettingAsync(part.LocalId, "color", args)'>
+                                    @foreach (var color in part.Claim.BodyCount > 1 ? new[] { "Any" } : GetColors(part.MaterialKey))
+                                    {
+                                        <option value="@color">@Localizer[color]</option>
+                                    }
+                                    @if (part.Claim.BodyCount == 1 && !GetColors(part.MaterialKey).Contains(part.Color, StringComparer.Ordinal))
+                                    {
+                                        <option value="@part.Color">@part.Color</option>
+                                    }
+                                </select>
+                                @if (part.Claim.BodyCount == 1 && part.MaterialKey == "PLA")
+                                {
+                                    <input type="color" aria-label="@Localizer["Color"]"
+                                           value="@(part.Color.StartsWith('#') ? part.Color : "#000000")"
+                                           @onchange='args => ChangeDevelopmentSettingAsync(part.LocalId, "color", args)' />
+                                }
+                            </div>
+                            <div>
+                                <label for="@DevelopmentInputId("quantity", part)">@Localizer["Quantity"]</label>
+                                <input id="@DevelopmentInputId("quantity", part)" type="number" min="1" max="@PricingCatalog.MaximumAdditiveQuantity"
+                                       step="1" value="@part.Quantity"
+                                       @onchange='args => ChangeDevelopmentSettingAsync(part.LocalId, "quantity", args)' />
+                            </div>
+                        </div>
+                    }
+                    <dl class="instant-quote__review-prices">
+                        <div><dt>@Localizer["Unit price"]</dt><dd data-local-demo-unit-price>@Money(part.Price?.UnitPrice)</dd></div>
+                        <div><dt>@Localizer["Subtotal"]</dt><dd data-local-demo-subtotal>@Money(part.Price?.Subtotal)</dd></div>
+                        <div><dt>@Localizer["Print time"]</dt><dd>@(part.Price is null ? "—" : Measurement(part.Price.PrintTimeMinutesPerUnit)) @Localizer["minutes"]</dd></div>
+                    </dl>
+                    <details class="instant-quote__review-details">
+                        <summary>@Localizer["Part details"]</summary>
+                        <dl class="instant-quote__review-measurements">
+                            <div><dt>@Localizer["Volume"]</dt><dd>@Measurement(part.Claim.VolumeMm3 / 1000) cm³</dd></div>
+                            <div><dt>@Localizer["Surface area"]</dt><dd>@Measurement(part.Claim.SurfaceAreaMm2 / 100) cm²</dd></div>
+                            <div><dt>@Localizer["Triangle count"]</dt><dd>@part.Claim.FacetCount</dd></div>
+                        </dl>
+                        <p>@Localizer["Price and lead time are estimates and may change after our engineers review your part for manufacturability."]</p>
+                    </details>
+                    <button type="button" data-local-demo-retry @onclick="() => RetryDevelopmentUploadAsync(part.LocalId)">@Localizer["Try again"]</button>
+                </article>
+            }
+            <section class="instant-quote__pricing-summary" aria-labelledby="development-preview-price-heading">
+                <h4 id="development-preview-price-heading">@Localizer["Advisory price and lead time"]</h4>
+                @if (!DevelopmentPriceAvailable)
+                {
+                    <p role="status">@Localizer["Price unavailable — engineering review required."]</p>
+                }
+                <dl>
+                    <div><dt>@Localizer["Subtotal"]</dt><dd>@Money(developmentTotal?.Printing)</dd></div>
+                    <div><dt>@Localizer["Shipping"]</dt><dd>@Money(developmentTotal?.ShippingCost)</dd></div>
+                    <div><dt>@Localizer["VAT"]</dt><dd>@Money(developmentTotal?.Vat)</dd></div>
+                    <div><dt>@Localizer["Total"]</dt><dd>@Money(developmentTotal?.FinalOrderPrice)</dd></div>
+                    <div><dt>@Localizer["Lead time"]</dt><dd data-local-demo-lead-time>@(developmentLeadTime is null ? "—" : developmentLeadTime.MinimumDays + "–" + developmentLeadTime.MaximumDays + " " + Localizer["days"].Value)</dd></div>
+                </dl>
+            </section>
+            @if (developmentStep is DevelopmentPreviewStep.Configuration)
+            {
+                <button type="button" data-local-demo-review @onclick="ShowDevelopmentReview">@Localizer["Review"]</button>
+            }
+            else if (developmentStep is DevelopmentPreviewStep.Review)
+            {
+                <button type="button" @onclick="ShowDevelopmentConfiguration">@Localizer["Back"]</button>
+                <button type="button" data-local-demo-continue @onclick="ShowDevelopmentContact">@Localizer["Customer details"]</button>
+            }
+            else
+            {
+                <section data-local-demo-contact aria-labelledby="development-preview-contact-heading">
+                    <h4 id="development-preview-contact-heading">@Localizer["Customer details"]</h4>
+                    <div class="instant-quote__customer-fields">
+                        <label for="demo-contact-name">@Localizer["First name"]</label>
+                        <input id="demo-contact-name" type="text" autocomplete="off" />
+                        <label for="demo-contact-email">@Localizer["Email"]</label>
+                        <input id="demo-contact-email" type="email" autocomplete="off" />
+                        <label for="demo-contact-phone">@Localizer["Telephone"]</label>
+                        <input id="demo-contact-phone" type="tel" autocomplete="off" maxlength="50" />
+                        @foreach (var field in new[] { "Last name", "Mobile number", "Company", "Tax number", "Tax invoice issued to", "Branch code" })
+                        {
+                            var id = "demo-contact-" + field.Replace(" ", "-").ToLowerInvariant();
+                            <label for="@id">@Localizer[field]</label>
+                            <input id="@id" type="text" autocomplete="off" maxlength="50" />
+                        }
+                        <label for="demo-contact-country">@Localizer["Country"]</label>
+                        <select id="demo-contact-country">
+                            @foreach (var country in CustomerModel.Countries)
+                            {
+                                <option value="@country.Name">@country.DisplayName</option>
+                            }
+                        </select>
+                        @foreach (var address in new[] { "Billing address", "Shipping address" })
+                        {
+                            <fieldset>
+                                <legend>@Localizer[address]</legend>
+                                @foreach (var field in new[] { "Building", "Street address", "Sub-district", "City / district", "Province", "Postal code" })
+                                {
+                                    var id = "demo-contact-" + address.Replace(" ", "-") + "-" + field.Replace(" ", "-");
+                                    <label for="@id">@Localizer[field]</label>
+                                    <input id="@id" type="text" autocomplete="off" maxlength="256" />
+                                }
+                            </fieldset>
+                        }
+                    </div>
+                    <button type="button" @onclick="ReturnDevelopmentReview">@Localizer["Back"]</button>
+                    <button type="button" data-local-demo-no-submit disabled>@Localizer["Submit"]</button>
+                </section>
+            }
+            <button type="button" data-local-demo-remove @onclick="() => ClearDevelopmentPreviewAsync()">@Localizer["Remove"]</button>
+        </section>
+    }
+
     @if (incompletePreviewKey is not null)
     {
         <section data-workflow-incomplete-preview aria-label="@Localizer["3D preview"]">
@@ -101,13 +256,15 @@
 
     @if (VisibleSections.Parts)
     {
+        var totalPartCount = Parts.Count + Uploads.Count(upload => Parts.All(part => part.PreviewCorrelationId != upload.LocalId));
         <section data-workflow-parts data-workflow-part-list aria-labelledby="instant-quote-parts-heading">
             <h3 id="instant-quote-parts-heading">@Localizer["Parts"]</h3>
+            <span data-workflow-part-count aria-live="polite">@(totalPartCount == 0 ? string.Empty : Localizer[totalPartCount == 1 ? "{0} part" : "{0} parts", totalPartCount])</span>
             <label for="instant-quote-files"
                    class="iq-compact-dropzone"
                    aria-disabled="@InputDisabled.ToString().ToLowerInvariant()">
                 <span aria-hidden="true">＋</span>
-                <strong>@Localizer["Add file"]</strong>
+                <strong>@Localizer["Add parts"]</strong>
                 <small>STL, OBJ, 3MF, STEP, IGES, GLB, GLTF</small>
                 <small data-workflow-upload-limit>@Localizer["Up to {0} MB per file", InstantQuotationWorkflowCoordinator.MaximumFileSize / (1024 * 1024)]</small>
             </label>
@@ -123,11 +280,20 @@
                                 aria-label="@Localizer["Cancel upload for {0}", upload.DisplayFileName]"
                                 @onclick="() => CancelUpload(upload.LocalId)">@Localizer["Cancel"]</button>
                     }
+                    else if (upload.Status is InstantQuotationWorkflowUploadStatus.Pending)
+                    {
+                        <button type="button"
+                                aria-label="@Localizer["Remove {0}", upload.DisplayFileName]"
+                                @onclick="() => DiscardUploadAsync(upload.LocalId)">@Localizer["Remove"]</button>
+                    }
                     else if (upload.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
                     {
                         <button type="button"
                                 aria-label="@Localizer["Try upload again for {0}", upload.DisplayFileName]"
                                 @onclick="() => RetryUploadAsync(upload.LocalId)">@Localizer["Try again"]</button>
+                        <button type="button"
+                                aria-label="@Localizer["Remove {0}", upload.DisplayFileName]"
+                                @onclick="() => DiscardUploadAsync(upload.LocalId)">@Localizer["Remove"]</button>
                     }
                 </article>
             }
@@ -137,6 +303,16 @@
                 <article data-workflow-part data-part-id="@part.PartId">
                     <span data-workflow-part-number aria-label="@Localizer["Part {0}", partNumber]">@partNumber.ToString("00")</span>
                     <h4>@part.DisplayFileName</h4>
+                    <img class="instant-quote__review-thumbnail"
+                         data-workflow-thumbnail
+                         data-part-id="@ViewerPartKey(part.PartId)"
+                         src="/src/images/3d-canvas-placeholder.svg"
+                         alt="" />
+                    <div data-workflow-part-summary>
+                        <span data-workflow-summary-configuration>@part.Configuration.MaterialKey @(part.Configuration.Quantity)×</span>
+                        <span data-workflow-summary-unit-price
+                              aria-label="@(Localizer["Unit price"].Value + " " + Money(DisplayQuote(part)?.UnitPrice))">@Money(DisplayQuote(part)?.UnitPrice)</span>
+                    </div>
                     <button type="button"
                             aria-label="@Localizer["View {0}", part.DisplayFileName]"
                             aria-pressed="@IsPreviewSelected(part.PartId).ToString().ToLowerInvariant()"
@@ -238,12 +414,19 @@
                     <select id="color-@part.PartId"
                             name="color"
                             value="@part.Configuration.Color"
+                            disabled="@(part.Geometry.BodyCount > 1)"
                             @onchange="args => ChangeColorAsync(part.PartId, args)">
-                        @foreach (var color in GetColors(part.Configuration.MaterialKey))
+                        @foreach (var color in GetPartColors(part))
                         {
                             <option value="@color">@Localizer[color]</option>
                         }
                     </select>
+                    @if (part.Geometry.BodyCount <= 1 && part.Configuration.MaterialKey == "PLA")
+                    {
+                        <input type="color" aria-label="@Localizer["Color"]"
+                               value="@(part.Configuration.Color.StartsWith('#') ? part.Configuration.Color : "#000000")"
+                               @onchange="args => ChangeColorAsync(part.PartId, args)" />
+                    }
                     <div class="instant-quote__quantity-heading">
                         <label for="quantity-@part.PartId">@Localizer["Quantity"]</label>
                         @if (InstantQuotationBulkSavings.Calculate(part, HasUnacceptedConfiguration(part)) is { } savings)
@@ -461,7 +644,7 @@
                 </div>
 
                 <div class="instant-quote__configuration-actions">
-                    <button type="button" @onclick="EnterReview" disabled="@(!CanEnterReview)">@Localizer["Review"]</button>
+                    <button type="button" @onclick="EnterReview" disabled="@(!CanEnterReview)">@Localizer["Review all items"]</button>
                     <a class="instant-quote__consultation-link" data-summary-consultation href="/contact#contact-us" target="_blank" rel="noopener noreferrer">@Localizer["Talk to an engineer"]<span class="instant-quote__sr-only"> @Localizer["(opens in a new tab)"]</span></a>
                 </div>
             </div>

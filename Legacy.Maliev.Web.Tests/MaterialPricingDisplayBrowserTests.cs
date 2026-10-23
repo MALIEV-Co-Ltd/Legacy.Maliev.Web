@@ -472,6 +472,95 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                 accepted.QuoteAuthorization, DateTimeOffset.UtcNow));
     }
 
+    [Theory]
+    [InlineData(768, 1024)]
+    [InlineData(820, 1180)]
+    [InlineData(834, 1194)]
+    [InlineData(1024, 768)]
+    [InlineData(1180, 820)]
+    [InlineData(1194, 834)]
+    [InlineData(1366, 1024)]
+    public async Task LoadedThreePartTabletControlsAndExpandedSummaryKeepSourceGeometry(int width, int height)
+    {
+        await using var fixture = await Fixture.CreateAsync(output, "th", width, ColorScheme.Light, height, partCount: 3);
+        Assert.Equal(3, (await fixture.StoredAsync()).Parts.Count);
+        Assert.Equal(3, Assert.IsType<InstantQuotationOrderQuote>(fixture.Control.FinalQuote).Parts.Count);
+        await Assertions.Expect(fixture.Page.Locator("[data-workflow-order-total]")).ToHaveAttributeAsync("aria-busy", "false");
+        await fixture.Page.EvaluateAsync("""
+            async () => {
+                await document.fonts.ready;
+                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            }
+            """);
+        var dock = fixture.Page.Locator("[data-workflow-summary-dock]");
+        await dock.Locator("summary").ClickAsync();
+        await Assertions.Expect(dock).ToHaveAttributeAsync("open", "");
+        var layout = await fixture.Page.EvaluateAsync<System.Text.Json.JsonElement>("""
+            () => {
+                const configuration = document.querySelector('[data-workflow-configuration]');
+                const content = configuration.querySelector('[data-workflow-configuration-content]');
+                const viewer = document.querySelector('[data-workflow-viewer]');
+                const footer = configuration.querySelector('.instant-quote__configuration-footer');
+                const cards = configuration.querySelector('[data-material-card-scroll]');
+                const card = cards.querySelector('[role="radio"]');
+                const controls = configuration.querySelector('[data-workflow-material-color-quantity]');
+                const color = controls.querySelector('select[name="color"]');
+                const category = cards.querySelector('[data-material-category]');
+                const total = configuration.querySelector('[data-workflow-order-total]');
+                const labels = [...controls.querySelectorAll('[data-workflow-build-preference] label')];
+                const c = configuration.getBoundingClientRect();
+                const v = viewer.getBoundingClientRect();
+                return {
+                    cardWidth: card.getBoundingClientRect().width,
+                    listHeight: cards.getBoundingClientRect().height,
+                    controlsWidth: controls.getBoundingClientRect().width,
+                    colorWidth: color.getBoundingClientRect().width,
+                    footerShare: Math.round(footer.getBoundingClientRect().height / innerHeight * 100),
+                    clippedBuildLabel: labels.length === 0 || labels.some(label => label.scrollWidth > label.clientWidth + 1),
+                    overflow: document.documentElement.scrollWidth - innerWidth,
+                    summaryColumns: getComputedStyle(total).gridTemplateColumns.split(' ').filter(Boolean).length,
+                    summaryWidth: total.getBoundingClientRect().width,
+                    categoryFontSize: parseFloat(getComputedStyle(category).fontSize),
+                    categoryLetterSpacing: getComputedStyle(category).letterSpacing,
+                    categoryTransform: getComputedStyle(category).textTransform,
+                    configBelowViewer: c.top >= v.bottom - 2,
+                    configBesideViewer: c.left >= v.right - 2,
+                    configWidth: c.width,
+                    viewerHeight: v.height,
+                    nestedConfigurationScroller: [configuration, content].some(element =>
+                        getComputedStyle(element).overflowY === 'auto' && element.scrollHeight > element.clientHeight + 1)
+                };
+            }
+            """);
+        var context = $"{width}×{height}: {layout}";
+        Assert.True(layout.GetProperty("cardWidth").GetDouble() >= 150, context);
+        Assert.True(layout.GetProperty("listHeight").GetDouble() >= 120, context);
+        // The modern full-width control group replaces the original separate settings rail.
+        Assert.True(layout.GetProperty("controlsWidth").GetDouble() >= 200, context);
+        Assert.True(layout.GetProperty("colorWidth").GetDouble() >= 150, context);
+        Assert.True(layout.GetProperty("footerShare").GetInt32() <= 40, context);
+        Assert.False(layout.GetProperty("clippedBuildLabel").GetBoolean(), context);
+        Assert.True(layout.GetProperty("overflow").GetDouble() <= 1, context);
+        Assert.Equal(2, layout.GetProperty("summaryColumns").GetInt32());
+        Assert.True(layout.GetProperty("summaryWidth").GetDouble() > 0, context);
+        Assert.True(layout.GetProperty("categoryFontSize").GetDouble() >= 12, context);
+        Assert.Contains(layout.GetProperty("categoryLetterSpacing").GetString(), new[] { "normal", "0px" });
+        Assert.Equal("none", layout.GetProperty("categoryTransform").GetString());
+        if (width < 1024)
+        {
+            Assert.True(layout.GetProperty("configBelowViewer").GetBoolean(), context);
+            Assert.True(layout.GetProperty("configWidth").GetDouble() >= width - 40, context);
+            Assert.True(layout.GetProperty("viewerHeight").GetDouble() <= height * .45, context);
+            Assert.False(layout.GetProperty("nestedConfigurationScroller").GetBoolean(), context);
+        }
+        else
+        {
+            Assert.True(layout.GetProperty("configBesideViewer").GetBoolean(), context);
+        }
+        await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
+        Assert.Equal(3, (await fixture.StoredAsync()).Parts.Count);
+    }
+
     private sealed class Gate(int quantity, InstantQuotationMaterialPricingStatus status, bool holdAuthorization)
     {
         public int Quantity { get; } = quantity;
@@ -547,6 +636,13 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         public async Task<InstantQuotationOrderQuote?> QuoteAsync(InstantQuotationSessionState session, string? owner,
             bool comparisons, Func<InstantQuotationMaterialPricingProgress, CancellationToken, ValueTask> observer, CancellationToken token)
         {
+            if (session.Parts.Count == 3)
+            {
+                // Multi-part geometry coverage uses the same real authority without single-part race gates.
+                var quote = await inner.QuoteAsync(session, owner, comparisons, observer, token);
+                control.FinalQuote = quote;
+                return quote;
+            }
             var quantity = session.Parts.Single().Configuration.Quantity;
             control.Timeline.Enqueue(("attempt", quantity, token.IsCancellationRequested));
             var gate = control.Gates.FirstOrDefault(candidate => candidate.Quantity == quantity && candidate.Claimed == 0);
@@ -614,8 +710,9 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         public Fixture() => Factory = new(Control);
 
         public static async Task<Fixture> CreateAsync(ITestOutputHelper output, string culture, int width, ColorScheme scheme, int height = 800,
-            string displayFileName = "historical-controlled.stl")
+            string displayFileName = "historical-controlled.stl", int partCount = 1)
         {
+            if (partCount is not (1 or 3)) throw new ArgumentOutOfRangeException(nameof(partCount));
             var fixture = new Fixture();
             try
             {
@@ -660,14 +757,19 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                 Assert.True(!string.IsNullOrEmpty(fixture.sessionId), "The normal anonymous runtime cookie must resolve its protected session.");
                 var store = fixture.Factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
                 var stored = (await store.GetAsync(fixture.sessionId, null, default))!;
-                var digest = new string('a', 64);
-                var reference = new InstantQuotationUploadReference(Guid.NewGuid().ToString("D"));
-                var geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(
-                    InstantQuotationUploadResult.Succeeded("synthetic-historical-browser", reference, digest),
-                    new InstantQuotationGeometryClaim(1, digest, 8, 8, 8, 512, 384,
-                        Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(), 12, 1, true, false, false, 1))!;
-                var part = new InstantQuotationPart(Guid.NewGuid(), displayFileName, reference, geometry, new("M68", "White", 1));
-                Assert.True(await store.PutAsync(stored with { RequestState = new([part]) }, null, default));
+                var parts = new List<InstantQuotationPart>();
+                for (var index = 0; index < partCount; index++)
+                {
+                    var digest = new string('a', 64);
+                    var reference = new InstantQuotationUploadReference(Guid.NewGuid().ToString("D"));
+                    var geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(
+                        InstantQuotationUploadResult.Succeeded("synthetic-historical-browser", reference, digest),
+                        new InstantQuotationGeometryClaim(1, digest, 8, 8, 8, 512, 384,
+                            Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(), 12, 1, true, false, false, 1))!;
+                    var fileName = partCount == 1 ? displayFileName : $"tablet-{index + 1}.stl";
+                    parts.Add(new InstantQuotationPart(Guid.NewGuid(), fileName, reference, geometry, new("M68", "White", 1)));
+                }
+                Assert.True(await store.PutAsync(stored with { RequestState = new(parts) }, null, default));
                 await fixture.Page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle });
                 await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
                 await fixture.Page.EvaluateAsync("""

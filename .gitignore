@@ -6,3 +6,6 @@ TestResults/
 **/node_modules/
 *.user
 *.suo
+
+# Internal planning and tracking documents
+SEO-CONVERSION-IMPROVEMENTS.md
