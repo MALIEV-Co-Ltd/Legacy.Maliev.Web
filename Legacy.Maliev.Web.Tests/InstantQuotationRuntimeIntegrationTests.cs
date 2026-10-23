@@ -12,12 +12,12 @@ using System.Text.RegularExpressions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
+public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<TestingWebApplicationFactory>, IAsyncLifetime
 {
     private static readonly IDataProtectionProvider DataProtectionProvider = new EphemeralDataProtectionProvider();
     private readonly WebApplicationFactory<Program> factory;
 
-    public InstantQuotationRuntimeIntegrationTests(WebApplicationFactory<Program> factory) =>
+    public InstantQuotationRuntimeIntegrationTests(TestingWebApplicationFactory factory) =>
         this.factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("environment", "Testing");

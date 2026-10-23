@@ -732,7 +732,9 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                 var url = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
                 try
                 {
-                    using var initialNavigation = new MaterialInitialNavigationDiagnostics(fixture.Page, origin);
+                    using var responseProbe = fixture.Factory.Services.GetRequiredService<TestResponseProbeRegistry>()
+                        .TryBeginNavigation(origin, TestResponseRequestLabel.BaseQuotation);
+                    using var initialNavigation = new MaterialInitialNavigationDiagnostics(fixture.Page, origin, responseProbe?.Probe);
                     await initialNavigation.RunAsync(
                         () => fixture.Page.GotoAsync(url, new() { WaitUntil = WaitUntilState.NetworkIdle }), output.WriteLine);
                 }
@@ -770,7 +772,14 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                     parts.Add(new InstantQuotationPart(Guid.NewGuid(), fileName, reference, geometry, new("M68", "White", 1)));
                 }
                 Assert.True(await store.PutAsync(stored with { RequestState = new(parts) }, null, default));
-                await fixture.Page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle });
+                using (var responseProbe = fixture.Factory.Services.GetRequiredService<TestResponseProbeRegistry>()
+                    .TryBeginNavigation(origin, TestResponseRequestLabel.BaseQuotation))
+                using (var reloadNavigation = new MaterialInitialNavigationDiagnostics(
+                    fixture.Page, origin, responseProbe?.Probe, "reload"))
+                {
+                    await reloadNavigation.RunAsync(
+                        () => fixture.Page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle }), output.WriteLine);
+                }
                 await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
                 await fixture.Page.EvaluateAsync("""
                     () => {

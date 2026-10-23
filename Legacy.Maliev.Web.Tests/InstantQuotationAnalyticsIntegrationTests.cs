@@ -4,11 +4,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationAnalyticsIntegrationTests : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
+public sealed class InstantQuotationAnalyticsIntegrationTests : IClassFixture<TestingWebApplicationFactory>, IAsyncLifetime
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public InstantQuotationAnalyticsIntegrationTests(WebApplicationFactory<Program> factory)
+    public InstantQuotationAnalyticsIntegrationTests(TestingWebApplicationFactory factory)
     {
         this.factory = factory.WithWebHostBuilder(builder => builder
             .UseSetting("environment", "Testing")

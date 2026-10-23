@@ -422,6 +422,43 @@ public sealed class QuotationPageTests
         Assert.False(analyticsEvent.TryGetProperty("file_upload_completed", out _));
     }
 
+    [Theory]
+    [InlineData("en", "Please enter a valid email address")]
+    [InlineData("th", "กรุณากรอกอีเมลที่ถูกต้อง")]
+    public async Task Post_InvalidEmailPreservesOriginalLocalizedMessageWithoutWriting(
+        string culture, string expected)
+    {
+        var previousCulture = System.Globalization.CultureInfo.CurrentUICulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+            var quotationClient = new RecordingQuotationClient();
+            var files = new RecordingFileClient();
+            var notifications = new RecordingNotificationClient();
+            var page = CreatePage(quotationClient, files, new StubAntiBotVerifier(true), notifications);
+            page.ServiceContext = "custom_manufacturing";
+            page.Email = "not-an-email";
+            var validation = new List<System.ComponentModel.DataAnnotations.ValidationResult>();
+            Assert.False(System.ComponentModel.DataAnnotations.Validator.TryValidateProperty(
+                page.Email,
+                new System.ComponentModel.DataAnnotations.ValidationContext(page) { MemberName = nameof(page.Email) },
+                validation));
+            var error = Assert.Single(validation);
+            Assert.Equal("Please enter a valid email address", error.ErrorMessage);
+            page.ModelState.AddModelError(nameof(page.Email), error.ErrorMessage!);
+
+            Assert.IsType<PageResult>(await page.OnPostSubmitRequestAsync(CancellationToken.None));
+            Assert.Equal(expected, Assert.Single(page.DisplayModel.ErrorsFor(nameof(page.Email))));
+            Assert.Equal(0, quotationClient.CallCount);
+            Assert.Equal(0, files.UploadCount);
+            Assert.Empty(notifications.Messages);
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = previousCulture;
+        }
+    }
+
     private static QuotationPage CreatePage(
         RecordingQuotationClient quotationClient,
         RecordingFileClient fileClient,

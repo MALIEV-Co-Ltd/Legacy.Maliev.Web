@@ -7,6 +7,7 @@
 
 <div data-migration-component="quotation-form-fields" data-migration-renderer="blazor-static-ssr">
     <header class="inquiry-form-header">
+        <h2 id="quotation-form-title">@Localizer["Request a manual quotation"]</h2>
         <p>@Localizer["Complete the form below. Required fields are marked with an asterisk."]</p>
     </header>
     <div class="inquiry-validation-summary text-danger @(summaryErrors.Length > 0 ? "validation-summary-errors" : "validation-summary-valid")" role="alert">
@@ -142,8 +143,9 @@
                 <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
                 <span><strong>@Localizer["Choose files or drop them here"]</strong><small>@Localizer["Multiple files are supported"]</small></span>
             </label>
-            <input type="file" class="inquiry-upload__input" multiple aria-describedby="quotation-files-help Files-error" aria-invalid="@AriaInvalid("Files")" id="Files" name="Files" data-upload-files data-remove-file-label='@Localizer["Remove"]' />
+            <input type="file" class="inquiry-upload__input" multiple aria-describedby="quotation-files-help Files-error quotation-file-too-large" aria-invalid="@AriaInvalid("Files")" id="Files" name="Files" data-upload-files data-remove-file-label='@Localizer["Remove"]' />
             <ul class="inquiry-upload__file-list" data-upload-file-list aria-live="polite" hidden></ul>
+            <span id="quotation-file-too-large" class="inquiry-file-error" role="alert" data-upload-size-error>@Localizer["The selected files size are too large. Please use external upload services."] @Localizer["You have selected"] <span data-upload-total-size></span>.</span>
             <div id="quotation-files-help" class="form-text">
                 <span>@Localizer["Upload multiple files up to 100 MB combined. Every upload is malware-scanned before storage."]</span>
                 <span class="inquiry-help">@Localizer["You may select multiple files. ZIP related files together to preserve references and folder structure."]</span>
@@ -171,9 +173,11 @@
         </p>
         <p class="inquiry-privacy inquiry-privacy--recaptcha">@Localizer["This site is protected by reCAPTCHA and the Google"] <a href="https://policies.google.com/privacy" rel="noopener noreferrer" target="_blank">@Localizer["Privacy Policy"]</a> @Localizer["and"] <a href="https://policies.google.com/terms" rel="noopener noreferrer" target="_blank">@Localizer["Terms of Service"]</a> @Localizer["apply."]</p>
         <p id="quotation-recaptcha-error" class="inquiry-help text-danger" data-recaptcha-error role="alert" hidden>@Localizer["We could not verify that you are human. Please try again."]</p>
+        <fieldset class="border-0 p-0 m-0" data-upload-size-gate>
         <button type="submit" id="submit-button" class="btn btn-primary inquiry-submit" disabled="@(string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey) || !Model.CountryServiceAvailable || !Model.CustomerProfileAvailable)">
-            <span data-submit-label>@Localizer["Submit quotation request"]</span>
+            <span data-submit-label>@Localizer["Submit quotation request"]</span> <i class="fas fa-arrow-right" aria-hidden="true"></i>
         </button>
+        </fieldset>
     </div>
 </div>
 

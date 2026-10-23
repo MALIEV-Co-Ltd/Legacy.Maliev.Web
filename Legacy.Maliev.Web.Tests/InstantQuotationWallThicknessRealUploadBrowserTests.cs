@@ -745,7 +745,51 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                     $"Real upload did not create a part. State: {state}. Page errors: {string.Join(" | ", pageErrors)}. Console: {string.Join(" | ", consoleErrors)}. Verified uploads: {upload.VerifiedUploads}.",
                     error);
             }
-            await page.Locator("[data-dfm-code='thin-wall']").WaitForAsync(new LocatorWaitForOptions { Timeout = 90000 });
+            try
+            {
+                await page.Locator("[data-dfm-code='thin-wall']").WaitForAsync(new LocatorWaitForOptions { Timeout = 90000 });
+            }
+            catch (TimeoutException)
+            {
+                using var diagnosticDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+                try
+                {
+                    output.WriteLine($"[dfm-thin-services] verifiedUploads={Math.Min(upload.VerifiedUploads, 100)}; pricingCalls={Math.Min(pricing.CallCount, 100)}; pageErrorCount={Math.Min(pageErrors.Count, 100)}; pageErrorsOverflow={pageErrors.Count > 100}; consoleErrorOrWarningCount={Math.Min(consoleErrors.Count, 100)}; consoleErrorsOverflow={consoleErrors.Count > 100}");
+                    var rendered = await page.EvaluateAsync<string>("""
+                        unavailableText => {
+                            const visible = element => !!element && element.getClientRects().length > 0
+                                && getComputedStyle(element).visibility !== 'hidden';
+                            const count = selector => Math.min(document.querySelectorAll(selector).length, 100);
+                            const toggle = document.querySelector('.instant-quote__thickness-toggle');
+                            const previewStatus = document.querySelector('[data-workflow-preview-status]');
+                            const warnings = [...document.querySelectorAll('[data-dfm-code="thin-wall"]')];
+                            return JSON.stringify({
+                                configurationPresent: !!document.querySelector('[data-workflow-configuration]'),
+                                configurationVisible: visible(document.querySelector('[data-workflow-configuration]')),
+                                partCount: count('[data-workflow-part]'),
+                                dfmPartCount: count('[data-workflow-dfm-part]'),
+                                thinWallCount: Math.min(warnings.length, 100),
+                                thinWallVisibleCount: Math.min(warnings.filter(visible).length, 100),
+                                incompleteCount: count('[data-dfm-code="thickness-incomplete"]'),
+                                togglePresent: !!toggle,
+                                toggleDisabled: toggle?.matches(':disabled') === true,
+                                previewStatusPresent: !!previewStatus,
+                                previewUnavailable: previewStatus?.textContent?.trim() === unavailableText,
+                                pricingLoading: !!document.querySelector('[data-pricing-loading-status]')
+                            });
+                        }
+                        """, culture == "th"
+                            ? "ไม่สามารถแสดงตัวอย่าง 3 มิติได้ คุณยังสามารถดำเนินการขอใบเสนอราคาต่อได้"
+                            : "3D preview is unavailable. You can continue with your quotation.")
+                        .WaitAsync(diagnosticDeadline.Token);
+                    output.WriteLine($"[dfm-thin-render] {rendered}");
+                }
+                catch
+                {
+                    // Secondary observation or output failure must not mask the primary timeout.
+                }
+                throw;
+            }
             var warning = await page.Locator("[data-dfm-code='thin-wall']").InnerTextAsync();
             Assert.Contains(warningTitle, warning, StringComparison.Ordinal);
             Assert.Contains(fdmLimit, warning, StringComparison.Ordinal);

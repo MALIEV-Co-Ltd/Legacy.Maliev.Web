@@ -1,3 +1,5 @@
+using System.Net;
+using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
 using System.Net;
 using System.Text.RegularExpressions;
@@ -186,6 +188,85 @@ public sealed class QuotationStaticSsrRouteTests : IClassFixture<TestingWebAppli
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("Could not retrieve countries from the server", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "en")]
+    [InlineData(false, "th")]
+    public async Task QuotationRequiredLabels_RetainVisibleSourceMarkers(bool useBlazorRoute, string culture)
+    {
+        await using var markerFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:Quotation", useBlazorRoute ? "true" : "false");
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<ICountryClient>();
+                services.AddSingleton<ICountryClient, StubCountryClient>();
+            });
+        });
+        using var client = markerFactory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        using var response = await client.GetAsync($"/quotation?culture={culture}&item=3d-printing");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Equal(useBlazorRoute, source.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var form = Assert.Single(Regex.Matches(source,
+            "<form\\b[^>]*\\bid=\"quotation-form\"[^>]*>[\\s\\S]*?</form>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("<div class=\"inquiry-page\"", source, StringComparison.Ordinal);
+        Assert.Contains("<header class=\"inquiry-form-header\">", form.Value, StringComparison.Ordinal);
+        Assert.Contains("id=\"quotation-form-title\"", form.Value, StringComparison.Ordinal);
+        Assert.Contains("class=\"inquiry-required-note\"", form.Value, StringComparison.Ordinal);
+        Assert.Contains("class=\"inquiry-field-grid\"", form.Value, StringComparison.Ordinal);
+        Assert.Contains("class=\"inquiry-field inquiry-field--full\"", form.Value, StringComparison.Ordinal);
+        Assert.Contains("class=\"inquiry-submit\"", form.Value, StringComparison.Ordinal);
+        Assert.Contains("<fieldset class=\"border-0 p-0 m-0\" data-upload-size-gate", form.Value, StringComparison.Ordinal);
+        Assert.Contains("id=\"quotation-file-too-large\" class=\"inquiry-file-error\" role=\"alert\" data-upload-size-error", form.Value, StringComparison.Ordinal);
+        Assert.Contains("data-upload-total-size", form.Value, StringComparison.Ordinal);
+        Assert.Contains(culture == "th"
+            ? "ไฟล์ที่คุณเลือกมีขนาดใหญ่เกินไป กรุณาอัปโหลดไฟล์ผ่านช่องทางอื่นแล้วส่งลิงก์มาให้เรา"
+            : "The selected files size are too large. Please use external upload services.", WebUtility.HtmlDecode(form.Value), StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "ไฟล์ที่คุณเลือกมีขนาดรวมทั้งหมด" : "You have selected", WebUtility.HtmlDecode(form.Value), StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"quotation-files-help Files-error quotation-file-too-large\"", form.Value, StringComparison.Ordinal);
+        var decodedForm = WebUtility.HtmlDecode(form.Value);
+        Assert.Contains(culture == "th" ? "ขอใบเสนอราคาจากทีมงาน" : "Request a manual quotation", decodedForm, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "กรอกแบบฟอร์มด้านล่าง ช่องที่จำเป็นจะแสดงด้วยเครื่องหมายดอกจัน" : "Complete the form below. Required fields are marked with an asterisk.", decodedForm, StringComparison.Ordinal);
+        var projectGuidance = culture == "th"
+            ? "ระบุบริการ จำนวน วัสดุ ผิวสำเร็จ ค่าความคลาดเคลื่อน และวันที่ต้องการเมื่อทราบ"
+            : "Include service, quantity, material, finish, tolerances, and target date when known.";
+        var fileGuidance = culture == "th"
+            ? "เลือกได้หลายไฟล์ ควร ZIP ไฟล์ที่เกี่ยวข้องเพื่อรักษาการอ้างอิงและโครงสร้างโฟลเดอร์"
+            : "You may select multiple files. ZIP related files together to preserve references and folder structure.";
+        var projectHelp = Assert.Single(Regex.Matches(source,
+            "<span\\b[^>]*\\bid=\"quotation-message-help\"[^>]*>[\\s\\S]*?</span>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains(projectGuidance, WebUtility.HtmlDecode(projectHelp.Value), StringComparison.Ordinal);
+        var fileHelp = Assert.Single(Regex.Matches(source,
+            "<div\\b[^>]*\\bid=\"quotation-files-help\"[^>]*>[\\s\\S]*?</div>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains(fileGuidance, WebUtility.HtmlDecode(fileHelp.Value), StringComparison.Ordinal);
+        Assert.Matches("<textarea\\b[^>]*\\bid=\"Message\"[^>]*\\baria-describedby=\"Message-error quotation-message-help\"", source);
+        Assert.Contains("aria-describedby=\"quotation-files-help Files-error quotation-file-too-large\"", source, StringComparison.Ordinal);
+        foreach (var field in new[] { "FirstName", "LastName", "Email", "Country", "Message" })
+        {
+            var label = Assert.Single(Regex.Matches(
+                source,
+                $"<label\\b[^>]*\\bfor=\"{field}\"[^>]*>[\\s\\S]*?</label>",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.Contains("<span class=\"inquiry-required\" aria-hidden=\"true\">*</span>", label.Value, StringComparison.Ordinal);
+        }
+        foreach (var field in new[] { "Phone", "Company", "TaxNumber" })
+        {
+            var label = Assert.Single(Regex.Matches(
+                source,
+                $"<label\\b[^>]*\\bfor=\"{field}\"[^>]*>[\\s\\S]*?</label>",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.DoesNotContain("inquiry-required", label.Value, StringComparison.Ordinal);
+        }
     }
 
     private static string FindRepositoryRoot()

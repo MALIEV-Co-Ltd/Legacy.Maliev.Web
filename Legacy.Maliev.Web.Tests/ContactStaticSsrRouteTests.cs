@@ -204,6 +204,48 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
         });
     }
 
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "en")]
+    [InlineData(false, "th")]
+    public async Task ContactRequiredLabels_RetainVisibleSourceMarkers(bool useBlazorRoute, string culture)
+    {
+        await using var markerFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:Contact", useBlazorRoute ? "true" : "false");
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<ICountryClient>();
+                services.AddSingleton<ICountryClient, StubCountryClient>();
+            });
+        });
+        using var client = markerFactory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        using var response = await client.GetAsync($"/contact?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Equal(useBlazorRoute, source.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        foreach (var field in new[] { "FirstName", "LastName", "Email", "Country", "Message" })
+        {
+            var label = Assert.Single(Regex.Matches(
+                source,
+                $"<label\\b[^>]*\\bfor=\"{field}\"[^>]*>[\\s\\S]*?</label>",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.Contains("<span class=\"inquiry-required\" aria-hidden=\"true\">*</span>", label.Value, StringComparison.Ordinal);
+        }
+        foreach (var field in new[] { "Phone", "Company" })
+        {
+            var label = Assert.Single(Regex.Matches(
+                source,
+                $"<label\\b[^>]*\\bfor=\"{field}\"[^>]*>[\\s\\S]*?</label>",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.DoesNotContain("inquiry-required", label.Value, StringComparison.Ordinal);
+        }
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

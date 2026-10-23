@@ -17,13 +17,13 @@ using Microsoft.JSInterop;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
+public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<TestingWebApplicationFactory>, IAsyncLifetime
 {
     private const string WorkflowNamespace = "Legacy.Maliev.Web.Components.Pages.InstantQuotation";
     private readonly HttpClient client;
     private readonly WebApplicationFactory<Program> ownedFactory;
 
-    public InstantQuotationInteractiveRouteTests(WebApplicationFactory<Program> factory)
+    public InstantQuotationInteractiveRouteTests(TestingWebApplicationFactory factory)
     {
         ownedFactory = factory.WithWebHostBuilder(builder =>
             {
