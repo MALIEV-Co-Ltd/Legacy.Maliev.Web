@@ -128,9 +128,16 @@ LIFECYCLE_ROWS = (
     "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkCreationIdUnavailable_RefusesNameBasedAdoptionAndCleanup",
     "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkIdentityLostBeforeDisposal_RefusesMutation",
     "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendUnsettledRemoval_RefusesAbsenceAndSdkRelease",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"graceful-stop\", stage: \"request-graceful-stop\", exceptionType: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"handle-close\", stage: \"close-handle\", exceptionType: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"identity\", stage: \"capture-identity\", exceptionType: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"kill\", stage: \"kill-exact\", exceptionType: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"reader-close\", stage: \"close-readers\", exceptionType: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"readers\", stage: \"join-readers\", exceptionType: \"TimeoutException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"reap\", stage: \"wait-exit\", exceptionType: \"TimeoutException\")",
 )
 LIFECYCLE_COUNTERS = {
-    'total': '43', 'executed': '43', 'passed': '43', 'failed': '0', 'error': '0', 'timeout': '0',
+    'total': '50', 'executed': '50', 'passed': '50', 'failed': '0', 'error': '0', 'timeout': '0',
     'aborted': '0', 'inconclusive': '0', 'passedButRunAborted': '0', 'notRunnable': '0', 'notExecuted': '0',
     'disconnected': '0', 'warning': '0', 'completed': '0', 'inProgress': '0', 'pending': '0',
 }
@@ -139,8 +146,8 @@ LIFECYCLE_NS = 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'
 
 class LifecycleRosterControls(unittest.TestCase):
     def guard(self):
-        workflow = (ROOT / '.github/workflows/billing-persistence.yml').read_text()
-        marker = '      - name: Require all forty-three exact unique passed lifecycle control rows\n'
+        workflow = (ROOT / '.github/workflows/billing-persistence.yml').read_text(encoding='utf-8')
+        marker = '      - name: Require all fifty exact unique passed lifecycle control rows\n'
         self.assertEqual(1, workflow.count(marker))
         block = workflow.split(marker, 1)[1].split('\n      - name:', 1)[0]
         body = block.split("          python3 -B - <<'PY'\n", 1)[1].split('\n          PY', 1)[0]
@@ -162,15 +169,15 @@ class LifecycleRosterControls(unittest.TestCase):
                 contextlib.redirect_stdout(io.StringIO()):
             exec(compile(self.guard(), '<billing-lifecycle-workflow>', 'exec'), {})
 
-    def test_current_43_literal_names_match_the_actual_inline_roster(self):
+    def test_current_50_literal_names_match_the_actual_inline_roster(self):
         assignment = next(node for node in ast.parse(self.guard()).body
                           if isinstance(node, ast.Assign)
                           and any(isinstance(target, ast.Name) and target.id == 'expected' for target in node.targets))
-        self.assertEqual(43, len(LIFECYCLE_ROWS))
-        self.assertEqual(43, len(set(LIFECYCLE_ROWS)))
+        self.assertEqual(50, len(LIFECYCLE_ROWS))
+        self.assertEqual(50, len(set(LIFECYCLE_ROWS)))
         self.assertEqual(set(LIFECYCLE_ROWS), ast.literal_eval(assignment.value))
 
-    def test_all_43_unique_passed_rows_and_exact_counters_are_accepted(self):
+    def test_all_50_unique_passed_rows_and_exact_counters_are_accepted(self):
         self.execute(self.document())
 
     def test_missing_duplicate_and_foreign_rows_are_rejected(self):
@@ -221,7 +228,7 @@ class LifecycleRosterControls(unittest.TestCase):
                         del counters.attrib[key]
                     else:
                         counters.set(key, '1')
-                    with self.assertRaisesRegex(SystemExit, '^Lifecycle TRX counters do not match forty-three completed Passed rows$'):
+                    with self.assertRaisesRegex(SystemExit, '^Lifecycle TRX counters do not match fifty completed Passed rows$'):
                         self.execute(root)
 
     def test_missing_or_multiple_trx_files_are_rejected(self):
