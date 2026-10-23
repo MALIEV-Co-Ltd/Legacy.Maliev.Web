@@ -1,0 +1,7 @@
+@page
+@inject IStringLocalizer<CncHolesAndTolerancesContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["Holes, threads and tolerances | MALIEV"];
+    ViewData["Description"] = MetadataLocalizer["Specify the feature that the assembly actually needs. Hole depth, full-thread engagement, size, position and inspection conditions describe different requirements."];
+}
+<component type="typeof(CncHolesAndTolerancesContent)" render-mode="Static" />

@@ -78,6 +78,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
             }));
             await page.WaitForFunctionAsync("() => window.source428?.pending.length === 9", null,
                 new PageWaitForFunctionOptions { Timeout = 60000 });
+            await Assertions.Expect(page.Locator("article[data-workflow-pending-parse]")).ToHaveCountAsync(9);
             var keys = await page.Locator("article[data-workflow-pending-parse]").EvaluateAllAsync<string[]>(
                 "rows => rows.map(row => row.dataset.browserPreviewKey)");
             Assert.Equal(9, keys.Distinct(StringComparer.Ordinal).Count());
@@ -101,8 +102,11 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
                 for (var index = 0; index < 5; index++)
                 {
                     await ViewBatchKeyAsync(page, keys[index]);
-                    await MaterialCardBrowserActions.SelectAsync(page, "PETG");
-                    await MaterialCardBrowserActions.SelectAsync(page, "PLA");
+                    // Match the source's rapid clicks while the producer is held; acceptance is asserted after release.
+                    var picker = page.Locator("[data-workflow-material-picker] [data-material-selector]");
+                    await picker.Locator("[role='radio'][data-material-key='PETG']").ClickAsync();
+                    await picker.Locator("[role='radio'][data-material-key='PLA']").ClickAsync();
+                    await Assertions.Expect(page.Locator("[data-pricing-loading-status]").First).ToBeVisibleAsync();
                 }
                 await page.Locator("[data-workflow-material-picker] input[name=quantity]").FillAsync("7");
                 await ViewBatchKeyAsync(page, keys[8]);
@@ -128,7 +132,12 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
             await AssertActualBatchAuthorityAsync(scope.ServiceProvider, upload, session, estimates.LatestQuote!, 9);
             Assert.Empty(errors);
         }
-        catch (Exception exception) { primary = exception; throw; }
+        catch (Exception exception)
+        {
+            primary = exception;
+            output.WriteLine("Batch exception kinds: " + string.Join(';', factory.ExceptionKinds));
+            throw;
+        }
         finally
         {
             await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
@@ -330,7 +339,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
     private sealed class BatchEstimateGate : IDisposable
     {
         private readonly object synchronization = new();
-        private readonly List<Task<InstantQuotationOrderQuote?>> actual = [];
+        private readonly List<(Task<InstantQuotationOrderQuote?> Task, CancellationToken Consumer)> actual = [];
         private readonly CancellationTokenSource lifetime = new(TimeSpan.FromMinutes(5));
         private readonly CancellationTokenSource holdLease = new(TimeSpan.FromSeconds(90));
         private bool stopped;
@@ -360,7 +369,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
             {
                 if (stopped) return Task.FromCanceled<InstantQuotationOrderQuote?>(new CancellationToken(canceled: true));
                 completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
-                actual.Add(completion.Task);
+                actual.Add((completion.Task, consumer));
             }
             _ = completion.Task.ContinueWith(static task => { _ = task.Exception; }, CancellationToken.None,
                 TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
@@ -395,18 +404,18 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
         internal void StopAdmission() { lock (synchronization) stopped = true; }
         internal async Task DrainAsync(Exception? primary)
         {
-            Task<InstantQuotationOrderQuote?>[] snapshot;
+            (Task<InstantQuotationOrderQuote?> Task, CancellationToken Consumer)[] snapshot;
             lock (synchronization) snapshot = actual.ToArray();
-            await MaterialPricingTestCleanup.ReleaseAllAsync(primary, snapshot.Select(task =>
-                (Func<ValueTask>)(async () => await MaterialPricingTestCleanup.DrainQuoteAsync(task,
-                    static () => { }, () => Release.TrySetResult(), lifetime.Token, null,
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary, snapshot.Select(item =>
+                (Func<ValueTask>)(async () => await MaterialPricingTestCleanup.DrainQuoteAsync(item.Task,
+                    static () => { }, () => Release.TrySetResult(), item.Consumer, null,
                     receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
                     afterWaitFailure: lifetime.Cancel, taskKind: "actual-partial-batch-price"))).ToArray());
         }
         internal async Task CancelAndDrainRemainingAsync()
         {
             Task<InstantQuotationOrderQuote?>[] snapshot;
-            lock (synchronization) snapshot = actual.ToArray();
+            lock (synchronization) snapshot = actual.Select(item => item.Task).ToArray();
             if (snapshot.Any(task => !task.IsCompleted)) lifetime.Cancel();
             try { await Task.WhenAll(snapshot).WaitAsync(TimeSpan.FromSeconds(5)); }
             catch (OperationCanceledException) when (snapshot.All(task => task.IsCompleted)) { }
@@ -416,7 +425,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
         {
             lock (synchronization)
             {
-                if (actual.Any(task => !task.IsCompleted)) return;
+                if (actual.Any(item => !item.Task.IsCompleted)) return;
                 holdLease.Dispose();
                 lifetime.Dispose();
             }

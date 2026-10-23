@@ -21,9 +21,54 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationResinPresentationTests
 {
     [Theory]
-    [InlineData("en", "Standard resin")]
-    [InlineData("th", "การพิมพ์เรซินมาตรฐาน")]
-    public async Task Workflow_DisablesOnlyResinBuildPreferenceControls(string culture, string label)
+    [InlineData("en", "White", "PETG", 1, "White")]
+    [InlineData("th", "White", "PETG", 1, "White")]
+    [InlineData("en", "Pink", "PA-CF", 1, "Black")]
+    [InlineData("th", "Pink", "PA-CF", 1, "Black")]
+    [InlineData("en", "Any", "PETG", 2, "Any")]
+    [InlineData("th", "Any", "PETG", 2, "Any")]
+    public async Task Workflow_MaterialChangePreservesCompatibleSingleBodyColor(
+        string culture, string initialColor, string targetMaterial, int bodies, string expectedColor)
+    {
+        using var cultures = new CultureScope(culture);
+        var part = Part("PLA", BuildPreference.Standard) with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(
+                10, 1_000, 100, [10], [10], 12, bodies, true),
+            Configuration = new("PLA", initialColor, 2),
+        };
+        var store = new SessionStore(part);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var change = typeof(InstantQuotationWorkflow).GetMethod(
+                "ChangeMaterialAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(change);
+            await (Task)change.Invoke(component, [part.PartId, new ChangeEventArgs { Value = targetMaterial }])!;
+        });
+
+        var session = await store.GetAsync("presentation-session", null, default);
+        Assert.NotNull(session);
+        var updated = Assert.Single(session.RequestState.Parts);
+        Assert.Equal(part.PartId, updated.PartId);
+        Assert.Equal(targetMaterial, updated.Configuration.MaterialKey);
+        Assert.Equal(expectedColor, updated.Configuration.Color);
+        Assert.Equal(2, updated.Configuration.Quantity);
+        Assert.Equal(BuildPreference.Standard, updated.Configuration.BuildPreference);
+    }
+
+    [Theory]
+    [InlineData("en", "Standard resin", "Review all items")]
+    [InlineData("th", "การพิมพ์เรซินมาตรฐาน", "ตรวจสอบรายการทั้งหมด")]
+    public async Task Workflow_DisablesOnlyResinBuildPreferenceControls(string culture, string label, string reviewLabel)
     {
         using var cultures = new CultureScope(culture);
         foreach (var material in new[] { "M68", "PLA" })
@@ -39,6 +84,12 @@ public sealed class InstantQuotationResinPresentationTests
             await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
             var html = await renderer.Dispatcher.InvokeAsync(async () =>
                 (await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty)).ToHtmlString());
+
+            var reviewAction = Assert.Single(
+                Regex.Matches(html, "<button\\b[^>]*>[\\s\\S]*?</button>").Cast<Match>(),
+                action => WebUtility.HtmlDecode(Regex.Replace(action.Value, "<[^>]+>", "")).Trim() == reviewLabel).Value;
+            Assert.Contains("type=\"button\"", reviewAction, StringComparison.Ordinal);
+            Assert.DoesNotContain("type=\"submit\"", reviewAction, StringComparison.Ordinal);
 
             var fieldsets = Regex.Matches(html, "<fieldset\\b[^>]*data-workflow-build-preference[^>]*>[\\s\\S]*?</fieldset>");
             var fieldset = Assert.Single(fieldsets.Cast<Match>()).Value;
@@ -521,7 +572,7 @@ public sealed class InstantQuotationResinPresentationTests
             keys.Add(parts[0].PreviewCorrelationId, "first-preview");
             keys.Add(parts[1].PreviewCorrelationId, "latest-preview");
             Set("autoPreviewLocalId", parts[1].PreviewCorrelationId);
-            var reconciling = (Task)Invoke("ReconcilePreviewsAsync")!;
+            var reconciling = (Task)Invoke("ReconcilePreviewsAsync", new object[] { null! })!;
             Exception? primary = null;
             try
             {
@@ -679,7 +730,7 @@ public sealed class InstantQuotationResinPresentationTests
                 .GetField("previewKeys", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
             keys.Add(localId, "held-preview");
             Set("autoPreviewLocalId", localId);
-            var reconciling = (Task)Invoke("ReconcilePreviewsAsync")!;
+            var reconciling = (Task)Invoke("ReconcilePreviewsAsync", new object[] { null! })!;
             Exception? primary = null;
             try
             {
@@ -770,7 +821,7 @@ public sealed class InstantQuotationResinPresentationTests
             Set("autoPreviewLocalId", localId);
             var reconciling = (Task)typeof(InstantQuotationWorkflow)
                 .GetMethod("ReconcilePreviewsAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
-                .Invoke(component, null)!;
+                .Invoke(component, [null])!;
             Exception? primary = null;
             try
             {
@@ -2141,7 +2192,7 @@ public sealed class InstantQuotationResinPresentationTests
                 .GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(component, args);
             Set("previewInterop", preview);
             Set("selectedPreviewPartId", original.PartId);
-            var appearance = (Task)Invoke("UpdatePartAppearanceAsync", original.PartId, "Blue")!;
+            var appearance = (Task)Invoke("UpdatePartAppearanceAsync", original.PartId)!;
             Exception? primary = null;
             try
             {
@@ -2390,13 +2441,14 @@ public sealed class InstantQuotationResinPresentationTests
     private static ServiceProvider Services(CapturingActivator activator, RecordingJavaScript javascript) =>
         new ServiceCollection().AddLogging().AddLocalization(options => options.ResourcesPath = "Resources")
             .AddSingleton<IComponentActivator>(activator).AddSingleton<IJSRuntime>(javascript)
+            .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager())
             .AddSingleton(FdmRuntimeProfileCatalog.LoadEmbedded())
             .AddSingleton<IWebHostEnvironment>(new ComponentEnvironment()).BuildServiceProvider();
 
     private sealed class CapturingActivator(InstantQuotationWorkflowCoordinator? coordinator = null) : IComponentActivator
     {
-        internal InstantQuotationPreliminaryQuotation? Preliminary { get; private set; }
         internal InstantQuotationWorkflow? Workflow { get; private set; }
+        internal InstantQuotationPreliminaryQuotation? Preliminary { get; private set; }
         public IComponent CreateInstance(Type componentType)
         {
             var component = (IComponent)Activator.CreateInstance(componentType)!;

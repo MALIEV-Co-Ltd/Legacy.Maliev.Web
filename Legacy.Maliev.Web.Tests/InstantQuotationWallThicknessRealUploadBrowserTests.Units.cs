@@ -31,6 +31,13 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
         await using var page = await browser.NewPageAsync(new() { ViewportSize = new() { Width = 1440, Height = 1000 } });
+        await page.AddInitScriptAsync("""
+            window.unitPolicyViolations = [];
+            addEventListener('securitypolicyviolation', event => {
+              if (window.unitPolicyViolations.length < 5)
+                window.unitPolicyViolations.push({directive:event.violatedDirective, data:event.blockedURI.startsWith('data')});
+            });
+            """);
         await page.GotoAsync(new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString(),
             new() { WaitUntil = WaitUntilState.NetworkIdle });
         await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
@@ -50,8 +57,19 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
         await Assertions.Expect(page.Locator("[data-workflow-file-error]")).ToContainTextAsync(
             culture == "th" ? "เลือกหน่วยก่อนนำเข้าไฟล์ GLB/GLTF" : "Choose units before importing GLB/GLTF");
         Assert.Equal(0, upload.StartedUploads);
-        await failed.Locator("button").Last.ClickAsync();
-        await Assertions.Expect(failed).ToHaveCountAsync(0);
+        await failed.Locator("[data-workflow-remove-failed]").ClickAsync();
+        try { await Assertions.Expect(failed).ToHaveCountAsync(0); }
+        catch
+        {
+            output.WriteLine("Unit removal exception kinds: " + string.Join(";", factory.ExceptionKinds));
+            var evidenceDirectory = Environment.GetEnvironmentVariable("MALIEV_BROWSER_EVIDENCE_DIR");
+            if (!string.IsNullOrWhiteSpace(evidenceDirectory))
+            {
+                Directory.CreateDirectory(evidenceDirectory);
+                await page.ScreenshotAsync(new() { Path = Path.Combine(evidenceDirectory, $"unit-failure-removal-{culture}.png") });
+            }
+            throw;
+        }
         await units.SelectOptionAsync("metres");
         await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
         {
@@ -60,7 +78,16 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
             Buffer = bytes,
         });
         var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
-        await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 90000 });
+        try
+        {
+            await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 90000 });
+        }
+        catch
+        {
+            output.WriteLine($"Unit admission: started={upload.StartedUploads}; verified={upload.VerifiedUploads}; rejected={upload.ValidationRejectedUploads}; exceptions={string.Join(';', factory.ExceptionKinds)}");
+            output.WriteLine(await page.EvaluateAsync<string>("() => JSON.stringify(window.unitPolicyViolations)"));
+            throw;
+        }
         var store = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
         var saved = (await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default))!;
         var part = Assert.Single(saved.Parts);
@@ -72,6 +99,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
         Assert.Equal(new InstantQuotationGltfUnitPolicy(1, InstantQuotationGltfLengthUnit.Metres),
             part.PhysicalAnalysisUpload!.GltfUnitPolicy);
         Assert.NotNull(saved.QuoteAuthorization);
+        Assert.Equal(0, await page.EvaluateAsync<int>("() => window.unitPolicyViolations.filter(item => item.directive === 'connect-src' && item.data).length"));
         Assert.Equal(part.PhysicalAnalysisUpload.GltfUnitPolicy, Assert.Single(saved.PhysicalReceipts!, receipt => receipt.PartId == part.PartId && receipt.MaterialKey == "PLA").GltfUnitPolicy);
 
         await units.SelectOptionAsync("millimetres");

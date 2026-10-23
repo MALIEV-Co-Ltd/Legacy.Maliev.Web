@@ -177,8 +177,8 @@ internal sealed class InstantQuotationAuthoritativePricingService(
             return null;
         }
 
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        using var timeoutDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30), clock);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutDeadline.Token);
         var evidence = new Dictionary<(Guid PartId, string MaterialKey), InstantQuotationBoundPhysicalAnalysisResult>();
         try
         {
@@ -204,8 +204,8 @@ internal sealed class InstantQuotationAuthoritativePricingService(
 
             if (includeComparisons)
             {
-                using var comparisonTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                comparisonTimeout.CancelAfter(TimeSpan.FromSeconds(3));
+                using var comparisonDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(3), clock);
+                using var comparisonTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, comparisonDeadline.Token);
                 foreach (var part in session.Parts)
                 {
                     if (!IsAdmittedMesh(part))
@@ -289,10 +289,7 @@ internal sealed class InstantQuotationAuthoritativePricingService(
         InstantQuotationPart part,
         string materialKey) =>
         result is { IsReady: true, Binding: { } binding, Physical: { } physical }
-        && (physical.GeometryReconstruction is null
-            ? physical.Diagnostics.Count == 0
-            : physical.GeometryReconstruction.IsValid()
-                && physical.Diagnostics.All(code => code is "mesh_open_edges" or "mesh_nonmanifold_edges" or "mesh_degenerate_triangles"))
+        && physical.HasPriceableDiagnostics
         && double.IsFinite(result.BoundingCm3PerUnit) && result.BoundingCm3PerUnit > 0
         && string.Equals(binding.SessionId, sessionId, StringComparison.Ordinal)
         && string.Equals(binding.OwnerIdentity, ownerIdentity, StringComparison.Ordinal)

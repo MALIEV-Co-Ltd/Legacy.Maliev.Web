@@ -10,6 +10,33 @@ namespace Legacy.Maliev.Web.Tests;
 /// <summary>Literal physical controls for the server-only recoverable-mesh fallback.</summary>
 public sealed class VoxelReconstructionTests
 {
+    [Theory]
+    [InlineData(false, "", true)]
+    [InlineData(false, "mesh_open_edges", false)]
+    [InlineData(false, "mesh_nonmanifold_edges", false)]
+    [InlineData(false, "mesh_degenerate_triangles", false)]
+    [InlineData(true, "mesh_open_edges", true)]
+    [InlineData(true, "mesh_nonmanifold_edges", true)]
+    [InlineData(true, "mesh_degenerate_triangles", true)]
+    [InlineData(true, "support_unsatisfied_demand", false)]
+    [InlineData(true, "unknown_diagnostic", false)]
+    public void PricingRecovery_AllowsOnlyRecoveredMeshWarnings(
+        bool reconstructed, string diagnostic, bool priceable)
+    {
+        string[] diagnostics = diagnostic.Length == 0 ? [] : [diagnostic];
+        var physical = SimulationResult.Create(FdmSimulationEngine.AnalysisVersion, new string('B', 64),
+            [new RoleDeposition(ExtrusionRole.OuterWall, "PLA", 1000, 60)],
+            new MotionLedger(new Dictionary<ExtrusionRole, double> { [ExtrusionRole.OuterWall] = 60 }, 0, 0, 0),
+            [], diagnostics, reconstructed ? new("voxel-majority-v1", 0.2) : null);
+
+        Assert.Equal(priceable, physical.HasPriceableDiagnostics);
+        if (priceable)
+            Assert.True(PricingEngine.QuoteFdmSimulation(physical, PricingCatalog.ResolveMaterial("PLA")!, 1, 1).UnitPrice > 0);
+        else
+            Assert.Throws<ArgumentException>(() =>
+                PricingEngine.QuoteFdmSimulation(physical, PricingCatalog.ResolveMaterial("PLA")!, 1, 1));
+    }
+
     [Fact]
     public void OpenBox_RecoversActualInteriorAndRetainsApproximationProvenance()
     {
@@ -159,7 +186,7 @@ public sealed class VoxelReconstructionTests
     public void OversizeGrid_IsRefusedBeforeOccupancyAllocation(float x, float y, float z)
     {
         var failure = Assert.Throws<SimulationGeometryException>(() =>
-            VoxelReconstruction.Build(Normalize(Box(Vector3.Zero, new(x, y, z))), Pose(), 0.2, Budget()));
+            VoxelReconstruction.Build(Normalize(Box(Vector3.Zero, new(x, y, z))), Pose(), 1, Budget()));
         Assert.Equal("geometry_complexity_exceeded", failure.ReasonCode);
     }
 

@@ -24,7 +24,11 @@ public sealed class InstantQuotationResponsiveCssTests
         Assert.Contains("min-height: calc(100dvh - 4.5625rem)", css, StringComparison.Ordinal);
         Assert.Contains("grid-template-columns: minmax(0, 44fr) minmax(0, 56fr)", css, StringComparison.Ordinal);
         Assert.Contains("[data-workflow-state=\"review\"]", css, StringComparison.Ordinal);
-        Assert.Contains("height: 260px", css, StringComparison.Ordinal);
+        Assert.Contains("height: clamp(280px, 72vw, 340px)", css, StringComparison.Ordinal);
+        Assert.Contains("height: clamp(260px, 32vh, 420px)", css, StringComparison.Ordinal);
+        Assert.Contains("@media (max-width: 35.99875rem)", css, StringComparison.Ordinal);
+        Assert.Contains("grid-template-columns: 52px minmax(0, 1fr)", css, StringComparison.Ordinal);
+        Assert.Contains(".instant-quote__workflow .instant-quote__review-fields {\n        grid-template-columns: 1fr;\n        gap: .45rem;", css.Replace("\r\n", "\n", StringComparison.Ordinal), StringComparison.Ordinal);
         Assert.Contains("[data-workflow-build-preference]", css, StringComparison.Ordinal);
         Assert.Contains("[data-workflow-material-comparison]", css, StringComparison.Ordinal);
         Assert.Contains("[data-workflow-part-number]", css, StringComparison.Ordinal);
@@ -43,6 +47,13 @@ public sealed class InstantQuotationResponsiveCssTests
         Assert.Contains("[data-workflow-review-total]", css, StringComparison.Ordinal);
         Assert.Contains(".instant-quote__actions", css, StringComparison.Ordinal);
         Assert.Contains("flex-wrap: wrap", css, StringComparison.Ordinal);
+        Assert.Contains(".instant-quote__workflow:not(:has(> .instant-quote__gltf-unit)):has(> [data-workflow-viewer]):has(> [data-workflow-parts-panel])", css, StringComparison.Ordinal);
+        Assert.Contains("grid-template-rows: minmax(0, 1fr) auto", css, StringComparison.Ordinal);
+        Assert.Contains(".instant-quote__workflow:not(:has(> .instant-quote__gltf-unit)):has(> [data-workflow-viewer]) > [data-workflow-parts-panel]", css, StringComparison.Ordinal);
+        Assert.Contains("grid-row: 1 / -1", css, StringComparison.Ordinal);
+        Assert.Contains("grid-template-rows: auto minmax(0, 1fr) auto", css, StringComparison.Ordinal);
+        Assert.Contains("> p[role=\"alert\"]", css, StringComparison.Ordinal);
+        Assert.Contains("grid-row: 2 / -1", css, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -51,7 +62,7 @@ public sealed class InstantQuotationResponsiveCssTests
         var css = ReadCss();
         const string compactLayout = """
             .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) {
-                grid-template-rows: auto minmax(8rem, 1fr) minmax(24rem, 3fr);
+                grid-template-rows: auto minmax(8rem, 1fr) auto;
                 overflow-y: auto;
             }
         """;
@@ -62,9 +73,9 @@ public sealed class InstantQuotationResponsiveCssTests
             }
         """;
         const string tallLayout = """
-        @media (min-width: 62rem) and (min-height: 48rem) {
+        @media (min-width: 64rem) and (min-height: 48rem) {
             .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) {
-                grid-template-rows: auto max-content minmax(24rem, 3fr);
+                grid-template-rows: auto minmax(8rem, 1fr) max-content;
             }
 
             .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] > [data-workflow-parts] {

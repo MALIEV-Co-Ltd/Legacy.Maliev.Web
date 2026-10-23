@@ -63,7 +63,7 @@ public sealed class WebApplicationFactoryLifecycleTests
     [InlineData("static-ssr-route")]
     public async Task InstantQuotationConstructorOwner_DisposesItsHostAndClientsBeforeParentFixture(string ownerKind)
     {
-        using var parent = new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program>();
+        await using var parent = new TestingWebApplicationFactory();
         object owner = ownerKind switch
         {
             "interactive-route" => new InstantQuotationInteractiveRouteTests(parent),
@@ -72,24 +72,25 @@ public sealed class WebApplicationFactoryLifecycleTests
             "static-ssr-route" => new InstantQuotationStaticSsrRouteTests(parent),
             _ => throw new ArgumentOutOfRangeException(nameof(ownerKind)),
         };
-        IDisposable? lifetimeOwner = null;
+        IAsyncLifetime? lifetimeOwner = null;
         try
         {
-            lifetimeOwner = Assert.IsAssignableFrom<IDisposable>(owner);
+            lifetimeOwner = Assert.IsAssignableFrom<IAsyncLifetime>(owner);
+            await lifetimeOwner.InitializeAsync();
             var child = Assert.Single(parent.Factories);
             using var client = child.CreateClient();
             var lifetime = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
                 .GetRequiredService<Microsoft.Extensions.Hosting.IHostApplicationLifetime>(child.Services);
             Assert.False(lifetime.ApplicationStopped.IsCancellationRequested);
 
-            lifetimeOwner.Dispose();
+            await lifetimeOwner.DisposeAsync();
 
             Assert.True(lifetime.ApplicationStopped.IsCancellationRequested);
             await Assert.ThrowsAsync<ObjectDisposedException>(() => client.GetAsync("https://localhost/"));
         }
         finally
         {
-            lifetimeOwner?.Dispose();
+            if (lifetimeOwner is not null) await lifetimeOwner.DisposeAsync();
         }
     }
 

@@ -167,6 +167,7 @@ public sealed class ErrorBrowserTests(ErrorBrowserFixture fixture)
             ["touchPoints"] = new[] { new { x, y } },
         });
         Assert.Equal("dragging", await astronaut.GetAttributeAsync("data-motion"));
+        var dragStart = Assert.IsType<LocatorBoundingBoxResult>(await astronaut.BoundingBoxAsync());
         for (var step = 1; step <= 5; step++)
         {
             await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
@@ -178,8 +179,8 @@ public sealed class ErrorBrowserTests(ErrorBrowserFixture fixture)
         }
 
         var dragged = Assert.IsType<LocatorBoundingBoxResult>(await astronaut.BoundingBoxAsync());
-        Assert.InRange(dragged.X - box.X, 78, 82);
-        Assert.InRange(dragged.Y - box.Y, 58, 62);
+        Assert.InRange(dragged.X - dragStart.X, 78, 82);
+        Assert.InRange(dragged.Y - dragStart.Y, 58, 62);
         await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
         {
             ["type"] = "touchEnd",

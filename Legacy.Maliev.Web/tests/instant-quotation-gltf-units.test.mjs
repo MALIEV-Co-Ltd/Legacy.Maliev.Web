@@ -75,13 +75,56 @@ test('missing glTF selection refuses before parser or raw hash reads', async () 
     assert.equal(loads, 0);
   } finally { interop.dispose(); }
 });
+test('embedded glTF buffer views are decoded without a network fetch', async () => {
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  globalThis.fetch = () => { requests++; return Promise.reject(new Error('Network access is forbidden.')); };
+  let object;
+  try {
+    object = await loadStandaloneModel(cubeFile(), { gltfUnitPolicy: { version: 1, unit: 1 } });
+    const claim = analyzeUploadDerivedGeometry(object);
+    assert.ok(Math.abs(claim.dimensionXmm - 100) < 0.00001);
+    assert.ok(Math.abs(claim.volumeMm3 - 1000000) < 1);
+    assert.equal(requests, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    object?.traverse(child => {
+      child.geometry?.dispose();
+      for (const material of Array.isArray(child.material) ? child.material : [child.material]) material?.dispose();
+    });
+  }
+});
+for (const [name, mutate] of [
+  ['declared length mismatch', document => { document.buffers[0].byteLength--; }],
+  ['invalid base64', document => { document.buffers[0].uri = 'data:application/octet-stream;base64,!!!!'; }],
+  ['external buffer', document => { document.buffers[0].uri = 'https://example.invalid/model.bin'; }],
+  ['negative view offset', document => { document.bufferViews[0].byteOffset = -1; }],
+  ['view beyond buffer', document => { document.bufferViews[1].byteLength = 241; }],
+]) {
+  test(`embedded glTF refuses ${name} without fetching`, async () => {
+    const document = JSON.parse(original);
+    mutate(document);
+    const bytes = new TextEncoder().encode(JSON.stringify(document));
+    const originalFetch = globalThis.fetch;
+    let requests = 0;
+    globalThis.fetch = () => { requests++; return Promise.reject(new Error('Network access is forbidden.')); };
+    try {
+      await assert.rejects(loadStandaloneModel({ name: 'invalid.gltf', arrayBuffer: async () => bytes.buffer },
+        { gltfUnitPolicy: { version: 1, unit: 1 } }));
+      assert.equal(requests, 0);
+    } finally { globalThis.fetch = originalFetch; }
+  });
+}
 test('selection-time units survive later dropdown change and retry without rescaling the old scene', async () => {
   let unit = 'metres';
   const policyReads = [];
   const file = cubeFile();
   const input = {
     files: [file],
-    closest: () => ({ querySelector: selector => selector === '[data-workflow-gltf-unit]' ? { value: unit } : null }),
+    closest: () => ({
+      querySelector: selector => selector === '[data-workflow-gltf-unit]' ? { value: unit } : null,
+      addEventListener() {}, removeEventListener() {},
+    }),
     addEventListener(name, handler) { if (name === 'change') this.change = handler; },
     removeEventListener() {},
   };

@@ -290,12 +290,23 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             throw new ArgumentException("Reserved upload identifiers must be unique.", nameof(localIds));
         }
 
-        var pending = localIds.Select(localId => entries.SingleOrDefault(entry => entry.LocalId == localId)
-                ?? throw new ArgumentException("A reserved upload was not found.", nameof(localIds)))
-            .ToArray();
-        if (pending.Any(static entry => entry.Status is not InstantQuotationWorkflowUploadStatus.Pending))
+        UploadEntry[] pending;
+        await WaitForStateGateAsync(cancellationToken);
+        try
         {
-            throw new InvalidOperationException("Only pending reserved uploads can be started.");
+            ThrowIfPricingCanceled(cancellationToken);
+            // A captured batch can outlive local removal of one of its reservations.
+            pending = localIds.Select(localId => entries.SingleOrDefault(entry => entry.LocalId == localId))
+                .OfType<UploadEntry>()
+                .ToArray();
+            if (pending.Any(static entry => entry.Status is not InstantQuotationWorkflowUploadStatus.Pending))
+            {
+                throw new InvalidOperationException("Only pending reserved uploads can be started.");
+            }
+        }
+        finally
+        {
+            stateGate.Release();
         }
 
         await Task.WhenAll(pending.Select(entry => StartUploadAsync(entry, cancellationToken)));
@@ -348,6 +359,48 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
         entry.ProblemCategory = InstantQuotationProblemCategory.None;
         await StartUploadAsync(entry, cancellationToken);
+    }
+
+    public async Task DiscardUploadAsync(Guid localId, CancellationToken cancellationToken)
+    {
+        ThrowIfDisposed();
+        EnsureInitialized();
+        CancellationTokenSource? operationCancellation = null;
+        await WaitForStateGateAsync(cancellationToken);
+        try
+        {
+            ThrowIfPricingCanceled(cancellationToken);
+            var entry = entries.SingleOrDefault(item => item.LocalId == localId);
+            if (entry is null) return;
+            if (entry.Part is not null
+                || entry.Status is not (InstantQuotationWorkflowUploadStatus.Pending or InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled))
+                throw new DiscardRefusedException();
+
+            entry.OperationId = NewOperationId();
+            operationCancellation = entry.OperationCancellation;
+            entry.OperationCancellation = null;
+            entries.Remove(entry);
+            RefreshState();
+        }
+        finally
+        {
+            stateGate.Release();
+        }
+
+        try
+        {
+            operationCancellation?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // A competing retry may already have disposed this captured source.
+        }
+        finally
+        {
+            operationCancellation?.Dispose();
+        }
+
+        await FlushUploadPricingAsync(cancellationToken);
     }
 
     public Task RemoveAsync(Guid partId, CancellationToken cancellationToken) =>
@@ -479,7 +532,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                     entry.Part = previous with
                     {
                         Configuration = new InstantQuotationPartConfiguration(
-                            material.Key, color, quantity,
+                            material.Key, previous.Geometry.BodyCount > 1 ? "Any" : color, quantity,
                             material.Process is PrintProcess.Resin
                                 ? BuildPreference.Standard
                                 : buildPreference ?? previous.Configuration.BuildPreference),
@@ -515,7 +568,9 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             throw new ArgumentOutOfRangeException(nameof(buildPreference));
         var material = PricingCatalog.ResolveMaterial(materialKey)
             ?? throw new ArgumentException("The selected material is not supported.", nameof(materialKey));
-        if (!PricingCatalog.IsColorSupported(material.Key, color))
+        var part = entries.SingleOrDefault(item => item.Part?.PartId == partId && !item.RemovalAcknowledged)?.Part
+            ?? throw new ArgumentException("The part was not found.", nameof(partId));
+        if (!PricingCatalog.IsColorSupported(material.Key, color) && !(part.Geometry.BodyCount > 1 && color == "Any"))
             throw new ArgumentException("The selected color is not supported.", nameof(color));
         if (quantity < 1 || quantity > PricingCatalog.MaximumAdditiveQuantity)
             throw new ArgumentOutOfRangeException(nameof(quantity));
@@ -768,21 +823,33 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
     private async Task StartUploadCoreAsync(UploadEntry entry, CancellationToken cancellationToken)
     {
-        entry.OperationCancellation?.Dispose();
-        var operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
-            cancellationToken,
-            lifetimeToken);
-        entry.OperationCancellation = operationCancellation;
-        var operationToken = operationCancellation.Token;
-        var operationId = entry.RetryDisposition is InstantQuotationUploadRetryDisposition.RetryIdentical
-            && entry.OperationId is { Length: > 0 } retainedOperationId
-                ? retainedOperationId
-                : NewOperationId();
-        var analyticsAttemptId = NewAnalyticsAttemptId();
-        entry.OperationId = operationId;
-        entry.RetryDisposition = InstantQuotationUploadRetryDisposition.None;
-        entry.Status = InstantQuotationWorkflowUploadStatus.Uploading;
-        RefreshState();
+        CancellationTokenSource operationCancellation;
+        CancellationToken operationToken;
+        string operationId;
+        string analyticsAttemptId;
+        await WaitForStateGateAsync(cancellationToken);
+        try
+        {
+            ThrowIfPricingCanceled(cancellationToken);
+            if (!entries.Contains(entry)) return;
+            if (entry.Part is not null
+                || entry.Status is not (InstantQuotationWorkflowUploadStatus.Pending or InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled))
+                throw new InvalidOperationException("Only pending, failed or cancelled local uploads can be started.");
+
+            entry.OperationCancellation?.Dispose();
+            operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetimeToken);
+            entry.OperationCancellation = operationCancellation;
+            operationToken = operationCancellation.Token;
+            operationId = entry.RetryDisposition is InstantQuotationUploadRetryDisposition.RetryIdentical
+                && entry.OperationId is { Length: > 0 } retainedOperationId
+                    ? retainedOperationId : NewOperationId();
+            analyticsAttemptId = NewAnalyticsAttemptId();
+            entry.OperationId = operationId;
+            entry.RetryDisposition = InstantQuotationUploadRetryDisposition.None;
+            entry.Status = InstantQuotationWorkflowUploadStatus.Uploading;
+            RefreshState();
+        }
+        finally { stateGate.Release(); }
 
         if (entry.File.Length is <= 0 or > MaximumFileSize)
         {
@@ -918,11 +985,12 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         await stateGate.WaitAsync(cancellationToken);
         try
         {
-            var reconcilesRetainedOperation = entry.OperationId == operationId
+            var registered = entries.Contains(entry);
+            var reconcilesRetainedOperation = registered && entry.OperationId == operationId
                 && entry.Part is null
                 && entry.Status is InstantQuotationWorkflowUploadStatus.Error
                 && IsAuthoritativeSuccess(result);
-            if ((entry.OperationId != operationId
+            if ((!registered || entry.OperationId != operationId
                     || entry.Status is not InstantQuotationWorkflowUploadStatus.Uploading)
                 && !reconcilesRetainedOperation)
             {
@@ -989,7 +1057,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                         entry.File.FileName,
                         result.UploadReference!,
                         geometry,
-                        new InstantQuotationPartConfiguration("PLA", "Black", 1),
+                        new InstantQuotationPartConfiguration("PLA", geometry.BodyCount > 1 ? "Any" : "Black", 1),
                         result.PhysicalAnalysisUpload);
                     entry.Status = InstantQuotationWorkflowUploadStatus.Uploaded;
                     entry.ProblemCategory = InstantQuotationProblemCategory.None;
@@ -1077,15 +1145,33 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 return false;
             }
 
+            parts = parts.Select(static part =>
+            {
+                var material = PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)
+                    ?? throw new ArgumentException("The selected material is not supported.");
+                if (!PricingCatalog.IsColorSupported(material.Key, part.Configuration.Color)
+                    && !(part.Geometry.BodyCount > 1 && part.Configuration.Color == "Any"))
+                {
+                    throw new ArgumentException("The selected color is not supported.");
+                }
+
+                return part with
+                {
+                    Configuration = part.Configuration with
+                    {
+                        Color = part.Geometry.BodyCount > 1 ? "Any" : part.Configuration.Color,
+                        BuildPreference = material.Process is PrintProcess.Resin
+                            ? BuildPreference.Standard
+                            : part.Configuration.BuildPreference,
+                    },
+                };
+            }).ToArray();
             await WaitForStateGateAsync(cancellationToken);
             try
             {
                 ThrowIfPricingCanceled(cancellationToken);
                 entries.Clear();
-                entries.AddRange(parts.Select(static part => UploadEntry.Restore(
-                    PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)?.Process is PrintProcess.Resin
-                        ? part with { Configuration = part.Configuration with { BuildPreference = BuildPreference.Standard } }
-                        : part)));
+                entries.AddRange(parts.Select(static part => UploadEntry.Restore(part)));
                 session = existing;
                 OrderQuote = null;
                 if (parts.Length > 0) await PersistAndPriceAsync(cancellationToken);
@@ -1471,6 +1557,14 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     {
         var extension = Path.GetExtension(fileName).TrimStart('.');
         return extension.Length == 0 ? null : extension;
+    }
+
+    internal sealed class DiscardRefusedException : InvalidOperationException
+    {
+        public DiscardRefusedException()
+            : base("Only pending, failed or cancelled local uploads can be discarded.")
+        {
+        }
     }
 
     private sealed class UploadEntry

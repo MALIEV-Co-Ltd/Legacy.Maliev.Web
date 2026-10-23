@@ -41,6 +41,19 @@ public sealed class FontDeliveryContractTests
         {
             Assert.True(File.Exists(Path.Combine(webRoot, "wwwroot", "lib", "outfit", asset)), asset);
         }
+        foreach (var asset in new[]
+        {
+            "NotoSansThai-Medium.woff2",
+            "NotoSansThai-SemiBold.woff2",
+            "NOTO-LICENSE.txt",
+        })
+        {
+            var path = Path.Combine(webRoot, "wwwroot", "lib", "ibm-plex", asset);
+            Assert.True(File.Exists(path), asset);
+            Assert.True(new FileInfo(path).Length > 0, asset);
+        }
+        var notoLicense = File.ReadAllText(Path.Combine(webRoot, "wwwroot", "lib", "ibm-plex", "NOTO-LICENSE.txt"));
+        Assert.Contains("SIL OPEN FONT LICENSE Version 1.1", notoLicense, StringComparison.Ordinal);
         Assert.DoesNotContain("fonts.googleapis.com", fontPartial, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fonts.gstatic.com", fontPartial, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fonts.googleapis.com", blazorShell, StringComparison.OrdinalIgnoreCase);

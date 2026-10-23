@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Net;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Components;
@@ -15,15 +17,15 @@ using Microsoft.JSInterop;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
+public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<TestingWebApplicationFactory>, IAsyncLifetime
 {
     private const string WorkflowNamespace = "Legacy.Maliev.Web.Components.Pages.InstantQuotation";
     private readonly HttpClient client;
-    private readonly WebApplicationFactory<Program> configuredFactory;
+    private readonly WebApplicationFactory<Program> ownedFactory;
 
-    public InstantQuotationInteractiveRouteTests(WebApplicationFactory<Program> factory)
+    public InstantQuotationInteractiveRouteTests(TestingWebApplicationFactory factory)
     {
-        configuredFactory = factory.WithWebHostBuilder(builder =>
+        ownedFactory = factory.WithWebHostBuilder(builder =>
             {
                 builder.UseSetting("environment", "Testing");
                 builder.UseSetting("Recaptcha:ProjectId", "test-project");
@@ -36,7 +38,7 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             });
         try
         {
-            client = configuredFactory.CreateClient(new WebApplicationFactoryClientOptions
+            client = ownedFactory.CreateClient(new WebApplicationFactoryClientOptions
             {
                 AllowAutoRedirect = false,
                 BaseAddress = new Uri("https://localhost"),
@@ -44,21 +46,19 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
         }
         catch (Exception original)
         {
-            try { configuredFactory.Dispose(); }
-            catch (Exception cleanup)
-            {
-                try { original.Data["InstantQuotationHostCleanupFailureType"] = cleanup.GetType().Name; }
-                catch (Exception) { /* Preserve the original startup failure if its metadata is unwritable. */ }
-            }
+            try { ownedFactory.Dispose(); }
+            catch (Exception cleanup) { OwnedWebSurfaceResources.RecordFailureTypes(original, [cleanup]); }
             throw;
         }
     }
 
-    public void Dispose()
-    {
-        try { client.Dispose(); }
-        finally { configuredFactory.Dispose(); }
-    }
+    /// <summary>Completes setup after the per-test child factory has been created.</summary>
+    /// <returns>A completed setup task.</returns>
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    /// <summary>Releases this test's child host and its tracked clients without disposing the borrowed parent.</summary>
+    /// <returns>A task that completes after the owned child factory has been disposed.</returns>
+    public async Task DisposeAsync() => await ownedFactory.DisposeAsync();
 
     [Fact]
     public void Route_RemainsStaticSsr_WithExactlyOneInteractiveServerWorkflowIsland()
@@ -97,7 +97,7 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
     }
 
     [Fact]
-    public void PrimaryJourney_IsUploadFirst_AndExposesAllWorkflowMarkers()
+    public async Task PrimaryJourney_IsUploadFirst_AndExposesAllWorkflowMarkers()
     {
         var source = ReadWorkflowSource();
         var document = File.ReadAllText(Path.Combine(
@@ -111,7 +111,11 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
         Assert.Contains("Start by uploading a file", source, StringComparison.Ordinal);
         Assert.DoesNotContain("instant-quote__header", document, StringComparison.Ordinal);
         Assert.Contains("data-workflow-empty-dropzone", source, StringComparison.Ordinal);
-        Assert.Contains("iq-empty-dropzone__icon", source, StringComparison.Ordinal);
+        Assert.Contains("<InstantQuotationEmptyScene />", source, StringComparison.Ordinal);
+        var emptyHtml = await RenderWorkflowAsync(InstantQuotationWorkflowState.Empty);
+        Assert.Contains("iq-empty-dropzone__icon", emptyHtml, StringComparison.Ordinal);
+        Assert.Contains("data-empty-hex", emptyHtml, StringComparison.Ordinal);
+        Assert.Contains("data-empty-cube", emptyHtml, StringComparison.Ordinal);
         Assert.DoesNotContain("Height (mm)", document, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Solid volume", document, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Footprint", document, StringComparison.OrdinalIgnoreCase);
@@ -398,6 +402,43 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
     }
 
     [Theory]
+    [InlineData("en", InstantQuotationWorkflowState.Empty, "iq-empty-dropzone")]
+    [InlineData("th", InstantQuotationWorkflowState.Empty, "iq-empty-dropzone")]
+    [InlineData("en", InstantQuotationWorkflowState.Configured, "iq-compact-dropzone")]
+    [InlineData("th", InstantQuotationWorkflowState.Configured, "iq-compact-dropzone")]
+    public async Task UploadDropzone_ShowsConfiguredPerFileLimitInSelectedLocale(
+        string culture,
+        InstantQuotationWorkflowState state,
+        string dropzoneClass)
+    {
+        var previousCulture = CultureInfo.CurrentCulture;
+        var previousUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+            var html = WebUtility.HtmlDecode(await RenderWorkflowAsync(state));
+            var dropzone = Regex.Match(
+                html,
+                $"<label[^>]*class=\"{dropzoneClass}\"[^>]*>(?<content>.*?)</label>",
+                RegexOptions.Singleline | RegexOptions.CultureInvariant);
+            Assert.True(dropzone.Success);
+            var limitMb = InstantQuotationWorkflowCoordinator.MaximumFileSize / (1024 * 1024);
+            var expected = culture == "th"
+                ? $"สูงสุด {limitMb} MB ต่อไฟล์"
+                : $"Up to {limitMb} MB per file";
+
+            Assert.Contains(expected, dropzone.Groups["content"].Value, StringComparison.Ordinal);
+            Assert.DoesNotContain("instant-quote__sr-only", dropzone.Value, StringComparison.Ordinal);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
+            CultureInfo.CurrentUICulture = previousUiCulture;
+        }
+    }
+
+    [Theory]
     [InlineData(InstantQuotationWorkflowState.Uploaded)]
     [InlineData(InstantQuotationWorkflowState.Review)]
     [InlineData(InstantQuotationWorkflowState.CustomerDetails)]
@@ -492,7 +533,8 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             Environment.NewLine,
             File.ReadAllText(Path.Combine(directory, "InstantQuotationWorkflow.razor")),
             File.ReadAllText(Path.Combine(directory, "InstantQuotationWorkflow.razor.cs")),
-            File.ReadAllText(Path.Combine(directory, "InstantQuotationWorkflowState.cs")));
+            File.ReadAllText(Path.Combine(directory, "InstantQuotationWorkflowState.cs")),
+            File.ReadAllText(Path.Combine(directory, "InstantQuotationEmptyScene.razor")));
     }
 
     private static int Count(string source, string value) =>
@@ -506,6 +548,7 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<WebApp
             .AddLogging()
             .AddLocalization(options => options.ResourcesPath = "Resources")
             .AddSingleton<IJSRuntime, NullJsRuntime>()
+            .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager())
             .AddSingleton<IWebHostEnvironment>(_ => new TestWebHostEnvironment
             {
                 EnvironmentName = "Testing",

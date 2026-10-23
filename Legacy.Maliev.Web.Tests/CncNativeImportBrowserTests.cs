@@ -223,7 +223,7 @@ public sealed class CncNativeBrowserFixture : IAsyncLifetime
     {
         int port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
-        factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
+        factory = new CareerSearchKestrelWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
         factory.UseKestrel(port);
         hostClient = factory.CreateClient(new WebApplicationFactoryClientOptions
         {

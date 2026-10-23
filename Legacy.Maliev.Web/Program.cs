@@ -1,3 +1,4 @@
+using Legacy.Maliev.Web.Pages.Shared;
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web;
 using Legacy.Maliev.Web.Application;
@@ -388,6 +389,54 @@ builder.Services.AddRazorPages(options =>
             "Knowledges",
             "/Specifications/CNC-Machining",
             model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/CNC/Cutting-Tools",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/CNC/Feeds-and-Speeds",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/CNC/Geometry-and-Workholding",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/CNC/Holes-and-Tolerances",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/CNC/Machining-Processes",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Finishing/Heat-Treatment",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Finishing/Surface-Finishes",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Inspection/Measuring-Parts",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Manufacturing/Process-Selection",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Materials/Engineering-Plastics",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Materials/Metals",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Materials/Selection",
+            model => model.Selectors.Clear());
     }
 })
     .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)
@@ -571,6 +620,9 @@ if (useBlazorRouteHost)
         branch => branch.Run(InstantQuotationCompatibilityEndpoint.HandleAsync));
 }
 app.MapDefaultEndpoints("web");
+app.UseWhen(
+    CareerSearchCompatibilityEndpoint.Matches,
+    branch => branch.Run(CareerSearchCompatibilityEndpoint.HandleAsync));
 app.MapBuildIdentity();
 app.MapLegacySitemap();
 app.MapGet("/instantquotation", () => Results.LocalRedirect("/InstantQuotation/3D-Printing"))

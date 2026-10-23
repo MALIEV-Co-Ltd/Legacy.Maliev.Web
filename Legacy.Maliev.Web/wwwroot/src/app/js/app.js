@@ -1,3 +1,5 @@
+var singleSubmitForms = new WeakSet();
+
 function initializeApplication() {
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
         window.bootstrap.Tooltip.getOrCreateInstance(element);
@@ -75,6 +77,11 @@ function initializeApplication() {
                 return;
             }
 
+            if (!ValidateFormForSubmission(form)) {
+                event.preventDefault();
+                return;
+            }
+
             if (form.dataset.recaptchaVerified === 'true') {
                 if (form.dataset.uploadAnalytics === 'true'
                     && !uploadStartEmitted
@@ -89,20 +96,18 @@ function initializeApplication() {
                         file_count: uploadFiles.files.length
                     });
                     event.preventDefault();
-                    window.setTimeout(function () { form.submit(); }, 150);
+                    window.setTimeout(function () {
+                        if (!ValidateFormForSubmission(form)) {
+                            resetAfterRecaptchaFailure();
+                            return;
+                        }
+                        form.submit();
+                    }, 150);
                 }
                 return;
             }
 
             event.preventDefault();
-            if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
-                if (typeof form.reportValidity === 'function') {
-                    form.reportValidity();
-                }
-
-                return;
-            }
-
             if (!window.grecaptcha || !window.grecaptcha.enterprise
                 || typeof window.grecaptcha.enterprise.ready !== 'function'
                 || typeof window.grecaptcha.enterprise.execute !== 'function') {
@@ -130,6 +135,11 @@ function initializeApplication() {
                                 return;
                             }
 
+                            if (!ValidateFormForSubmission(form)) {
+                                resetAfterRecaptchaFailure();
+                                return;
+                            }
+
                             responseInput.value = token;
                             delete form.dataset.recaptchaPending;
                             form.dataset.recaptchaVerified = 'true';
@@ -146,17 +156,7 @@ function initializeApplication() {
         });
     });
 
-    document.querySelectorAll('[data-single-submit]').forEach(function (form) {
-        form.addEventListener('submit', function (event) {
-            if (form.dataset.submitting === 'true') {
-                event.preventDefault();
-                return;
-            }
-
-            form.dataset.submitting = 'true';
-            form.setAttribute?.('aria-busy', 'true');
-        });
-    });
+    document.querySelectorAll('[data-single-submit]').forEach(bindSingleSubmitForm);
 
     document.querySelectorAll('[data-member-workspace]').forEach(function (workspace) {
         var navigation = workspace.querySelector('#member-navigation');
@@ -204,12 +204,27 @@ if (document.readyState === 'loading') {
     initializeApplication();
 }
 
-// Prevents reCAPTCHA callbacks from bypassing the normal in-flight button state
-// when they invoke the browser's native form.submit() method.
+function ValidateFormForSubmission(form) {
+    var hasNativeValidation = typeof form.checkValidity === 'function';
+    if (hasNativeValidation && !form.checkValidity()) {
+        if (typeof form.reportValidity === 'function') {
+            form.reportValidity();
+        }
+
+        return false;
+    }
+
+    return hasNativeValidation;
+}
+
+// reCAPTCHA callbacks must revalidate before locking and invoking native form.submit().
 function SubmitFormOnce(formId, buttonId, submittingText) {
     var form = document.getElementById(formId);
     var submitButton = document.getElementById(buttonId);
     if (!form || !submitButton || form.dataset.submitting === 'true') {
+        return false;
+    }
+    if (!ValidateFormForSubmission(form)) {
         return false;
     }
 
@@ -268,11 +283,7 @@ function GuardRecaptchaSubmit(formId, buttonId, siteKey, action, submittingText,
             return;
         }
 
-        if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
-            if (typeof form.reportValidity === 'function') {
-                form.reportValidity();
-            }
-
+        if (!ValidateFormForSubmission(form)) {
             return;
         }
 
@@ -303,7 +314,9 @@ function GuardRecaptchaSubmit(formId, buttonId, siteKey, action, submittingText,
                         tokenInput.value = token;
                         delete form.dataset.recaptchaPending;
                         var submit = function () {
-                            SubmitFormOnce(formId, buttonId, submittingText);
+                            if (!SubmitFormOnce(formId, buttonId, submittingText)) {
+                                showError();
+                            }
                         };
                         if (form.dataset.uploadAnalytics === 'true'
                             && !uploadStartEmitted
@@ -331,11 +344,15 @@ function GuardRecaptchaSubmit(formId, buttonId, siteKey, action, submittingText,
 }
 
 function GuardSingleSubmit(formId) {
-    var form = document.getElementById(formId);
-    if (!form) {
+    bindSingleSubmitForm(document.getElementById(formId));
+}
+
+function bindSingleSubmitForm(form) {
+    if (!form || singleSubmitForms.has(form)) {
         return;
     }
 
+    singleSubmitForms.add(form);
     form.addEventListener('submit', function (event) {
         if (form.dataset.submitting === 'true') {
             event.preventDefault();

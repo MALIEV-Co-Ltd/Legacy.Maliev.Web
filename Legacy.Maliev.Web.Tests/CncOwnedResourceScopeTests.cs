@@ -47,6 +47,23 @@ public sealed class CncOwnedResourceScopeTests(Xunit.Abstractions.ITestOutputHel
                 Assert.False(refusal.RootElement.GetProperty("closed").GetBoolean());
                 if (mode == "reader-settlement") Assert.False(refusal.RootElement.GetProperty("readersSettled").GetBoolean());
                 else Assert.False(refusal.RootElement.GetProperty("terminal").GetBoolean());
+                if (mode == "unknown-identity")
+                {
+                    var capturedExecutable = recovery.ExecutableIdentityForControl;
+                    recovery.RejectIdentity = false;
+                    recovery.ExecutableIdentityForControl = null;
+                    try
+                    {
+                        var missingExecutable = await Assert.ThrowsAsync<InvalidOperationException>(() => recovery.CloseAsync());
+                        Assert.Equal("Owned PID/birth/executable identity changed; preserve process.", missingExecutable.Message);
+                        Assert.False(recovery.Process.HasExited);
+                        Assert.True(CncOwnedResourceScope.RetainedCustody.ContainsKey(key));
+                    }
+                    finally
+                    {
+                        recovery.ExecutableIdentityForControl = capturedExecutable;
+                    }
+                }
             }
             finally
             {
@@ -115,9 +132,17 @@ public sealed class CncOwnedResourceScopeTests(Xunit.Abstractions.ITestOutputHel
                 _ = child.Process.WorkingSet64;
                 _ = child.Process.TotalProcessorTime;
             };
-            Assert.IsType<InvalidOperationException>(Record.Exception(readMetrics));
+            Assert.True(Record.Exception(readMetrics) is InvalidOperationException or System.ComponentModel.Win32Exception);
             var observed = OwnedProcessMetricObservation.TryRead(child.Process, handle, pid, readMetrics);
             Assert.False(observed, "The same real metrics read that faults without the terminal guard must settle the exact owned child.");
+            Action readExecutable = () =>
+            {
+                child.Process.Refresh();
+                _ = child.Process.MainModule?.FileName ?? throw new InvalidOperationException("Executable identity unavailable.");
+            };
+            Assert.True(Record.Exception(readExecutable) is InvalidOperationException or System.ComponentModel.Win32Exception);
+            Assert.False(OwnedProcessMetricObservation.TryRead(child.Process, handle, pid, readExecutable),
+                "The same exact-terminal guard must also settle executable observation after natural exit.");
             await child.CompleteAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
         }, rows => output.WriteLine(JsonSerializer.Serialize(rows)));
     }
@@ -130,9 +155,13 @@ public sealed class CncOwnedResourceScopeTests(Xunit.Abstractions.ITestOutputHel
         await CncOwnedResourceScope.ExecuteAsync(async scope =>
         {
             var child = scope.StartChild(dll!, new() { ["MALIEV_CNC_PROBE_MODE"] = "partial-start" });
-            var original = new InvalidOperationException("controlled-live-metric-error");
-            Assert.Same(original, Record.Exception(() => OwnedProcessMetricObservation.TryRead(
-                child.Process, child.Process.SafeHandle, child.Process.Id, () => throw original)));
+            foreach (var original in new Exception[]
+            {
+                new InvalidOperationException("controlled-live-metric-error"),
+                new System.ComponentModel.Win32Exception(5, "controlled-live-metric-error"),
+            })
+                Assert.Same(original, Record.Exception(() => OwnedProcessMetricObservation.TryRead(
+                    child.Process, child.Process.SafeHandle, child.Process.Id, () => throw original)));
             await Task.CompletedTask;
         }, rows => output.WriteLine(JsonSerializer.Serialize(rows)));
     }
@@ -158,11 +187,15 @@ public sealed class CncOwnedResourceScopeTests(Xunit.Abstractions.ITestOutputHel
             using var disposed = new System.Diagnostics.Process();
             if (mode == "closed-handle") invalid.Dispose();
             if (mode == "disposed-process") disposed.Dispose();
-            var original = new InvalidOperationException("controlled-unverifiable-metric-error");
-            Assert.Same(original, Record.Exception(() => OwnedProcessMetricObservation.TryRead(
-                mode == "disposed-process" ? disposed : child.Process,
-                mode is "invalid-handle" or "closed-handle" ? invalid : handle,
-                mode == "pid-mismatch" ? -1 : pid, () => throw original)));
+            foreach (var original in new Exception[]
+            {
+                new InvalidOperationException("controlled-unverifiable-metric-error"),
+                new System.ComponentModel.Win32Exception(5, "controlled-unverifiable-metric-error"),
+            })
+                Assert.Same(original, Record.Exception(() => OwnedProcessMetricObservation.TryRead(
+                    mode == "disposed-process" ? disposed : child.Process,
+                    mode is "invalid-handle" or "closed-handle" ? invalid : handle,
+                    mode == "pid-mismatch" ? -1 : pid, () => throw original)));
         }, rows => output.WriteLine(JsonSerializer.Serialize(rows)));
     }
 
@@ -179,7 +212,7 @@ public sealed class CncOwnedResourceScopeTests(Xunit.Abstractions.ITestOutputHel
             {
                 moduleReads++;
                 if (OperatingSystem.IsLinux()) throw new InvalidOperationException("controlled-module-enumeration-unavailable");
-                return process.MainModule?.FileName;
+                return CncOwnedResourceScope.OwnedChild.ReadExecutableIdentity(process);
             });
             Assert.True(Path.IsPathFullyQualified(actual));
             if (OperatingSystem.IsLinux())
@@ -190,7 +223,7 @@ public sealed class CncOwnedResourceScopeTests(Xunit.Abstractions.ITestOutputHel
             else
             {
                 Assert.Equal(1, moduleReads);
-                Assert.Equal(child.Process.MainModule?.FileName, actual);
+                Assert.Equal(CncOwnedResourceScope.OwnedChild.ReadExecutableIdentity(child.Process), actual);
             }
             Assert.False(child.Process.HasExited);
             await Task.CompletedTask;

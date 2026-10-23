@@ -467,7 +467,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 
 /* Below the split-pane desktop shell, keep names and actions in the page's
    scroll path instead of clipping them behind the horizontal parts rail. */
-@media (max-width: 61.999rem) {
+@media (max-width: 63.99875rem) {
     .instant-quote__workflow [data-workflow-parts] {
         flex-wrap: wrap;
         overflow: visible;
@@ -492,7 +492,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 
 .instant-quote__workflow > [data-workflow-viewer] {
     position: relative;
-    height: 260px;
+    height: clamp(280px, 72vw, 340px);
     padding: 0;
     overflow: hidden;
     border-radius: 0;
@@ -788,7 +788,36 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     align-self: center;
 }
 
-@media (max-width: 36rem) {
+/* Keep the whole non-phone footer within its viewport share. Only the details
+   rail scrolls; legal links and configuration actions keep their own rows. */
+@media (min-width: 48rem) {
+    .instant-quote__workflow .instant-quote__configuration-footer {
+        box-sizing: border-box;
+        grid-template-rows: minmax(44px, 1fr) auto auto;
+        min-height: 0;
+        max-height: 40dvh;
+    }
+
+    .instant-quote__configuration-footer .instant-quote__summary-dock {
+        min-height: 0;
+        overflow: auto;
+        overscroll-behavior: contain;
+    }
+
+    .instant-quote__configuration-footer .instant-quote__summary-dock > summary {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: inherit;
+    }
+
+    .instant-quote__configuration-footer [data-workflow-order-total] {
+        max-height: none;
+        overflow: visible;
+    }
+}
+
+@media (max-width: 35.99875rem) {
     .instant-quote__workflow .instant-quote__configuration-footer {
         grid-template-columns: minmax(0, 1fr);
     }
@@ -845,7 +874,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     outline-offset: 3px;
 }
 
-@media (max-width: 36rem) {
+@media (max-width: 35.99875rem) {
     .instant-quote__configuration-actions button,
     .instant-quote__consultation-link {
         height: auto;
@@ -1092,14 +1121,14 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 
 /* The page itself scrolls below the fixed desktop shell; keep the tier list
    in that single scroll path instead of trapping touch and keyboard users. */
-@media (max-width: 61.999rem) {
+@media (max-width: 63.99875rem) {
     .instant-quote__bulk-pricing {
         max-height: none;
         overflow-y: visible;
     }
 }
 
-@media (min-width: 62rem) and (min-height: 62.5rem) {
+@media (min-width: 64rem) and (min-height: 62.5rem) {
     .instant-quote__bulk-pricing {
         max-height: clamp(11rem, calc(100dvh - 42rem), 24rem);
     }
@@ -1290,9 +1319,21 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     margin: .4rem var(--instant-quote-review-inset) var(--instant-quote-review-inset);
 }
 
-@media (max-width: 36rem) {
+@media (max-width: 35.99875rem) {
     .instant-quote__workflow [data-workflow-review-part] {
         --instant-quote-review-inset: .55rem;
+        grid-template-columns: 52px minmax(0, 1fr);
+        gap: .55rem;
+    }
+
+    .instant-quote__review-thumbnail {
+        width: 52px;
+        height: 52px;
+    }
+
+    .instant-quote__workflow .instant-quote__review-fields {
+        grid-template-columns: 1fr;
+        gap: .45rem;
     }
 }
 
@@ -1566,7 +1607,13 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     }
 }
 
-@media (min-width: 62rem) {
+@media (min-width: 48rem) and (max-width: 63.99875rem) {
+    .instant-quote__workflow > [data-workflow-viewer] {
+        height: clamp(260px, 32vh, 420px);
+    }
+}
+
+@media (min-width: 64rem) {
     body.instant-quotation-shell {
         height: 100dvh;
         overflow: hidden;
@@ -1616,7 +1663,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 
     /* Keep usable parts and configuration panes; shorter shells scroll instead of collapsing either pane. */
     .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) {
-        grid-template-rows: auto minmax(8rem, 1fr) minmax(24rem, 3fr);
+        grid-template-rows: auto minmax(8rem, 1fr) auto;
         overflow-y: auto;
     }
 
@@ -1625,12 +1672,13 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     }
 
     .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-viewer] {
-        grid-row: 2 / -1;
+        grid-row: 2;
     }
 
     .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] {
         display: flex;
-        grid-row: 2;
+        grid-column: 1;
+        grid-row: 3;
         min-height: 0;
         flex-direction: column;
         overflow: auto;
@@ -1646,7 +1694,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     }
 
     .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-configuration] {
-        grid-row: 3;
+        grid-row: 2 / -1;
         overflow: auto;
     }
 
@@ -1717,6 +1765,73 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
         min-height: 0;
         overflow-y: auto;
         align-items: flex-start;
+    }
+
+    /* Source09f04/f506: the part rail belongs below its preview, not above
+       configuration. Review/customer and development-only rails have no pair. */
+    .instant-quote__workflow:not(:has(> .instant-quote__gltf-unit)):has(> [data-workflow-viewer]):has(> [data-workflow-parts-panel]) {
+        grid-template-rows: minmax(0, 1fr) auto;
+    }
+
+    .instant-quote__workflow:not(:has(> .instant-quote__gltf-unit)):has(> [data-workflow-parts-panel]) > [data-workflow-viewer] {
+        grid-row: 1;
+    }
+
+    .instant-quote__workflow:not(:has(> .instant-quote__gltf-unit)):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .instant-quote__workflow:not(:has(> .instant-quote__gltf-unit)):has(> [data-workflow-parts-panel]) > [data-workflow-configuration] {
+        grid-row: 1 / -1;
+    }
+
+    /* An explicit next-import unit row must not push a retained-part error below the panes. */
+    .instant-quote__workflow[data-workflow-state="error"]:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]):has(> [data-workflow-parts-panel]) {
+        grid-template-rows: auto auto minmax(8rem, 1fr) auto;
+    }
+
+    .instant-quote__workflow[data-workflow-state="error"]:has(> .instant-quote__gltf-unit):has(> [data-workflow-parts-panel]) > p[role="alert"] {
+        grid-column: 1 / -1;
+        grid-row: 1;
+    }
+
+    .instant-quote__workflow[data-workflow-state="error"]:has(> .instant-quote__gltf-unit):has(> [data-workflow-parts-panel]) > .instant-quote__gltf-unit {
+        grid-row: 2;
+    }
+
+    .instant-quote__workflow[data-workflow-state="error"]:has(> .instant-quote__gltf-unit):has(> [data-workflow-parts-panel]) > [data-workflow-viewer] {
+        grid-row: 3;
+    }
+
+    .instant-quote__workflow[data-workflow-state="error"]:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] {
+        grid-row: 4;
+    }
+
+    .instant-quote__workflow[data-workflow-state="error"]:has(> .instant-quote__gltf-unit):has(> [data-workflow-parts-panel]) > [data-workflow-configuration] {
+        grid-row: 3 / -1;
+    }
+
+    /* A retained-part failure keeps its real alert above both working panes. */
+    .instant-quote__workflow:not(:has(> .instant-quote__gltf-unit))[data-workflow-state="error"]:has(> [data-workflow-viewer]):has(> [data-workflow-parts-panel]) {
+        grid-template-rows: auto minmax(0, 1fr) auto;
+    }
+
+    .instant-quote__workflow:not(:has(> .instant-quote__gltf-unit))[data-workflow-state="error"]:has(> [data-workflow-parts-panel]) > p[role="alert"] {
+        grid-column: 1 / -1;
+        grid-row: 1;
+    }
+
+    .instant-quote__workflow:not(:has(> .instant-quote__gltf-unit))[data-workflow-state="error"]:has(> [data-workflow-parts-panel]) > [data-workflow-viewer] {
+        grid-row: 2;
+    }
+
+    .instant-quote__workflow:not(:has(> .instant-quote__gltf-unit))[data-workflow-state="error"]:has(> [data-workflow-viewer]) > [data-workflow-parts-panel] {
+        grid-row: 3;
+    }
+
+    .instant-quote__workflow:not(:has(> .instant-quote__gltf-unit))[data-workflow-state="error"]:has(> [data-workflow-parts-panel]) > [data-workflow-configuration] {
+        grid-row: 2 / -1;
     }
 
     .instant-quote__workflow [data-workflow-parts] > [data-workflow-part] {
@@ -1806,12 +1921,12 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     }
 }
 
-/* Compact panes reserve 4.5625rem for navigation, 24rem for configuration and
-   8rem for parts. From 48rem height, let names size the parts row; unusually
-   long content can use the existing workflow scroll instead of clipping. */
-@media (min-width: 62rem) and (min-height: 48rem) {
+/* Keep the preview above its parts dock in both desktop height regimes.
+   Tall shells let complete names size the dock; compact shells retain its
+   native scroll. The configuration column spans both rows. */
+@media (min-width: 64rem) and (min-height: 48rem) {
     .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) {
-        grid-template-rows: auto max-content minmax(24rem, 3fr);
+        grid-template-rows: auto minmax(8rem, 1fr) max-content;
     }
 
     .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] > [data-workflow-parts] {
@@ -1822,7 +1937,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 
 /* Compact desktop rails use the existing single-column card flow so complete
    names and native keyboard scrolling do not compete with the panel header. */
-@media (min-width: 62rem) and (height < 48rem) {
+@media (min-width: 64rem) and (height < 48rem) {
     .instant-quote__workflow:has(> .instant-quote__gltf-unit):has(> [data-workflow-viewer]) > [data-workflow-parts-panel] > [data-workflow-parts] {
         flex-wrap: wrap;
         overflow-x: hidden;
@@ -1925,7 +2040,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 }
 
 /* Keep Add file reachable while the horizontal part rail reveals later parts. */
-@media (min-width: 62rem) {
+@media (min-width: 64rem) {
     .instant-quote__workflow [data-workflow-parts] > .iq-compact-dropzone {
         position: sticky;
         left: 0;
@@ -1952,3 +2067,174 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 .instant-quote__workflow .instant-quote__file-error:focus-visible { outline: 3px solid #a32136; outline-offset: -3px; }
 
 .instant-quote__workflow > [data-workflow-viewer] > .instant-quote__local-stage-thumbnail { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+/* Empty-only decoration: the existing label remains the sole upload affordance. */
+.instant-quote__workflow .iq-empty-dropzone {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    background:
+        radial-gradient(130% 78% at 50% 112%, rgba(7, 93, 232, .11) 0%, transparent 64%),
+        linear-gradient(180deg, #fff 0%, #f8fbff 52%, #edf3fd 100%);
+}
+
+.instant-quote__workflow .iq-empty-scene {
+    display: grid;
+    place-items: center;
+    width: clamp(220px, 27vw, 340px);
+    height: clamp(170px, 21vw, 260px);
+    pointer-events: none;
+}
+
+.instant-quote__workflow .iq-empty-scene__hex,
+.instant-quote__workflow .iq-empty-scene__veil {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.instant-quote__workflow .iq-empty-scene__hex { z-index: -2; }
+.instant-quote__workflow .iq-empty-scene__veil {
+    z-index: -1;
+    background: radial-gradient(closest-side ellipse at 50% 50%,
+        #fff 0%, rgba(255, 255, 255, .86) 42%, transparent 78%);
+}
+
+.instant-quote__workflow .iq-empty-scene__cube,
+.instant-quote__workflow .iq-empty-scene__fallback {
+    grid-area: 1 / 1;
+    pointer-events: none;
+}
+
+.instant-quote__workflow .iq-empty-scene__cube {
+    display: block;
+    width: 100%;
+    height: 100%;
+    visibility: hidden;
+}
+
+.instant-quote__workflow .iq-empty-scene[data-cube-ready="true"] .iq-empty-scene__cube { visibility: visible; }
+.instant-quote__workflow .iq-empty-scene[data-cube-ready="true"] .iq-empty-scene__fallback { visibility: hidden; }
+
+.instant-quote__workflow .iq-empty-dropzone span.iq-empty-scene__fallback {
+    font-size: 3rem;
+    font-weight: 400;
+    line-height: 1.5;
+}
+
+/* Source customer decisions remain structured inside the existing native POST.
+   The accepted order ledger and sticky action footer retain their ownership. */
+.instant-quote__workflow [data-workflow-customer-details-content] {
+    container: instant-quote-customer / inline-size;
+}
+
+[data-workflow-customer-details-content] form.instant-quote__customer-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 0;
+    min-width: 0;
+    padding: 0;
+    border: 1px solid #dce4ee;
+    border-radius: .75rem;
+    background: #fff;
+}
+
+.instant-quote__customer-sections {
+    min-width: 0;
+    padding: 1rem 1.15rem;
+}
+
+.instant-quote__workflow .instant-quote__customer-section {
+    min-width: 0;
+    margin: 0;
+    padding: 0 0 .85rem;
+    border: 0;
+    border-bottom: 1px solid #dce4ee;
+    border-radius: 0;
+    background: transparent;
+}
+
+.instant-quote__workflow .instant-quote__customer-section + .instant-quote__customer-section {
+    padding-top: .85rem;
+}
+
+.instant-quote__workflow .instant-quote__customer-section:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.instant-quote__customer-section-heading {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    align-items: start;
+    gap: .65rem;
+    margin-bottom: .7rem;
+}
+
+.instant-quote__customer-section-index {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: .45rem;
+    background: #eaf2ff;
+    color: #075de8;
+    font-weight: 600;
+}
+
+.instant-quote__customer-section-heading h4 {
+    margin: 0 0 .1rem;
+    color: #111f33;
+    font-size: .95rem;
+    line-height: 1.35;
+}
+
+.instant-quote__customer-section-heading p {
+    margin: 0;
+    color: #5b6777;
+    font-size: .8125rem;
+    line-height: 1.45;
+}
+
+.instant-quote__customer-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .65rem .8rem;
+    min-width: 0;
+}
+
+.instant-quote__customer-fields > div {
+    min-width: 0;
+}
+
+.instant-quote__customer-fields > fieldset,
+.instant-quote__customer-fields > .instant-quote__checkbox-field,
+.instant-quote__customer-section:last-child .instant-quote__customer-fields > div {
+    grid-column: 1 / -1;
+}
+
+.instant-quote__customer-section textarea[name="Description"] {
+    min-height: 5.25rem;
+    height: 5.25rem;
+    resize: vertical;
+}
+
+.instant-quote__customer-description-meta {
+    display: flex;
+    justify-content: flex-end;
+    min-height: 1rem;
+    color: #5b6777;
+    font-size: .8125rem;
+}
+
+@container instant-quote-customer (max-width: 32.5rem) {
+    .instant-quote__customer-fields {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .instant-quote__customer-sections {
+        padding: .9rem;
+    }
+}

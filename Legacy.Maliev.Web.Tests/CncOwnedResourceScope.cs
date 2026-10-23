@@ -130,6 +130,7 @@ internal sealed class CncOwnedResourceScope
         internal bool RejectIdentity { get; set; }
         internal bool RejectStop { get; set; }
         internal TaskCompletionSource<bool>? ReaderRelease { get; set; }
+        internal string? ExecutableIdentityForControl { get => executable; set => executable = value; }
         internal Process Process { get; } = new();
         private readonly CancellationTokenSource readerStop = new();
         private readonly SemaphoreSlim stopping = new(1);
@@ -151,9 +152,14 @@ internal sealed class CncOwnedResourceScope
             if (!Process.Start()) throw new InvalidOperationException("Owned child failed to start.");
             started = true;
             pid = Process.Id;
-            ownedHandle = Process.SafeHandle; // Retain before identity observation can fail; never reconstruct ownership.
+            ownedHandle = Process.SafeHandle; // Retain handle before any executable observation can race natural exit.
             start = Process.StartTime.ToUniversalTime();
-            executable = ReadExecutableIdentity(Process);
+            // A missing executable is acceptable only after exact retained-handle terminal proof.
+            // Live or unverifiable observations still throw; CloseAsync retains unresolved custody.
+            OwnedProcessMetricObservation.TryRead(Process, ownedHandle, pid, () =>
+            {
+                executable = ReadExecutableIdentity(Process);
+            });
             stdout = ReadAndSettle(Process.StandardOutput.BaseStream, true);
             stderr = ReadBounded(Process.StandardError.BaseStream, false);
             monitor = Monitor();
@@ -224,7 +230,23 @@ internal sealed class CncOwnedResourceScope
         internal static string ReadExecutableIdentity(Process process, Func<Process, string?>? readModule = null)
             => OperatingSystem.IsLinux()
                 ? ReadLinuxExecutableIdentity(process.Id, path => new FileInfo(path).LinkTarget)
-                : RequireAbsoluteExecutable((readModule ?? (child => child.MainModule?.FileName))(process));
+                : RequireAbsoluteExecutable((readModule ?? ReadNativeExecutableIdentity)(process));
+
+        private static string? ReadNativeExecutableIdentity(Process process)
+        {
+            if (!OperatingSystem.IsWindows()) return process.MainModule?.FileName;
+            var image = new System.Text.StringBuilder(32768);
+            var length = image.Capacity;
+            if (!QueryFullProcessImageName(process.SafeHandle, 0, image, ref length))
+                throw new InvalidOperationException("Executable identity unavailable.",
+                    new System.ComponentModel.Win32Exception(Marshal.GetLastPInvokeError()));
+            return image.ToString();
+        }
+
+        [DllImport("kernel32.dll", EntryPoint = "QueryFullProcessImageNameW", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool QueryFullProcessImageName(Microsoft.Win32.SafeHandles.SafeProcessHandle process,
+            int flags, System.Text.StringBuilder image, ref int length);
 
         internal static string ReadLinuxExecutableIdentity(int processId, Func<string, string?> readLink)
         {
@@ -248,7 +270,7 @@ internal sealed class CncOwnedResourceScope
         private void VerifyIdentity()
         {
             Process.Refresh();
-            if (RejectIdentity || ownedHandle is null || ownedHandle.IsClosed || ownedHandle.IsInvalid
+            if (RejectIdentity || string.IsNullOrEmpty(executable) || ownedHandle is null || ownedHandle.IsClosed || ownedHandle.IsInvalid
                 || !ReferenceEquals(Process.SafeHandle, ownedHandle)
                 || Process.Id != pid || Process.StartTime.ToUniversalTime() != start
                 || !IsMatchingExecutableIdentity(executable, ReadExecutableIdentity(Process)))

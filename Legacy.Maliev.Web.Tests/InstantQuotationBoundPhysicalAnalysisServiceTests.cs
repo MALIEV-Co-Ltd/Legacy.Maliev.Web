@@ -506,7 +506,7 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
         f 3 8 7
         f 7 6 5
         f 8 6 7
-        
+
         """;
 
     [Theory]

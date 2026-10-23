@@ -48,6 +48,8 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
     [InlineData("th", 820)]
     [InlineData("en", 992)]
     [InlineData("th", 992)]
+    [InlineData("en", 1024)]
+    [InlineData("th", 1024)]
     [InlineData("en", 1280)]
     [InlineData("th", 1280)]
     [InlineData("en", 1600)]
@@ -217,7 +219,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         await page.ReloadAsync(new() { WaitUntil = WaitUntilState.NetworkIdle });
         failureEvidence.Stage("PartsRail");
         var compactDesktop = await page.EvaluateAsync<bool>(
-            "() => matchMedia('(min-width: 62rem)').matches && !matchMedia('(min-height: 48rem)').matches");
+            "() => matchMedia('(min-width: 64rem)').matches && !matchMedia('(min-height: 48rem)').matches");
         if (expectCompact) Assert.True(compactDesktop, "The compact cases must exercise the existing native-scroll height regime.");
         var rail = page.Locator("[data-workflow-parts]");
         await Assertions.Expect(rail.Locator("[data-workflow-part]")).ToHaveCountAsync(names.Length);
@@ -273,6 +275,10 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
                 "A vertical wheel gesture must move the desktop parts rail horizontally.");
             await Assertions.Expect(page.Locator("[data-workflow-select-all]")).ToBeInViewportAsync();
         }
+        await Assertions.Expect(page.Locator("[data-workflow-parts-panel] [data-workflow-part-count]")).ToBeVisibleAsync();
+        await Assertions.Expect(page.Locator("[data-workflow-parts-panel] [data-workflow-part-count]")).ToHaveAttributeAsync("aria-live", "polite");
+        await Assertions.Expect(page.Locator("[data-workflow-parts-panel] [data-workflow-part-count]")).ToHaveTextAsync(culture == "th" ? $"{names.Length} ชิ้น" : $"{names.Length} parts");
+        await Assertions.Expect(rail.Locator(".iq-compact-dropzone strong")).ToHaveTextAsync(culture == "th" ? "เพิ่มชิ้นงาน" : "Add parts");
         var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
         await Assertions.Expect(review).ToBeEnabledAsync();
         var directory = Environment.GetEnvironmentVariable("MALIEV_BROWSER_EVIDENCE_DIR");
@@ -312,13 +318,28 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
             await File.WriteAllTextAsync(Path.Combine(directory, $"{evidencePrefix}-{state}.json"), geometry.GetRawText());
             failureEvidence.AwaitBoundary(state + "-write", true);
         }
+        if (width >= 1024)
+        {
+            Assert.True(await page.EvaluateAsync<bool>("""
+                () => {
+                  const workflow=document.querySelector('.instant-quote__workflow');
+                  const viewer=workflow.querySelector(':scope > [data-workflow-viewer]').getBoundingClientRect();
+                  const rail=workflow.querySelector(':scope > [data-workflow-parts-panel]').getBoundingClientRect();
+                  const configuration=workflow.querySelector(':scope > [data-workflow-configuration]').getBoundingClientRect();
+                  return Math.abs(rail.left-viewer.left)<=1 && Math.abs(rail.right-viewer.right)<=1
+                    && rail.top>=viewer.bottom-1 && viewer.width>0 && viewer.height>0
+                    && configuration.left>=viewer.right-1 && Math.abs(configuration.top-viewer.top)<=1
+                    && configuration.bottom>=rail.bottom-1;
+                }
+                """), "The actual parts dock must sit below the preview while configuration owns the other column.");
+        }
         await rail.ScrollIntoViewIfNeededAsync();
         await Capture("initial");
         Assert.Contains("/instantquotation/3d-printing", page.Url, StringComparison.Ordinal);
         Assert.False(string.IsNullOrWhiteSpace(await page.TitleAsync()));
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
-        if (width < 992)
+        if (width < 1024)
             Assert.True(await rail.EvaluateAsync<bool>("rail => rail.scrollWidth <= rail.clientWidth + 1"),
                 "A narrow parts rail must expose names and actions without nested horizontal clipping.");
         foreach (var name in names)
@@ -448,11 +469,13 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         await Assertions.Expect(page.Locator("[data-workflow-review-part]")).ToHaveCountAsync(names.Length);
         // Complete the application's native accessibility focus transition before moving focus.
         await Assertions.Expect(page.Locator("[data-workflow-review]")).ToBeFocusedAsync();
+        Assert.Equal(0, await page.Locator("[data-workflow-parts]").CountAsync());
         var continueButton = page.Locator("[data-review-continue]");
         await continueButton.FocusAsync();
         await Assertions.Expect(continueButton).ToBeFocusedAsync();
         await page.Keyboard.PressAsync("Enter");
         await Assertions.Expect(page.Locator("[data-workflow-customer-details]")).ToBeFocusedAsync();
+        Assert.Equal(0, await page.Locator("[data-workflow-parts]").CountAsync());
         failureEvidence.AwaitBoundary("review", true);
         failureEvidence.Stage("CustomerInput");
         failureEvidence.AwaitBoundary("customer-input", false);

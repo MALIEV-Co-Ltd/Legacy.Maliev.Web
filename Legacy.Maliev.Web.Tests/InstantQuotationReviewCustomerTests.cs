@@ -244,7 +244,9 @@ public sealed class InstantQuotationReviewCustomerTests
         Assert.Contains("Our team will review your files", form, StringComparison.Ordinal);
         Assert.Contains("[data-workflow-state=\"customerdetails\"] > [data-workflow-viewer]", css, StringComparison.Ordinal);
         Assert.Contains("@media (min-width: 48rem)", css, StringComparison.Ordinal);
-        Assert.Contains("@media (min-width: 62rem)", css, StringComparison.Ordinal);
+        Assert.Contains("@media (min-width: 64rem)", css, StringComparison.Ordinal);
+        Assert.Contains("@media (max-width: 63.99875rem)", css, StringComparison.Ordinal);
+        Assert.Matches(@"(?s)@media \(min-width: 64rem\).*?body\.instant-quotation-shell\s*\{\s*height: 100dvh;\s*overflow: hidden;", css);
     }
 
     [Fact]

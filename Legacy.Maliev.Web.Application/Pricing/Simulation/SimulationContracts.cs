@@ -253,6 +253,11 @@ public sealed class SimulationResult
     /// <summary>Gets server-produced pricing-only reconstruction provenance.</summary>
     public VoxelReconstructionInfo? GeometryReconstruction { get; private init; }
 
+    internal bool HasPriceableDiagnostics => GeometryReconstruction is null
+        ? Diagnostics.Count == 0
+        : GeometryReconstruction.IsValid()
+            && Diagnostics.All(code => code is "mesh_open_edges" or "mesh_nonmanifold_edges" or "mesh_degenerate_triangles");
+
     /// <summary>Gets all deposited material, including adhesion and purge.</summary>
     public double TotalDepositedMm3 { get; }
 
