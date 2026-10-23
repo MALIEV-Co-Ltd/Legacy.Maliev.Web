@@ -57,7 +57,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private long minimumDisplayGeneration;
     private MaterialDisplayRenderProjection? materialDisplayRender;
     private readonly Dictionary<Guid, InstantQuotationPartConfiguration> displayIntents = [];
-    private readonly Dictionary<Guid, (long Revision, string Raw)> quantityDrafts = [];
+    private readonly Dictionary<Guid, (long Revision, string Raw, bool Committing)> quantityDrafts = [];
     private long quantityDraftRevision;
     private ElementReference configurationSection;
     private ElementReference reviewSection;
@@ -1717,7 +1717,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         var part = Parts.SingleOrDefault(part => part.PartId == partId);
         if (part is null) return;
         var raw = args.Value?.ToString() ?? "";
-        quantityDrafts[partId] = (checked(++quantityDraftRevision), raw);
+        quantityDrafts[partId] = (checked(++quantityDraftRevision), raw, false);
         if (!IsRepricing && workflow?.State is InstantQuotationWorkflowState.Configured
             && part.Quote is { } accepted
             && accepted.MaterialKey == part.Configuration.MaterialKey && accepted.Color == part.Configuration.Color
@@ -1735,13 +1735,30 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         quantityEdits.Begin(partId);
     }
 
+    private Task OnQuantityBlurAsync(Guid partId)
+    {
+        if (bulkApplying || disposed || !Parts.Any(part => part.PartId == partId)
+            || !quantityDrafts.TryGetValue(partId, out var draft) || draft.Committing)
+            return Task.CompletedTask;
+        // Native change can be absent when the input returns to its original value.
+        return ChangeQuantityAsync(partId, new ChangeEventArgs { Value = draft.Raw });
+    }
+
     private async Task ChangeQuantityAsync(Guid partId, ChangeEventArgs args)
     {
         if (bulkApplying || disposed) return;
+        var raw = args.Value?.ToString() ?? "";
+        long? revision = null;
+        if (quantityDrafts.TryGetValue(partId, out var draft) && draft.Raw == raw)
+        {
+            if (draft.Committing) return;
+            revision = draft.Revision;
+            // Claim synchronously so change and blur cannot submit the same draft twice.
+            quantityDrafts[partId] = (draft.Revision, draft.Raw, true);
+        }
         InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
-        var quantity = int.TryParse(args.Value?.ToString(), out var value) ? value : part.Configuration.Quantity;
-        var revision = quantityDrafts.GetValueOrDefault(partId).Revision;
+        var quantity = int.TryParse(raw, out var value) ? value : part.Configuration.Quantity;
         await quantityEdits.RepriceAsync(partId,
             () => UpdateConfigurationAsync(part, part.Configuration.MaterialKey, part.Configuration.Color, quantity));
         if (quantityDrafts.TryGetValue(partId, out var current) && current.Revision == revision)
