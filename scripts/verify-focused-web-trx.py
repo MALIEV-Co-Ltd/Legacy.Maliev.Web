@@ -47,10 +47,18 @@ ROSTERS = {'fdm': {'Legacy.Maliev.Web.Tests.FdmOriginalServiceEligibilityBoundar
                                                                'Build_SupportOff_ReportsDemandInsteadOfZeroSuccess': 1,
                                                                'Build_VerticalCube_ProducesNoSupport': 1,
                                                                'CalculateMass_UsesDepositedVolumesAndSeparateDensities': 1}},
- 'sidebar': {'Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests': {'RealPartsRailExposesLongNamesAndKeyboardActions': 12}}}
+ 'sidebar': {'Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests': {'RealPartsRailExposesLongNamesAndKeyboardActions': 14,
+                                                                             'CompactPartsRailKeepsFullNamesAndKeyboardActionsReachable': 2}}}
 
 
 BILLING_LIFETIME_CASES = (
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"graceful-stop\", stage: \"request-graceful-stop\", exceptionType: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"handle-close\", stage: \"close-handle\", exceptionType: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"identity\", stage: \"capture-identity\", exceptionType: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"kill\", stage: \"kill-exact\", exceptionType: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"reader-close\", stage: \"close-readers\", exceptionType: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"readers\", stage: \"join-readers\", exceptionType: \"TimeoutException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"reap\", stage: \"wait-exit\", exceptionType: \"TimeoutException\")",
     "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAdmittedSynchronousBodyBeforeDependencyRelease",
     "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: False)",
     "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: True)",
@@ -108,6 +116,7 @@ ROSTERS["billing-lifetime"] = {
         "ActualExpiry_DelayedFrontendShutdownRetainsBackendAndCaseWorkUntilSettled": 1,
         "AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup": 3,
         "FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease": 5,
+        "ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies": 7,
         "FailedHostDisposal_IsStickyAndCannotBecomeNoOpClearance": 1,
         "InterruptedHostStartup_RefusesHostDisposalAndDependencyRelease": 1,
         "SettledChildReaders_BeforeHandleAndDependencyRelease_AllHostsAttemptedFirst": 1,
@@ -283,9 +292,11 @@ def verify(path, suite, assembly):
     if suite == "sidebar":
         cls = "Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests"
         exact = {f'{cls}.RealPartsRailExposesLongNamesAndKeyboardActions(culture: "{culture}", width: {width})'
-                 for culture in ("en", "th") for width in (320, 375, 820, 992, 1024, 1280)}
+                 for culture in ("en", "th") for width in (320, 375, 820, 992, 1024, 1280, 1600)}
+        exact.update(f'{cls}.CompactPartsRailKeepsFullNamesAndKeyboardActionsReachable(culture: "{culture}")'
+                     for culture in ("en", "th"))
         if names != exact:
-            raise ValueError("Exact twelve sidebar culture/viewport rows required")
+            raise ValueError("Exact sixteen sidebar original and compact culture/viewport rows required")
     return counts
 
 

@@ -21,7 +21,7 @@ public interface IInstantQuotationAuthoritativePricingService
         QuoteAsync(session, ownerIdentity, includeComparisons, cancellationToken);
 }
 
-/// <summary>Prices only current admitted STL evidence; unverified FDM remains unavailable.</summary>
+/// <summary>Prices only current admitted STL, OBJ or 3MF evidence; unverified FDM remains unavailable.</summary>
 internal sealed class InstantQuotationAuthoritativePricingService(
     InstantQuotationBoundPhysicalAnalysisService analysis,
     FdmRuntimeProfileCatalog profiles,
@@ -86,8 +86,8 @@ internal sealed class InstantQuotationAuthoritativePricingService(
                     foreach (var candidate in PricingCatalog.Materials.Values)
                     {
                         if (string.Equals(candidate.Key, selectedKey, StringComparison.Ordinal)) continue;
-                        // The final kernel includes resin cards even without an admitted STL.
-                        if (candidate.Process == PrintProcess.Fdm && !IsAdmittedStl(part)) continue;
+                        // The final kernel includes resin cards even without an admitted mesh.
+                        if (candidate.Process == PrintProcess.Fdm && !IsAdmittedMesh(part)) continue;
                         if (comparison.IsCancellationRequested) break;
                         // Display delivery keeps its original absolute budget; only optional
                         // comparison analysis owns the shorter budget. Avoid comparison-budget
@@ -208,7 +208,7 @@ internal sealed class InstantQuotationAuthoritativePricingService(
                 using var comparisonTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, comparisonDeadline.Token);
                 foreach (var part in session.Parts)
                 {
-                    if (!IsAdmittedStl(part))
+                    if (!IsAdmittedMesh(part))
                     {
                         continue;
                     }
@@ -265,7 +265,7 @@ internal sealed class InstantQuotationAuthoritativePricingService(
         string? ownerIdentity,
         CancellationToken cancellationToken)
     {
-        if (!IsAdmittedStl(part))
+        if (!IsAdmittedMesh(part))
         {
             return Task.FromResult(InstantQuotationBoundPhysicalAnalysisResult.Unavailable(
                 InstantQuotationBoundPhysicalAnalysisFailure.UploadUnavailable));
@@ -275,7 +275,10 @@ internal sealed class InstantQuotationAuthoritativePricingService(
         var binding = new InstantQuotationPhysicalAnalysisBinding(
             sessionId, ownerIdentity, part.PartId, upload.FileId, upload.Sha256,
             materialKey, part.Configuration.BuildPreference, part.Configuration.Quantity,
-            profiles.ProfileVersion, part.Configuration.MaterialKey);
+            profiles.ProfileVersion, part.Configuration.MaterialKey)
+        {
+            GltfUnitPolicy = upload.GltfUnitPolicy,
+        };
         return analysis.AnalyzeAsync(binding, cancellationToken);
     }
 
@@ -286,7 +289,7 @@ internal sealed class InstantQuotationAuthoritativePricingService(
         InstantQuotationPart part,
         string materialKey) =>
         result is { IsReady: true, Binding: { } binding, Physical: { } physical }
-        && physical.Diagnostics.Count == 0
+        && physical.HasPriceableDiagnostics
         && double.IsFinite(result.BoundingCm3PerUnit) && result.BoundingCm3PerUnit > 0
         && string.Equals(binding.SessionId, sessionId, StringComparison.Ordinal)
         && string.Equals(binding.OwnerIdentity, ownerIdentity, StringComparison.Ordinal)
@@ -295,12 +298,14 @@ internal sealed class InstantQuotationAuthoritativePricingService(
         && string.Equals(binding.ConfiguredMaterialKey, part.Configuration.MaterialKey, StringComparison.Ordinal)
         && binding.Quantity == part.Configuration.Quantity
         && binding.BuildPreference == part.Configuration.BuildPreference
+        && binding.GltfUnitPolicy == part.PhysicalAnalysisUpload?.GltfUnitPolicy
         && binding.FileId == part.PhysicalAnalysisUpload?.FileId
         && string.Equals(binding.UploadSha256, part.PhysicalAnalysisUpload?.Sha256, StringComparison.OrdinalIgnoreCase);
 
-    private static bool IsAdmittedStl(InstantQuotationPart part) =>
+    private static bool IsAdmittedMesh(InstantQuotationPart part) =>
         part.PhysicalAnalysisUpload is { Status: "clean" } upload
-        && Path.GetExtension(upload.FileName).Equals(".stl", StringComparison.OrdinalIgnoreCase)
+        && upload.GltfUnitPolicy?.IsValidForFile(upload.FileName, newUpload: false) is true
+        && InstantQuotationAdmittedMeshService.IsSupportedFileName(upload.FileName)
         && upload.FileId != Guid.Empty
         && string.Equals(upload.Sha256, part.Geometry.Sha256, StringComparison.OrdinalIgnoreCase);
 }

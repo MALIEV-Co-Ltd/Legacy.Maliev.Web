@@ -47,6 +47,40 @@ public sealed class PublicContactFormBrowserTests(PublicContactBrowserFixture fi
         Assert.Contains("browser-submission%40example.test", posted, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("en", 1440)]
+    [InlineData("th", 1440)]
+    [InlineData("en", 390)]
+    [InlineData("th", 390)]
+    public async Task Footer_PreferredSourceLink_IsLocalizedAndAccessible(string culture, int width)
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = 1000 },
+        });
+        await using var page = await context.NewPageAsync();
+        var response = await page.GotoAsync(new Uri(fixture.Origin, "/legal?culture=" + culture).ToString());
+        Assert.NotNull(response);
+        Assert.True(response.Ok, $"Footer page returned HTTP {response.Status}.");
+        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+
+        var link = page.Locator(".landing-preferred-source");
+        await Assertions.Expect(link).ToHaveCountAsync(1);
+        await Assertions.Expect(link).ToHaveAttributeAsync("href", "https://www.google.com/preferences/source?q=maliev.com");
+        await Assertions.Expect(link).ToHaveAttributeAsync("target", "_blank");
+        await Assertions.Expect(link).ToHaveAttributeAsync("rel", "noopener noreferrer");
+        await Assertions.Expect(link).ToHaveTextAsync(culture == "th"
+            ? "เพิ่ม MALIEV เป็นแหล่งข้อมูลที่ต้องการบน Google"
+            : "Add MALIEV as a preferred source on Google");
+        await link.FocusAsync();
+        await Assertions.Expect(link).ToBeFocusedAsync();
+        Assert.True(await link.EvaluateAsync<bool>(@"el => {
+            const box = el.getBoundingClientRect();
+            return box.width >= 44 && box.height >= 44 && el.scrollWidth <= el.clientWidth + 1
+                && box.left >= 0 && box.right <= innerWidth;
+        }"));
+    }
+
 
     /// <summary>Checks the served Additional services submenu stays readable and keyboard-reachable in both public languages and navigation layouts.</summary>
     /// <param name="culture">The public page language whose real labels are rendered.</param>
@@ -348,6 +382,29 @@ public sealed class PublicContactBrowserFixture : IAsyncLifetime
         (renderedScripts ?? throw new InvalidOperationException("The owned contact scripts must be captured first."))
             .Get(culture);
 
+    private static int ReserveFreePort()
+    {
+        // Keep test listeners outside the outbound client-port pool on Windows.
+        for (var attempt = 0; attempt < 64; attempt++)
+        {
+            var listener = new TcpListener(IPAddress.Loopback, Random.Shared.Next(20000, 30000));
+            try
+            {
+                listener.Start();
+                return ((IPEndPoint)listener.LocalEndpoint).Port;
+            }
+            catch (SocketException exception) when (exception.SocketErrorCode is SocketError.AddressAlreadyInUse or SocketError.AccessDenied)
+            {
+                // Another task or an excluded port range owns this candidate.
+            }
+            finally
+            {
+                listener.Stop();
+            }
+        }
+
+        throw new InvalidOperationException("No loopback browser-test port is available in the test-server range.");
+    }
     internal void SetCountryLookupAvailability(bool available) =>
         ((StubCountryClient)(factory ?? throw new InvalidOperationException("The owned host must be initialized."))
             .Services.GetRequiredService<ICountryClient>()).Available = available;
@@ -356,10 +413,7 @@ public sealed class PublicContactBrowserFixture : IAsyncLifetime
     {
         try
         {
-            using var listener = new TcpListener(IPAddress.Loopback, 0);
-            listener.Start();
-            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-            listener.Stop();
+            var port = ReserveFreePort();
             Origin = new Uri($"http://127.0.0.1:{port}");
 
             factory = new PublicContactTestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());

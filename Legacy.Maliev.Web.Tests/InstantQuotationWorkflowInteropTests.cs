@@ -96,7 +96,7 @@ public sealed class InstantQuotationWorkflowInteropTests
         var code = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflow.razor.cs");
         var coordinator = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflowCoordinator.cs");
         var beginPreview = code.IndexOf("BeginPreviewSelectionAsync", StringComparison.Ordinal);
-        var getClaim = code.IndexOf("getGeometryClaim", beginPreview, StringComparison.Ordinal);
+        var getClaim = code.IndexOf("var claim = await claims[index]", beginPreview, StringComparison.Ordinal);
         var reserve = code.IndexOf("ReserveUploads", getClaim, StringComparison.Ordinal);
 
         Assert.Contains("SemaphoreSlim", code, StringComparison.Ordinal);
@@ -105,7 +105,9 @@ public sealed class InstantQuotationWorkflowInteropTests
         Assert.Contains("discardSelection", code, StringComparison.Ordinal);
         Assert.True(beginPreview >= 0 && getClaim > beginPreview && reserve > getClaim);
         Assert.Contains("InstantQuotationGeometryClaim", code, StringComparison.Ordinal);
-        Assert.Contains("item.Claim", code, StringComparison.Ordinal);
+        Assert.Contains("file.Name, file.ContentType, file.Size, claim", code, StringComparison.Ordinal);
+        Assert.Contains("keys.Select(ReadGeometryClaimAsync)", code, StringComparison.Ordinal);
+        Assert.Contains("InvokeAsync<InstantQuotationGeometryClaim>(\"getGeometryClaim\", key)", code, StringComparison.Ordinal);
         Assert.Contains("ReserveUploads", coordinator, StringComparison.Ordinal);
         Assert.Contains("UploadReservedAsync", coordinator, StringComparison.Ordinal);
     }

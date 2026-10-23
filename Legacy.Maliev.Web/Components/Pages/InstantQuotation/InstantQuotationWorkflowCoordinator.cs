@@ -63,6 +63,8 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private readonly CancellationTokenSource lifetimeCancellation = new();
     private readonly CancellationToken lifetimeToken;
     private readonly object displayGate = new();
+    private readonly object configurationGate = new();
+    private readonly Dictionary<Guid, ConfigurationRequest> configurationRequests = [];
     private readonly Dictionary<long, Func<InstantQuotationMaterialPriceDisplaySnapshot, CancellationToken, ValueTask>> displaySubscribers = [];
     private InstantQuotationMaterialPriceDisplaySnapshot materialPriceDisplay = new(1);
     private DisplayPricingContext? displayContext;
@@ -71,6 +73,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private InstantQuotationSessionState? session;
     private long authoritativeQuoteRevision;
     private bool disposed;
+    private int activeUploadAttempts;
+    private bool uploadQuotePending;
+    private ConfigurationRequest? uploadPricingRequest;
+    private readonly List<(UploadEntry Entry, string AnalyticsAttemptId)> pendingUploadPricingStages = [];
 
     public InstantQuotationWorkflowCoordinator(
         IInstantQuotationSessionStore sessionStore,
@@ -145,7 +151,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         return new InstantQuotationPhysicalAnalysisBinding(
             session!.SessionId, ownerIdentity, partId, upload.FileId, upload.Sha256,
             part.Configuration.MaterialKey, part.Configuration.BuildPreference,
-            part.Configuration.Quantity, profileVersion);
+            part.Configuration.Quantity, profileVersion)
+        {
+            GltfUnitPolicy = upload.GltfUnitPolicy,
+        };
     }
 
     public InstantQuotationOrderQuote? OrderQuote { get; private set; }
@@ -226,17 +235,47 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         EnsureInitialized();
         ArgumentNullException.ThrowIfNull(files);
 
-        var pending = new List<UploadEntry>(files.Count);
-        foreach (var file in files)
+        lock (configurationGate)
         {
-            ArgumentNullException.ThrowIfNull(file);
-            var entry = new UploadEntry(file);
-            entries.Add(entry);
-            pending.Add(entry);
-        }
+            if (files.Count == 0) return [];
+            RetireOrderPricing();
+            var pending = new List<UploadEntry>(files.Count);
+            foreach (var file in files)
+            {
+                ArgumentNullException.ThrowIfNull(file);
+                var entry = new UploadEntry(file);
+                entries.Add(entry);
+                pending.Add(entry);
+            }
 
-        RefreshState();
-        return pending.Select(static entry => entry.LocalId).ToArray();
+            RefreshState();
+            return pending.Select(static entry => entry.LocalId).ToArray();
+        }
+    }
+
+    internal IReadOnlyList<Guid> ReserveUploads(IReadOnlyList<InstantQuotationWorkflowUploadFile> files, Guid? beforeLocalId)
+    {
+        if (beforeLocalId is not { } before) return ReserveUploads(files);
+        ThrowIfDisposed();
+        EnsureInitialized();
+        ArgumentNullException.ThrowIfNull(files);
+        var insertionIndex = entries.FindIndex(entry => entry.LocalId == before);
+        if (insertionIndex < 0) throw new ArgumentException("The next reserved upload was not found.", nameof(beforeLocalId));
+        lock (configurationGate)
+        {
+            if (files.Count == 0) return [];
+            RetireOrderPricing();
+            var pending = new List<UploadEntry>(files.Count);
+            foreach (var file in files)
+            {
+                ArgumentNullException.ThrowIfNull(file);
+                var entry = new UploadEntry(file);
+                entries.Insert(insertionIndex++, entry);
+                pending.Add(entry);
+            }
+            RefreshState();
+            return pending.Select(static entry => entry.LocalId).ToArray();
+        }
     }
 
     public async Task UploadReservedAsync(
@@ -285,6 +324,21 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         entry.RetryDisposition = InstantQuotationUploadRetryDisposition.RetryIdentical;
         entry.OperationCancellation?.Cancel();
         RefreshState();
+    }
+
+    /// <summary>Drops only an unadmitted terminal local upload; accepted parts and their quote stay untouched.</summary>
+    internal bool DismissFailedUpload(Guid localId)
+    {
+        ThrowIfDisposed();
+        var entry = entries.SingleOrDefault(item => item.LocalId == localId);
+        if (entry is null || entry.Part is not null
+            || entry.Status is not (InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled))
+            return false;
+        entry.OperationCancellation?.Cancel();
+        entry.OperationCancellation?.Dispose();
+        entries.Remove(entry);
+        RefreshState();
+        return true;
     }
 
     public async Task RetryAsync(Guid localId, CancellationToken cancellationToken)
@@ -345,9 +399,17 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         {
             operationCancellation?.Dispose();
         }
+
+        await FlushUploadPricingAsync(cancellationToken);
     }
 
-    public async Task RemoveAsync(Guid partId, CancellationToken cancellationToken)
+    public Task RemoveAsync(Guid partId, CancellationToken cancellationToken) =>
+        RemoveCoreAsync(partId, null, cancellationToken);
+
+    internal Task RemoveAsync(Guid partId, Action acknowledged, CancellationToken cancellationToken) =>
+        RemoveCoreAsync(partId, acknowledged, cancellationToken);
+
+    private async Task RemoveCoreAsync(Guid partId, Action? acknowledged, CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
         EnsureInitialized();
@@ -373,17 +435,33 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             return;
         }
 
+        RetireOrderPricing();
+        // Only an exact authorized delete acknowledgement relinquishes this part's quote ownership.
+        ConfigurationRequest? obsolete;
+        lock (configurationGate)
+        {
+            entry.RemovalAcknowledged = true;
+            configurationRequests.Remove(partId, out obsolete);
+        }
+        acknowledged?.Invoke();
+        if (obsolete is not null)
+        {
+            lock (configurationGate) CancelQuoteConsumer(obsolete);
+        }
+        string?[] pricingStages;
         await WaitForStateGateAsync(cancellationToken);
         try
         {
             ThrowIfPricingCanceled(cancellationToken);
             entries.Remove(entry);
             await PersistAndPriceAsync(cancellationToken);
+            pricingStages = TakePendingUploadPricingStages(cancellationToken);
         }
         finally
         {
             stateGate.Release();
         }
+        await PublishPendingUploadPricingStagesAsync(pricingStages);
     }
 
     public async Task UpdateConfigurationAsync(
@@ -432,50 +510,135 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         BuildPreference? buildPreference,
         CancellationToken cancellationToken)
     {
-        ThrowIfDisposed();
-        EnsureInitialized();
-        var material = PricingCatalog.ResolveMaterial(materialKey)
-            ?? throw new ArgumentException("The selected material is not supported.", nameof(materialKey));
-        if (!PricingCatalog.IsColorSupported(material.Key, color) && color != "Any")
-        {
-            throw new ArgumentException("The selected color is not supported.", nameof(color));
-        }
-
-        if (quantity < 1 || quantity > PricingCatalog.MaximumAdditiveQuantity)
-        {
-            throw new ArgumentOutOfRangeException(nameof(quantity));
-        }
-
-        await WaitForStateGateAsync(cancellationToken);
+        var material = ValidateConfiguration(partId, materialKey, color, quantity, buildPreference);
+        ThrowIfPricingCanceled(cancellationToken);
+        var entry = entries.SingleOrDefault(item => item.Part?.PartId == partId)
+            ?? throw new ArgumentException("The part was not found.", nameof(partId));
+        var request = BeginConfigurationRequest(partId, entry);
+        string?[] pricingStages;
         try
         {
-            ThrowIfPricingCanceled(cancellationToken);
-            var entry = entries.SingleOrDefault(item => item.Part?.PartId == partId)
-                ?? throw new ArgumentException("The part was not found.", nameof(partId));
-            var previous = entry.Part!;
-            if (!PricingCatalog.IsColorSupported(material.Key, color)
-                && !(previous.Geometry.BodyCount > 1 && color == "Any"))
+            await WaitForStateGateAsync(cancellationToken);
+            try
             {
-                throw new ArgumentException("The selected color is not supported.", nameof(color));
+                ThrowIfPricingCanceled(cancellationToken);
+                lock (configurationGate)
+                {
+                    if (entry.RemovalAcknowledged
+                        || configurationRequests.GetValueOrDefault(partId) != request) return;
+                    if (!entries.Contains(entry))
+                        throw new ArgumentException("The part was not found.", nameof(partId));
+                    var previous = entry.Part!;
+                    entry.Part = previous with
+                    {
+                        Configuration = new InstantQuotationPartConfiguration(
+                            material.Key, previous.Geometry.BodyCount > 1 ? "Any" : color, quantity,
+                            material.Process is PrintProcess.Resin
+                                ? BuildPreference.Standard
+                                : buildPreference ?? previous.Configuration.BuildPreference),
+                    };
+                    entry.HasConfigured = true;
+                }
+                await PersistAndPriceAsync(cancellationToken, request);
+                pricingStages = TakePendingUploadPricingStages(cancellationToken);
             }
-
-            entry.Part = previous with
-            {
-                Configuration = new InstantQuotationPartConfiguration(
-                    material.Key,
-                    previous.Geometry.BodyCount > 1 ? "Any" : color,
-                    quantity,
-                    material.Process is PrintProcess.Resin
-                        ? BuildPreference.Standard
-                        : buildPreference ?? previous.Configuration.BuildPreference),
-            };
-            entry.HasConfigured = true;
-            await PersistAndPriceAsync(cancellationToken);
+            finally { stateGate.Release(); }
+            await PublishPendingUploadPricingStagesAsync(pricingStages);
         }
         finally
         {
-            stateGate.Release();
+            lock (configurationGate)
+                if (configurationRequests.GetValueOrDefault(partId) == request)
+                    configurationRequests.Remove(partId);
         }
+        // Release stateGate before draining obsolete callbacks; a primary operation fault still wins.
+        if (request.CancellationCallbacks is { } callbacks)
+        {
+            try { await callbacks; }
+            catch (AggregateException exception) { throw new ObsoleteQuoteCancellationException(exception); }
+        }
+    }
+
+    internal MaterialInfo ValidateConfiguration(Guid partId, string materialKey, string color,
+        int quantity, BuildPreference? buildPreference = null)
+    {
+        ThrowIfDisposed();
+        EnsureInitialized();
+        if (buildPreference is { } preference && !Enum.IsDefined(preference))
+            throw new ArgumentOutOfRangeException(nameof(buildPreference));
+        var material = PricingCatalog.ResolveMaterial(materialKey)
+            ?? throw new ArgumentException("The selected material is not supported.", nameof(materialKey));
+        var part = entries.SingleOrDefault(item => item.Part?.PartId == partId && !item.RemovalAcknowledged)?.Part
+            ?? throw new ArgumentException("The part was not found.", nameof(partId));
+        if (!PricingCatalog.IsColorSupported(material.Key, color) && !(part.Geometry.BodyCount > 1 && color == "Any"))
+            throw new ArgumentException("The selected color is not supported.", nameof(color));
+        if (quantity < 1 || quantity > PricingCatalog.MaximumAdditiveQuantity)
+            throw new ArgumentOutOfRangeException(nameof(quantity));
+        if (!entries.Any(item => item.Part?.PartId == partId && !item.RemovalAcknowledged))
+            throw new ArgumentException("The part was not found.", nameof(partId));
+        return material;
+    }
+
+    private ConfigurationRequest BeginConfigurationRequest(Guid partId, UploadEntry entry)
+    {
+        lock (configurationGate)
+        {
+            if (entry.RemovalAcknowledged)
+                throw new ArgumentException("The part was not found.", nameof(partId));
+            RetireUploadPricing();
+            var previous = configurationRequests.GetValueOrDefault(partId);
+            var current = new ConfigurationRequest(partId);
+            configurationRequests[partId] = current;
+            if (previous is not null) CancelQuoteConsumer(previous);
+            return current;
+        }
+    }
+
+    private static void CancelQuoteConsumer(ConfigurationRequest obsolete)
+    {
+        if (obsolete.QuoteConsumer is not { } consumer) return;
+        // Callback faults stay owned by the old request after stateGate is released.
+        obsolete.CancellationCallbacks = consumer.CancelAsync();
+        _ = obsolete.CancellationCallbacks.ContinueWith(static task => { _ = task.Exception; },
+            CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+    }
+
+    private bool IsCurrentConfigurationRequest(ConfigurationRequest? request)
+    {
+        if (request is null) return true;
+        lock (configurationGate)
+            return request.PartId is { } partId
+                ? configurationRequests.GetValueOrDefault(partId) == request
+                : uploadPricingRequest == request;
+    }
+
+    private CancellationTokenSource? BeginQuoteConsumer(ConfigurationRequest request, CancellationToken token)
+    {
+        lock (configurationGate)
+        {
+            if (!IsCurrentConfigurationRequest(request)) return null;
+            return request.QuoteConsumer = CancellationTokenSource.CreateLinkedTokenSource(token);
+        }
+    }
+
+    private void EndQuoteConsumer(ConfigurationRequest request, CancellationTokenSource consumer)
+    {
+        lock (configurationGate)
+        {
+            if (request.QuoteConsumer == consumer) request.QuoteConsumer = null;
+            consumer.Dispose();
+        }
+    }
+
+    internal sealed class ObsoleteQuoteCancellationException(AggregateException innerException)
+        : Exception("Obsolete quote cancellation callbacks failed.", innerException);
+
+    private sealed class ConfigurationRequest(Guid? partId)
+    {
+        internal Guid? PartId { get; } = partId;
+        internal CancellationTokenSource? QuoteConsumer { get; set; }
+        internal Task? CancellationCallbacks { get; set; }
     }
 
     public void EnterReview()
@@ -533,6 +696,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             materialPriceDisplay = new(materialPriceDisplay.Generation);
             displaySubscribers.Clear();
         }
+        RetireUploadPricing();
         lifetimeCancellation.Cancel();
         foreach (var entry in entries)
         {
@@ -552,6 +716,114 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
     private async Task StartUploadAsync(UploadEntry entry, CancellationToken cancellationToken)
     {
+        Interlocked.Increment(ref activeUploadAttempts);
+        try { await StartUploadCoreAsync(entry, cancellationToken); }
+        finally
+        {
+            if (Interlocked.Decrement(ref activeUploadAttempts) == 0 && !disposed && !cancellationToken.IsCancellationRequested)
+            {
+                try { await FlushUploadPricingAsync(cancellationToken); }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested || lifetimeToken.IsCancellationRequested) { }
+            }
+        }
+    }
+
+    private void RetireOrderPricing()
+    {
+        lock (configurationGate)
+        {
+            RetireUploadPricing();
+            foreach (var pair in configurationRequests.Where(static pair => pair.Value.QuoteConsumer is not null).ToArray())
+            {
+                configurationRequests.Remove(pair.Key);
+                CancelQuoteConsumer(pair.Value);
+            }
+        }
+    }
+
+    private void RetireUploadPricing()
+    {
+        lock (configurationGate)
+        {
+            var obsolete = uploadPricingRequest;
+            uploadPricingRequest = null;
+            if (obsolete is not null) CancelQuoteConsumer(obsolete);
+        }
+    }
+
+    private bool HasUnsettledUploads() => Volatile.Read(ref activeUploadAttempts) > 0
+        || entries.Any(static entry => entry.Status is InstantQuotationWorkflowUploadStatus.Pending
+            or InstantQuotationWorkflowUploadStatus.Uploading);
+
+    private async Task FlushUploadPricingAsync(CancellationToken cancellationToken)
+    {
+        (UploadEntry Entry, string AnalyticsAttemptId)? failed = null;
+        string?[] pricingStages;
+        await WaitForStateGateAsync(cancellationToken);
+        try
+        {
+            ThrowIfPricingCanceled(cancellationToken);
+            if (uploadQuotePending && !HasUnsettledUploads())
+            {
+                ConfigurationRequest request;
+                lock (configurationGate)
+                    uploadPricingRequest = request = new ConfigurationRequest(null);
+                try { await PersistAndPriceAsync(cancellationToken, request); }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested || lifetimeToken.IsCancellationRequested) { throw; }
+                catch
+                {
+                    // Attribute a failed flush while its state/request ownership is still serialized.
+                    if (IsCurrentConfigurationRequest(request))
+                    {
+                        foreach (var pending in pendingUploadPricingStages)
+                            if (entries.Contains(pending.Entry) && pending.Entry.Part is not null) failed = pending;
+                        if (failed is { } upload)
+                        {
+                            upload.Entry.Status = InstantQuotationWorkflowUploadStatus.Error;
+                            upload.Entry.ProblemCategory = InstantQuotationProblemCategory.Unexpected;
+                            RefreshState();
+                        }
+                    }
+                }
+            }
+            pricingStages = TakePendingUploadPricingStages(cancellationToken);
+        }
+        finally { stateGate.Release(); }
+        if (failed is { } failure)
+        {
+            await analytics.RecordUploadFailureAsync(failure.AnalyticsAttemptId, InstantQuotationProblemCategory.Unexpected, 1);
+            await analytics.RecordStageResultAsync(InstantQuotationStage.Upload, InstantQuotationStageResult.Failure,
+                InstantQuotationStageFailure.Network, FileType(failure.Entry.File.FileName));
+        }
+        await PublishPendingUploadPricingStagesAsync(pricingStages);
+    }
+
+    // Call only while stateGate is held; obsolete edits must not reacquire a newer quote's gate.
+    private string?[] TakePendingUploadPricingStages(CancellationToken cancellationToken)
+    {
+        ThrowIfPricingCanceled(cancellationToken);
+        if (uploadQuotePending || OrderQuote is null) return [];
+        var fileTypes = pendingUploadPricingStages
+            .Where(pending => OrderQuote.Parts.Any(part => part.PartId == pending.Entry.Part?.PartId))
+            .Select(static pending => FileType(pending.Entry.File.FileName)).ToArray();
+        pendingUploadPricingStages.Clear();
+        return fileTypes;
+    }
+
+    private async Task PublishPendingUploadPricingStagesAsync(string?[] fileTypes)
+    {
+        foreach (var fileType in fileTypes)
+        {
+            await analytics.RecordStageResultAsync(InstantQuotationStage.Pricing,
+                InstantQuotationStageResult.Success, null, fileType);
+            await analytics.RecordStageResultAsync(InstantQuotationStage.OrderTotal,
+                InstantQuotationStageResult.Success, null, null);
+        }
+    }
+
+    private async Task StartUploadCoreAsync(UploadEntry entry, CancellationToken cancellationToken)
+    {
+        CancellationTokenSource operationCancellation;
         CancellationToken operationToken;
         string operationId;
         string analyticsAttemptId;
@@ -565,24 +837,19 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 throw new InvalidOperationException("Only pending, failed or cancelled local uploads can be started.");
 
             entry.OperationCancellation?.Dispose();
-            entry.OperationCancellation = CancellationTokenSource.CreateLinkedTokenSource(
-                cancellationToken,
-                lifetimeToken);
-            operationToken = entry.OperationCancellation.Token;
+            operationCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetimeToken);
+            entry.OperationCancellation = operationCancellation;
+            operationToken = operationCancellation.Token;
             operationId = entry.RetryDisposition is InstantQuotationUploadRetryDisposition.RetryIdentical
                 && entry.OperationId is { Length: > 0 } retainedOperationId
-                    ? retainedOperationId
-                    : NewOperationId();
+                    ? retainedOperationId : NewOperationId();
             analyticsAttemptId = NewAnalyticsAttemptId();
             entry.OperationId = operationId;
             entry.RetryDisposition = InstantQuotationUploadRetryDisposition.None;
             entry.Status = InstantQuotationWorkflowUploadStatus.Uploading;
             RefreshState();
         }
-        finally
-        {
-            stateGate.Release();
-        }
+        finally { stateGate.Release(); }
 
         if (entry.File.Length is <= 0 or > MaximumFileSize)
         {
@@ -626,7 +893,8 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             null,
             FileType(entry.File.FileName));
 
-        if (entry.File.GeometryClaim is null || !entry.File.GeometryClaim.IsValid())
+        if (entry.File.GeometryClaim is null || !entry.File.GeometryClaim.IsValid()
+            || entry.File.GeometryClaim.GltfUnitPolicy?.IsValidForFile(entry.File.FileName, newUpload: true) is not true)
         {
             entry.Status = InstantQuotationWorkflowUploadStatus.Error;
             entry.ProblemCategory = InstantQuotationProblemCategory.Validation;
@@ -652,6 +920,13 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         try
         {
             await using var content = await entry.File.OpenReadStreamAsync(operationToken);
+            if (disposed || entry.OperationCancellation != operationCancellation
+                || entry.OperationId != operationId || entry.Status is not InstantQuotationWorkflowUploadStatus.Uploading) return;
+            operationToken.ThrowIfCancellationRequested();
+            await analytics.RecordUploadStartAsync($"upload-{entry.LocalId:N}", 1);
+            if (disposed || entry.OperationCancellation != operationCancellation
+                || entry.OperationId != operationId || entry.Status is not InstantQuotationWorkflowUploadStatus.Uploading) return;
+            operationToken.ThrowIfCancellationRequested();
             var result = await uploadClient.UploadAsync(
                 session!.SessionId,
                 ownerIdentity,
@@ -671,7 +946,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
         catch (OperationCanceledException) when (operationToken.IsCancellationRequested)
         {
-            if (entry.OperationId == operationId)
+            if (!disposed && entry.OperationCancellation == operationCancellation && entry.OperationId == operationId)
             {
                 entry.Status = InstantQuotationWorkflowUploadStatus.Cancelled;
                 entry.RetryDisposition = InstantQuotationUploadRetryDisposition.RetryIdentical;
@@ -680,7 +955,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
         catch
         {
-            if (entry.OperationId == operationId)
+            if (!disposed && entry.OperationCancellation == operationCancellation && entry.OperationId == operationId)
             {
                 entry.Status = InstantQuotationWorkflowUploadStatus.Error;
                 entry.ProblemCategory = InstantQuotationProblemCategory.Unexpected;
@@ -788,6 +1063,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                     entry.ProblemCategory = InstantQuotationProblemCategory.None;
                     entry.RetryDisposition = InstantQuotationUploadRetryDisposition.None;
                     await PersistAndPriceAsync(cancellationToken);
+                    pendingUploadPricingStages.Add((entry, analyticsAttemptId));
                     successfulUpload = true;
                 }
             }
@@ -804,16 +1080,6 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                 InstantQuotationStageResult.Success,
                 null,
                 FileType(entry.File.FileName));
-            await analytics.RecordStageResultAsync(
-                InstantQuotationStage.Pricing,
-                InstantQuotationStageResult.Success,
-                null,
-                FileType(entry.File.FileName));
-            await analytics.RecordStageResultAsync(
-                InstantQuotationStage.OrderTotal,
-                InstantQuotationStageResult.Success,
-                null,
-                null);
         }
 
         if (terminalFailure is { } failure)
@@ -921,13 +1187,18 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
     }
 
-    private async Task PersistAndPriceAsync(CancellationToken cancellationToken)
+    private async Task PersistAndPriceAsync(CancellationToken cancellationToken, ConfigurationRequest? request = null)
     {
+        if (request is null)
+        {
+            lock (configurationGate)
+                uploadPricingRequest = request = new ConfigurationRequest(null);
+        }
         var generation = BeginMaterialDisplay();
         using var pricingCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lifetimeToken);
         try
         {
-            await PersistAndPriceCoreAsync(pricingCancellation.Token, generation);
+            await PersistAndPriceCoreAsync(pricingCancellation.Token, generation, request);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -942,7 +1213,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
     }
 
-    private async Task PersistAndPriceCoreAsync(CancellationToken cancellationToken, long generation)
+    private async Task PersistAndPriceCoreAsync(CancellationToken cancellationToken, long generation, ConfigurationRequest? request)
     {
         cancellationToken.ThrowIfCancellationRequested();
         OrderQuote = null;
@@ -962,6 +1233,9 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         session = await sessionStore.GetAsync(updated.SessionId, ownerIdentity, cancellationToken)
             ?? throw new InvalidOperationException("The protected quotation session could not be read.");
         cancellationToken.ThrowIfCancellationRequested();
+        uploadQuotePending = true;
+        // Only already-reserved uploads defer pricing; future parser callbacks never enter this test.
+        if (HasUnsettledUploads()) { RefreshState(); return; }
         InstantQuotationOrderQuote? quote = null;
         if (state.Parts.Count > 0)
         {
@@ -971,25 +1245,46 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             }
             else
             {
-                var context = CaptureMaterialDisplay(generation, state.Parts, session, cancellationToken);
-                var pricing = authoritativePricingService.QuoteAsync(
-                    session, ownerIdentity, includeComparisons: true,
-                    (frame, token) => PublishMaterialDisplayAsync(context, frame, token), cancellationToken);
-                // Cancellation stops this consumer even when a dependency ignores its token.
-                // An abandoned dependency has no continuation into ticket/publication code.
-                _ = pricing.ContinueWith(static task => { _ = task.Exception; },
-                    CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                    TaskScheduler.Default);
-                quote = await pricing.WaitAsync(cancellationToken);
-                CompleteMaterialDisplay(generation);
+                CancellationTokenSource? consumer = null;
+                if (request is not null)
+                {
+                    consumer = BeginQuoteConsumer(request, cancellationToken);
+                    if (consumer is null) { ClearMaterialDisplay(generation); return; }
+                }
+                var quoteToken = consumer?.Token ?? cancellationToken;
+                try
+                {
+                    var context = CaptureMaterialDisplay(generation, state.Parts, session, quoteToken);
+                    var pricing = authoritativePricingService.QuoteAsync(
+                        session, ownerIdentity, includeComparisons: true,
+                        (frame, token) => PublishMaterialDisplayAsync(context, frame, token), quoteToken);
+                    // Retire only this consumer. The actual dependency remains observed and owns its cleanup.
+                    _ = pricing.ContinueWith(static task => { _ = task.Exception; },
+                        CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                        TaskScheduler.Default);
+                    quote = await pricing.WaitAsync(quoteToken);
+                    CompleteMaterialDisplay(generation);
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested
+                    && !IsCurrentConfigurationRequest(request))
+                {
+                    ClearMaterialDisplay(generation);
+                    return;
+                }
+                finally
+                {
+                    if (request is not null && consumer is not null) EndQuoteConsumer(request, consumer);
+                }
             }
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        if (!IsCurrentConfigurationRequest(request)) { ClearMaterialDisplay(generation); return; }
         if (quote is not null && quoteTicketService is not null)
         {
             var current = await sessionStore.GetAsync(updated.SessionId, ownerIdentity, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
+            if (!IsCurrentConfigurationRequest(request)) { ClearMaterialDisplay(generation); return; }
             if (current is null || current.UpdatedAt != session.UpdatedAt)
             {
                 quote = null;
@@ -1020,13 +1315,53 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             }
         }
         cancellationToken.ThrowIfCancellationRequested();
+        if (!IsCurrentConfigurationRequest(request)) { ClearMaterialDisplay(generation); return; }
         if (quote is null) ClearMaterialDisplay(generation);
         OrderQuote = quote;
+        uploadQuotePending = false;
         if (OrderQuote is not null)
         {
             authoritativeQuoteRevision++;
+            AcceptCurrentDefaultConfigurations(OrderQuote);
         }
         RefreshState();
+    }
+
+    private void AcceptCurrentDefaultConfigurations(InstantQuotationOrderQuote quote)
+    {
+        if (disposed || authoritativePricingService is null || quoteTicketService is null
+            || session?.QuoteAuthorization is not { } authorization
+            || !quoteTicketService.Validate(session, quote, authorization, DateTimeOffset.UtcNow))
+            return;
+
+        var defaults = new InstantQuotationPartConfiguration("PLA", "Black", 1);
+        lock (configurationGate)
+        {
+            foreach (var entry in entries)
+            {
+                if (entry.HasConfigured || entry.RemovalAcknowledged || !entries.Contains(entry)
+                    || entry.Status is not InstantQuotationWorkflowUploadStatus.Uploaded
+                    || entry.Part is not { } part || part.Configuration != defaults
+                    || session.Parts.SingleOrDefault(candidate => candidate.PartId == part.PartId) is not { } current
+                    || current.Configuration != defaults
+                    || current.UploadReference != part.UploadReference
+                    || !string.Equals(current.Geometry.Sha256, part.Geometry.Sha256, StringComparison.OrdinalIgnoreCase)
+                    || quote.Parts.SingleOrDefault(candidate => candidate.PartId == part.PartId) is not
+                    { Process: PrintProcess.Fdm, PhysicalReceipt: { } receipt } line
+                    || line.Color != part.Configuration.Color
+                    || CurrentPhysicalAnalysisBinding(part.PartId, receipt.ProfileVersion) is null
+                    || receipt.AnalysisVersion != Legacy.Maliev.Web.Application.Pricing.Simulation.FdmSimulationEngine.AnalysisVersion
+                    || !double.IsFinite(line.UnitPrice) || line.UnitPrice <= 0
+                    || !double.IsFinite(receipt.DepositedMm3) || receipt.DepositedMm3 <= 0
+                    || !double.IsFinite(receipt.SupportMm3) || receipt.SupportMm3 < 0
+                    || !double.IsFinite(receipt.MotionSeconds) || receipt.MotionSeconds <= 0
+                    || !double.IsFinite(receipt.BoundingCm3PerUnit) || receipt.BoundingCm3PerUnit <= 0)
+                    continue;
+
+                // The protected current physical price accepts the unchanged fresh defaults, not an extra user confirmation.
+                entry.HasConfigured = true;
+            }
+        }
     }
 
     private long BeginMaterialDisplay()
@@ -1124,11 +1459,13 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         string? OwnerIdentity, IReadOnlyList<DisplayPartBinding> Parts, CancellationToken CancellationToken);
 
     private sealed record DisplayPartBinding(Guid PartId, string UploadReference, Guid? FileId, string GeometrySha256,
-        string? UploadSha256, string MaterialKey, string Color, int Quantity, BuildPreference BuildPreference)
+        string? UploadSha256, InstantQuotationGltfUnitPolicy? GltfUnitPolicy,
+        string MaterialKey, string Color, int Quantity, BuildPreference BuildPreference)
     {
         public static DisplayPartBinding Create(InstantQuotationPart part) => new(part.PartId,
             part.UploadReference.Value, part.PhysicalAnalysisUpload?.FileId, part.Geometry.Sha256,
-            part.PhysicalAnalysisUpload?.Sha256, part.Configuration.MaterialKey, part.Configuration.Color,
+            part.PhysicalAnalysisUpload?.Sha256, part.PhysicalAnalysisUpload?.GltfUnitPolicy,
+            part.Configuration.MaterialKey, part.Configuration.Color,
             part.Configuration.Quantity, part.Configuration.BuildPreference);
     }
 
@@ -1246,6 +1583,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 
         public string? OperationId { get; set; }
 
+        public bool RemovalAcknowledged { get; set; }
         public CancellationTokenSource? OperationCancellation { get; set; }
 
         public InstantQuotationWorkflowUploadStatus Status { get; set; } = InstantQuotationWorkflowUploadStatus.Pending;

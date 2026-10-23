@@ -714,4 +714,32 @@
     <value>{0} ชิ้น</value>
   </data>
   <data name="Smooth, highly detailed appearance for resin-suitable parts · suitability is confirmed during review" xml:space="preserve"><value>ผิวเรียบและรายละเอียดคมชัดสำหรับงานที่เหมาะกับเรซิน · วิศวกรจะตรวจสอบความเหมาะสม</value></data>
+  <data name="Select all" xml:space="preserve"><value>เลือกทั้งหมด</value></data>
+  <data name="{0} parts selected" xml:space="preserve"><value>เลือกแล้ว {0} ชิ้นงาน</value></data>
+  <data name="Apply material to selected parts" xml:space="preserve"><value>ใช้วัสดุกับชิ้นงานที่เลือก</value></data>
+  <data name="Select for bulk material: {0}" xml:space="preserve"><value>เลือกเพื่อใช้วัสดุร่วมกัน: {0}</value></data>
+  <data name="Invalid file. Repair the model and reupload it." xml:space="preserve"><value>ไฟล์ไม่สมบูรณ์ กรุณาแก้ไขโมเดลแล้วอัปโหลดใหม่</value></data>
+  <data name="Voxel-based estimate ({0} mm) — engineering review required" xml:space="preserve">
+    <value>ราคาประมาณจากแบบจำลองว็อกเซล ({0} มม.) — ต้องให้วิศวกรตรวจสอบ</value>
+  </data>
+  <data name="Pricing uses reconstructed geometry. Small features may change; the original file must be reviewed before manufacture." xml:space="preserve">
+    <value>ใช้แบบจำลองชั่วคราวเพื่อคำนวณราคา รายละเอียดเล็กอาจเปลี่ยนไป ต้องตรวจสอบไฟล์ต้นฉบับก่อนผลิต</value>
+  </data>
+  <data name="Apply {0} to selected parts" xml:space="preserve"><value>ใช้ {0} กับชิ้นงานที่เลือก</value></data>
+  <data name="3D file processing is unavailable. Try again or contact our engineers for a quotation." xml:space="preserve"><value>ไม่สามารถประมวลผลไฟล์ 3 มิติได้ โปรดลองอีกครั้งหรือติดต่อวิศวกรเพื่อขอใบเสนอราคา</value></data>
+  <data name="Units for the next GLB/GLTF upload" xml:space="preserve">
+    <value>หน่วยสำหรับไฟล์ GLB/GLTF ที่จะอัปโหลดถัดไป</value>
+  </data>
+  <data name="Choose units before importing GLB/GLTF" xml:space="preserve">
+    <value>เลือกหน่วยก่อนนำเข้าไฟล์ GLB/GLTF</value>
+  </data>
+  <data name="Metres (standard glTF)" xml:space="preserve">
+    <value>เมตร (มาตรฐาน glTF)</value>
+  </data>
+  <data name="Millimetres (printing compatibility)" xml:space="preserve">
+    <value>มิลลิเมตร (รองรับไฟล์สำหรับการพิมพ์เดิม)</value>
+  </data>
+  <data name="This choice applies only to new GLB/GLTF files. Existing parts and other formats keep their units." xml:space="preserve">
+    <value>ตัวเลือกนี้ใช้กับไฟล์ GLB/GLTF ใหม่เท่านั้น ชิ้นงานที่มีอยู่และไฟล์รูปแบบอื่นจะใช้หน่วยเดิม</value>
+  </data>
 </root>

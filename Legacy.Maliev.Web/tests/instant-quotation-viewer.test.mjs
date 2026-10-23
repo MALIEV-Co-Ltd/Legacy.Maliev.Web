@@ -131,7 +131,7 @@ test('review snapshot renders the requested part and restores the active part', 
   viewer.addPart('b', disposableObject());
   viewer.select('a');
 
-  assert.equal(viewer.snapshot('b'), 'data:image/png;base64,preview');
+  assert.equal(viewer.snapshot('b'), 'data:image/webp;base64,preview');
   assert.equal(adapter.snapshots, 1);
   viewer.setColor('#123456');
   assert.equal(adapter.colors.length, 1);
@@ -321,7 +321,7 @@ test('textual GLTF loading rejects an external resource before invoking the load
     name: 'external.gltf',
     arrayBuffer: async () => source.buffer,
   };
-  await assert.rejects(loadStandaloneModel(file), /embedded data URIs/i);
+  await assert.rejects(loadStandaloneModel(file, { gltfUnitPolicy: { version: 1, unit: 0 } }), /embedded data URIs/i);
 });
 
 test('canvas resize caches CSS dimensions and DPR without repeated DPR 2 setSize calls', () => {
@@ -509,20 +509,66 @@ test('production capture renders white then restores the exact live background a
       renders.push(actualScene.background.getHex());
     },
   };
-  for (const image of ['data:image/png;base64,preview', 'data:,']) {
+  for (const image of ['data:image/webp;base64,preview', 'data:,', 'data:image/png;base64,fallback']) {
     const canvas = {
       toDataURL(type) {
-        assert.equal(type, 'image/png');
+        assert.equal(type, 'image/webp');
         assert.equal(scene.background.getHex(), 0xffffff);
         return image;
       },
     };
     assert.equal(viewerModule.capturePreviewSnapshot({ scene, camera, renderer, canvas }),
-      image === 'data:,' ? null : image);
+      image.startsWith('data:image/webp;base64,') ? image : null);
     assert.equal(scene.background, liveBackground);
     assert.deepEqual(camera.position.toArray(), [12, 23, 34]);
   }
-  assert.deepEqual(renders, [0xffffff, 0xf7f9fc, 0xffffff, 0xf7f9fc]);
+  assert.deepEqual(renders, [0xffffff, 0xf7f9fc, 0xffffff, 0xf7f9fc, 0xffffff, 0xf7f9fc]);
+});
+
+test('bounded failed-preview capture scales the white thumbnail and restores the live scene', () => {
+  const scene = viewerModule.createPreviewScene();
+  const liveBackground = scene.background;
+  const renders = [];
+  const draws = [];
+  const thumbnail = {
+    getContext(type) {
+      assert.equal(type, '2d');
+      return { drawImage(...args) { draws.push(args); } };
+    },
+    toDataURL(type) {
+      assert.equal(type, 'image/webp');
+      assert.equal(scene.background.getHex(), 0xffffff);
+      return 'data:image/webp;base64,bounded';
+    },
+  };
+  const canvas = { width: 1200, height: 600, ownerDocument: {
+    createElement(tag) { assert.equal(tag, 'canvas'); return thumbnail; },
+  } };
+  const result = viewerModule.capturePreviewSnapshot({
+    scene, camera: new PerspectiveCamera(), canvas, maximumDimension: 192,
+    renderer: { render() { renders.push(scene.background.getHex()); } },
+  });
+  assert.equal(result, 'data:image/webp;base64,bounded');
+  assert.equal(thumbnail.width, 192);
+  assert.equal(thumbnail.height, 96);
+  assert.deepEqual(draws, [[canvas, 0, 0, 192, 96]]);
+  assert.equal(scene.background, liveBackground);
+  assert.deepEqual(renders, [0xffffff, 0xf7f9fc]);
+});
+
+test('bounded preview context failure still restores and redraws the live scene', () => {
+  const scene = viewerModule.createPreviewScene();
+  const liveBackground = scene.background;
+  const renders = [];
+  assert.throws(() => viewerModule.capturePreviewSnapshot({
+    scene, camera: new PerspectiveCamera(), maximumDimension: 192,
+    renderer: { render() { renders.push(scene.background.getHex()); } },
+    canvas: { width: 200, height: 100, ownerDocument: {
+      createElement() { return { getContext() { return null; } }; },
+    } },
+  }), /Thumbnail rendering is unavailable/);
+  assert.equal(scene.background, liveBackground);
+  assert.deepEqual(renders, [0xffffff, 0xf7f9fc]);
 });
 
 test('production capture restores and redraws the live background after render or encoding failure', () => {
@@ -604,7 +650,7 @@ function createAdapter() {
     reset() { this.resets += 1; },
     fit() { this.fits += 1; },
     fullscreen() { this.fullscreens += 1; },
-    snapshot() { this.snapshots += 1; return 'data:image/png;base64,preview'; },
+    snapshot() { this.snapshots += 1; return 'data:image/webp;base64,preview'; },
     setColor(value) { this.colors.push(value); },
     setBodyColors(_object, values) { this.bodyColors = values; },
     disposeControls() { this.controlsDisposed += 1; },
@@ -692,3 +738,92 @@ function fakeLargeMesh(triangleCount, onVertexRead, material = new MeshStandardM
     },
   };
 }
+
+test('standalone additive STEP imports request finer tessellation and leave IGES and cancellation unchanged', async () => {
+  const documentDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  const factoryDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'occtimportjs');
+  const calls = [];
+  const result = () => ({
+    success: true,
+    meshes: [{ attributes: { position: { array: cubeVertices() } }, index: { array: cubeIndices() } }],
+  });
+  const record = (format, bytes, parameters) => {
+    calls.push({ format, bytes: Array.from(bytes), parameters });
+    return result();
+  };
+  try {
+    globalThis.document = {};
+    globalThis.occtimportjs = async () => ({
+      ReadStepFile: (bytes, parameters) => record('step', bytes, parameters),
+      ReadIgesFile: (bytes, parameters) => record('iges', bytes, parameters),
+    });
+    // A separate module instance keeps this controlled API out of the production-loader cache.
+    const viewer = await import('../wwwroot/src/app/js/instant-quotation/model-viewer.mjs?step-import-parameters');
+    for (const extension of ['step', 'stp', 'igs', 'iges']) {
+      const object = await viewer.loadStandaloneModel({
+        name: 'controlled.' + extension,
+        arrayBuffer: async () => Uint8Array.from([11, 22, 33]).buffer,
+      });
+      object.traverse(child => {
+        child.geometry?.dispose();
+        for (const material of [].concat(child.material ?? [])) material.dispose();
+      });
+    }
+    assert.deepEqual(calls, [
+      { format: 'step', bytes: [11, 22, 33], parameters: { linearDeflection: 0.02 } },
+      { format: 'step', bytes: [11, 22, 33], parameters: { linearDeflection: 0.02 } },
+      { format: 'iges', bytes: [11, 22, 33], parameters: null },
+      { format: 'iges', bytes: [11, 22, 33], parameters: null },
+    ]);
+
+    const cancellation = new AbortController();
+    cancellation.abort();
+    await assert.rejects(viewer.loadStandaloneModel({
+      name: 'cancelled.step',
+      arrayBuffer: async () => Uint8Array.from([11, 22, 33]).buffer,
+    }, { signal: cancellation.signal }), { name: 'AbortError' });
+    assert.equal(calls.length, 4);
+  } finally {
+    if (documentDescriptor) Object.defineProperty(globalThis, 'document', documentDescriptor);
+    else delete globalThis.document;
+    if (factoryDescriptor) Object.defineProperty(globalThis, 'occtimportjs', factoryDescriptor);
+    else delete globalThis.occtimportjs;
+  }
+});
+
+test('promoting a local render key preserves its object, camera and selection without disposing it', () => {
+  const adapter = createAdapter();
+  const object = disposableObject();
+  const viewer = createModelViewer({ adapter });
+  try {
+    viewer.addPart('preview-local', object);
+    adapter.cameraState = { position: [3, 4, 5], target: [1, 1, 1] };
+    const fits = adapter.fits;
+    viewer.promotePart('preview-local', 'server-part');
+    assert.equal(object.disposeCount(), 0);
+    assert.equal(adapter.fits, fits);
+    assert.deepEqual(adapter.cameraState, { position: [3, 4, 5], target: [1, 1, 1] });
+    assert.throws(() => viewer.select('preview-local'), /Unknown/);
+    viewer.select('server-part');
+    assert.equal(adapter.fits, fits);
+    viewer.remove('server-part');
+    assert.equal(object.disposeCount(), 1);
+  } finally { viewer.dispose(); }
+});
+
+test('local render promotion refuses a duplicate server key without losing either owned object', () => {
+  const first = disposableObject();
+  const second = disposableObject();
+  const viewer = createModelViewer({ adapter: createAdapter() });
+  try {
+    viewer.addPart('preview-local', first);
+    viewer.addPart('server-part', second);
+    assert.throws(() => viewer.promotePart('preview-local', 'server-part'), /unique/);
+    viewer.select('preview-local');
+    viewer.select('server-part');
+    assert.equal(first.disposeCount(), 0);
+    assert.equal(second.disposeCount(), 0);
+  } finally { viewer.dispose(); }
+  assert.equal(first.disposeCount(), 1);
+  assert.equal(second.disposeCount(), 1);
+});
