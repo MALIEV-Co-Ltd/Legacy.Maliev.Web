@@ -70,6 +70,8 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                 Exception? primary = null;
                 Task<JsonElement>? post = null;
                 var receiptTableUnavailable = false;
+                var quantityStage = "before-navigation";
+                var quantitySnapshots = new List<JsonElement>();
                 try
                 {
                     var timer = System.Diagnostics.Stopwatch.StartNew();
@@ -114,9 +116,28 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                     await MaterialCardBrowserActions.SelectAsync(page, "PLA");
                     await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 30000 });
                     var input = page.Locator("input[name='quantity']");
+                    await input.EvaluateAsync("""
+                        input => {
+                            input.__source292QuantityEvents = [];
+                            for (const type of ['input', 'change', 'blur']) {
+                                input.addEventListener(type, event => {
+                                    const events = input.__source292QuantityEvents;
+                                    if (events.length < 32) events.push({ type, trusted: event.isTrusted,
+                                        value: input.value.slice(0, 16), connected: input.isConnected });
+                                });
+                            }
+                        }
+                        """);
+                    quantityStage = "before-fill";
+                    quantitySnapshots.Add(await Source292QuantitySnapshotAsync(page));
                     await input.FillAsync(quantity.ToString(CultureInfo.InvariantCulture));
+                    quantityStage = "after-fill";
+                    quantitySnapshots.Add(await Source292QuantitySnapshotAsync(page));
                     await input.PressAsync("Tab");
+                    quantityStage = "after-tab";
+                    quantitySnapshots.Add(await Source292QuantitySnapshotAsync(page));
                     await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 30000 });
+                    quantityStage = "quantity-accepted";
 
                     using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
                     var store = web.Services.GetRequiredService<IInstantQuotationSessionStore>();
@@ -230,7 +251,30 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                     Assert.NotNull(checkpoint.FrozenCustomer?.ProfileCompletion);
                     Assert.Equal(wire.Posts[^1].Key, checkpoint.FrozenCustomer!.ProfileCompletion!.Key.ToString("D"));
                 }
-                catch (Exception error) { primary = error; throw; }
+                catch (Exception error)
+                {
+                    primary = error;
+                    error.Data["Source292RequestedQuantity"] = quantity;
+                    error.Data["Source292QuantityStage"] = quantityStage;
+                    try
+                    {
+                        var capture = Source292QuantitySnapshotAsync(page);
+                        _ = capture.ContinueWith(static done => { _ = done.Exception; }, CancellationToken.None,
+                            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                        quantitySnapshots.Add(await capture.WaitAsync(TimeSpan.FromSeconds(1)));
+                        Console.Error.WriteLine("Source292QuantityDiagnostic: " + JsonSerializer.Serialize(new
+                        {
+                            RequestedQuantity = quantity,
+                            Stage = quantityStage,
+                            Snapshots = quantitySnapshots,
+                        }));
+                    }
+                    catch (Exception)
+                    {
+                        Console.Error.WriteLine($"Source292QuantityDiagnostic: requested={quantity}; stage={quantityStage}; capture=unavailable");
+                    }
+                    throw;
+                }
                 finally
                 {
                     await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
@@ -276,6 +320,32 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
         {
             await MaterialPricingTestCleanup.ReleaseAllAsync(fixtureFailure, async () => await uploads.DisposeAsync());
         }
+    }
+
+    private static async Task<JsonElement> Source292QuantitySnapshotAsync(IPage page)
+    {
+        var capture = page.EvaluateAsync<JsonElement>("""
+        () => {
+            const input = document.querySelector("input[name='quantity']");
+            const review = document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button');
+            const summary = document.querySelector('[data-workflow-order-summary]');
+            const workflow = document.querySelector('[data-workflow-state]');
+            return { inputCount: document.querySelectorAll("input[name='quantity']").length,
+                value: input?.value.slice(0, 16), defaultValue: input?.defaultValue.slice(0, 16),
+                valueAsNumber: input && Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : null,
+                inputConnected: input?.isConnected, inputFocused: input === document.activeElement,
+                reviewDisabled: review?.disabled, summaryBusy: summary?.getAttribute('aria-busy'),
+                workflowState: workflow?.getAttribute('data-workflow-state'), workflowBusy: workflow?.getAttribute('aria-busy'),
+                pendingParseCount: document.querySelectorAll('[data-workflow-pending-parse]').length,
+                failedPreviewCount: document.querySelectorAll('[data-workflow-failed-preview]').length,
+                partCount: document.querySelectorAll('[data-workflow-part]').length,
+                events: input?.__source292QuantityEvents ?? [] };
+        }
+        """);
+        _ = capture.ContinueWith(static done => { _ = done.Exception; }, CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        try { return await capture.WaitAsync(TimeSpan.FromSeconds(1)); }
+        catch (Exception) { return JsonSerializer.SerializeToElement(new { Capture = "unavailable" }); }
     }
 
     private sealed class Source292ProfileUploads : IInstantQuotationUploadClient, IAsyncDisposable
