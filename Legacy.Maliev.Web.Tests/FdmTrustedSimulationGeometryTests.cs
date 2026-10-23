@@ -40,7 +40,111 @@ public sealed class FdmSimulationGeometryTests
     {
         const int sides = 32;
         const float radius = 10;
-        const float height = 20;
+        NormalizedMesh mesh = MeshNormalizer.Normalize(RoundedBody(grouped), Tolerance);
+        Assert.Empty(mesh.Diagnostics);
+
+        IReadOnlyList<LayerContours> layers = LayerContourBuilder.Build(mesh, IdentityPose(), Profile(0.2), Budget());
+
+        Assert.Equal(100, layers.Count);
+        double expectedArea = sides * radius * radius * Math.Sin(2 * Math.PI / sides) / 2;
+        Assert.All(layers, layer =>
+        {
+            Assert.Single(layer.Rings);
+            Assert.False(layer.Rings[0].IsHole);
+            Assert.InRange(Math.Abs(NetArea(layer) - expectedArea), 0, 0.05);
+        });
+        Assert.Equal(0.1, layers[0].ZMm, 6);
+        Assert.Equal(19.9, layers[^1].ZMm, 6);
+    }
+
+    /// <summary>Counts pair candidates independently from the conservative per-call output bound.</summary>
+    [Fact]
+    public void BooleanBudget_PairUnitsAndOutputBoundAreIndependent()
+    {
+        AnalysisBudget budget = Budget() with { MaximumBooleanWork = 2081 };
+        var work = new LayerContourBuilder.BooleanWorkBudget(budget);
+
+        Assert.Equal(16644, work.Admit(64, 1));
+        Assert.Equal(0, work.Admit(0, 0));
+        Assert.Equal("boolean_work_budget_exceeded", Assert.Throws<SimulationGeometryException>(() => work.Admit(1, 1)).ReasonCode);
+        Assert.Equal(1_000_000, budget.MaximumPathSegments);
+        Assert.Equal(1_000_000, Budget().MaximumBooleanWork);
+    }
+
+    /// <summary>Refuses the first candidate beyond the independent cumulative allowance.</summary>
+    [Fact]
+    public void BooleanBudget_CumulativeBoundaryIsExact()
+    {
+        var work = new LayerContourBuilder.BooleanWorkBudget(Budget() with { MaximumBooleanWork = 22 });
+        Assert.Equal(84, work.Admit(4, 1));
+        Assert.Equal(84, work.Admit(4, 1));
+        Assert.Equal("boolean_work_budget_exceeded", Assert.Throws<SimulationGeometryException>(() => work.Admit(1, 0)).ReasonCode);
+    }
+
+    /// <summary>Invalid independent limits fail before returning any physical contours.</summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void BooleanBudget_NonpositiveLimitIsRejected(int maximum)
+    {
+        Assert.Equal("analysis_budget_invalid", Assert.Throws<SimulationGeometryException>(() =>
+            LayerContourBuilder.Build(Normalize(Box(Vector3.Zero, new Vector3(10))), IdentityPose(), Profile(0.2),
+                Budget() with { MaximumBooleanWork = maximum })).ReasonCode);
+    }
+
+    /// <summary>Extreme counts fail closed instead of overflowing into an unbounded admission or generic error.</summary>
+    [Theory]
+    [InlineData((long)int.MaxValue, 1L)]
+    [InlineData(long.MaxValue, 1L)]
+    [InlineData(0L, long.MaxValue)]
+    public void BooleanBudget_OverflowIsAControlledRefusal(long edges, long paths)
+    {
+        var work = new LayerContourBuilder.BooleanWorkBudget(Budget(segments: int.MaxValue));
+        Assert.Equal("path_segment_budget_exceeded", Assert.Throws<SimulationGeometryException>(() => work.Admit(edges, paths)).ReasonCode);
+    }
+
+    /// <summary>Charges extracted and both emitted contour generations, never their Boolean estimate.</summary>
+    [Theory]
+    [InlineData(799)]
+    [InlineData(800)]
+    public void Build_GroupedOutput_ConsumesExactGeneratedPathAllowance(int maximum)
+    {
+        IReadOnlyList<MeshTriangle> triangles = Box(Vector3.Zero, new Vector3(10));
+        var mesh = MeshNormalizer.Normalize(new MeshInput(triangles, 1, Matrix4x4.Identity)
+        {
+            PositiveFillGroups = new int[triangles.Count],
+        }, Tolerance);
+        if (maximum == 799)
+        {
+            Assert.Equal("path_segment_budget_exceeded", Assert.Throws<SimulationGeometryException>(() =>
+                LayerContourBuilder.Build(mesh, IdentityPose(), Profile(0.2), Budget(segments: maximum))).ReasonCode);
+            return;
+        }
+
+        var layers = LayerContourBuilder.Build(mesh, IdentityPose(), Profile(0.2), Budget(segments: maximum));
+        Assert.Equal(50, layers.Count);
+        Assert.All(layers, layer =>
+        {
+            Assert.Single(layer.Rings);
+            Assert.Equal(100, NetArea(layer), 3);
+        });
+    }
+
+    /// <summary>The recovery entry point cannot convert a Boolean work refusal into physical evidence.</summary>
+    [Fact]
+    public void BooleanBudget_RefusalCannotEnterVoxelRecovery()
+    {
+        var mesh = MeshNormalizer.Normalize(RoundedBody(grouped: true), Tolerance);
+        var request = new SimulationRequest(mesh, IdentityPose(), Profile(0.2), 1,
+            Budget() with { MaximumBooleanWork = 1 });
+        Assert.Equal("boolean_work_budget_exceeded", Assert.Throws<SimulationGeometryException>(() =>
+            FdmSimulationEngine.EstimateRecoverable(request)).ReasonCode);
+    }
+
+    internal static MeshInput RoundedBody(bool grouped, float height = 20)
+    {
+        const int sides = 32;
+        const float radius = 10;
         var triangles = new List<MeshTriangle>();
         for (int index = 0; index < sides; index++)
         {
@@ -56,25 +160,10 @@ public sealed class FdmSimulationGeometryTests
             triangles.Add(new(first, topNext, topFirst));
         }
 
-        var input = new MeshInput(triangles, 1, Matrix4x4.Identity)
+        return new MeshInput(triangles, 1, Matrix4x4.Identity)
         {
             PositiveFillGroups = grouped ? new int[triangles.Count] : null,
         };
-        NormalizedMesh mesh = MeshNormalizer.Normalize(input, Tolerance);
-        Assert.Empty(mesh.Diagnostics);
-
-        IReadOnlyList<LayerContours> layers = LayerContourBuilder.Build(mesh, IdentityPose(), Profile(0.2), Budget());
-
-        Assert.Equal(100, layers.Count);
-        double expectedArea = sides * radius * radius * Math.Sin(2 * Math.PI / sides) / 2;
-        Assert.All(layers, layer =>
-        {
-            Assert.Single(layer.Rings);
-            Assert.False(layer.Rings[0].IsHole);
-            Assert.InRange(Math.Abs(NetArea(layer) - expectedArea), 0, 0.05);
-        });
-        Assert.Equal(0.1, layers[0].ZMm, 6);
-        Assert.Equal(19.9, layers[^1].ZMm, 6);
     }
 
     /// <summary>Preserves a void as a hole rather than charging its material as solid.</summary>

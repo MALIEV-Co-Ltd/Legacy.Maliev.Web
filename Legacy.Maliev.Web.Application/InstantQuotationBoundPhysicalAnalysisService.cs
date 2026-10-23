@@ -134,7 +134,7 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
             {
                 "geometry_requires_review" => InstantQuotationBoundPhysicalAnalysisFailure.GeometryReview,
                 "triangle_budget_exceeded" or "layer_budget_exceeded" or "path_segment_budget_exceeded"
-                    or "geometry_complexity_exceeded"
+                    or "boolean_work_budget_exceeded" or "geometry_complexity_exceeded"
                     => InstantQuotationBoundPhysicalAnalysisFailure.ComplexityExceeded,
                 _ => InstantQuotationBoundPhysicalAnalysisFailure.SimulationUnavailable,
             });
