@@ -94,7 +94,7 @@ public sealed class InstantQuotationLocalizedValidationBrowserTests(CncNativeBro
         await page.EvaluateAsync("() => { window.__validationDocumentSentinel = document; }");
         await validationLink.ClickAsync();
         await Assertions.Expect(page).ToHaveURLAsync(
-            new Regex($"^{Regex.Escape(resolvedLink.AbsoluteUri)}$", RegexOptions.CultureInvariant));
+            new Regex($"^{Regex.Escape(resolvedLink.AbsoluteUri)}$"));
         Assert.Equal(pageBeforeClick.GetLeftPart(UriPartial.Path), new Uri(page.Url).GetLeftPart(UriPartial.Path));
         Assert.Equal(pageBeforeClick.Query, new Uri(page.Url).Query);
         Assert.True(await page.EvaluateAsync<bool>("() => window.__validationDocumentSentinel === document"));
