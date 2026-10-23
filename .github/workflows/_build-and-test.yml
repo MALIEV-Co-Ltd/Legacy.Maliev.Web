@@ -111,6 +111,17 @@ jobs:
             --logger 'trx;LogFileName=preview-initialization.trx' \
             --results-directory ./preview-initialization-test-results
           python3 -B -c 'import xml.etree.ElementTree as E; r=E.parse("preview-initialization-test-results/preview-initialization.trx").getroot(); c=r.find(".//{*}Counters"); assert c is not None and all(c.get(k)==v for k,v in {"total":"5","executed":"5","passed":"5","failed":"0","notExecuted":"0"}.items()), "All five preview initialization ownership controls must pass"'
+      - name: Verify unchanged quantity input preserves accepted review state
+        timeout-minutes: 5
+        run: |
+          test ! -e quantity-input-test-results
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj \
+            --configuration Release --no-build --no-restore \
+            -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath= \
+            --filter 'FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationResinPresentationTests.Workflow_QuantityInputReturningToAcceptedValueKeepsReviewAvailableWithoutChangeEvent|FullyQualifiedName~Legacy.Maliev.Web.Tests.InstantQuotationQuantityEditStateTests' \
+            --logger 'trx;LogFileName=quantity-input.trx' \
+            --results-directory ./quantity-input-test-results
+          python3 -B -c 'import xml.etree.ElementTree as E; r=E.parse("quantity-input-test-results/quantity-input.trx").getroot(); c=r.find(".//{*}Counters"); assert c is not None and all(c.get(k)==v for k,v in {"total":"6","executed":"6","passed":"6","failed":"0","notExecuted":"0"}.items()), "All six quantity input and stale completion controls must pass"'
       - name: Verify rounded-body contour budgets and adversarial refusal controls
         timeout-minutes: 5
         run: |
@@ -531,6 +542,7 @@ jobs:
           path: |
             material-color-switch-test-results/
             preview-initialization-test-results/**/*.trx
+            quantity-input-test-results/**/*.trx
             contour-budget-test-results/**/*.trx
             Legacy.Maliev.Web/wwwroot/dist/site.min.css
             Legacy.Maliev.Web/wwwroot/dist/route-service-toc.js
