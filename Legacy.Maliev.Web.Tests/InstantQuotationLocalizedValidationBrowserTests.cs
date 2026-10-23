@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -92,7 +93,8 @@ public sealed class InstantQuotationLocalizedValidationBrowserTests(CncNativeBro
         Assert.Equal("#instant-quote-taxnumber", resolvedLink.Fragment);
         await page.EvaluateAsync("() => { window.__validationDocumentSentinel = document; }");
         await validationLink.ClickAsync();
-        await Assertions.Expect(page).ToHaveURLAsync(resolvedLink.AbsoluteUri);
+        await Assertions.Expect(page).ToHaveURLAsync(
+            new Regex($"^{Regex.Escape(resolvedLink.AbsoluteUri)}$", RegexOptions.CultureInvariant));
         Assert.Equal(pageBeforeClick.GetLeftPart(UriPartial.Path), new Uri(page.Url).GetLeftPart(UriPartial.Path));
         Assert.Equal(pageBeforeClick.Query, new Uri(page.Url).Query);
         Assert.True(await page.EvaluateAsync<bool>("() => window.__validationDocumentSentinel === document"));
