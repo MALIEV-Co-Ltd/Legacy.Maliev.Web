@@ -167,6 +167,7 @@ public sealed class ErrorBrowserTests(ErrorBrowserFixture fixture)
             ["touchPoints"] = new[] { new { x, y } },
         });
         Assert.Equal("dragging", await astronaut.GetAttributeAsync("data-motion"));
+        var dragStart = Assert.IsType<LocatorBoundingBoxResult>(await astronaut.BoundingBoxAsync());
         for (var step = 1; step <= 5; step++)
         {
             await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
@@ -178,8 +179,8 @@ public sealed class ErrorBrowserTests(ErrorBrowserFixture fixture)
         }
 
         var dragged = Assert.IsType<LocatorBoundingBoxResult>(await astronaut.BoundingBoxAsync());
-        Assert.InRange(dragged.X - box.X, 78, 82);
-        Assert.InRange(dragged.Y - box.Y, 58, 62);
+        Assert.InRange(dragged.X - dragStart.X, 78, 82);
+        Assert.InRange(dragged.Y - dragStart.Y, 58, 62);
         await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
         {
             ["type"] = "touchEnd",
@@ -273,12 +274,33 @@ public sealed class ErrorBrowserFixture : IAsyncLifetime
     public IBrowser Browser { get; private set; } = null!;
     public Uri Origin { get; private set; } = null!;
 
+    private static int ReserveFreePort()
+    {
+        // Keep test listeners outside the outbound client-port pool on Windows.
+        for (var attempt = 0; attempt < 64; attempt++)
+        {
+            var listener = new TcpListener(IPAddress.Loopback, Random.Shared.Next(20000, 30000));
+            try
+            {
+                listener.Start();
+                return ((IPEndPoint)listener.LocalEndpoint).Port;
+            }
+            catch (SocketException exception) when (exception.SocketErrorCode is SocketError.AddressAlreadyInUse or SocketError.AccessDenied)
+            {
+                // Another task or an excluded port range owns this candidate.
+            }
+            finally
+            {
+                listener.Stop();
+            }
+        }
+
+        throw new InvalidOperationException("No loopback browser-test port is available in the test-server range.");
+    }
+
     public async Task InitializeAsync()
     {
-        using var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
+        var port = ReserveFreePort();
         Origin = new Uri($"http://127.0.0.1:{port}");
 
         factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());

@@ -1,0 +1,7 @@
+@page
+@inject IStringLocalizer<FinishingSurfaceFinishesContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["Surface finishes and coatings | MALIEV"];
+    ViewData["Description"] = MetadataLocalizer["Plan the supplied surface and final dimensions before machining. Coating, preparation, masking and cosmetic acceptance belong in the same project discussion."];
+}
+<component type="typeof(FinishingSurfaceFinishesContent)" render-mode="Static" />

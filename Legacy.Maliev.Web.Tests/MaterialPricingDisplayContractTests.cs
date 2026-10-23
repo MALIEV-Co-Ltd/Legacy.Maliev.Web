@@ -86,21 +86,33 @@ public sealed class MaterialPricingDisplayContractTests
         var secondRun = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 3, default);
         try
         {
-            Assert.False(second.Entered.Task.IsCompleted);
-            Assert.Same(firstDisplay, fixture.Workflow.MaterialPriceDisplay);
-            Assert.Equal(2, Assert.Single(fixture.Workflow.Parts).Configuration.Quantity);
+            await second.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await firstRun.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.True(first.ConsumerToken.IsCancellationRequested);
+            Assert.False(first.Release.Task.IsCompleted,
+                "The current configuration must not wait for the obsolete dependency to be released.");
+            var current = fixture.Workflow.MaterialPriceDisplay;
+            Assert.True(current.Generation > firstDisplay.Generation);
+            Assert.Equal(3, Assert.Single(fixture.Workflow.Parts).Configuration.Quantity);
             var accepted = (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!;
-            Assert.Equal(2, Assert.Single(accepted.Parts).Configuration.Quantity);
+            Assert.Equal(3, Assert.Single(accepted.Parts).Configuration.Quantity);
             await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
                 fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 0, default));
             Assert.Equal(accepted.UpdatedAt, (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!.UpdatedAt);
-            first.Release.TrySetResult(); await firstRun;
-            await second.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-            Assert.True(fixture.Workflow.MaterialPriceDisplay.Generation > firstDisplay.Generation);
+            await first.Observer!(Assert.Single(first.Frames,
+                frame => frame.MaterialKey == "M68" && frame.Status == InstantQuotationMaterialPricingStatus.Completed), default);
+            Assert.Same(current, fixture.Workflow.MaterialPriceDisplay);
+            Assert.Null(fixture.Workflow.OrderQuote);
+            Assert.Null((await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!.QuoteAuthorization);
+            first.Release.TrySetResult();
             Assert.Equal(3, Assert.Single(fixture.Workflow.Parts).Configuration.Quantity);
             Assert.Equal(3, Assert.Single((await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!.Parts).Configuration.Quantity);
         }
-        finally { first.Release.TrySetResult(); second.Release.TrySetResult(); await Task.WhenAll(firstRun, secondRun); }
+        finally
+        {
+            first.Release.TrySetResult(); second.Release.TrySetResult();
+            await Task.WhenAll(firstRun, secondRun).WaitAsync(TimeSpan.FromSeconds(5));
+        }
     }
 
     [Fact]
@@ -465,6 +477,7 @@ public sealed class MaterialPricingDisplayContractTests
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool ObserverRoute { get; set; }
+        public CancellationToken ConsumerToken { get; set; }
         public List<InstantQuotationMaterialPricingProgress> Frames { get; } = [];
         public InstantQuotationMaterialPriceDisplaySnapshot Snapshot { get; set; } = new(1);
         public Func<InstantQuotationMaterialPricingProgress, InstantQuotationMaterialPricingProgress?>? InvalidFrame { get; set; }
@@ -494,7 +507,11 @@ public sealed class MaterialPricingDisplayContractTests
             Func<InstantQuotationMaterialPricingProgress, CancellationToken, ValueTask> observer, CancellationToken token)
         {
             pending.TryDequeue(out var next);
-            if (next is not null) next.Observer = observer;
+            if (next is not null)
+            {
+                next.Observer = observer;
+                next.ConsumerToken = token;
+            }
             bool paused = false;
             bool injected = false;
             return inner.QuoteAsync(session, owner, includeComparisons, async (frame, callbackToken) =>

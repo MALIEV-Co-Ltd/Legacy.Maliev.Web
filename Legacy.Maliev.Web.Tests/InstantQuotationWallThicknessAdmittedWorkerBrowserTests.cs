@@ -26,10 +26,7 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
     {
         var transport = new BoundUploadTransport();
         await using var factory = new AdmittedWallFactory(transport);
-        var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
+        var port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
         factory.UseKestrel(port);
         using var http = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
@@ -221,6 +218,30 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
         Assert.All(consoleWarnings, warning => Assert.Matches(
             @"\A\[\.WebGL-0x[0-9a-f]{1,16}\]GL Driver Message \(OpenGL, Performance, GL_CLOSE_PATH_NV, High\): GPU stall due to ReadPixels(?: \(this message will no longer repeat\))?\z",
             warning));
+    }
+
+    private static int ReserveFreePort()
+    {
+        // Keep test listeners outside the outbound client-port pool on Windows.
+        for (var attempt = 0; attempt < 64; attempt++)
+        {
+            var listener = new TcpListener(IPAddress.Loopback, Random.Shared.Next(20000, 30000));
+            try
+            {
+                listener.Start();
+                return ((IPEndPoint)listener.LocalEndpoint).Port;
+            }
+            catch (SocketException exception) when (exception.SocketErrorCode is SocketError.AddressAlreadyInUse or SocketError.AccessDenied)
+            {
+                // Another task or an excluded port range owns this candidate.
+            }
+            finally
+            {
+                listener.Stop();
+            }
+        }
+
+        throw new InvalidOperationException("No loopback browser-test port is available in the test-server range.");
     }
 
     private static Task ScreenshotAsync(IPage page, string name)
