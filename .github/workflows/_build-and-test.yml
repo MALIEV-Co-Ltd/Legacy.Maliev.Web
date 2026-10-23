@@ -100,6 +100,17 @@ jobs:
         run: ./scripts/prepare-scb-payment-boundary.ps1
       - name: Build browser acceptance host
         run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj --configuration Release
+      - name: Verify preview initialization ownership before browser validation
+        timeout-minutes: 5
+        run: |
+          test ! -e preview-initialization-test-results
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj \
+            --configuration Release --no-build --no-restore \
+            -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath= \
+            --filter 'FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationPreviewInitializationTests.ConcurrentSelection_RetainsTheControllerThatOwnsItsGeometryKey|FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationPreviewInitializationTests.Disposal_WaitsForPendingInitializationAndReleasesEveryAcquiredReference' \
+            --logger 'trx;LogFileName=preview-initialization.trx' \
+            --results-directory ./preview-initialization-test-results
+          python3 -B -c 'import xml.etree.ElementTree as E; r=E.parse("preview-initialization-test-results/preview-initialization.trx").getroot(); c=r.find(".//{*}Counters"); assert c is not None and all(c.get(k)==v for k,v in {"total":"5","executed":"5","passed":"5","failed":"0","notExecuted":"0"}.items()), "All five preview initialization ownership controls must pass"'
       - name: Verify material-switch color preservation and refusal controls
         timeout-minutes: 5
         run: |
@@ -281,7 +292,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~InstantQuotationAuthenticatedProfileTests|FullyQualifiedName~InstantQuotationAuthenticatedPreparationTests|FullyQualifiedName~InstantQuotationSubmissionEndpointTests|FullyQualifiedName~InstantQuotationLocalizedValidationBrowserTests"
+          --filter "FullyQualifiedName~InstantQuotationAuthenticatedProfileTests|FullyQualifiedName~InstantQuotationAuthenticatedPreparationTests|FullyQualifiedName~InstantQuotationSubmissionEndpointTests|FullyQualifiedName~InstantQuotationLocalizedValidationBrowserTests|FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationProfileProducerBoundaryTests.OwnerProfile_RealProducer_DurableQuotationSurvivesReadinessFailureAndExactReplay"
           --logger trx --results-directory ./authenticated-profile-test-results
       - name: Verify resolved material identity across Catalog and Order boundaries
         run: >-
@@ -508,6 +519,7 @@ jobs:
           name: web-combined-native-${{ github.sha }}
           path: |
             material-color-switch-test-results/
+            preview-initialization-test-results/**/*.trx
             Legacy.Maliev.Web/wwwroot/dist/site.min.css
             Legacy.Maliev.Web/wwwroot/dist/route-service-toc.js
             Legacy.Maliev.Web/wwwroot/dist/route-service-printing.js
