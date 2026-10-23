@@ -902,6 +902,62 @@ public sealed class InstantQuotationResinPresentationTests
 
 
     [Fact]
+    public async Task Workflow_MatchingQuantityInputDoesNotAcceptAnInFlightConfiguration()
+    {
+        var part = Part("PLA", BuildPreference.Standard);
+        var store = new SessionStore(part);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            bool CanReview() => (bool)typeof(InstantQuotationWorkflow)
+                .GetProperty("CanEnterReview", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
+            store.BeforePut = async () =>
+            {
+                store.BeforePut = null;
+                entered.TrySetResult();
+                await release.Task.WaitAsync(lease.Token);
+            };
+            var changing = (Task)typeof(InstantQuotationWorkflow)
+                .GetMethod("ChangeQuantityAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(component, [part.PartId, new ChangeEventArgs { Value = "2" }])!;
+            Exception? primary = null;
+            try
+            {
+                await entered.Task.WaitAsync(lease.Token);
+                Assert.False(changing.IsCompleted);
+                typeof(InstantQuotationWorkflow)
+                    .GetMethod("OnQuantityInput", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .Invoke(component, [part.PartId, new ChangeEventArgs { Value = "2" }]);
+                Assert.False(CanReview());
+                release.TrySetResult();
+                await changing.WaitAsync(lease.Token);
+                Assert.False(CanReview());
+            }
+            catch (Exception error) { primary = error; throw; }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        changing, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "unchanged-quantity-in-flight"));
+            }
+        });
+    }
+
+
+    [Fact]
     public async Task InvalidSamePartUiEdit_DoesNotRetireAValidReachedRepricingActivity()
     {
         var part = Part("PLA", BuildPreference.Standard);

@@ -1714,8 +1714,22 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private void OnQuantityInput(Guid partId, ChangeEventArgs args)
     {
         if (bulkApplying || disposed) return;
-        if (Parts.All(part => part.PartId != partId)) return;
-        quantityDrafts[partId] = (checked(++quantityDraftRevision), args.Value?.ToString() ?? "");
+        var part = Parts.SingleOrDefault(part => part.PartId == partId);
+        if (part is null) return;
+        var raw = args.Value?.ToString() ?? "";
+        quantityDrafts[partId] = (checked(++quantityDraftRevision), raw);
+        if (!IsRepricing && workflow?.State is InstantQuotationWorkflowState.Configured
+            && part.Quote is { } accepted
+            && accepted.MaterialKey == part.Configuration.MaterialKey && accepted.Color == part.Configuration.Color
+            && accepted.Quantity == part.Configuration.Quantity && accepted.BuildPreference == part.Configuration.BuildPreference
+            && int.TryParse(raw, out var quantity) && quantity == part.Configuration.Quantity)
+        {
+            // Native change need not fire when an edit returns to the original input value.
+            quantityDrafts.Remove(partId);
+            quantityEdits.RestoreAccepted(partId);
+            displayIntents.Remove(partId);
+            return;
+        }
         minimumDisplayGeneration = workflow?.MaterialPriceDisplay.Generation ?? 0;
         displayIntents.Remove(partId);
         quantityEdits.Begin(partId);
