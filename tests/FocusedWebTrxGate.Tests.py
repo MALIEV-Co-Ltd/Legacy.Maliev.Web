@@ -1,5 +1,8 @@
 """Parser controls only; synthetic XML and marker files are not native test evidence."""
 import copy
+import contextlib
+import io
+import textwrap
 import importlib.util
 from pathlib import Path
 import tempfile
@@ -73,7 +76,7 @@ class FocusedGateControls(unittest.TestCase):
                          gate.ROSTERS["sidebar"]["Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests"])
 
     def test_both_complete_suites_accept_lowercase_native_storage(self):
-        for suite, total in (("fdm", 59), ("sidebar", 16), ("migration-consumers", 147), ("billing-lifetime", 43)):
+        for suite, total in (("fdm", 59), ("sidebar", 16), ("migration-consumers", 147), ("billing-lifetime", 50)):
             with self.subTest(suite=suite), tempfile.TemporaryDirectory() as temp:
                 directory = Path(temp)
                 root, dll = self.fixture(directory, suite)
@@ -186,10 +189,10 @@ class FocusedGateControls(unittest.TestCase):
 
 
     def test_lifecycle_frozen_cases_and_wrong_argument_rejection(self):
-        self.assertEqual(43, len(gate.BILLING_LIFETIME_CASES))
-        self.assertEqual(43, len(set(gate.BILLING_LIFETIME_CASES)))
+        self.assertEqual(50, len(gate.BILLING_LIFETIME_CASES))
+        self.assertEqual(50, len(set(gate.BILLING_LIFETIME_CASES)))
         methods = gate.ROSTERS["billing-lifetime"]["Legacy.Maliev.Web.Tests.BillingProofLifetimeTests"]
-        self.assertEqual(31, sum(count for name, count in methods.items() if not name.startswith("StartupFailure_")))
+        self.assertEqual(38, sum(count for name, count in methods.items() if not name.startswith("StartupFailure_")))
         self.assertEqual(12, sum(count for name, count in methods.items() if name.startswith("StartupFailure_")))
         with tempfile.TemporaryDirectory() as temp:
             directory = Path(temp)
@@ -203,6 +206,90 @@ class FocusedGateControls(unittest.TestCase):
             definition.set("name", gate.native_definition_display(changed))
             with self.assertRaisesRegex(ValueError, "Exact lifecycle control identities"):
                 self.verify(root, directory, dll, "billing-lifetime")
+
+    def test_every_cleanup_stage_identity_is_required_and_rejects_mutations(self):
+        cls = "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests"
+        method = "ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies"
+        arguments = (("identity", "capture-identity", "IOException"),
+                     ("graceful-stop", "request-graceful-stop", "IOException"),
+                     ("kill", "kill-exact", "IOException"),
+                     ("reap", "wait-exit", "TimeoutException"),
+                     ("readers", "join-readers", "TimeoutException"),
+                     ("reader-close", "close-readers", "IOException"),
+                     ("handle-close", "close-handle", "IOException"))
+        expected = {f'{cls}.{method}(failure: "{failure}", stage: "{stage}", exceptionType: "{exception}")'
+                    for failure, stage, exception in arguments}
+        actual = {name for name in gate.BILLING_LIFETIME_CASES if name.startswith(f'{cls}.{method}(')}
+        self.assertEqual(expected, actual)
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            baseline, dll = self.fixture(directory, "billing-lifetime")
+            self.assertEqual(50, self.verify(baseline, directory, dll, "billing-lifetime")["passed"])
+            for required in sorted(expected):
+                index = next(i for i, row in enumerate(baseline.find(NS + "Results"))
+                             if row.get("testName") == required)
+                for mutation in ("missing", "duplicate", "failure", "stage", "exceptionType", "failed", "not-executed"):
+                    with self.subTest(identity=required, mutation=mutation):
+                        root = copy.deepcopy(baseline)
+                        results = root.find(NS + "Results")
+                        definitions = root.find(NS + "TestDefinitions")
+                        if mutation == "missing":
+                            for rows in (results, definitions, root.find(NS + "TestEntries")):
+                                rows.remove(rows[index])
+                            counters = root.find(NS + "ResultSummary/" + NS + "Counters")
+                            for field in ("total", "executed", "passed"):
+                                counters.set(field, "49")
+                        elif mutation in ("failed", "not-executed"):
+                            results[index].set("outcome", "Failed" if mutation == "failed" else "NotExecuted")
+                        else:
+                            if mutation == "duplicate":
+                                changed = next(name for name in sorted(expected) if name != required)
+                            else:
+                                changed = required.replace(f'{mutation}: "', f'{mutation}: "wrong-')
+                            results[index].set("testName", changed)
+                            definitions[index].set("name", gate.native_definition_display(changed))
+                        with self.assertRaises(ValueError):
+                            self.verify(root, directory, dll, "billing-lifetime")
+
+    def test_billing_inline_lifecycle_gate_requires_same_exact_rows_and_rejects_mutations(self):
+        workflow = (ROOT / ".github/workflows/billing-persistence.yml").read_text(encoding="utf-8")
+        block = workflow.split("      - name: Require all ", 1)[1].split("      - name:", 1)[0]
+        source = textwrap.dedent(block.split("python3 -B - <<'PY'\n", 1)[1].rsplit("          PY", 1)[0])
+        code = compile(source, "billing-persistence-inline-lifecycle", "exec")
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            baseline, _ = self.fixture(directory, "billing-lifetime")
+            results_directory = directory / "billing-lifetime-test-results"
+            results_directory.mkdir()
+            def validate(root):
+                ET.ElementTree(root).write(results_directory / "actual.trx", encoding="utf-8")
+                scope = {}
+                with contextlib.chdir(directory), contextlib.redirect_stdout(io.StringIO()):
+                    exec(code, scope)
+                return scope
+            self.assertEqual(set(gate.BILLING_LIFETIME_CASES), validate(baseline)["expected"])
+            identities = [name for name in gate.BILLING_LIFETIME_CASES if ".ChildCleanupFailure_" in name]
+            self.assertEqual(7, len(identities))
+            for required in identities:
+                index = next(i for i, row in enumerate(baseline.find(NS + "Results"))
+                             if row.get("testName") == required)
+                for mutation in ("missing", "duplicate", "failure", "stage", "exceptionType", "failed", "not-executed"):
+                    with self.subTest(identity=required, mutation=mutation):
+                        root = copy.deepcopy(baseline)
+                        results = root.find(NS + "Results")
+                        if mutation == "missing":
+                            results.remove(results[index])
+                            counters = root.find(NS + "ResultSummary/" + NS + "Counters")
+                            for field in ("total", "executed", "passed"):
+                                counters.set(field, "49")
+                        elif mutation in ("failed", "not-executed"):
+                            results[index].set("outcome", "Failed" if mutation == "failed" else "NotExecuted")
+                        elif mutation == "duplicate":
+                            results[index].set("testName", next(name for name in identities if name != required))
+                        else:
+                            results[index].set("testName", required.replace(f'{mutation}: "', f'{mutation}: "wrong-'))
+                        with self.assertRaises(SystemExit):
+                            validate(root)
 
     def test_each_1600_sidebar_identity_rejects_missing_duplicate_foreign_and_nonpassed_rows(self):
         with tempfile.TemporaryDirectory() as temp:

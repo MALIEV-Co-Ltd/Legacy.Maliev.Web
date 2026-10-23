@@ -2391,6 +2391,100 @@ public sealed class InstantQuotationResinPresentationTests
         });
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DevelopmentPreview_RenderOwnsItsCanvasBeforeAwaitingInputBinding(bool replaceWhileBinding)
+    {
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var activator = new CapturingActivator();
+        using var services = Services(activator, new RecordingJavaScript());
+        services.GetRequiredService<IWebHostEnvironment>().EnvironmentName = "Development";
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var type = typeof(InstantQuotationWorkflow);
+            var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            void Set(string field, object value) => type.GetField(field, flags)!.SetValue(component, value);
+            var previews = Assert.IsAssignableFrom<System.Collections.IDictionary>(
+                type.GetField("developmentPreviews", flags)!.GetValue(component));
+            var partType = type.GetNestedType("DevelopmentPreviewPart", BindingFlags.NonPublic)!;
+            object Part(string key) => Activator.CreateInstance(partType,
+                Guid.NewGuid(), key, "controlled-demo.stl", new InstantQuotationGeometryClaim(
+                    1, new string('A', 64), 10, 10, 10, 1_000, 600, [100], [40], 12, 1, true, false, false, 1))!;
+            void Replace(object part, long generation, string canvas)
+            {
+                previews.Clear();
+                previews.Add(partType.GetProperty("LocalId")!.GetValue(part)!, part);
+                Set("developmentPreviewGeneration", generation);
+                Set("developmentPreviewCanvas", new ElementReference(canvas));
+            }
+            Task Render() => (Task)type.GetMethod("OnAfterRenderAsync", flags)!.Invoke(component, [false])!;
+            var original = Part("original");
+            Replace(original, 1, "canvas-1");
+            var interop = new HeldDevelopmentBinding(lease.Token);
+            Set("previewInterop", interop);
+            Set("fileInput", new InputFile());
+            var pending = Render();
+            try
+            {
+                await interop.Entered.Task.WaitAsync(lease.Token);
+                var current = original;
+                if (replaceWhileBinding)
+                {
+                    current = Part("retry");
+                    // Retry state exists before its new keyed canvas has rendered.
+                    Replace(current, 2, "canvas-1");
+                }
+                interop.Release.TrySetResult();
+                await pending.WaitAsync(lease.Token);
+                Assert.Equal(replaceWhileBinding ? 0 : 1, interop.Attachments.Count);
+                Assert.Equal(!replaceWhileBinding, partType.GetProperty("Attached")!.GetValue(current));
+                if (replaceWhileBinding)
+                {
+                    Set("developmentPreviewCanvas", new ElementReference("canvas-2"));
+                    await Render().WaitAsync(lease.Token);
+                    Assert.Equal(("retry", "canvas-2", 2L), Assert.Single(interop.Attachments));
+                    Assert.Equal(true, partType.GetProperty("Attached")!.GetValue(current));
+                }
+            }
+            finally
+            {
+                interop.Release.TrySetResult();
+                await pending.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+        });
+    }
+
+    private sealed class HeldDevelopmentBinding(CancellationToken token) : IJSObjectReference
+    {
+        internal TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal List<(string Key, string Canvas, long Generation)> Attachments { get; } = [];
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
+            InvokeAsync<TValue>(identifier, default, args);
+        public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+        {
+            if (identifier == "bindInput")
+            {
+                Entered.TrySetResult();
+                await Release.Task.WaitAsync(token);
+            }
+            if (identifier == "retainDevelopmentPreview")
+            {
+                var key = Assert.IsType<string>(args![0]);
+                var canvas = Assert.IsType<ElementReference>(args[1]);
+                var generation = Assert.IsType<long>(args[2]);
+                Attachments.Add((key, canvas.Id, generation));
+                return (TValue)(object)(canvas.Id == $"canvas-{generation}");
+            }
+            return default!;
+        }
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
     private sealed class RecoveryPresentationPricing(string mode) : IInstantQuotationAuthoritativePricingService
     {
         public Task<InstantQuotationOrderQuote?> QuoteAsync(InstantQuotationSessionState session,

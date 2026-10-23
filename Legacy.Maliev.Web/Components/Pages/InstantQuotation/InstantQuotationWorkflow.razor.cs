@@ -456,6 +456,9 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Input binding can yield while a retry changes state before its new canvas renders.
+        var renderedDevelopmentGeneration = developmentPreviewGeneration;
+        var renderedDevelopmentCanvas = developmentPreviewCanvas;
         if (firstRender)
         {
             await EnsurePreviewInteropAsync();
@@ -474,8 +477,10 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             {
                 try
                 {
-                    var generation = developmentPreviewGeneration;
-                    var canvas = developmentPreviewCanvas;
+                    var generation = renderedDevelopmentGeneration;
+                    var canvas = renderedDevelopmentCanvas;
+                    if (disposed || generation != developmentPreviewGeneration || !canvas.Equals(developmentPreviewCanvas))
+                        break;
                     var attached = await previewInterop.InvokeAsync<bool>(
                         "retainDevelopmentPreview", part.Key, canvas, generation);
                     if (!disposed && developmentPreviews.TryGetValue(part.LocalId, out var current)

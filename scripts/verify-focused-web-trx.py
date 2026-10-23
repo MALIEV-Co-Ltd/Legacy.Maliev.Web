@@ -52,6 +52,13 @@ ROSTERS = {'fdm': {'Legacy.Maliev.Web.Tests.FdmOriginalServiceEligibilityBoundar
 
 
 BILLING_LIFETIME_CASES = (
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"graceful-stop\", stage: \"request-graceful-stop\", exceptionType: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"handle-close\", stage: \"close-handle\", exceptionType: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"identity\", stage: \"capture-identity\", exceptionType: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"kill\", stage: \"kill-exact\", exceptionType: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"reader-close\", stage: \"close-readers\", exceptionType: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"readers\", stage: \"join-readers\", exceptionType: \"TimeoutException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: \"reap\", stage: \"wait-exit\", exceptionType: \"TimeoutException\")",
     "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAdmittedSynchronousBodyBeforeDependencyRelease",
     "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: False)",
     "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: True)",
@@ -109,6 +116,7 @@ ROSTERS["billing-lifetime"] = {
         "ActualExpiry_DelayedFrontendShutdownRetainsBackendAndCaseWorkUntilSettled": 1,
         "AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup": 3,
         "FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease": 5,
+        "ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies": 7,
         "FailedHostDisposal_IsStickyAndCannotBecomeNoOpClearance": 1,
         "InterruptedHostStartup_RefusesHostDisposalAndDependencyRelease": 1,
         "SettledChildReaders_BeforeHandleAndDependencyRelease_AllHostsAttemptedFirst": 1,
