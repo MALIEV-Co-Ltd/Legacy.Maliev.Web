@@ -54,6 +54,7 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
             const string sha = "2d31d5a61f110106cf30c0c17d713602b8ab5c9d90c6c802e980e4c1c0bee8dc";
             Assert.Equal(960, bytes.Length);
             Assert.Equal(sha, Convert.ToHexStringLower(SHA256.HashData(bytes)));
+            var unitPolicy = new InstantQuotationGltfUnitPolicy(1, InstantQuotationGltfLengthUnit.Millimetres);
             foreach (var quantity in new[] { 1, 9, 10, 49, 50, 99, 100, 101 })
             {
                 tempData.Values.Clear();
@@ -80,6 +81,27 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                     await using (var binding = await page.WaitForFunctionAsync(
                         "() => { const input = document.querySelector('#instant-quote-files'); return !!input && !input.disabled && typeof input._blazorInputFileNextFileId === 'number'; }",
                         options: new() { Timeout = remaining })) { }
+                    var units = page.Locator("[data-workflow-gltf-unit]");
+                    await Assertions.Expect(units).ToHaveValueAsync("");
+                    if (quantity == 1)
+                    {
+                        await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+                        {
+                            Name = "source-292-authenticated.glb",
+                            MimeType = "model/gltf-binary",
+                            Buffer = bytes,
+                        });
+                        var refused = page.Locator("article[data-workflow-failed-preview]");
+                        await Assertions.Expect(refused).ToHaveCountAsync(1);
+                        await Assertions.Expect(page.Locator("[data-workflow-file-error]")).ToContainTextAsync(
+                            "Choose units before importing GLB/GLTF");
+                        await Assertions.Expect(page.Locator("[data-workflow-part]")).ToHaveCountAsync(0);
+                        Assert.Equal(0, uploads.StartedUploads);
+                        Assert.Empty(uploads.SessionId);
+                        await refused.Locator("[data-workflow-remove-failed]").ClickAsync();
+                        await Assertions.Expect(refused).ToHaveCountAsync(0);
+                    }
+                    await units.SelectOptionAsync("millimetres");
                     await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
                     {
                         Name = "source-292-authenticated.glb",
@@ -114,12 +136,17 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                     Assert.Equal("PLA", part.Configuration.MaterialKey);
                     Assert.Equal(quantity, part.Configuration.Quantity);
                     Assert.Equal(sha, part.Geometry.Sha256);
+                    Assert.Equal(10, part.Geometry.DimensionXmm, 3);
+                    Assert.Equal(10, part.Geometry.DimensionYmm, 3);
+                    Assert.Equal(10, part.Geometry.DimensionZmm, 3);
+                    Assert.Equal(unitPolicy, part.PhysicalAnalysisUpload!.GltfUnitPolicy);
                     var physical = Assert.Single(session.PhysicalReceipts!, item =>
                         item.PartId == part.PartId && item.MaterialKey == "PLA" && item.Quantity == quantity);
                     Assert.Equal(session.SessionId, physical.SessionId);
                     Assert.Equal(session.OwnerIdentity, physical.OwnerIdentity);
                     Assert.Equal(part.PhysicalAnalysisUpload!.FileId, physical.FileId);
                     Assert.Equal(sha, physical.UploadSha256);
+                    Assert.Equal(unitPolicy, physical.GltfUnitPolicy);
                     Assert.True(physical.DepositedMm3 > 0 && physical.MotionSeconds > 0);
                     await using var scope = web.Services.CreateAsyncScope();
                     var authority = scope.ServiceProvider.GetRequiredService<IInstantQuotationAuthoritativePricingService>();
@@ -258,23 +285,30 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
         private readonly List<Task> pending = [];
         private readonly Dictionary<Guid, Source292Upload> uploads = [];
         private bool closed;
+        private int startedUploads;
+        public int StartedUploads => Volatile.Read(ref startedUploads);
         public string SessionId { get; private set; } = "";
         public int FinalizationCalls { get; private set; }
         public Task<InstantQuotationUploadResult> UploadAsync(string sessionId, string? ownerIdentity, Stream content,
             string fileName, string contentType, long contentLength, InstantQuotationGeometryClaim claim,
-            string operationId, CancellationToken cancellationToken) => Own(async token =>
+            string operationId, CancellationToken cancellationToken)
         {
-            using var copy = new MemoryStream();
-            await content.CopyToAsync(copy, token);
-            var bytes = copy.ToArray();
-            var sha = Convert.ToHexStringLower(SHA256.HashData(bytes));
-            Assert.Equal(contentLength, bytes.LongLength);
-            Assert.Equal(claim.Sha256, sha);
-            var id = Guid.NewGuid();
-            lock (gate) { SessionId = sessionId; uploads.Add(id, new(sessionId, ownerIdentity, fileName, bytes, sha)); }
-            return InstantQuotationUploadResult.Succeeded(operationId, new(id.ToString("D")), sha,
-                new(id, fileName, contentType, bytes.LongLength, sha, "clean"));
-        }, cancellationToken);
+            Interlocked.Increment(ref startedUploads);
+            return Own(async token =>
+            {
+                using var copy = new MemoryStream();
+                await content.CopyToAsync(copy, token);
+                var bytes = copy.ToArray();
+                var sha = Convert.ToHexStringLower(SHA256.HashData(bytes));
+                Assert.Equal(contentLength, bytes.LongLength);
+                Assert.Equal(claim.Sha256, sha);
+                Assert.Equal(new InstantQuotationGltfUnitPolicy(1, InstantQuotationGltfLengthUnit.Millimetres), claim.GltfUnitPolicy);
+                var id = Guid.NewGuid();
+                lock (gate) { SessionId = sessionId; uploads.Add(id, new(sessionId, ownerIdentity, fileName, bytes, sha, claim.GltfUnitPolicy)); }
+                return InstantQuotationUploadResult.Succeeded(operationId, new(id.ToString("D")), sha,
+                    new(id, fileName, contentType, bytes.LongLength, sha, "clean") { GltfUnitPolicy = claim.GltfUnitPolicy });
+            }, cancellationToken);
+        }
         public Task<T> Own<T>(Func<CancellationToken, Task<T>> action, CancellationToken cancellationToken)
         {
             lock (gate)
@@ -300,6 +334,7 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
         {
             lock (gate) return uploads.TryGetValue(file, out var upload) && upload.Session == session && upload.Owner == owner
                 ? new(upload.Bytes, InstantQuotationPhysicalAnalysisInputFailure.None, file, upload.Name, upload.Sha)
+                { GltfUnitPolicy = upload.GltfUnitPolicy }
                 : InstantQuotationPhysicalAnalysisInputResult.Unavailable(InstantQuotationPhysicalAnalysisInputFailure.UploadMismatch);
         }
         public Task<InstantQuotationFinalizationResult> FinalizeAsync(string sessionId, string? ownerIdentity, int requestId,
@@ -335,7 +370,8 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
             }
         }
     }
-    private sealed record Source292Upload(string Session, string? Owner, string Name, byte[] Bytes, string Sha);
+    private sealed record Source292Upload(string Session, string? Owner, string Name, byte[] Bytes, string Sha,
+        InstantQuotationGltfUnitPolicy GltfUnitPolicy);
     private sealed class Source292ProfileInput(Source292ProfileUploads upload, IInstantQuotationSessionStore store)
         : IInstantQuotationPhysicalAnalysisInputReader
     {
