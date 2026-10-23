@@ -95,6 +95,17 @@ jobs:
         run: ./scripts/prepare-scb-payment-boundary.ps1
       - name: Build browser acceptance host
         run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj --configuration Release
+      - name: Verify material-switch color preservation and refusal controls
+        timeout-minutes: 5
+        run: |
+          test ! -e material-color-switch-test-results
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj \
+            --configuration Release --no-build --no-restore \
+            -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath= \
+            --filter 'FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationResinPresentationTests.Workflow_MaterialChangePreservesCompatibleSingleBodyColor' \
+            --logger 'trx;LogFileName=material-color-switch.trx' \
+            --results-directory ./material-color-switch-test-results
+          python3 -B -c 'import xml.etree.ElementTree as E; r=E.parse("material-color-switch-test-results/material-color-switch.trx").getroot(); c=r.find(".//{*}Counters"); assert c is not None and all(c.get(k)==v for k,v in {"total":"6","executed":"6","passed":"6","failed":"0","notExecuted":"0"}.items()), "All six material color preservation/fallback/multipart controls must pass"'
       - name: Verify migrated Home Knowledge sitemap copy and asset consumers before browser validation
         timeout-minutes: 10
         run: |
@@ -482,6 +493,7 @@ jobs:
         with:
           name: web-combined-native-${{ github.sha }}
           path: |
+            material-color-switch-test-results/
             Legacy.Maliev.Web/wwwroot/dist/site.min.css
             Legacy.Maliev.Web/wwwroot/dist/route-service-toc.js
             Legacy.Maliev.Web/wwwroot/dist/route-service-printing.js
