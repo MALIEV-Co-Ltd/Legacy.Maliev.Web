@@ -857,6 +857,50 @@ public sealed class InstantQuotationResinPresentationTests
     }
 
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("9")]
+    [InlineData("")]
+    public async Task Workflow_QuantityInputReturningToAcceptedValueKeepsReviewAvailableWithoutChangeEvent(string? draft)
+    {
+        var part = Part("PLA", BuildPreference.Standard);
+        var store = new SessionStore(part);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            bool CanReview() => (bool)typeof(InstantQuotationWorkflow)
+                .GetProperty("CanEnterReview", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
+            void Input(string raw) => typeof(InstantQuotationWorkflow)
+                .GetMethod("OnQuantityInput", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(component, [part.PartId, new ChangeEventArgs { Value = raw }]);
+            Assert.True(CanReview());
+            var quote = Assert.IsType<InstantQuotationOrderQuote>(coordinator.OrderQuote);
+            var writes = 0;
+            store.BeforePut = () => { writes++; return Task.CompletedTask; };
+            if (draft is not null)
+            {
+                Input(draft);
+                Assert.False(CanReview());
+            }
+
+            // A native input restored to its original value need not emit change on blur.
+            Input("1");
+            Assert.True(CanReview());
+            Assert.Same(quote, coordinator.OrderQuote);
+            Assert.Equal(1, Assert.Single(coordinator.Parts).Configuration.Quantity);
+            Assert.Equal(0, writes);
+        });
+    }
+
+
     [Fact]
     public async Task InvalidSamePartUiEdit_DoesNotRetireAValidReachedRepricingActivity()
     {
