@@ -61,6 +61,7 @@ function harness(
   return {
     calls,
     statuses,
+    viewer,
     interop: createWorkflowPreviewInterop({
       loadModel,
       analyzeGeometry,
@@ -253,6 +254,143 @@ test('replacement review images receive exact cached bytes without recapturing t
   assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'multi').length, 1);
   assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'single').length, 2);
   interop.dispose();
+});
+
+function thumbnailMutations() {
+  const original = globalThis.MutationObserver;
+  const observers = [];
+  globalThis.MutationObserver = class {
+    constructor(callback) { this.callback = callback; observers.push(this); }
+    observe(root, options) { this.root = root; this.options = options; }
+    disconnect() { this.disconnected = true; }
+  };
+  const image = partId => ({
+    dataset: { partId }, isConnected: true, src: '/fallback.svg',
+    getAttribute(name) { assert.equal(name, 'src'); return this.src; },
+  });
+  const root = images => ({
+    isConnected: true, images,
+    querySelectorAll() { return this.images; },
+    contains(node) { return this.images.includes(node); },
+  });
+  return {
+    observers, image, root,
+    deliver() { for (const observer of observers.filter(item => !item.disconnected)) observer.callback([]); },
+    restore() { globalThis.MutationObserver = original; },
+  };
+}
+
+test('render replacement and src reset restore cached thumbnails before another server render', async () => {
+  const mutations = thumbnailMutations();
+  const { interop, calls, viewer } = harness();
+  viewer.snapshot = id => {
+    calls.push(['snapshot', id]);
+    const color = id === 'single' ? calls.findLast(call => call[0] === 'color')?.[1] ?? 'initial' : 'source';
+    return `data:image/webp;base64,${id}-${color}`;
+  };
+  try {
+    const keys = interop.beginSelection({ files: [modelFile('single.stl'), modelFile('multi.stl')] });
+    await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
+    interop.attach({});
+    interop.admit(keys[0], 'single');
+    interop.admit(keys[1], 'multi');
+    const root = mutations.root(['single', 'multi'].map(mutations.image));
+    interop.renderReviewThumbnails(root);
+    const retained = root.images[1].src;
+    interop.updatePartAppearance('single', 'Red');
+    root.images = ['single', 'multi'].map(mutations.image);
+    mutations.deliver();
+    assert.equal(root.images[1].src, retained);
+    assert.equal(root.images[0].src, 'data:image/webp;base64,single-#dc2626');
+    root.images[1].src = '/fallback.svg';
+    mutations.deliver();
+    assert.equal(root.images[1].src, retained);
+    let writes = 0;
+    Object.defineProperty(root.images[1], 'src', { get: () => retained, set: () => { writes += 1; } });
+    mutations.deliver();
+    interop.renderReviewThumbnails(root);
+    assert.equal(writes, 0);
+    assert.equal(mutations.observers.length, 1);
+    assert.deepEqual(mutations.observers[0].options,
+      { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+    assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'multi').length, 1);
+    assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'single').length, 2);
+  } finally { interop.dispose(); mutations.restore(); }
+});
+
+test('thumbnail mutation callbacks cannot resurrect invalidated released or disconnected images', async () => {
+  const mutations = thumbnailMutations();
+  const { interop, calls } = harness();
+  try {
+    const keys = interop.beginSelection({ files: [modelFile('a.stl'), modelFile('b.stl')] });
+    await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
+    interop.attach({});
+    interop.admit(keys[0], 'part-a');
+    interop.admit(keys[1], 'part-b');
+    const root = mutations.root(['part-a', 'part-b'].map(mutations.image));
+    interop.renderReviewThumbnails(root);
+    assert.equal(mutations.observers.length, 1);
+    interop.select('part-a');
+    interop.reset(); // Camera invalidation removes these bytes before recapture.
+    interop.release(keys[1]);
+    root.images = ['part-a', 'part-b', 'unknown'].map(mutations.image);
+    mutations.deliver();
+    assert.deepEqual(root.images.map(image => image.src), ['/fallback.svg', '/fallback.svg', '/fallback.svg']);
+    assert.equal(calls.filter(call => call[0] === 'snapshot').length, 2);
+    interop.renderReviewThumbnails(root);
+    root.images[0] = mutations.image('part-a');
+    root.images[0].isConnected = false;
+    mutations.deliver();
+    assert.equal(root.images[0].src, '/fallback.svg');
+    root.images[0].isConnected = true;
+    root.isConnected = false;
+    mutations.deliver();
+    assert.equal(root.images[0].src, '/fallback.svg');
+    root.isConnected = true;
+    interop.quarantine(keys[0]);
+    mutations.deliver();
+    assert.equal(root.images[0].src, '/fallback.svg');
+  } finally { interop.dispose(); mutations.restore(); }
+});
+
+test('thumbnail observer root replacement and disposal reject late callbacks and release ownership', async () => {
+  const mutations = thumbnailMutations();
+  const { interop } = harness();
+  try {
+    const [key] = interop.beginSelection({ files: [modelFile('a.stl')] });
+    await interop.getGeometryClaim(key);
+    interop.attach({});
+    interop.admit(key, 'part-a');
+    const first = mutations.root([mutations.image('part-a')]);
+    interop.renderReviewThumbnails(first);
+    const old = mutations.observers[0];
+    const second = mutations.root([mutations.image('part-a')]);
+    interop.renderReviewThumbnails(second);
+    assert.equal(old?.disconnected, true);
+    first.images[0].src = '/fallback.svg';
+    old.callback([]);
+    assert.equal(first.images[0].src, '/fallback.svg');
+    const released = mutations.observers[1];
+    interop.release(key);
+    assert.equal(released.disconnected, true);
+    second.images[0].src = '/fallback.svg';
+    released.callback([]);
+    assert.equal(second.images[0].src, '/fallback.svg');
+    const [replacement] = interop.beginSelection({ files: [modelFile('replacement.stl')] });
+    await interop.getGeometryClaim(replacement);
+    interop.admit(replacement, 'part-a');
+    released.callback([]);
+    assert.equal(second.images[0].src, '/fallback.svg');
+    interop.renderReviewThumbnails(second);
+    const current = mutations.observers[2];
+    interop.dispose();
+    assert.equal(current.disconnected, true);
+    second.images[0].src = '/fallback.svg';
+    current.callback([]);
+    assert.equal(second.images[0].src, '/fallback.svg');
+    interop.renderReviewThumbnails(second);
+    assert.equal(mutations.observers.length, 3);
+  } finally { interop.dispose(); mutations.restore(); }
 });
 
 test('empty viewer detach releases old canvas listeners before reattach and disposal', () => {

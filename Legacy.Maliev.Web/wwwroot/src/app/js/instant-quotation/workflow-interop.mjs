@@ -96,6 +96,8 @@ export function createWorkflowPreviewInterop({
   const previews = new Map();
   const partKeys = new Map();
   const thumbnails = new Map();
+  let thumbnailRoot = null;
+  let thumbnailObserver = null;
   let selectedPartId = null;
   let thumbnailCanvas = null;
   const invalidateCameraThumbnail = () => thumbnails.delete(selectedPartId);
@@ -498,6 +500,7 @@ export function createWorkflowPreviewInterop({
     entry.stallTimer = null;
     attempt(() => entry.controller?.abort());
     if (entry.partId) partKeys.delete(entry.partId);
+    if (partKeys.size === 0) attempt(unbindThumbnailRoot);
     if (entry.attached && viewer) attempt(() => viewer.remove(entry.partId ?? entry.key));
     else if (!developmentDetached) attempt(() => disposeModel(entry.object ?? entry.loadedObject, disposedResources));
     entry.loadedObject = null;
@@ -692,7 +695,8 @@ export function createWorkflowPreviewInterop({
   function fit() { thumbnails.delete(selectedPartId); selectedViewer()?.fit(); }
   function fullscreen() { return selectedViewer()?.fullscreen(); }
   function renderReviewThumbnails(root) {
-    if (!viewer || !root?.querySelectorAll) return 0;
+    if (disposed || !viewer || !root?.querySelectorAll) return 0;
+    observeThumbnailRoot(root);
     let rendered = 0;
     for (const image of root.querySelectorAll('[data-review-thumbnail][data-part-id], [data-workflow-thumbnail][data-part-id]')) {
       let source = null;
@@ -703,10 +707,44 @@ export function createWorkflowPreviewInterop({
       }
       if (typeof source !== 'string' || !source.startsWith('data:image/')) continue;
       thumbnails.set(image.dataset.partId, source);
-      image.src = source;
+      setThumbnailSource(image, source);
       rendered += 1;
     }
     return rendered;
+  }
+
+  function setThumbnailSource(image, source) {
+    if ((image.getAttribute?.('src') ?? image.src) !== source) image.src = source;
+  }
+
+  function observeThumbnailRoot(root) {
+    if (thumbnailRoot === root || partKeys.size === 0) return;
+    unbindThumbnailRoot();
+    const Observer = root.ownerDocument?.defaultView?.MutationObserver ?? globalThis.MutationObserver;
+    if (typeof Observer !== 'function') return;
+    const observer = new Observer(() => {
+      if (disposed || thumbnailObserver !== observer || thumbnailRoot !== root || !root.isConnected) return;
+      // Blazor can replace review images before its asynchronous after-render work resumes.
+      // Restore only current cached bytes; this callback never captures or starts server work.
+      for (const image of root.querySelectorAll('[data-review-thumbnail][data-part-id], [data-workflow-thumbnail][data-part-id]')) {
+        if (!image.isConnected || !root.contains(image)) continue;
+        const partId = image.dataset.partId;
+        const entry = previews.get(partKeys.get(partId));
+        const source = thumbnails.get(partId);
+        if (!entry || entry.partId !== partId || !isCurrent(entry) || typeof source !== 'string') continue;
+        setThumbnailSource(image, source);
+      }
+    });
+    thumbnailRoot = root;
+    thumbnailObserver = observer;
+    observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+  }
+
+  function unbindThumbnailRoot() {
+    const observer = thumbnailObserver;
+    thumbnailObserver = null;
+    thumbnailRoot = null;
+    observer?.disconnect();
   }
 
   function updatePartAppearance(partId, color) {
@@ -861,6 +899,7 @@ export function createWorkflowPreviewInterop({
     const failures = [];
     const attempt = action => { try { action(); } catch (error) { failures.push(error); } };
     attempt(unbindThumbnailCanvas);
+    attempt(unbindThumbnailRoot);
     thumbnails.clear();
     attempt(unbindInput);
     for (const key of [...previews.keys()]) attempt(() => release(key));
