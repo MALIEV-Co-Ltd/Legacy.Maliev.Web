@@ -152,7 +152,19 @@ export function renderedVertexReader(mesh) {
   // refresh attached bindMatrixInverse after root printing rotation/unit scaling.
   if (mesh.isSkinnedMesh) mesh.updateMatrixWorld(true);
   const target = mesh.position.clone();
-  return index => mesh.getVertexPosition(index, target);
+  return index => {
+    mesh.getVertexPosition(index, target);
+    if (mesh.isSkinnedMesh) {
+      const weights = mesh.geometry.getAttribute('skinWeight');
+      const weightedW = weights.getX(index) + weights.getY(index) + weights.getZ(index) + weights.getW(index);
+      // The skin shader carries weighted W through inverse binding; Three's Vector3 path assumes one.
+      const inverse = mesh.bindMatrixInverse.elements;
+      target.x += inverse[12] * (weightedW - 1);
+      target.y += inverse[13] * (weightedW - 1);
+      target.z += inverse[14] * (weightedW - 1);
+    }
+    return target;
+  };
 }
 
 function extractWorldSpaceTriangles(object3D) {
