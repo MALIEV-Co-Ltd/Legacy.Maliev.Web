@@ -196,6 +196,107 @@ test('part appearance updates select the requested part, apply a canonical previ
   ]);
 });
 
+test('unrelated rerenders preserve admitted thumbnail bytes while appearance and camera changes refresh only their part', async () => {
+  const { interop, calls } = harness();
+  const keys = interop.beginSelection({ files: [modelFile('a.stl'), modelFile('b.stl')] });
+  await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
+  const listeners = new Map();
+  interop.attach({ addEventListener: (type, listener) => listeners.set(type, listener),
+    removeEventListener: type => listeners.delete(type) });
+  interop.admit(keys[0], 'part-a');
+  interop.admit(keys[1], 'part-b');
+  const images = ['part-a', 'part-b'].map(partId => ({ dataset: { partId }, src: '/fallback.svg' }));
+  const root = { querySelectorAll: () => images };
+  interop.renderReviewThumbnails(root);
+  const snapshots = id => calls.filter(call => call[0] === 'snapshot' && call[1] === id).length;
+  assert.equal(snapshots('part-a'), 1);
+  assert.equal(snapshots('part-b'), 1);
+  interop.updatePartAppearance('part-a', 'Red');
+  interop.renderReviewThumbnails(root);
+  assert.equal(snapshots('part-a'), 2);
+  assert.equal(snapshots('part-b'), 1);
+  interop.select('part-a');
+  listeners.get('pointerup')();
+  interop.renderReviewThumbnails(root);
+  assert.equal(snapshots('part-a'), 3);
+  assert.equal(snapshots('part-b'), 1);
+  interop.reset();
+  interop.renderReviewThumbnails(root);
+  interop.fit();
+  interop.renderReviewThumbnails(root);
+  assert.equal(snapshots('part-a'), 5);
+  assert.equal(snapshots('part-b'), 1);
+  interop.dispose();
+  assert.equal(listeners.size, 0);
+});
+
+test('unavailable and released previews cannot supply a cached thumbnail', async () => {
+  const { interop, calls } = harness();
+  const [key] = interop.beginSelection({ files: [modelFile('a.stl')] });
+  await interop.getGeometryClaim(key);
+  interop.attach({});
+  interop.admit(key, 'part-a');
+  const unavailable = { dataset: { partId: 'missing' }, src: '/fallback.svg' };
+  const admitted = { dataset: { partId: 'part-a' }, src: '/fallback.svg' };
+  const root = { querySelectorAll: () => [admitted, unavailable] };
+  interop.renderReviewThumbnails(root);
+  interop.renderReviewThumbnails(root);
+  assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'missing').length, 2);
+  assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'part-a').length, 1);
+  interop.release(key);
+  const [replacement] = interop.beginSelection({ files: [modelFile('replacement.stl')] });
+  await interop.getGeometryClaim(replacement);
+  interop.admit(replacement, 'part-a');
+  admitted.src = '/fallback.svg';
+  // Reusing a part ID for new geometry must not reuse the old admission's bytes.
+  interop.renderReviewThumbnails(root);
+  assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'part-a').length, 2);
+});
+
+test('development retries reject an old canvas generation before claiming the new preview', async () => {
+  const { interop, calls } = harness();
+  const [key] = interop.beginSelection({ files: [modelFile('a.stl')] });
+  await interop.getGeometryClaim(key);
+  const oldCanvas = { isConnected: true, dataset: { localDemoGeneration: '1' } };
+  assert.equal(interop.retainDevelopmentPreview(key, oldCanvas, 1), true);
+  const nextKey = interop.retry(key);
+  await interop.getGeometryClaim(nextKey);
+  assert.equal(interop.retainDevelopmentPreview(nextKey, oldCanvas, 2), false);
+  oldCanvas.isConnected = false;
+  assert.equal(interop.retainDevelopmentPreview(nextKey, oldCanvas, 1), false);
+  const newCanvas = { isConnected: true, dataset: { localDemoGeneration: '2' } };
+  assert.equal(interop.retainDevelopmentPreview(nextKey, newCanvas, 2), true);
+  assert.equal(newCanvas.dataset.localDemoReady, 'true');
+  assert.equal(interop.retainDevelopmentPreview(nextKey,
+    { isConnected: true, dataset: { localDemoGeneration: '2' } }, 2), false);
+  assert.equal(calls.filter(call => call[0] === 'add' && call[1] === nextKey).length, 1);
+  interop.dispose();
+  assert.equal(newCanvas.dataset.localDemoReady, undefined);
+});
+
+test('ordinary viewer listeners are released when a development preview replaces its canvas', async () => {
+  const { interop } = harness();
+  const listeners = [new Set(), new Set()];
+  const canvas = index => ({
+    addEventListener: type => listeners[index].add(type),
+    removeEventListener: type => listeners[index].delete(type),
+  });
+  interop.attach(canvas(0));
+  assert.equal(listeners[0].size, 3);
+  const [key] = interop.beginSelection({ files: [modelFile('a.stl')] });
+  await interop.getGeometryClaim(key);
+  assert.equal(interop.retainDevelopmentPreview(key,
+    { isConnected: true, dataset: { localDemoGeneration: '1' } }, 1), true);
+  assert.equal(listeners[0].size, 0);
+  const nextKey = interop.retry(key);
+  await interop.getGeometryClaim(nextKey);
+  interop.admit(nextKey, 'part-a');
+  interop.attach(canvas(1));
+  assert.equal(listeners[1].size, 3);
+  interop.dispose();
+  assert.deepEqual(listeners.map(value => value.size), [0, 0]);
+});
+
 test('preview colors accept custom hex and fail closed to the neutral material color', () => {
   assert.equal(previewColorForSelection('#Aa00fF'), '#aa00ff');
   assert.equal(previewColorForSelection('Blue'), '#2563eb');

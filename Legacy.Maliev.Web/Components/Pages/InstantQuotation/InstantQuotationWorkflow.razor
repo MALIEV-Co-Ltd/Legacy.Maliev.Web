@@ -64,7 +64,8 @@
                 <h3 id="development-preview-heading" data-local-demo-badge>@Localizer["Demo"]</h3>
                 <p role="status">@Localizer["Development preview only. Advisory prices cannot be submitted."]</p>
             </header>
-            <canvas @key="developmentPreviewGeneration" @ref="developmentPreviewCanvas" data-local-demo-canvas tabindex="0"
+            <canvas @key="developmentPreviewGeneration" @ref="developmentPreviewCanvas" data-local-demo-canvas
+                    data-local-demo-generation="@developmentPreviewGeneration" tabindex="0"
                     style="display:block;width:100%;max-width:600px;height:300px"
                     aria-label="@Localizer["Interactive 3D part preview"]"></canvas>
             @foreach (var part in developmentPreviews.Values)

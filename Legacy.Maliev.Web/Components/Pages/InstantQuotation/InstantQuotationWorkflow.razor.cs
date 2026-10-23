@@ -285,11 +285,18 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             {
                 try
                 {
+                    var generation = developmentPreviewGeneration;
+                    var canvas = developmentPreviewCanvas;
                     var attached = await previewInterop.InvokeAsync<bool>(
-                        "retainDevelopmentPreview", part.Key, developmentPreviewCanvas);
+                        "retainDevelopmentPreview", part.Key, canvas, generation);
                     if (!disposed && developmentPreviews.TryGetValue(part.LocalId, out var current)
                         && ReferenceEquals(part, current))
-                        part.Attached = attached;
+                    {
+                        if (generation == developmentPreviewGeneration && canvas.Equals(developmentPreviewCanvas))
+                            part.Attached = attached;
+                        else
+                            await InvokeAsync(StateHasChanged);
+                    }
                 }
                 catch (JSException)
                 {

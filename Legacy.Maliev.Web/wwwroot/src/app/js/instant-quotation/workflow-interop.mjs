@@ -95,6 +95,10 @@ export function createWorkflowPreviewInterop({
 
   const previews = new Map();
   const partKeys = new Map();
+  const thumbnails = new Map();
+  let selectedPartId = null;
+  let thumbnailCanvas = null;
+  const invalidateCameraThumbnail = () => thumbnails.delete(selectedPartId);
   const disposedResources = {
     geometries: new WeakSet(),
     materials: new WeakSet(),
@@ -234,7 +238,10 @@ export function createWorkflowPreviewInterop({
         if (!isCurrent(entry)) return;
         entry.thicknessEvidence = evidence;
         entry.evidenceCompleted = true;
-        if (entry.attached && evidence) viewer?.setThicknessEvidence?.(entry.partId, evidence);
+        if (entry.attached && evidence) {
+          if (entry.thicknessVisible) thumbnails.delete(entry.partId);
+          viewer?.setThicknessEvidence?.(entry.partId, evidence);
+        }
         notifyThickness(entry);
         notifyIncomplete(entry);
       }).catch(() => {
@@ -307,7 +314,12 @@ export function createWorkflowPreviewInterop({
 
   function attach(canvas) {
     assertActive();
-    if (!viewer) viewer = createViewer(canvas);
+    if (!viewer) {
+      unbindThumbnailCanvas();
+      viewer = createViewer(canvas);
+      thumbnailCanvas = canvas;
+      for (const type of ['pointerup', 'wheel', 'keydown']) canvas?.addEventListener?.(type, invalidateCameraThumbnail);
+    }
     for (const entry of previews.values()) attachAdmittedPreview(entry);
   }
 
@@ -316,6 +328,8 @@ export function createWorkflowPreviewInterop({
     const entry = requirePreview(key);
     if (entry.released || entry.quarantined || entry.previewOnly || developmentKeys.has(key) || !partId) return false;
     entry.partId = partId;
+    thumbnails.delete(partId);
+    selectedPartId ??= partId;
     entry.thicknessMaterial = material;
     entry.file = null;
     partKeys.set(partId, key);
@@ -334,6 +348,7 @@ export function createWorkflowPreviewInterop({
   function quarantine(key) {
     const entry = previews.get(key);
     if (!entry || entry.released || entry.quarantined) return;
+    thumbnails.delete(entry.partId);
     if (developmentKeys.has(key)) {
       release(key);
       return;
@@ -356,6 +371,8 @@ export function createWorkflowPreviewInterop({
   function release(key) {
     const entry = previews.get(key);
     if (!entry) return;
+    thumbnails.delete(entry.partId);
+    if (selectedPartId === entry.partId) selectedPartId = null;
     const failures = [];
     const attempt = action => { try { action(); } catch (error) { failures.push(error); } };
     // Drop ownership before calling external disposers, and attempt each owned release.
@@ -400,6 +417,7 @@ export function createWorkflowPreviewInterop({
     assertActive();
     if (!partKeys.has(partId) || !viewer) return false;
     viewer.select(partId);
+    selectedPartId = partId;
     const entry = previews.get(partKeys.get(partId));
     if (entry) notifyThickness(entry);
     return true;
@@ -433,7 +451,9 @@ export function createWorkflowPreviewInterop({
     if (!entry) return false;
     entry.thicknessMaterial = material;
     if (entry.thicknessVisible && viewer) {
+      thumbnails.delete(partId);
       viewer.select(partId);
+      selectedPartId = partId;
       viewer.setThicknessVisible?.(true, policyForMaterial(material));
     }
     notifyThickness(entry);
@@ -443,7 +463,9 @@ export function createWorkflowPreviewInterop({
   function toggleThickness(partId) {
     const entry = previews.get(partKeys.get(partId));
     if (!entry?.thicknessEvidence || !viewer) return false;
+    thumbnails.delete(partId);
     viewer.select(partId);
+    selectedPartId = partId;
     entry.thicknessVisible = !entry.thicknessVisible;
     if (!viewer.setThicknessVisible?.(
       entry.thicknessVisible, policyForMaterial(entry.thicknessMaterial))) {
@@ -458,8 +480,8 @@ export function createWorkflowPreviewInterop({
     if (key) release(key);
   }
 
-  function reset() { viewer?.reset(); }
-  function fit() { viewer?.fit(); }
+  function reset() { thumbnails.delete(selectedPartId); viewer?.reset(); }
+  function fit() { thumbnails.delete(selectedPartId); viewer?.fit(); }
   function fullscreen() { return viewer?.fullscreen(); }
   function renderReviewThumbnails(root) {
     if (!viewer || !root?.querySelectorAll) return 0;
@@ -467,11 +489,12 @@ export function createWorkflowPreviewInterop({
     for (const image of root.querySelectorAll('[data-review-thumbnail][data-part-id], [data-workflow-thumbnail][data-part-id]')) {
       let source = null;
       try {
-        source = viewer.snapshot?.(image.dataset.partId);
+        source = thumbnails.get(image.dataset.partId) ?? viewer.snapshot?.(image.dataset.partId);
       } catch {
         continue;
       }
       if (typeof source !== 'string' || !source.startsWith('data:image/')) continue;
+      thumbnails.set(image.dataset.partId, source);
       image.src = source;
       rendered += 1;
     }
@@ -481,8 +504,11 @@ export function createWorkflowPreviewInterop({
   function updatePartAppearance(partId, color) {
     if (!viewer || !partKeys.has(partId)) return null;
     viewer.select(partId);
+    selectedPartId = partId;
+    thumbnails.delete(partId);
     viewer.setColor(previewColorForSelection(color));
     const source = viewer.snapshot?.(partId);
+    if (typeof source === 'string' && source.startsWith('data:image/')) thumbnails.set(partId, source);
     return typeof source === 'string' && source.startsWith('data:image/') ? source : null;
   }
   function status() { return availability; }
@@ -515,17 +541,19 @@ export function createWorkflowPreviewInterop({
   }
 
 
-  function retainDevelopmentPreview(key, canvas) {
+  function retainDevelopmentPreview(key, canvas, generation) {
     assertActive();
+    if (!canvas?.isConnected || canvas.dataset?.localDemoGeneration !== String(generation)) return false;
     const entry = requirePreview(key);
     const claim = entry.geometryClaim;
     if (!isCurrent(entry) || !entry.object || entry.partId || entry.previewOnly
         || !Number.isFinite(claim?.volumeMm3) || claim.volumeMm3 <= 0) return false;
-    if (developmentKeys.has(key)) return true;
+    if (developmentKeys.has(key)) return developmentCanvas === canvas;
     // The ordinary uploading canvas is gone in the zero-admitted-part error state.
     if (viewer && partKeys.size === 0) {
       const unusedViewer = viewer;
       viewer = null;
+      unbindThumbnailCanvas();
       unusedViewer.dispose();
     }
     const ownedViewer = developmentViewer ?? createViewer(canvas);
@@ -612,11 +640,20 @@ export function createWorkflowPreviewInterop({
     }
   }
 
+  function unbindThumbnailCanvas() {
+    const canvas = thumbnailCanvas;
+    thumbnailCanvas = null;
+    for (const type of ['pointerup', 'wheel', 'keydown'])
+      canvas?.removeEventListener?.(type, invalidateCameraThumbnail);
+  }
+
   function dispose() {
     if (disposed) return;
     disposed = true;
     const failures = [];
     const attempt = action => { try { action(); } catch (error) { failures.push(error); } };
+    attempt(unbindThumbnailCanvas);
+    thumbnails.clear();
     attempt(unbindInput);
     for (const key of [...previews.keys()]) attempt(() => release(key));
     for (const files of selectionSnapshots) files.length = 0;

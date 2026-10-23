@@ -349,6 +349,12 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
                 var endpoint = context.GetEndpoint();
                 var original = reExecute?.Endpoint;
                 var antiforgery = context.Features.Get<IAntiforgeryValidationFeature>();
+                var failure = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+                var failureMethods = failure is null ? string.Empty : string.Join(",", new StackTrace(failure).GetFrames()
+                    .Take(4).Select(frame => frame.GetMethod()).Where(method => method is not null)
+                    .Select(method => $"{method!.DeclaringType?.FullName}.{method.Name}"));
+                if (failure is not null)
+                    RoutingSnapshots += $"[exceptionType={failure.GetType().FullName}; methods={failureMethods}]";
                 RoutingSnapshots += $"[match={count + 1}; errorPath={context.Request.Path.Equals("/Error", StringComparison.OrdinalIgnoreCase)}; razor={endpoint is not null && IsPrintingPage(endpoint)}; allowsPost={endpoint is RouteEndpoint && AcceptsPost(endpoint)}; methodRejection={IsMethodRejection(endpoint)}; reExecuted={reExecute is not null}; originalStatus={reExecute?.OriginalStatusCode ?? 0}; originalRazor={original is not null && IsPrintingPage(original)}; originalAllowsPost={original is RouteEndpoint && AcceptsPost(original)}; originalMethodRejection={IsMethodRejection(original)}; antiforgery={(antiforgery is null ? 0 : antiforgery.IsValid ? 1 : 2)}]";
             }
             catch
