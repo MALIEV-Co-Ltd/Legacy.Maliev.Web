@@ -967,7 +967,9 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         var part = Parts.Single(item => item.PartId == partId);
         var material = args.Value?.ToString() ?? part.Configuration.MaterialKey;
         var colors = GetColors(material);
-        var color = part.Geometry.BodyCount > 1 ? "Any" : colors.First();
+        var color = part.Geometry.BodyCount > 1 ? "Any"
+            : colors.Contains(part.Configuration.Color, StringComparer.Ordinal)
+                ? part.Configuration.Color : colors.First();
         await UpdateConfigurationAsync(part, material, color, part.Configuration.Quantity, async () =>
         {
             var accepted = Parts.SingleOrDefault(item => item.PartId == partId);
