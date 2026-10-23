@@ -1,5 +1,8 @@
 """Parser controls only; synthetic XML and marker files are not native test evidence."""
 import copy
+import contextlib
+import io
+import textwrap
 import importlib.util
 from pathlib import Path
 import tempfile
@@ -247,6 +250,46 @@ class FocusedGateControls(unittest.TestCase):
                             definitions[index].set("name", gate.native_definition_display(changed))
                         with self.assertRaises(ValueError):
                             self.verify(root, directory, dll, "billing-lifetime")
+
+    def test_billing_inline_lifecycle_gate_requires_same_exact_rows_and_rejects_mutations(self):
+        workflow = (ROOT / ".github/workflows/billing-persistence.yml").read_text(encoding="utf-8")
+        block = workflow.split("      - name: Require all ", 1)[1].split("      - name:", 1)[0]
+        source = textwrap.dedent(block.split("python3 -B - <<'PY'\n", 1)[1].rsplit("          PY", 1)[0])
+        code = compile(source, "billing-persistence-inline-lifecycle", "exec")
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            baseline, _ = self.fixture(directory, "billing-lifetime")
+            results_directory = directory / "billing-lifetime-test-results"
+            results_directory.mkdir()
+            def validate(root):
+                ET.ElementTree(root).write(results_directory / "actual.trx", encoding="utf-8")
+                scope = {}
+                with contextlib.chdir(directory), contextlib.redirect_stdout(io.StringIO()):
+                    exec(code, scope)
+                return scope
+            self.assertEqual(set(gate.BILLING_LIFETIME_CASES), validate(baseline)["expected"])
+            identities = [name for name in gate.BILLING_LIFETIME_CASES if ".ChildCleanupFailure_" in name]
+            self.assertEqual(7, len(identities))
+            for required in identities:
+                index = next(i for i, row in enumerate(baseline.find(NS + "Results"))
+                             if row.get("testName") == required)
+                for mutation in ("missing", "duplicate", "failure", "stage", "exceptionType", "failed", "not-executed"):
+                    with self.subTest(identity=required, mutation=mutation):
+                        root = copy.deepcopy(baseline)
+                        results = root.find(NS + "Results")
+                        if mutation == "missing":
+                            results.remove(results[index])
+                            counters = root.find(NS + "ResultSummary/" + NS + "Counters")
+                            for field in ("total", "executed", "passed"):
+                                counters.set(field, "49")
+                        elif mutation in ("failed", "not-executed"):
+                            results[index].set("outcome", "Failed" if mutation == "failed" else "NotExecuted")
+                        elif mutation == "duplicate":
+                            results[index].set("testName", next(name for name in identities if name != required))
+                        else:
+                            results[index].set("testName", required.replace(f'{mutation}: "', f'{mutation}: "wrong-'))
+                        with self.assertRaises(SystemExit):
+                            validate(root)
 
     def test_each_1600_sidebar_identity_rejects_missing_duplicate_foreign_and_nonpassed_rows(self):
         with tempfile.TemporaryDirectory() as temp:
