@@ -542,7 +542,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             {
                 var source = await previewInterop.InvokeAsync<string?>("getLocalThumbnail", thumbnailKey);
                 if (!disposed && incompletePreviewKey == thumbnailKey
-                    && source is { Length: <= 262144 } && source.StartsWith("data:image/png;base64,", StringComparison.Ordinal))
+                    && source is { Length: <= 262144 } && source.StartsWith("data:image/webp;base64,", StringComparison.Ordinal))
                 {
                     localPreviewThumbnails[thumbnailKey] = source;
                     await InvokeAsync(StateHasChanged);
@@ -1426,7 +1426,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                         var source = await interop.InvokeAsync<string?>("captureFailedThumbnail", key, previewCanvas);
                         if (!disposed && previewKeys.GetValueOrDefault(localId) == key
                             && Uploads.Any(item => item.LocalId == localId && item.Status is InstantQuotationWorkflowUploadStatus.Error)
-                            && source is { Length: <= 262144 } && source.StartsWith("data:image/png;base64,", StringComparison.Ordinal))
+                            && source is { Length: <= 262144 } && source.StartsWith("data:image/webp;base64,", StringComparison.Ordinal))
                             localPreviewThumbnails[key] = source;
                     }
                     catch (JSException) { /* Preserve the controlled upload failure if rendering is unavailable. */ }

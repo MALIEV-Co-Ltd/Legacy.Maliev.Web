@@ -131,7 +131,7 @@ test('review snapshot renders the requested part and restores the active part', 
   viewer.addPart('b', disposableObject());
   viewer.select('a');
 
-  assert.equal(viewer.snapshot('b'), 'data:image/png;base64,preview');
+  assert.equal(viewer.snapshot('b'), 'data:image/webp;base64,preview');
   assert.equal(adapter.snapshots, 1);
   viewer.setColor('#123456');
   assert.equal(adapter.colors.length, 1);
@@ -509,20 +509,20 @@ test('production capture renders white then restores the exact live background a
       renders.push(actualScene.background.getHex());
     },
   };
-  for (const image of ['data:image/png;base64,preview', 'data:,']) {
+  for (const image of ['data:image/webp;base64,preview', 'data:,', 'data:image/png;base64,fallback']) {
     const canvas = {
       toDataURL(type) {
-        assert.equal(type, 'image/png');
+        assert.equal(type, 'image/webp');
         assert.equal(scene.background.getHex(), 0xffffff);
         return image;
       },
     };
     assert.equal(viewerModule.capturePreviewSnapshot({ scene, camera, renderer, canvas }),
-      image === 'data:,' ? null : image);
+      image.startsWith('data:image/webp;base64,') ? image : null);
     assert.equal(scene.background, liveBackground);
     assert.deepEqual(camera.position.toArray(), [12, 23, 34]);
   }
-  assert.deepEqual(renders, [0xffffff, 0xf7f9fc, 0xffffff, 0xf7f9fc]);
+  assert.deepEqual(renders, [0xffffff, 0xf7f9fc, 0xffffff, 0xf7f9fc, 0xffffff, 0xf7f9fc]);
 });
 
 test('bounded failed-preview capture scales the white thumbnail and restores the live scene', () => {
@@ -536,9 +536,9 @@ test('bounded failed-preview capture scales the white thumbnail and restores the
       return { drawImage(...args) { draws.push(args); } };
     },
     toDataURL(type) {
-      assert.equal(type, 'image/png');
+      assert.equal(type, 'image/webp');
       assert.equal(scene.background.getHex(), 0xffffff);
-      return 'data:image/png;base64,bounded';
+      return 'data:image/webp;base64,bounded';
     },
   };
   const canvas = { width: 1200, height: 600, ownerDocument: {
@@ -548,7 +548,7 @@ test('bounded failed-preview capture scales the white thumbnail and restores the
     scene, camera: new PerspectiveCamera(), canvas, maximumDimension: 192,
     renderer: { render() { renders.push(scene.background.getHex()); } },
   });
-  assert.equal(result, 'data:image/png;base64,bounded');
+  assert.equal(result, 'data:image/webp;base64,bounded');
   assert.equal(thumbnail.width, 192);
   assert.equal(thumbnail.height, 96);
   assert.deepEqual(draws, [[canvas, 0, 0, 192, 96]]);
@@ -650,7 +650,7 @@ function createAdapter() {
     reset() { this.resets += 1; },
     fit() { this.fits += 1; },
     fullscreen() { this.fullscreens += 1; },
-    snapshot() { this.snapshots += 1; return 'data:image/png;base64,preview'; },
+    snapshot() { this.snapshots += 1; return 'data:image/webp;base64,preview'; },
     setColor(value) { this.colors.push(value); },
     setBodyColors(_object, values) { this.bodyColors = values; },
     disposeControls() { this.controlsDisposed += 1; },

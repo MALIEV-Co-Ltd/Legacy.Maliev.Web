@@ -931,7 +931,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 """
                 () => {
                     const images = [...document.querySelectorAll('[data-workflow-review-part] [data-review-thumbnail]')];
-                    return images.length === 9 && images.every(image => image.getAttribute('src')?.startsWith('data:image/png'));
+                    return images.length === 9 && images.every(image => image.getAttribute('src')?.startsWith('data:image/webp'));
                 }
                 """,
                 null,
@@ -956,7 +956,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             var preliminaryPreviews = await preview.Locator(".iq-preliminary-quotation-thumbnail")
                 .EvaluateAllAsync<string[]>("images => images.map(image => image.getAttribute('src'))");
             Assert.Equal(9, preliminaryPreviews.Length);
-            Assert.All(preliminaryPreviews, source => Assert.StartsWith("data:image/png", source, StringComparison.Ordinal));
+            Assert.All(preliminaryPreviews, source => Assert.StartsWith("data:image/webp", source, StringComparison.Ordinal));
             Assert.Equal(9, preliminaryPreviews.Distinct(StringComparer.Ordinal).Count());
             Assert.True(await preview.Locator(".iq-preliminary-quotation-thumbnail").EvaluateAllAsync<bool>("""
                 images => images.length === 9 && images.every(image => {
@@ -1907,7 +1907,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                     """
                     count => {
                         const images = [...document.querySelectorAll('[data-workflow-review-part] [data-review-thumbnail]')];
-                        return images.length === count && images.every(image => image.getAttribute('src')?.startsWith('data:image/png'));
+                        return images.length === count && images.every(image => image.getAttribute('src')?.startsWith('data:image/webp'));
                     }
                     """, partCount, new PageWaitForFunctionOptions { Timeout = 90000 });
                 failureEvidence.AwaitBoundary("review", true);
@@ -1919,19 +1919,19 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                       const images = [...document.querySelectorAll('[data-workflow-review-part] [data-review-thumbnail]')];
                       const workflow = document.querySelector('.instant-quote__workflow')?.dataset.workflowState;
                       const reviewParts = document.querySelectorAll('[data-workflow-review-part]').length;
-                      const png = image => image.getAttribute('src')?.startsWith('data:image/png') === true;
+                      const webp = image => image.getAttribute('src')?.startsWith('data:image/webp') === true;
                       const placeholder = image => image.getAttribute('src') === '/src/images/3d-canvas-placeholder.svg';
-                      const pngReady = images.filter(png).length;
+                      const webpReady = images.filter(webp).length;
                       return JSON.stringify({
                         workflow:['empty','uploading','uploaded','error','multipart','configured','review','customerdetails','submitted'].includes(workflow) ? workflow : 'unavailable',
                         expectedThumbnails:Math.min(expected,32),
                         reviewParts:Math.min(reviewParts,32),
                         actualThumbnails:Math.min(images.length,32),
-                        pngReadyThumbnails:Math.min(pngReady,32),
+                        webpReadyThumbnails:Math.min(webpReady,32),
                         reviewImages:Math.min(images.length,32),
-                        reviewPngImages:Math.min(pngReady,32),
+                        reviewWebpImages:Math.min(webpReady,32),
                         reviewPlaceholderImages:Math.min(images.filter(placeholder).length,32),
-                        reviewOtherImages:Math.min(images.filter(image => !png(image) && !placeholder(image)).length,32),
+                        reviewOtherImages:Math.min(images.filter(image => !webp(image) && !placeholder(image)).length,32),
                         reviewCountsCapped:expected > 32 || reviewParts > 32 || images.length > 32,
                         errorVisible:document.querySelector('#blazor-error-ui')?.style.display === 'block'
                       });
@@ -1954,7 +1954,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 """
                 images => images.every(image => {
                     const bounds = image.getBoundingClientRect();
-                    return image.getAttribute('src')?.startsWith('data:image/png')
+                    return image.getAttribute('src')?.startsWith('data:image/webp')
                         && bounds.width >= 150 && bounds.height >= 150 && getComputedStyle(image).objectFit === 'contain';
                 })
                 """));
@@ -3238,9 +3238,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30_000 });
         var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
         if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
-        await page.WaitForFunctionAsync(
-            "() => document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId !== undefined",
-            null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        await WaitForUploadInputReadyAsync(page);
 
         // Two disconnected, individually closed shells: actual mesh analysis owns BodyCount.
         var shell = WallThicknessParityBrowserFixture.Box(5);
@@ -3367,7 +3365,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             () => {
               const images = [...document.querySelectorAll('[data-workflow-thumbnail]')];
               return images.length === 2 && images.every(image => image.complete && image.naturalWidth > 0
-                && image.src.startsWith('data:image/png'));
+                && image.src.startsWith('data:image/webp'));
             }
             """,
             null, new PageWaitForFunctionOptions { Timeout = 30_000 });
@@ -3398,8 +3396,20 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             "id => document.querySelector('[data-workflow-review-part][data-review-part-id=\"' + id + '\"]')?.dataset.selected === 'true'",
             singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 30_000 });
         await page.WaitForFunctionAsync(
-            "() => [...document.querySelectorAll('[data-review-thumbnail]')].length === 2 && [...document.querySelectorAll('[data-review-thumbnail]')].every(image => image.complete && image.naturalWidth > 0 && image.src.startsWith('data:image/png'))",
+            "() => [...document.querySelectorAll('[data-review-thumbnail]')].length === 2 && [...document.querySelectorAll('[data-review-thumbnail]')].every(image => image.complete && image.naturalWidth > 0 && image.src.startsWith('data:image/webp'))",
             null, new PageWaitForFunctionOptions { Timeout = 30_000 });
+        foreach (var width in new[] { 390, 768, 1280 })
+        {
+            await page.SetViewportSizeAsync(width, 900);
+            Assert.True(await page.Locator("[data-workflow-review-part]").EvaluateAllAsync<bool>(
+                """
+                cards => cards.length === 2 && cards.every(card => {
+                  const prices = card.querySelector('.instant-quote__review-prices');
+                  return prices.getBoundingClientRect().width >= card.getBoundingClientRect().width * 0.8
+                    && [...prices.querySelectorAll('dt, dd')].every(value => value.scrollWidth <= value.clientWidth);
+                })
+                """), "Both review prices must use the card row and display their complete labels and amounts.");
+        }
         var beforeSingle = await singleReview.Locator("[data-review-thumbnail]").GetAttributeAsync("src");
         var beforeMulti = await multiReview.Locator("[data-review-thumbnail]").GetAttributeAsync("src");
         // Two native changes may overlap server repricing; the visible result must use the final accepted configuration.
@@ -3428,7 +3438,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             async id => {
               const article = document.querySelector('[data-workflow-review-part][data-review-part-id="' + id + '"]');
               const thumbnail = article?.querySelector('[data-review-thumbnail]');
-              if (!thumbnail?.src.startsWith('data:image/png') || document.querySelector('[data-pricing-loading-status]')) return false;
+              if (!thumbnail?.src.startsWith('data:image/webp') || document.querySelector('[data-pricing-loading-status]')) return false;
               const image = new Image();
               image.src = thumbnail.src;
               await image.decode();
@@ -3457,7 +3467,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         Assert.Equal(2, upload.VerifiedUploads);
         Assert.Equal(0, upload.ValidationRejectedUploads);
 
-        // Browser model bytes live only until reload. Verify real PNG/pixel behavior above,
+        // Browser model bytes live only until reload. Verify real WebP/pixel behavior above,
         // then verify protected configuration restoration without inventing durable mesh fetch.
         var screenshotDirectory = Path.Combine(AppContext.BaseDirectory, "TestResults", "source-integration-browser");
         Directory.CreateDirectory(screenshotDirectory);
@@ -3474,6 +3484,18 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         Assert.Equal("2", await page.Locator($"#quantity-{singleId}").InputValueAsync());
         Assert.Equal(1, await custom.CountAsync());
         Assert.Equal("PLA 2×", (await singleStrip.Locator("[data-workflow-summary-configuration]").InnerTextAsync()).Trim());
+        await page.WaitForFunctionAsync(
+            """
+            ([id, label]) => {
+              const configured = [...document.querySelectorAll('[data-workflow-part-price] > div')]
+                .find(row => row.querySelector('dt')?.textContent?.trim() === label)
+                ?.querySelector('dd')?.textContent?.trim();
+              const summary = document.querySelector('[data-workflow-part][data-part-id="' + id + '"] [data-workflow-summary-unit-price]')
+                ?.textContent?.trim();
+              return configured && summary && configured !== '—' && summary !== '—' && configured === summary;
+            }
+            """,
+            new[] { singleId.ToString(), unitPriceLabel }, new PageWaitForFunctionOptions { Timeout = 30_000 });
         Assert.Equal(await configuredUnitPrice.InnerTextAsync(),
             await singleStrip.Locator("[data-workflow-summary-unit-price]").InnerTextAsync());
         await multiStrip.Locator("button[aria-pressed]").ClickAsync();

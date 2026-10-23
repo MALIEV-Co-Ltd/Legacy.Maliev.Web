@@ -600,8 +600,8 @@ export function capturePreviewSnapshot({ scene, camera, renderer, canvas, maximu
       if (!context) throw new Error('Thumbnail rendering is unavailable.');
       context.drawImage(canvas, 0, 0, capture.width, capture.height);
     }
-    const image = capture.toDataURL('image/png');
-    return image === 'data:,' ? null : image;
+    const image = capture.toDataURL('image/webp');
+    return image.startsWith('data:image/webp;base64,') ? image : null;
   } catch (error) {
     failed = true;
     primary = error;

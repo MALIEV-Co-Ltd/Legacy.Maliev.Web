@@ -571,7 +571,7 @@ export function createWorkflowPreviewInterop({
       attached = true;
       guardModelDisposal(object, guardedResources, viewerDisposedResources);
       const source = viewer.snapshot?.(key, 192);
-      return typeof source === 'string' && source.startsWith('data:image/png;base64,')
+      return typeof source === 'string' && source.startsWith('data:image/webp;base64,')
         && source.length <= 262144 ? source : null;
     } catch {
       return null; // Thumbnail/WebGL failure must not replace the actual upload failure.
@@ -592,7 +592,7 @@ export function createWorkflowPreviewInterop({
   function getLocalThumbnail(key) {
     if (disposed || incompleteEntry?.key !== key || !incompleteViewer || !isCurrent(incompleteEntry)) return null;
     const source = incompleteViewer.snapshot?.(key, 192);
-    return typeof source === 'string' && source.startsWith('data:image/png;base64,')
+    return typeof source === 'string' && source.startsWith('data:image/webp;base64,')
       && source.length <= 262144 ? source : null;
   }
 

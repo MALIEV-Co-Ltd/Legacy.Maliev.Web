@@ -32,6 +32,11 @@ internal static class AdmittedObjMeshReader
         using var reader = new StringReader(content);
         var vertices = new List<Vector3>();
         var triangles = new List<MeshTriangle>();
+        var objectGroups = new List<int>();
+        var fallbackGroups = new List<int>();
+        int objectOccurrence = 0, groupOccurrence = 0;
+        bool objectDeclared = false, groupDeclared = false;
+        bool nextObject = false, nextGroup = false;
         int textureCount = 0, normalCount = 0;
         string? line;
         while ((line = reader.ReadLine()) is not null)
@@ -141,14 +146,34 @@ internal static class AdmittedObjMeshReader
                         RequireConvexPlanarFace(face, cancellationToken);
                     }
 
+                    if (nextObject)
+                    {
+                        objectOccurrence++;
+                        nextObject = false;
+                    }
+
+                    if (nextGroup)
+                    {
+                        groupOccurrence++;
+                        nextGroup = false;
+                    }
+
                     for (int index = 1; index < count - 1; index++)
                     {
                         triangles.Add(new(face[0], face[index], face[index + 1]));
+                        objectGroups.Add(objectOccurrence);
+                        fallbackGroups.Add(groupOccurrence);
                     }
 
                     break;
                 case "o":
+                    objectDeclared = true;
+                    nextObject = objectGroups.Count > 0;
+                    break;
                 case "g":
+                    groupDeclared = true;
+                    nextGroup = fallbackGroups.Count > 0;
+                    break;
                 case "s":
                 case "mtllib":
                 case "usemtl":
@@ -164,7 +189,61 @@ internal static class AdmittedObjMeshReader
             throw new FormatException("The OBJ contains no polygonal surface.");
         }
 
-        return new MeshInput(triangles, 1, Matrix4x4.Identity);
+        // Explicit objects own their group subdivisions, including inner cavity shells.
+        // Group-only exports use declaration occurrences, not labels or one copy per label.
+        // Undeclared geometry retains its original even-odd interpretation.
+        List<int>? groups = objectDeclared ? objectGroups : groupDeclared ? fallbackGroups : null;
+        if (groups is not null)
+        {
+            if (groups[^1] >= 256)
+            {
+                throw new FormatException("The OBJ exceeds the physical analysis object budget.");
+            }
+
+            NormalizeBodyWinding(triangles, groups, cancellationToken);
+        }
+
+        return new MeshInput(triangles, 1, Matrix4x4.Identity) { PositiveFillGroups = groups?.ToArray() };
+    }
+
+    private static void NormalizeBodyWinding(List<MeshTriangle> triangles, List<int> groups, CancellationToken cancellationToken)
+    {
+        int first = 0;
+        while (first < triangles.Count)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            int end = first + 1;
+            while (end < triangles.Count && groups[end] == groups[first])
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                end++;
+            }
+            Vector3 origin = triangles[first].A;
+            double volume = 0;
+            for (int index = first; index < end; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var triangle = triangles[index];
+                double ax = (double)triangle.A.X - origin.X, ay = (double)triangle.A.Y - origin.Y, az = (double)triangle.A.Z - origin.Z;
+                double bx = (double)triangle.B.X - origin.X, by = (double)triangle.B.Y - origin.Y, bz = (double)triangle.B.Z - origin.Z;
+                double cx = (double)triangle.C.X - origin.X, cy = (double)triangle.C.Y - origin.Y, cz = (double)triangle.C.Z - origin.Z;
+                volume += ax * (by * cz - bz * cy) + ay * (bz * cx - bx * cz) + az * (bx * cy - by * cx);
+            }
+
+            // Reverse the entire occurrence together, retaining relative cavity orientation.
+            // Existing downstream topology checks still reject open or inconsistent surfaces.
+            if (volume < 0)
+            {
+                for (int index = first; index < end; index++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var triangle = triangles[index];
+                    triangles[index] = new(triangle.A, triangle.C, triangle.B);
+                }
+            }
+
+            first = end;
+        }
     }
 
     private static float Coordinate(string value) =>

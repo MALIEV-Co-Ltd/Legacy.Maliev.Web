@@ -54,7 +54,7 @@ function harness(
     snapshot: id => {
       calls.push(['snapshot', id]);
       if (id === 'missing') throw new RangeError('Unknown viewer part.');
-      return `data:image/png;base64,${id}`;
+      return `data:image/webp;base64,${id}`;
     },
     dispose: () => calls.push(['dispose']),
   };
@@ -172,7 +172,7 @@ test('review thumbnails use admitted browser previews and preserve fallback when
   const root = { querySelectorAll: () => [admitted, unavailable] };
 
   assert.equal(interop.renderReviewThumbnails(root), 1);
-  assert.equal(admitted.src, 'data:image/png;base64,part-a');
+  assert.equal(admitted.src, 'data:image/webp;base64,part-a');
   assert.equal(unavailable.src, '/fallback.svg');
   assert.deepEqual(calls.filter(call => call[0] === 'snapshot'), [
     ['snapshot', 'part-a'],
@@ -190,7 +190,7 @@ test('part appearance updates select the requested part, apply a canonical previ
   interop.admit(firstKey, 'part-a');
   interop.admit(secondKey, 'part-b');
 
-  assert.equal(interop.updatePartAppearance('part-b', 'Blue'), 'data:image/png;base64,part-b');
+  assert.equal(interop.updatePartAppearance('part-b', 'Blue'), 'data:image/webp;base64,part-b');
   assert.deepEqual(calls.slice(-3), [
     ['select', 'part-b'],
     ['color', '#2563eb'],
@@ -773,7 +773,7 @@ test('a retained local failure thumbnail and selection never create an admitted 
       return {
         addPart: key => calls.push(['add', owner, key]),
         select: key => calls.push(['select', owner, key]),
-        snapshot: key => { calls.push(['snapshot', owner, key]); return 'data:image/png;base64,aW1hZ2U='; },
+        snapshot: key => { calls.push(['snapshot', owner, key]); return 'data:image/webp;base64,aW1hZ2U='; },
         reset: () => calls.push(['reset', owner]),
         fit: () => calls.push(['fit', owner]),
         fullscreen: () => calls.push(['fullscreen', owner]),
@@ -788,7 +788,7 @@ test('a retained local failure thumbnail and selection never create an admitted 
     interop.attach({});
     assert.equal(interop.getLocalThumbnail(key), null);
     assert.equal(interop.retainIncompletePreview(key, {}), true);
-    assert.equal(interop.getLocalThumbnail(key), 'data:image/png;base64,aW1hZ2U=');
+    assert.equal(interop.getLocalThumbnail(key), 'data:image/webp;base64,aW1hZ2U=');
     assert.equal(interop.admit(key, 'invented-part'), false);
     assert.equal(interop.select('invented-part'), false);
     assert.equal(interop.selectLocalPreview(key), true);
@@ -828,7 +828,7 @@ test('a failed renderable local preview snapshots at bounded size and restores t
     show: object => shown.push(object), hide() {}, fit() {}, snapshot: maximum => {
       dimensions.push(maximum);
       if (losesContext) throw new Error('synthetic context loss');
-      return 'data:image/png;base64,aW1hZ2U=';
+      return 'data:image/webp;base64,aW1hZ2U=';
     },
   } });
   const interop = createWorkflowPreviewInterop({
@@ -842,7 +842,7 @@ test('a failed renderable local preview snapshots at bounded size and restores t
     const keys = interop.beginSelection({ files: [modelFile('good.stl'), modelFile('bad.stl'), modelFile('lost.stl')] });
     await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
     interop.admit(keys[0], 'healthy');
-    assert.equal(interop.captureFailedThumbnail(keys[1]), 'data:image/png;base64,aW1hZ2U=');
+    assert.equal(interop.captureFailedThumbnail(keys[1]), 'data:image/webp;base64,aW1hZ2U=');
     assert.deepEqual(dimensions, [192]);
     assert.equal(shown.at(-1), objects.get('good.stl'));
     assert.equal(objects.get('good.stl').disposed, false);
@@ -900,7 +900,7 @@ test('bounded snapshots validate their size before changing the viewer selection
   const sizes = [], shown = [];
   const viewer = createModelViewer({ adapter: {
     show: object => shown.push(object), hide() {}, fit() {},
-    snapshot: size => { sizes.push(size); return 'data:image/png;base64,aW1hZ2U='; },
+    snapshot: size => { sizes.push(size); return 'data:image/webp;base64,aW1hZ2U='; },
   } });
   const good = disposableObject(), other = disposableObject();
   try {
@@ -1120,7 +1120,7 @@ test('a selected unready local file never displays another admitted mesh and pre
     show: object => visible.add(object), hide: object => visible.delete(object), fit() {},
     getCameraState: () => structuredClone(camera),
     setCameraState: value => { camera = structuredClone(value); },
-    snapshot: () => 'data:image/png;base64,aW1hZ2U=',
+    snapshot: () => 'data:image/webp;base64,aW1hZ2U=',
   } });
   const interop = createWorkflowPreviewInterop({
     loadModel: file => file.name === 'last.glb' ? held.promise : Promise.resolve(file.name === 'first.glb' ? first : middle),

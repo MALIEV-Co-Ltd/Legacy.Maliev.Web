@@ -1338,6 +1338,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 }
 
 .instant-quote__workflow [data-workflow-review-part] dl.instant-quote__review-prices {
+    grid-column: 1 / -1;
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
