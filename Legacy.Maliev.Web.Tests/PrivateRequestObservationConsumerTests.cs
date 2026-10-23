@@ -19,6 +19,7 @@ using Microsoft.Extensions.Logging;
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Actual Web Program with fixture-owned peers, clock, health check and Razor failure filter.</summary>
+[Collection("Shared diagnostics output")]
 public sealed class PrivateRequestObservationConsumerTests
 {
     private const string Diagnostic = "/internal/diagnostics/observability";
@@ -131,6 +132,7 @@ public sealed class PrivateRequestObservationConsumerTests
     public async Task ActualProgram_OrdinaryRazorThrowReexecutesErrorWithExactlyOneSanitizedWebIncident(
         string culture, string method, bool staticSsrError, string applicationError, string incidentInstruction, string previewLabel)
     {
+        using var console = new CapturedConsoleOutput();
         using var factory = new ObservationFactory("127.0.0.1", ordinaryFailure: true,
             failureMethod: method, staticSsrError: staticSsrError);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
@@ -140,6 +142,9 @@ public sealed class PrivateRequestObservationConsumerTests
         });
         using var request = new HttpRequestMessage(new HttpMethod(method),
             "/contact?handler=SubmitRequest&token=" + Sensitive + "&culture=" + culture);
+        const string traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+        const string parentSpanId = "00f067aa0ba902b7";
+        request.Headers.Add("traceparent", $"00-{traceId}-{parentSpanId}-01");
         if (method == "POST")
         {
             var bootstrap = await client.GetStringAsync("/?culture=" + culture);
@@ -194,6 +199,29 @@ public sealed class PrivateRequestObservationConsumerTests
         Assert.False(response.Headers.Contains("X-Maliev-Health-Instance"));
         Assert.False(response.Headers.Contains("X-Maliev-Diagnostic-Id"));
         AssertPrivate(factory.Records.Snapshot);
+
+        // Disposing the actual host drains its console logger before inspecting the wire output.
+        factory.Dispose();
+        var wire = Assert.Single(console.Text
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(line =>
+            {
+                using var entry = JsonDocument.Parse(line);
+                return entry.RootElement.Clone();
+            }), entry => entry.GetProperty("Category").GetString() == webIncident.Category
+                && entry.GetProperty("State").GetProperty("EventName").GetString() == "UnhandledRequestFailure");
+        Assert.Equal("CRITICAL", wire.GetProperty("severity").GetString());
+        Assert.Equal(incident, wire.GetProperty("State").GetProperty("IncidentId").GetString());
+        Assert.Equal(webIncident.Fields["OccurredAtUtc"], wire.GetProperty("State").GetProperty("OccurredAtUtc").GetString());
+        var activityScope = Assert.Single(wire.GetProperty("Scopes").EnumerateArray(), scope =>
+            scope.ValueKind == JsonValueKind.Object && scope.TryGetProperty("TraceId", out _));
+        Assert.Equal(traceId, activityScope.GetProperty("TraceId").GetString());
+        Assert.Equal(parentSpanId, activityScope.GetProperty("ParentId").GetString());
+        var spanId = activityScope.GetProperty("SpanId").GetString();
+        Assert.Matches("^[a-f0-9]{16}$", spanId);
+        Assert.NotEqual(parentSpanId, spanId);
+        Assert.NotEqual(traceId, incident);
+        Assert.DoesNotContain(Sensitive, console.Text, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -297,6 +325,21 @@ public sealed class PrivateRequestObservationConsumerTests
 
     private static void AssertPrivate(Record[] records) => Assert.DoesNotContain(Sensitive,
         JsonSerializer.Serialize(records), StringComparison.Ordinal);
+
+    private sealed class CapturedConsoleOutput : IDisposable
+    {
+        private readonly TextWriter original = Console.Out;
+        private readonly StringWriter output = new(CultureInfo.InvariantCulture);
+
+        public CapturedConsoleOutput() => Console.SetOut(output);
+        public string Text => output.ToString();
+
+        public void Dispose()
+        {
+            Console.SetOut(original);
+            output.Dispose();
+        }
+    }
 
     private sealed class ObservationFactory(string? peer, bool overwriteSynthetic = false,
         bool overwriteHealth = false, bool ordinaryFailure = false, bool handledFailure = false,
