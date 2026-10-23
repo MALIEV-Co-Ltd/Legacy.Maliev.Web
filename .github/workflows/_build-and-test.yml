@@ -122,6 +122,17 @@ jobs:
             --logger 'trx;LogFileName=quantity-input.trx' \
             --results-directory ./quantity-input-test-results
           python3 -B -c 'import xml.etree.ElementTree as E; r=E.parse("quantity-input-test-results/quantity-input.trx").getroot(); c=r.find(".//{*}Counters"); assert c is not None and all(c.get(k)==v for k,v in {"total":"8","executed":"8","passed":"8","failed":"0","notExecuted":"0"}.items()), "All eight quantity input and stale completion controls must pass"'
+      - name: Verify source skin influence parity and retained default poses
+        timeout-minutes: 5
+        run: |
+          test ! -e skin-influence-test-results
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj \
+            --configuration Release --no-build --no-restore \
+            -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath= \
+            --filter 'FullyQualifiedName~Legacy.Maliev.Web.Tests.InstantQuotationSkinInfluenceParityTests|FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationGltfUnitPolicyTests.RenderedDefaultPose_MatchesTrustedScaledBoundsAndRawVolume' \
+            --logger 'trx;LogFileName=skin-influences.trx' \
+            --results-directory ./skin-influence-test-results
+          python3 -B -c 'import xml.etree.ElementTree as E; r=E.parse("skin-influence-test-results/skin-influences.trx").getroot(); c=r.find(".//{*}Counters"); assert c is not None and all(c.get(k)==v for k,v in {"total":"50","executed":"50","passed":"50","failed":"0","notExecuted":"0"}.items()), "All fifty source skin influence and retained pose controls must pass"'
       - name: Verify rounded-body contour budgets and adversarial refusal controls
         timeout-minutes: 5
         run: |
@@ -543,6 +554,7 @@ jobs:
             material-color-switch-test-results/
             preview-initialization-test-results/**/*.trx
             quantity-input-test-results/**/*.trx
+            skin-influence-test-results/**/*.trx
             contour-budget-test-results/**/*.trx
             Legacy.Maliev.Web/wwwroot/dist/site.min.css
             Legacy.Maliev.Web/wwwroot/dist/route-service-toc.js
