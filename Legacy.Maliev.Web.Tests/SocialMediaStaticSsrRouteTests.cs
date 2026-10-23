@@ -108,6 +108,23 @@ public sealed class SocialMediaStaticSsrRouteTests : IClassFixture<TestingWebApp
             }
         }
 
+        // Source 3879b78 resolves the temporary LINE incident, not the contact channels.
+        Assert.DoesNotContain("maliev-service-notice", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Our LINE Official Account has been compromised", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("บัญชี LINE Official Account ของเราถูกเข้าถึงโดยไม่ได้รับอนุญาต", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("check the site notice", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("โปรดตรวจสอบประกาศบนเว็บไซต์", source, StringComparison.Ordinal);
+        var lineAriaLabel = culture == "th" ? "ติดต่อ MALIEV ผ่าน LINE Official Account" : "Contact MALIEV through LINE Official Account";
+        var messengerAriaLabel = culture == "th" ? "ติดต่อ MALIEV ผ่าน Messenger" : "Contact MALIEV through Messenger";
+        var whatsappAriaLabel = culture == "th" ? "ติดต่อ MALIEV ผ่าน WhatsApp" : "Contact MALIEV through WhatsApp";
+        var lineDescription = culture == "th"
+            ? "แชตกับทีมงานผ่าน LINE Official Account"
+            : "Chat with our team through LINE Official Account";
+        Assert.Contains($">{lineDescription}<", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"https://line.me/ti/p/@maliev\" target=\"_blank\" rel=\"noopener\" aria-label=\"{lineAriaLabel}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"https://m.me/maliev.manufacturing/\" target=\"_blank\" rel=\"noopener noreferrer\" aria-label=\"{messengerAriaLabel}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"https://wa.me/66898950690\" target=\"_blank\" rel=\"noopener\" aria-label=\"{whatsappAriaLabel}\"", source, StringComparison.Ordinal);
+
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-footer\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-cookie-consent\"", source, StringComparison.Ordinal);
