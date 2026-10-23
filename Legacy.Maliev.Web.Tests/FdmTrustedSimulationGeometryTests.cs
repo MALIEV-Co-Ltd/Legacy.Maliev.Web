@@ -105,8 +105,8 @@ public sealed class FdmSimulationGeometryTests
 
     /// <summary>Charges extracted and both emitted contour generations, never their Boolean estimate.</summary>
     [Theory]
-    [InlineData(799)]
-    [InlineData(800)]
+    [InlineData(1199)]
+    [InlineData(1200)]
     public void Build_GroupedOutput_ConsumesExactGeneratedPathAllowance(int maximum)
     {
         IReadOnlyList<MeshTriangle> triangles = Box(Vector3.Zero, new Vector3(10));
@@ -114,18 +114,21 @@ public sealed class FdmSimulationGeometryTests
         {
             PositiveFillGroups = new int[triangles.Count],
         }, Tolerance);
-        if (maximum == 799)
+        if (maximum == 1199)
         {
             Assert.Equal("path_segment_budget_exceeded", Assert.Throws<SimulationGeometryException>(() =>
                 LayerContourBuilder.Build(mesh, IdentityPose(), Profile(0.2), Budget(segments: maximum))).ReasonCode);
             return;
         }
 
+        // Clipper preserves collinear vertices: each layer charges eight extracted edges,
+        // eight group-union vertices and eight final-union vertices (50 * 24 = 1200).
         var layers = LayerContourBuilder.Build(mesh, IdentityPose(), Profile(0.2), Budget(segments: maximum));
         Assert.Equal(50, layers.Count);
         Assert.All(layers, layer =>
         {
-            Assert.Single(layer.Rings);
+            var ring = Assert.Single(layer.Rings);
+            Assert.Equal(8, ring.Points.Count);
             Assert.Equal(100, NetArea(layer), 3);
         });
     }
