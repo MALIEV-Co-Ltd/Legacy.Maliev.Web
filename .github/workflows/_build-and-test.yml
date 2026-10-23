@@ -118,10 +118,10 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj \
             --configuration Release --no-build --no-restore \
             -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath= \
-            --filter 'FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationResinPresentationTests.Workflow_QuantityInputReturningToAcceptedValueKeepsReviewAvailableWithoutChangeEvent|FullyQualifiedName~Legacy.Maliev.Web.Tests.InstantQuotationQuantityEditStateTests|FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationResinPresentationTests.Workflow_MatchingQuantityInputDoesNotAcceptAnInFlightConfiguration' \
+            --filter 'FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationResinPresentationTests.Workflow_QuantityInputReturningToAcceptedValueKeepsReviewAvailableWithoutChangeEvent|FullyQualifiedName~Legacy.Maliev.Web.Tests.InstantQuotationQuantityEditStateTests|FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationResinPresentationTests.Workflow_MatchingQuantityInputDoesNotAcceptAnInFlightConfiguration|FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationResinPresentationTests.Workflow_QuantityBlurAcknowledgesOnlyTheLatestUnclaimedDraft' \
             --logger 'trx;LogFileName=quantity-input.trx' \
             --results-directory ./quantity-input-test-results
-          python3 -B -c 'import xml.etree.ElementTree as E; r=E.parse("quantity-input-test-results/quantity-input.trx").getroot(); c=r.find(".//{*}Counters"); assert c is not None and all(c.get(k)==v for k,v in {"total":"8","executed":"8","passed":"8","failed":"0","notExecuted":"0"}.items()), "All eight quantity input and stale completion controls must pass"'
+          python3 -B -c 'import xml.etree.ElementTree as E; r=E.parse("quantity-input-test-results/quantity-input.trx").getroot(); c=r.find(".//{*}Counters"); assert c is not None and all(c.get(k)==v for k,v in {"total":"12","executed":"12","passed":"12","failed":"0","notExecuted":"0"}.items()), "All twelve quantity input, blur and stale completion controls must pass"'
       - name: Verify source skin influence parity and retained default poses
         timeout-minutes: 5
         run: |
