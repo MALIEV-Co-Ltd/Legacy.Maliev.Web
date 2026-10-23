@@ -218,6 +218,73 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
         Assert.Empty(model.QueuedEventScript);
     }
 
+    /// <summary>The shared model discloses only consented authenticated identity, independently of browser-supplied identifiers.</summary>
+    /// <param name="consent">Whether the server tracking feature grants consent.</param>
+    /// <param name="authenticated">Whether the server principal is authenticated.</param>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void SharedModel_IdentityRequiresServerAuthenticationAndConsent(bool consent, bool authenticated)
+    {
+        var context = new DefaultHttpContext();
+        context.Features.Set<Microsoft.AspNetCore.Http.Features.ITrackingConsentFeature>(new ConsentFeature(consent));
+        context.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+            [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "customer:1"),
+             new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Email, "private@example.test")],
+            authenticated ? "test" : null));
+        context.Request.Headers["X-Customer-Id"] = "customer:999";
+        context.Request.QueryString = new QueryString("?user_id=browser-owned&access_token=never-emitted");
+        var model = PublicGoogleTagManagerDisplayModel.Create(
+            context, new TempDataDictionaryFactory(new PreloadedTempDataProvider(new Dictionary<string, object>())));
+
+        Assert.Equal(consent, model.CanTrack);
+        Assert.Equal(consent ? "granted" : "denied", model.ConsentState);
+        if (consent && authenticated)
+        {
+            using var document = JsonDocument.Parse(model.UserIdConfigurationJson);
+            var property = Assert.Single(document.RootElement.EnumerateObject());
+            Assert.Equal("user_id", property.Name);
+            Assert.Equal("customer:1", property.Value.GetString());
+        }
+        else
+        {
+            Assert.Empty(model.UserIdConfigurationJson);
+        }
+
+        Assert.DoesNotContain("private@example.test", model.UserIdConfigurationJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("customer:999", model.UserIdConfigurationJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("browser-owned", model.UserIdConfigurationJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("never-emitted", model.UserIdConfigurationJson, StringComparison.Ordinal);
+    }
+
+    /// <summary>Missing tracking features never make authenticated identity eligible.</summary>
+    [Fact]
+    public void SharedModel_MissingConsentFeatureWithholdsAuthenticatedIdentity()
+    {
+        var context = new DefaultHttpContext
+        {
+            User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+                [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "customer:1")], "test")),
+        };
+        var model = PublicGoogleTagManagerDisplayModel.Create(
+            context, new TempDataDictionaryFactory(new PreloadedTempDataProvider(new Dictionary<string, object>())));
+
+        Assert.False(model.CanTrack);
+        Assert.Empty(model.UserIdConfigurationJson);
+    }
+
+    private sealed class ConsentFeature(bool granted) : Microsoft.AspNetCore.Http.Features.ITrackingConsentFeature
+    {
+        public bool IsConsentNeeded => true;
+        public bool HasConsent => granted;
+        public bool CanTrack => granted;
+        public void GrantConsent() { }
+        public void WithdrawConsent() { }
+        public string CreateConsentCookie() => string.Empty;
+    }
+
     private HttpClient CreateClient() => factory.CreateClient(new WebApplicationFactoryClientOptions
     {
         AllowAutoRedirect = false,
