@@ -7,6 +7,24 @@ public sealed class InstantQuotationWorkflowInteropTests
     private static readonly string RepositoryRoot = FindRepositoryRoot();
 
     [Fact]
+    public void IntentDiagnostics_UseActualUploadStateAndExistingTypedConsentSink()
+    {
+        var markup = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflow.razor");
+        var form = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationCustomerForm.razor");
+        var code = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflow.razor.cs");
+        var script = Read("Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "instant-quotation-submission.mjs");
+
+        Assert.Contains("HasFiles=\"@(workflow?.Uploads.Count > 0)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("workflow.Uploads.All(upload => upload.Status is InstantQuotationWorkflowUploadStatus.Uploaded)", markup, StringComparison.Ordinal);
+        Assert.Contains("Parts.Count == workflow.Uploads.Count", markup, StringComparison.Ordinal);
+        Assert.Contains("HasFiles && FileUploadCompleted", form, StringComparison.Ordinal);
+        Assert.Contains("analytics.RecordQuoteStartedAsync(analyticsWorkflowId)", code, StringComparison.Ordinal);
+        Assert.Contains("defaultView?.malievAnalytics?.emit?.(payload)", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("dataLayer", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("request_quote", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Workflow_renders_accessible_canvas_and_wired_controls()
     {
         var markup = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflow.razor");
