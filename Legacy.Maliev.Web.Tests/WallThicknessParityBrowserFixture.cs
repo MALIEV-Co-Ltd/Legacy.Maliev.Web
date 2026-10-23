@@ -73,6 +73,7 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
         using var services = new ServiceCollection().AddLogging()
             .AddLocalization(options => options.ResourcesPath = "Resources")
             .AddSingleton<IComponentActivator>(activator)
+            .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager())
             .AddSingleton<IJSRuntime, NullJsRuntime>()
             .AddSingleton<IWebHostEnvironment>(new ComponentEnvironment())
             .BuildServiceProvider();
@@ -103,6 +104,7 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
         using var services = new ServiceCollection().AddLogging()
             .AddLocalization(options => options.ResourcesPath = "Resources")
             .AddSingleton<IComponentActivator>(activator).AddSingleton<IJSRuntime, NullJsRuntime>()
+            .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager())
             .AddSingleton<IWebHostEnvironment>(new ComponentEnvironment()).BuildServiceProvider();
         await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
         return await renderer.Dispatcher.InvokeAsync(async () =>

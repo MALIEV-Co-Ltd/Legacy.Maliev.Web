@@ -130,6 +130,7 @@ internal sealed class CncOwnedResourceScope
         internal bool RejectIdentity { get; set; }
         internal bool RejectStop { get; set; }
         internal TaskCompletionSource<bool>? ReaderRelease { get; set; }
+        internal string? ExecutableIdentityForControl { get => executable; set => executable = value; }
         internal Process Process { get; } = new();
         private readonly CancellationTokenSource readerStop = new();
         private readonly SemaphoreSlim stopping = new(1);
@@ -151,9 +152,14 @@ internal sealed class CncOwnedResourceScope
             if (!Process.Start()) throw new InvalidOperationException("Owned child failed to start.");
             started = true;
             pid = Process.Id;
+            ownedHandle = Process.SafeHandle; // Retain handle before any executable observation can race natural exit.
             start = Process.StartTime.ToUniversalTime();
-            executable = Process.MainModule?.FileName ?? throw new InvalidOperationException("Executable identity unavailable.");
-            ownedHandle = Process.SafeHandle; // Retain handle through terminal observation and reader settlement.
+            // A missing executable is acceptable only after exact retained-handle terminal proof.
+            // Live or unverifiable observations still throw; CloseAsync retains unresolved custody.
+            OwnedProcessMetricObservation.TryRead(Process, ownedHandle, pid, () =>
+            {
+                executable = Process.MainModule?.FileName ?? throw new InvalidOperationException("Executable identity unavailable.");
+            });
             stdout = ReadAndSettle(Process.StandardOutput.BaseStream, true);
             stderr = ReadBounded(Process.StandardError.BaseStream, false);
             monitor = Monitor();
@@ -224,7 +230,7 @@ internal sealed class CncOwnedResourceScope
         private void VerifyIdentity()
         {
             Process.Refresh();
-            if (RejectIdentity || Process.Id != pid || Process.StartTime.ToUniversalTime() != start
+            if (RejectIdentity || string.IsNullOrEmpty(executable) || Process.Id != pid || Process.StartTime.ToUniversalTime() != start
                 || Process.MainModule?.FileName != executable)
                 throw new InvalidOperationException("Owned PID/birth/executable identity changed; preserve process.");
         }

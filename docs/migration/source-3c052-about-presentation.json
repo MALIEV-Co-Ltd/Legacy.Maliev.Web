@@ -1,0 +1,263 @@
+{
+  "schema": 1,
+  "source": {
+    "sha": "3c052083d04a46bf36a7e19695ffc5d339300c86",
+    "subject": "Present manufacturing portfolios and selected customers on About",
+    "parents": [
+      "72472c1721efc53cad01df35d0340fd74fffab76"
+    ],
+    "paths": [
+      {
+        "path": "Maliev.Web.Tests/Frontend/company-profile-capabilities.test.cjs",
+        "status": "added"
+      },
+      {
+        "path": "Maliev.Web.Tests/Frontend/company-profile-presentation.test.cjs",
+        "status": "added"
+      },
+      {
+        "path": "Maliev.Web.Tests/Frontend/company-profile-workpieces.test.cjs",
+        "status": "added"
+      },
+      {
+        "path": "Maliev.Web.Tests/RemainingApplicationPageMigrationSourceTests.cs",
+        "status": "modified"
+      },
+      {
+        "path": "Maliev.Web/Pages/About/Index.cshtml",
+        "status": "modified"
+      },
+      {
+        "path": "Maliev.Web/Pages/Shared/_AboutWorkpieceGallery.cshtml",
+        "status": "added"
+      },
+      {
+        "path": "Maliev.Web/Pages/Shared/_CorporateCustomers.cshtml",
+        "status": "added"
+      },
+      {
+        "path": "Maliev.Web/wwwroot/src/app/css/company-profile.css",
+        "status": "added"
+      },
+      {
+        "path": "Maliev.Web/wwwroot/src/app/css/corporate-customers.css",
+        "status": "added"
+      },
+      {
+        "path": "Maliev.Web/wwwroot/src/app/js/company-profile-capabilities.js",
+        "status": "added"
+      },
+      {
+        "path": "Maliev.Web/wwwroot/src/app/js/company-profile-presentation.js",
+        "status": "added"
+      },
+      {
+        "path": "Maliev.Web/wwwroot/src/app/js/company-profile-workpieces.js",
+        "status": "added"
+      },
+      {
+        "path": "Maliev.Web/wwwroot/src/images/customers/kobelco.gif",
+        "status": "added"
+      },
+      {
+        "path": "docs/superpowers/verification/2026-10-15-corporate-customer-logos.md",
+        "status": "added"
+      },
+      {
+        "path": "docs/superpowers/verification/2026-10-15-corporate-logo-audit.json",
+        "status": "added"
+      },
+      {
+        "path": "docs/superpowers/verification/2026-10-15-corporate-logo-audit.md",
+        "status": "added"
+      },
+      {
+        "path": "docs/superpowers/verification/2026-10-15-corporate-logo-sources.json",
+        "status": "added"
+      },
+      {
+        "path": "docs/superpowers/verification/2026-10-16-company-release-assets.json",
+        "status": "modified"
+      },
+      {
+        "path": "docs/superpowers/verification/2026-10-16-tpipp-white-tile.json",
+        "status": "added"
+      },
+      {
+        "path": "docs/superpowers/verification/2026-10-16-yg1-official-symbol.json",
+        "status": "added"
+      }
+    ]
+  },
+  "owner": "Legacy.Maliev.Web",
+  "issue": 598,
+  "parentPR": 608,
+  "candidateBase": "f89b1b21299fc13e14f49861716f24781c7b091e",
+  "status": "draft stacked migration; not runtime acceptance",
+  "disposition": [
+    {
+      "path": "Maliev.Web.Tests/Frontend/company-profile-capabilities.test.cjs",
+      "status": "added",
+      "disposition": "Ported/adapted shared About markup, localization, behavior or tests in this candidate"
+    },
+    {
+      "path": "Maliev.Web.Tests/Frontend/company-profile-presentation.test.cjs",
+      "status": "added",
+      "disposition": "Ported/adapted shared About markup, localization, behavior or tests in this candidate"
+    },
+    {
+      "path": "Maliev.Web.Tests/Frontend/company-profile-workpieces.test.cjs",
+      "status": "added",
+      "disposition": "Ported/adapted shared About markup, localization, behavior or tests in this candidate"
+    },
+    {
+      "path": "Maliev.Web.Tests/RemainingApplicationPageMigrationSourceTests.cs",
+      "status": "modified",
+      "disposition": "Adapted retained About contract and actual active/retained SSR/route/browser tests"
+    },
+    {
+      "path": "Maliev.Web/Pages/About/Index.cshtml",
+      "status": "modified",
+      "disposition": "Ported/adapted shared About markup, localization, behavior or tests in this candidate"
+    },
+    {
+      "path": "Maliev.Web/Pages/Shared/_AboutWorkpieceGallery.cshtml",
+      "status": "added",
+      "disposition": "Ported/adapted shared About markup, localization, behavior or tests in this candidate"
+    },
+    {
+      "path": "Maliev.Web/Pages/Shared/_CorporateCustomers.cshtml",
+      "status": "added",
+      "disposition": "Ported/adapted shared About markup, localization, behavior or tests in this candidate"
+    },
+    {
+      "path": "Maliev.Web/wwwroot/src/app/css/company-profile.css",
+      "status": "added",
+      "disposition": "Ported/adapted shared About markup, localization, behavior or tests in this candidate"
+    },
+    {
+      "path": "Maliev.Web/wwwroot/src/app/css/corporate-customers.css",
+      "status": "added",
+      "disposition": "Ported/adapted shared About markup, localization, behavior or tests in this candidate"
+    },
+    {
+      "path": "Maliev.Web/wwwroot/src/app/js/company-profile-capabilities.js",
+      "status": "added",
+      "disposition": "Ported/adapted shared About markup, localization, behavior or tests in this candidate"
+    },
+    {
+      "path": "Maliev.Web/wwwroot/src/app/js/company-profile-presentation.js",
+      "status": "added",
+      "disposition": "Ported/adapted shared About markup, localization, behavior or tests in this candidate"
+    },
+    {
+      "path": "Maliev.Web/wwwroot/src/app/js/company-profile-workpieces.js",
+      "status": "added",
+      "disposition": "Ported/adapted shared About markup, localization, behavior or tests in this candidate"
+    },
+    {
+      "path": "Maliev.Web/wwwroot/src/images/customers/kobelco.gif",
+      "status": "added",
+      "disposition": "Parent608 immutable company-asset custody/source-audit evidence; verify accepted parent before closure"
+    },
+    {
+      "path": "docs/superpowers/verification/2026-10-15-corporate-customer-logos.md",
+      "status": "added",
+      "disposition": "Parent608 immutable company-asset custody/source-audit evidence; verify accepted parent before closure"
+    },
+    {
+      "path": "docs/superpowers/verification/2026-10-15-corporate-logo-audit.json",
+      "status": "added",
+      "disposition": "Parent608 immutable company-asset custody/source-audit evidence; verify accepted parent before closure"
+    },
+    {
+      "path": "docs/superpowers/verification/2026-10-15-corporate-logo-audit.md",
+      "status": "added",
+      "disposition": "Parent608 immutable company-asset custody/source-audit evidence; verify accepted parent before closure"
+    },
+    {
+      "path": "docs/superpowers/verification/2026-10-15-corporate-logo-sources.json",
+      "status": "added",
+      "disposition": "Parent608 immutable company-asset custody/source-audit evidence; verify accepted parent before closure"
+    },
+    {
+      "path": "docs/superpowers/verification/2026-10-16-company-release-assets.json",
+      "status": "modified",
+      "disposition": "Parent608 immutable company-asset custody/source-audit evidence; verify accepted parent before closure"
+    },
+    {
+      "path": "docs/superpowers/verification/2026-10-16-tpipp-white-tile.json",
+      "status": "added",
+      "disposition": "Parent608 immutable company-asset custody/source-audit evidence; verify accepted parent before closure"
+    },
+    {
+      "path": "docs/superpowers/verification/2026-10-16-yg1-official-symbol.json",
+      "status": "added",
+      "disposition": "Parent608 immutable company-asset custody/source-audit evidence; verify accepted parent before closure"
+    }
+  ],
+  "sourcePackets": {
+    "markup": "6e0bf66d061b586996546c43f351f201ed6f3503",
+    "behavior": "09ea46a9bb8886fc900b08db594e925f9509fbfb",
+    "sourceOverlay": "4c2566a692351d18eb306db8c2e1653c3ad284ef"
+  },
+  "preconditions": {
+    "all25PreimagesReverifiedOnCandidateBase": true,
+    "packageLock": "8c392b351e1c1da0e11807ad7fb9ef79514d0c86",
+    "assetCustodyCount": 59,
+    "assetCustodyBytes": 3947803
+  },
+  "generated": {
+    "run": 38937700910,
+    "artifact": 12061318194,
+    "archiveSha256": "2e56d1d2e6476bb5d5ec712972b40b71a16984611bd1bba50187ccdd1711d54a",
+    "archiveBytes": 1312070,
+    "nodePassed": 123,
+    "nodeFailed": 0,
+    "nodeSkipped": 0,
+    "custodyControlsEachNormalAndOptimized": 16,
+    "generatedFiles": 48,
+    "generatedBytes": 4213056,
+    "unchangedGeneratedPaths": 45,
+    "outputs": [
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/asset-manifest.json",
+        "gitBlob": "2363145c71dd34a9b20f53f9b0e536a3c0217a33",
+        "sha256": "534687b45c05b57a637794a87403f569f04a8bb25f1c3c8ed6444a83cb727483",
+        "bytes": 855
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-about.css",
+        "gitBlob": "4a83c1e2e01a0969cbd89765b59650b90351cd6c",
+        "sha256": "ac0a50979fda9728e3a360cfc3b0a041cecd2d4ed130b75210267bec772f7a90",
+        "bytes": 34548
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-about.js",
+        "gitBlob": "ea21785daadb0827559d8a173c1b673e3f4db2ce",
+        "sha256": "c12b8a38529ca16449be9bcb9cc4802b9d6a273583b06f6d9314ddb2ff808c1c",
+        "bytes": 10004
+      }
+    ],
+    "scope": "Historical exact source-overlay/lock/custody-bound generated asset evidence, not this candidate's C# browser/Release/full/runtime acceptance. Candidate CI must regenerate and require no diff."
+  },
+  "preserved": [
+    "English/Thai168 unique resource keys each",
+    "active Blazor SSR and retained Razor shared composition",
+    "canonical/hreflang/culture links and image preload",
+    "manual capability keyboard controls",
+    "gallery pause/hover/focus/offscreen/reduced-motion/stale-timer handling",
+    "no-JavaScript illustrative content and source service limits",
+    "public source customer marks without inferred endorsement or disclosure permission"
+  ],
+  "required": [
+    "parent608 protected-main acceptance",
+    "exact-head Release zero warnings/errors",
+    "actual focused About/route/bundle SSR and eight browser rows",
+    "relevant full suite, formatting/security/audits and unchanged generated-inclusive raw coverage",
+    "normal protected-main merge and post-merge exact-main proof"
+  ],
+  "nativeLocal": "NOT RUN",
+  "deployment": "disabled",
+  "wholeSourceClosure": false
+}

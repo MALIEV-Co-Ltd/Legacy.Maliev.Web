@@ -20,9 +20,54 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationResinPresentationTests
 {
     [Theory]
-    [InlineData("en", "Standard resin")]
-    [InlineData("th", "การพิมพ์เรซินมาตรฐาน")]
-    public async Task Workflow_DisablesOnlyResinBuildPreferenceControls(string culture, string label)
+    [InlineData("en", "White", "PETG", 1, "White")]
+    [InlineData("th", "White", "PETG", 1, "White")]
+    [InlineData("en", "Pink", "PA-CF", 1, "Black")]
+    [InlineData("th", "Pink", "PA-CF", 1, "Black")]
+    [InlineData("en", "Any", "PETG", 2, "Any")]
+    [InlineData("th", "Any", "PETG", 2, "Any")]
+    public async Task Workflow_MaterialChangePreservesCompatibleSingleBodyColor(
+        string culture, string initialColor, string targetMaterial, int bodies, string expectedColor)
+    {
+        using var cultures = new CultureScope(culture);
+        var part = Part("PLA", BuildPreference.Standard) with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(
+                10, 1_000, 100, [10], [10], 12, bodies, true),
+            Configuration = new("PLA", initialColor, 2),
+        };
+        var store = new SessionStore(part);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var change = typeof(InstantQuotationWorkflow).GetMethod(
+                "ChangeMaterialAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(change);
+            await (Task)change.Invoke(component, [part.PartId, new ChangeEventArgs { Value = targetMaterial }])!;
+        });
+
+        var session = await store.GetAsync("presentation-session", null, default);
+        Assert.NotNull(session);
+        var updated = Assert.Single(session.RequestState.Parts);
+        Assert.Equal(part.PartId, updated.PartId);
+        Assert.Equal(targetMaterial, updated.Configuration.MaterialKey);
+        Assert.Equal(expectedColor, updated.Configuration.Color);
+        Assert.Equal(2, updated.Configuration.Quantity);
+        Assert.Equal(BuildPreference.Standard, updated.Configuration.BuildPreference);
+    }
+
+    [Theory]
+    [InlineData("en", "Standard resin", "Review all items")]
+    [InlineData("th", "การพิมพ์เรซินมาตรฐาน", "ตรวจสอบรายการทั้งหมด")]
+    public async Task Workflow_DisablesOnlyResinBuildPreferenceControls(string culture, string label, string reviewLabel)
     {
         using var cultures = new CultureScope(culture);
         foreach (var material in new[] { "M68", "PLA" })
@@ -38,6 +83,12 @@ public sealed class InstantQuotationResinPresentationTests
             await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
             var html = await renderer.Dispatcher.InvokeAsync(async () =>
                 (await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty)).ToHtmlString());
+
+            var reviewAction = Assert.Single(
+                Regex.Matches(html, "<button\\b[^>]*>[\\s\\S]*?</button>").Cast<Match>(),
+                action => WebUtility.HtmlDecode(Regex.Replace(action.Value, "<[^>]+>", "")).Trim() == reviewLabel).Value;
+            Assert.Contains("type=\"button\"", reviewAction, StringComparison.Ordinal);
+            Assert.DoesNotContain("type=\"submit\"", reviewAction, StringComparison.Ordinal);
 
             var fieldsets = Regex.Matches(html, "<fieldset\\b[^>]*data-workflow-build-preference[^>]*>[\\s\\S]*?</fieldset>");
             var fieldset = Assert.Single(fieldsets.Cast<Match>()).Value;
@@ -75,6 +126,49 @@ public sealed class InstantQuotationResinPresentationTests
             var quantityControl = Regex.Match(html, "<input\\b[^>]*id=\"quantity-" + part.PartId + "\"[^>]*>");
             Assert.True(quantityControl.Success);
             Assert.DoesNotMatch("\\sdisabled(?:\\s|=|>)", quantityControl.Value);
+        }
+    }
+
+    [Theory]
+    [InlineData("en", "M68", "Smooth, highly detailed appearance for resin-suitable parts · suitability is confirmed during review")]
+    [InlineData("th", "M68", "ผิวเรียบและรายละเอียดคมชัดสำหรับงานที่เหมาะกับเรซิน · วิศวกรจะตรวจสอบความเหมาะสม")]
+    [InlineData("en", "PLA", null)]
+    [InlineData("th", "PLA", null)]
+    public async Task Review_UsesFinalResinSuitabilityCopyWithoutTechnicalPromises(
+        string culture, string material, string? expectedDetail)
+    {
+        using var cultures = new CultureScope(culture);
+        var part = Part(material, BuildPreference.Standard);
+        var viewModel = new InstantQuotationWorkflowPartViewModel(
+            part.PartId, Guid.NewGuid(), part.DisplayFileName, part.Geometry, part.Configuration, null);
+        using var services = Services(new CapturingActivator(), new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        var html = await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var parameters = ParameterView.FromDictionary(new Dictionary<string, object?>
+            {
+                [nameof(InstantQuotationReview.Parts)] = new[] { viewModel },
+                [nameof(InstantQuotationReview.Materials)] = new InstantQuotationWorkflowMaterialOption[]
+                {
+                    new("M68", "M68 resin"), new("PLA", "PLA"),
+                },
+            });
+            return (await renderer.RenderComponentAsync<InstantQuotationReview>(parameters)).ToHtmlString();
+        });
+
+        var details = Regex.Matches(html,
+            "<dd\\b[^>]*data-review-build-preference-detail[^>]*>([\\s\\S]*?)</dd>");
+        if (expectedDetail is null)
+        {
+            Assert.Empty(details.Cast<Match>());
+            return;
+        }
+
+        var detail = WebUtility.HtmlDecode(Assert.Single(details.Cast<Match>()).Groups[1].Value);
+        Assert.Equal(expectedDetail, detail);
+        foreach (var fdmTerm in new[] { "0.05", "full-layer", "post-cure", "walls", "infill", "ชั้นเรซิน", "ฉายแสง", "ผนัง", "อินฟิลล์" })
+        {
+            Assert.DoesNotContain(fdmTerm, detail, StringComparison.OrdinalIgnoreCase);
         }
     }
 
@@ -164,18 +258,23 @@ public sealed class InstantQuotationResinPresentationTests
     private static ServiceProvider Services(CapturingActivator activator, RecordingJavaScript javascript) =>
         new ServiceCollection().AddLogging().AddLocalization(options => options.ResourcesPath = "Resources")
             .AddSingleton<IComponentActivator>(activator).AddSingleton<IJSRuntime>(javascript)
+            .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager())
             .AddSingleton(FdmRuntimeProfileCatalog.LoadEmbedded())
             .AddSingleton<IWebHostEnvironment>(new ComponentEnvironment()).BuildServiceProvider();
 
     private sealed class CapturingActivator(InstantQuotationWorkflowCoordinator? coordinator = null) : IComponentActivator
     {
+        internal InstantQuotationWorkflow? Workflow { get; private set; }
         internal InstantQuotationPreliminaryQuotation? Preliminary { get; private set; }
         public IComponent CreateInstance(Type componentType)
         {
             var component = (IComponent)Activator.CreateInstance(componentType)!;
             if (component is InstantQuotationWorkflow workflow)
+            {
                 typeof(InstantQuotationWorkflow).GetField("workflow", BindingFlags.Instance | BindingFlags.NonPublic)!
                     .SetValue(workflow, coordinator);
+                Workflow = workflow;
+            }
             if (component is InstantQuotationPreliminaryQuotation preliminary) Preliminary = preliminary;
             return component;
         }

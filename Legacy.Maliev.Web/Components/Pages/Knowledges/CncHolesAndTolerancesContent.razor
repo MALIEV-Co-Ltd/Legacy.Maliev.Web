@@ -1,0 +1,43 @@
+@inject IStringLocalizer<CncHolesAndTolerancesContent> Localizer
+
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+<h1>@Localizer["Holes, threads and tolerances"]</h1>
+<p class="docs-lead">@Localizer["Specify the feature that the assembly actually needs. Hole depth, full-thread engagement, size, position and inspection conditions describe different requirements."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/holes-tolerances.webp" srcset="/src/images/knowledge/photos/holes-tolerances-small.webp 768w, /src/images/knowledge/photos/holes-tolerances.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["A machined plate with bores, a counterbore and a threaded hole beside inspection pins."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Hole size, usable depth, position and acceptance method describe different requirements. Illustrative image."]</figcaption>
+</figure>
+<nav class="docs-toc" aria-label="@Localizer["On this page"]">
+<strong>@Localizer["On this page"]</strong>
+<ul><li><a href="#holes-threads">@Localizer["Holes and threads: specify the usable feature"]</a></li>
+<li><a href="#tolerances">@Localizer["Tolerances, datums and inspection: describe the assembly"]</a></li></ul></nav>
+<aside class="docs-note">@Localizer["Examples explain design principles; confirm the material, drawing revision and proposed process for the actual project."]</aside>
+<section class="docs-section" id="holes-threads">
+        <h2>@Localizer["Holes and threads: specify the usable feature"]</h2>
+        <p>@Localizer["For holes, give diameter, depth, location, fit and surface requirements. Distinguish through holes from blind holes, and usable cylindrical depth from the drill-tip space. Angled entries, angled exits and intersecting holes can affect tool choice and chip removal. A drilled clearance hole and a locating bore serve different functions; explain the assembly need so the production method can be selected accordingly."]</p>
+        <p>@Localizer["For threads, specify the standard, nominal diameter, pitch, tolerance class and minimum full-thread depth. State whether a coating applies inside the thread. Blind-hole drill depth, thread depth and bottom clearance need coordinated planning. Thread milling may be useful near a shoulder or blind bottom, on thin-walled parts or where tap-breakage risk matters. Avoid assuming that a longer thread always creates a better joint; required engagement depends on loads and materials."]</p>
+        <aside class="docs-example">@Localizer["Illustrative example: a 4 mm diameter hole 32 mm deep is 8 times its diameter; an 8 mm hole at the same depth is 4 times its diameter. These are different access and chip-removal problems. For a blind M6 × 1 thread requiring 10 mm of full thread, agree the separate drill depth and bottom clearance."]</aside>
+        <p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/drilling">@Localizer["Sandvik Coromant: hole geometry, quality and drilling choices"]</a></p>
+        <p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/threading/thread-milling">@Localizer["Sandvik Coromant: thread milling applications"]</a></p>
+    <figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["Sections of a blind threaded hole, through hole and counterbore."]">
+        <img src="/src/images/knowledge/visual-hole-depths.svg" alt="@Localizer["Sections of a blind threaded hole, through hole and counterbore."]" width="960" height="480" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>@Localizer["1: total drill depth h₁ includes the drill point; required full-thread depth h₂ stops earlier and needs bottom clearance. Internal threads use simplified envelope lines, not individual teeth. 2: the through-bore diameter is Ød. 3: the counterbore has diameters ØD and Ød and recess depth h₃. Geometry is schematic; no thread designation, tolerance or fixed allowance is specified. This is not a complete production drawing."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-hole-depths.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
+</section>
+<section class="docs-section" id="tolerances">
+        <h2>@Localizer["Tolerances, datums and inspection: describe the assembly"]</h2>
+        <p>@Localizer["A size tolerance does not describe every relationship that makes an assembly work. A bore can have the correct diameter while its axis is in the wrong position. Choose datum features that represent how the part seats and locates in use, then specify the necessary form, orientation and location controls. Identify the drawing convention and applicable edition so everyone interprets the requirements consistently."]</p>
+        <p>@Localizer["Concentrate demanding requirements on features that need them. Agree the measurement method, access, datum establishment, part condition and reporting before production. Instrument resolution alone does not establish measurement uncertainty. Temperature also matters when tolerances are small: NIST describes the effects of temperature and thermal-expansion uncertainty relative to the 20 °C dimensional reference temperature. State whether acceptance is before or after coating and thermal processing."]</p>
+        <aside class="docs-example">@Localizer["Illustrative calculation: assume a 200 mm length, thermal expansion coefficient of 23 × 10⁻⁶/K and a 5 K temperature difference. Expansion is 200 × 23 × 10⁻⁶ × 5 = 0.023 mm. The coefficient is an assumption for this example, not a certified value for the material supplied."]</aside>
+        <p class="docs-source"><a href="https://www.asme.org/codes-standards/find-codes-standards/dimensioning-and-tolerancing">@Localizer["ASME: dimensioning, datums and geometric tolerancing"]</a></p>
+        <p class="docs-source"><a href="https://www.nist.gov/publications/uncertainties-dimensional-measurements-made-nonstandard-temperatures">@Localizer["NIST: temperature and dimensional measurement uncertainty"]</a></p>
+    </section>
+<p><a href="/knowledges">@Localizer["Back to the knowledge library"]</a></p>
+</article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}

@@ -373,6 +373,21 @@
 .service-table th, .service-table td { padding: 1rem; border-bottom: 1px solid var(--service-line); text-align: left; vertical-align: top; }
 .service-table th { background: #eef4fc; color: var(--service-ink); font-size: .86rem; }
 .service-table td { color: var(--service-muted); font-size: .88rem; line-height: 1.55; }
+.service-tolerance-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; overflow: hidden; border: 1px solid var(--service-line); border-radius: var(--service-radius-md); background: var(--service-line); }
+.service-tolerance-item { min-width: 0; padding: .9rem 1rem; background: #fff; }
+.service-tolerance-item h3 { margin: 0; color: var(--service-ink); font-size: .78rem; font-weight: 600; letter-spacing: .02em; }
+.service-tolerance-value { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .5rem; margin: .5rem 0 .3rem; color: var(--service-blue-dark); font-variant-numeric: tabular-nums; line-height: 1.05; }
+.service-tolerance-value strong { font-size: clamp(1.25rem, 2vw, 1.65rem); letter-spacing: -.025em; }
+.service-tolerance-value span { color: var(--service-ink); font-size: .78rem; font-weight: 600; }
+.service-tolerance-rule { margin: 0; color: var(--service-muted); font-size: .73rem; line-height: 1.45; }
+.service-tolerance-details { margin-top: .75rem; border: 1px solid var(--service-line); border-radius: var(--service-radius-sm); background: rgba(255,255,255,.72); }
+.service-tolerance-details summary { display: flex; align-items: center; justify-content: space-between; min-height: 2.8rem; padding: .7rem 1rem; cursor: pointer; color: var(--service-ink); font-size: .8rem; font-weight: 600; list-style: none; }
+.service-tolerance-details summary::-webkit-details-marker { display: none; }
+.service-tolerance-details summary::after { content: "+"; color: var(--service-blue); font-size: 1.15rem; line-height: 1; }
+.service-tolerance-details[open] summary::after { content: "−"; }
+.service-tolerance-details > div { display: grid; gap: .45rem; padding: 0 1rem .85rem; }
+.service-tolerance-details p { margin: 0; color: var(--service-muted); font-size: .78rem; line-height: 1.55; }
+.service-tolerance-factors { width: 100%; }
 .service-faq { display: grid; gap: .75rem; max-width: 60rem; margin-inline: auto; }
 .service-faq details { border: 1px solid var(--service-line); border-radius: var(--service-radius-sm); background: #fff; }
 .service-faq summary { display: flex; align-items: center; justify-content: space-between; min-height: 3.5rem; padding: 1rem 1.2rem; cursor: pointer; color: var(--service-ink); font-weight: 600; list-style: none; }
@@ -435,6 +450,7 @@
     .service-pricing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .service-location-section .service-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .service-process { grid-template-columns: repeat(2, 1fr); }
+    .service-tolerance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .service-material-controls { grid-template-columns: minmax(14rem, 1fr) minmax(11rem, .55fr) auto; }
     .service-material-count { grid-column: 1 / -1; text-align: left; }
     .scanning-workflow-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
@@ -830,6 +846,7 @@
     .service-part-gallery-social { flex-wrap: wrap; justify-content: flex-start; }
     .service-part-gallery-social span { flex-basis: 100%; }
     .service-part-bento-cta .service-actions { width: 100%; }
+    .service-tolerance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 359px) {

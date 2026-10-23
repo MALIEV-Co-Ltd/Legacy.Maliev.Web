@@ -1,0 +1,7 @@
+@page
+@inject IStringLocalizer<InspectionMeasuringPartsContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["Measuring manufactured parts | MALIEV"];
+    ViewData["Description"] = MetadataLocalizer["Choose dimensional inspection methods, control temperature and fixturing, understand measurement uncertainty, and agree useful inspection reports."];
+}
+<component type="typeof(InspectionMeasuringPartsContent)" render-mode="Static" />

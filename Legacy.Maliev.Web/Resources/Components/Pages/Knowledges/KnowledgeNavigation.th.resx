@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?><root><resheader name="resmimetype"><value>text/microsoft-resx</value></resheader><resheader name="version"><value>2.0</value></resheader><resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader><resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader><data name="Knowledge center" xml:space="preserve"><value>ศูนย์ความรู้</value></data><data name="Close contents" xml:space="preserve"><value>ปิดสารบัญ</value></data><data name="Overview" xml:space="preserve"><value>ภาพรวม</value></data><data name="Service specifications" xml:space="preserve"><value>ข้อแนะนำเฉพาะบริการ</value></data><data name="All service specifications" xml:space="preserve"><value>ข้อแนะนำทุกบริการ</value></data><data name="CNC manufacturing" xml:space="preserve"><value>งาน CNC</value></data><data name="3D printing" xml:space="preserve"><value>งานพิมพ์ 3 มิติ</value></data><data name="3D scanning" xml:space="preserve"><value>งานสแกน 3 มิติ</value></data><data name="Working with MALIEV" xml:space="preserve"><value>ทำงานร่วมกับ MALIEV</value></data><data name="Guidelines" xml:space="preserve"><value>แนวทาง</value></data><data name="Workflow" xml:space="preserve"><value>ขั้นตอนงาน</value></data>
+<data name="In this article" xml:space="preserve">
+    <value>ในบทความนี้</value>
+  </data>
+<data name="Start here" xml:space="preserve">
+    <value>เริ่มต้นที่นี่</value>
+  </data>
+<data name="Files and quotation checklist" xml:space="preserve">
+    <value>ไฟล์และข้อมูลสำหรับขอราคา</value>
+  </data>
+<data name="Review and production workflow" xml:space="preserve">
+    <value>การทบทวนแบบและขั้นตอนผลิต</value>
+  </data>
+<data name="Choose a manufacturing process" xml:space="preserve">
+    <value>เลือกกระบวนการผลิต</value>
+  </data>
+<data name="Service preparation guides" xml:space="preserve">
+    <value>เตรียมงานสำหรับแต่ละบริการ</value>
+  </data>
+<data name="CNC machining" xml:space="preserve">
+    <value>งาน CNC</value>
+  </data>
+<data name="CNC design overview" xml:space="preserve">
+    <value>ภาพรวมการออกแบบงาน CNC</value>
+  </data>
+<data name="Calculate feeds and speeds" xml:space="preserve">
+    <value>คำนวณความเร็วตัดและอัตราป้อน</value>
+  </data>
+<data name="Choose cutting tools" xml:space="preserve">
+    <value>เลือกเครื่องมือตัด</value>
+  </data>
+<data name="Geometry, rigidity and workholding" xml:space="preserve">
+    <value>รูปทรง ความแข็งแกร่ง และการจับยึด</value>
+  </data>
+<data name="Holes, threads and tolerances" xml:space="preserve">
+    <value>รู เกลียว และค่าความคลาดเคลื่อน</value>
+  </data>
+<data name="3-axis, 5-axis, EDM and grinding" xml:space="preserve">
+    <value>3 แกน 5 แกน EDM และการเจียร</value>
+  </data>
+<data name="Materials and applications" xml:space="preserve">
+    <value>วัสดุและการใช้งาน</value>
+  </data>
+<data name="Material selection checklist" xml:space="preserve">
+    <value>แนวทางเลือกวัสดุ</value>
+  </data>
+<data name="Metals and their applications" xml:space="preserve">
+    <value>โลหะและการใช้งาน</value>
+  </data>
+<data name="Engineering plastics" xml:space="preserve">
+    <value>พลาสติกวิศวกรรม</value>
+  </data>
+<data name="3D printing and scanning" xml:space="preserve">
+    <value>พิมพ์ 3 มิติและสแกน</value>
+  </data>
+<data name="Design for 3D printing" xml:space="preserve">
+    <value>ออกแบบสำหรับพิมพ์ 3 มิติ</value>
+  </data>
+<data name="Scanning and reverse engineering" xml:space="preserve">
+    <value>สแกนและวิศวกรรมย้อนกลับ</value>
+  </data>
+<data name="Finishing and inspection" xml:space="preserve">
+    <value>ปรับสภาพผิวและตรวจสอบ</value>
+  </data>
+<data name="Surface finishes and coatings" xml:space="preserve">
+    <value>ผิวงานและการเคลือบ</value>
+  </data>
+<data name="Heat treatment and material condition" xml:space="preserve">
+    <value>อบชุบและสภาพวัสดุ</value>
+  </data>
+<data name="Measure and inspect parts" xml:space="preserve">
+    <value>วัดและตรวจสอบชิ้นงาน</value>
+  </data>
+  <data name="Search the knowledge center" xml:space="preserve"><value>ค้นหาในศูนย์ความรู้</value></data>
+  <data name="Searching the guides…" xml:space="preserve"><value>กำลังค้นหาในบทความ…</value></data>
+  <data name="Enter at least two characters." xml:space="preserve"><value>พิมพ์อย่างน้อย 2 ตัวอักษร</value></data>
+  <data name="No matches. Try a different term or part feature." xml:space="preserve"><value>ไม่พบข้อมูล ลองใช้คำอื่นหรือระบุลักษณะชิ้นงาน</value></data>
+  <data name="Matches: {0}" xml:space="preserve"><value>พบ {0} รายการ</value></data>
+  <data name="Showing {0} of {1} matches. Narrow your search to see more." xml:space="preserve"><value>แสดง {0} จาก {1} รายการ ลองระบุคำค้นให้เฉพาะเจาะจงขึ้น</value></data>
+  <data name="We could not search every guide. Please try again." xml:space="preserve"><value>ค้นหาบางบทความไม่สำเร็จ กรุณาลองอีกครั้ง</value></data>
+  <data name="Search the guides" xml:space="preserve"><value>ค้นหาบทความ</value></data>
+  <data name="e.g. 6061, tolerance, feeds" xml:space="preserve"><value>เช่น 6061 เกลียว ค่าความคลาดเคลื่อน</value></data>
+  <data name="Clear search" xml:space="preserve"><value>ล้างคำค้น</value></data>
+  <data name="Search article text and headings." xml:space="preserve"><value>ค้นหาในเนื้อหาและหัวข้อบทความ</value></data>
+  <data name="Try again" xml:space="preserve"><value>ลองอีกครั้ง</value></data>
+</root>
