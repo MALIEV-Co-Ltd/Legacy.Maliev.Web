@@ -32,6 +32,51 @@ public sealed class FdmSimulationGeometryTests
         Assert.Equal(9.9, layers[^1].ZMm, 6);
     }
 
+    /// <summary>Ordinary rounded bodies fit the generated-path allowance with either fill ownership.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Build_RoundedBody_PreservesEveryPhysicalLayerWithinPathBudget(bool grouped)
+    {
+        const int sides = 32;
+        const float radius = 10;
+        const float height = 20;
+        var triangles = new List<MeshTriangle>();
+        for (int index = 0; index < sides; index++)
+        {
+            double angle = 2 * Math.PI * index / sides;
+            double nextAngle = 2 * Math.PI * (index + 1) / sides;
+            Vector3 first = new(radius * (float)Math.Cos(angle), radius * (float)Math.Sin(angle), 0);
+            Vector3 next = new(radius * (float)Math.Cos(nextAngle), radius * (float)Math.Sin(nextAngle), 0);
+            Vector3 topFirst = first + new Vector3(0, 0, height);
+            Vector3 topNext = next + new Vector3(0, 0, height);
+            triangles.Add(new(Vector3.Zero, next, first));
+            triangles.Add(new(new Vector3(0, 0, height), topFirst, topNext));
+            triangles.Add(new(first, next, topNext));
+            triangles.Add(new(first, topNext, topFirst));
+        }
+
+        var input = new MeshInput(triangles, 1, Matrix4x4.Identity)
+        {
+            PositiveFillGroups = grouped ? new int[triangles.Count] : null,
+        };
+        NormalizedMesh mesh = MeshNormalizer.Normalize(input, Tolerance);
+        Assert.Empty(mesh.Diagnostics);
+
+        IReadOnlyList<LayerContours> layers = LayerContourBuilder.Build(mesh, IdentityPose(), Profile(0.2), Budget());
+
+        Assert.Equal(100, layers.Count);
+        double expectedArea = sides * radius * radius * Math.Sin(2 * Math.PI / sides) / 2;
+        Assert.All(layers, layer =>
+        {
+            Assert.Single(layer.Rings);
+            Assert.False(layer.Rings[0].IsHole);
+            Assert.InRange(Math.Abs(NetArea(layer) - expectedArea), 0, 0.05);
+        });
+        Assert.Equal(0.1, layers[0].ZMm, 6);
+        Assert.Equal(19.9, layers[^1].ZMm, 6);
+    }
+
     /// <summary>Preserves a void as a hole rather than charging its material as solid.</summary>
     [Fact]
     public void Build_HollowTube_ExcludesHoleFromArea()
