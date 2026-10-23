@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Playwright;
 using Xunit.Abstractions;
 
@@ -136,7 +138,8 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
             ViewportSize = new ViewportSize { Width = 1920, Height = 1080 },
         });
         var probe = new SubmitBoundaryProbe();
-        await using var application = new SubmitBoundaryFactory(probe);
+        var submissionBoundary = new RejectingSubmissionService();
+        await using var application = new SubmitBoundaryFactory(probe, submissionBoundary);
         application.UseKestrel(0);
         application.ClientOptions.AllowAutoRedirect = false;
         using var hostClient = application.CreateClient();
@@ -150,6 +153,8 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
             directPost.Headers.Accept.ParseAdd("text/html");
             directPost.Content = new FormUrlEncodedContent(new Dictionary<string, string> { ["Country"] = "Thailand" });
             using var directResponse = await hostClient.SendAsync(directPost);
+            Assert.Equal(400, (int)directResponse.StatusCode);
+            Assert.Equal(0, submissionBoundary.Calls);
             output.WriteLine($"[customer-layout-direct-post] status={(int)directResponse.StatusCode}; razorEndpoint={probe.RazorEndpoint}; allowsPost={probe.AllowsPost}; methodRejection={probe.MethodRejection}; secureTransport={probe.SecureTransport}; antiforgeryCookie={probe.AntiforgeryCookie}; routingSnapshots={probe.RoutingSnapshots}");
         }
         await context.AddCookiesAsync(
@@ -215,6 +220,7 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
                 }
                 """),
             ObserveSubmitResponseAsync());
+        Assert.Equal(0, submissionBoundary.Calls);
         var content = page.Locator("[data-workflow-customer-details-content]");
         await Assertions.Expect(content).ToBeVisibleAsync();
         var form = content.Locator("#instant-quotation-form");
@@ -270,6 +276,9 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
             }
             """));
         Assert.True(await page.Locator("[data-workflow-customer-order] .instant-quote__pricing-summary").IsVisibleAsync());
+        var screenshotDirectory = Path.Combine(AppContext.BaseDirectory, "TestResults", "source-integration-browser");
+        Directory.CreateDirectory(screenshotDirectory);
+        await form.ScreenshotAsync(new() { Path = Path.Combine(screenshotDirectory, $"customer-{culture}-1920.png") });
 
         foreach (var width in new[] { 820, 390 })
         {
@@ -296,18 +305,40 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
             Assert.Equal(names, await form.Locator("input[name]:not([type=hidden]), select[name], textarea[name]")
                 .EvaluateAllAsync<string[]>("fields => fields.map(field => field.name)"));
             await Assertions.Expect(counter).ToHaveTextAsync("512");
+            await form.ScreenshotAsync(new() { Path = Path.Combine(screenshotDirectory, $"customer-{culture}-{width}.png") });
         }
         Assert.Equal(1, Volatile.Read(ref submissions));
+        Assert.Equal(0, submissionBoundary.Calls);
         Assert.False(await page.Locator("[data-workflow-submitted]").IsVisibleAsync());
     }
 
-    private sealed class SubmitBoundaryFactory(SubmitBoundaryProbe probe)
+    private sealed class SubmitBoundaryFactory(SubmitBoundaryProbe probe, RejectingSubmissionService submissionBoundary)
         : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             base.ConfigureWebHost(builder);
-            builder.ConfigureServices(services => services.AddSingleton<IStartupFilter>(probe));
+            builder.ConfigureServices(services =>
+            {
+                services.AddSingleton<IStartupFilter>(probe);
+                // Invalid customer input must be rejected before Redis-backed submission is used.
+                services.RemoveAll<IInstantQuotationSubmissionService>();
+                services.AddSingleton<IInstantQuotationSubmissionService>(submissionBoundary);
+            });
+        }
+    }
+
+    private sealed class RejectingSubmissionService : IInstantQuotationSubmissionService
+    {
+        private int calls;
+        internal int Calls => Volatile.Read(ref calls);
+
+        public Task<InstantQuotationSubmissionResult> SubmitAsync(
+            string sessionId, string? ownerIdentity, InstantQuotationCustomerSubmission customer,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref calls);
+            throw new InvalidOperationException("Invalid customer input must not reach submission.");
         }
     }
 

@@ -1881,6 +1881,9 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
 
         // Browser model bytes live only until reload. Verify real PNG/pixel behavior above,
         // then verify protected configuration restoration without inventing durable mesh fetch.
+        var screenshotDirectory = Path.Combine(AppContext.BaseDirectory, "TestResults", "source-integration-browser");
+        Directory.CreateDirectory(screenshotDirectory);
+        await page.ScreenshotAsync(new() { Path = Path.Combine(screenshotDirectory, $"preview-colors-{culture}.png"), FullPage = true });
         await page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
         await page.WaitForFunctionAsync(
             "() => document.querySelectorAll('[data-workflow-part]').length === 2 && !document.querySelector('[data-pricing-loading-status]')",
