@@ -203,7 +203,8 @@ public sealed class InstantQuotationPricingService : IInstantQuotationPricingSer
 
         var material = PricingCatalog.ResolveMaterial(configuration.MaterialKey)
             ?? throw new ArgumentException("The selected material is not supported.", nameof(configuration.MaterialKey));
-        if (!PricingCatalog.IsColorSupported(material.Key, configuration.Color))
+        if (!PricingCatalog.IsColorSupported(material.Key, configuration.Color)
+            && !(part.Geometry.BodyCount > 1 && configuration.Color == "Any"))
         {
             throw new ArgumentException(
                 "The selected color is not supported for the selected material.",

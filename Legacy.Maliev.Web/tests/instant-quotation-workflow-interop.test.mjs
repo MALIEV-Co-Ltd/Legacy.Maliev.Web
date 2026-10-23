@@ -196,6 +196,107 @@ test('part appearance updates select the requested part, apply a canonical previ
   ]);
 });
 
+test('unrelated rerenders preserve admitted thumbnail bytes while appearance and camera changes refresh only their part', async () => {
+  const { interop, calls } = harness();
+  const keys = interop.beginSelection({ files: [modelFile('a.stl'), modelFile('b.stl')] });
+  await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
+  const listeners = new Map();
+  interop.attach({ addEventListener: (type, listener) => listeners.set(type, listener),
+    removeEventListener: type => listeners.delete(type) });
+  interop.admit(keys[0], 'part-a');
+  interop.admit(keys[1], 'part-b');
+  const images = ['part-a', 'part-b'].map(partId => ({ dataset: { partId }, src: '/fallback.svg' }));
+  const root = { querySelectorAll: () => images };
+  interop.renderReviewThumbnails(root);
+  const snapshots = id => calls.filter(call => call[0] === 'snapshot' && call[1] === id).length;
+  assert.equal(snapshots('part-a'), 1);
+  assert.equal(snapshots('part-b'), 1);
+  interop.updatePartAppearance('part-a', 'Red');
+  interop.renderReviewThumbnails(root);
+  assert.equal(snapshots('part-a'), 2);
+  assert.equal(snapshots('part-b'), 1);
+  interop.select('part-a');
+  listeners.get('pointerup')();
+  interop.renderReviewThumbnails(root);
+  assert.equal(snapshots('part-a'), 3);
+  assert.equal(snapshots('part-b'), 1);
+  interop.reset();
+  interop.renderReviewThumbnails(root);
+  interop.fit();
+  interop.renderReviewThumbnails(root);
+  assert.equal(snapshots('part-a'), 5);
+  assert.equal(snapshots('part-b'), 1);
+  interop.dispose();
+  assert.equal(listeners.size, 0);
+});
+
+test('unavailable and released previews cannot supply a cached thumbnail', async () => {
+  const { interop, calls } = harness();
+  const [key] = interop.beginSelection({ files: [modelFile('a.stl')] });
+  await interop.getGeometryClaim(key);
+  interop.attach({});
+  interop.admit(key, 'part-a');
+  const unavailable = { dataset: { partId: 'missing' }, src: '/fallback.svg' };
+  const admitted = { dataset: { partId: 'part-a' }, src: '/fallback.svg' };
+  const root = { querySelectorAll: () => [admitted, unavailable] };
+  interop.renderReviewThumbnails(root);
+  interop.renderReviewThumbnails(root);
+  assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'missing').length, 2);
+  assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'part-a').length, 1);
+  interop.release(key);
+  const [replacement] = interop.beginSelection({ files: [modelFile('replacement.stl')] });
+  await interop.getGeometryClaim(replacement);
+  interop.admit(replacement, 'part-a');
+  admitted.src = '/fallback.svg';
+  // Reusing a part ID for new geometry must not reuse the old admission's bytes.
+  interop.renderReviewThumbnails(root);
+  assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'part-a').length, 2);
+});
+
+test('development retries reject an old canvas generation before claiming the new preview', async () => {
+  const { interop, calls } = harness();
+  const [key] = interop.beginSelection({ files: [modelFile('a.stl')] });
+  await interop.getGeometryClaim(key);
+  const oldCanvas = { isConnected: true, dataset: { localDemoGeneration: '1' } };
+  assert.equal(interop.retainDevelopmentPreview(key, oldCanvas, 1), true);
+  const nextKey = interop.retry(key);
+  await interop.getGeometryClaim(nextKey);
+  assert.equal(interop.retainDevelopmentPreview(nextKey, oldCanvas, 2), false);
+  oldCanvas.isConnected = false;
+  assert.equal(interop.retainDevelopmentPreview(nextKey, oldCanvas, 1), false);
+  const newCanvas = { isConnected: true, dataset: { localDemoGeneration: '2' } };
+  assert.equal(interop.retainDevelopmentPreview(nextKey, newCanvas, 2), true);
+  assert.equal(newCanvas.dataset.localDemoReady, 'true');
+  assert.equal(interop.retainDevelopmentPreview(nextKey,
+    { isConnected: true, dataset: { localDemoGeneration: '2' } }, 2), false);
+  assert.equal(calls.filter(call => call[0] === 'add' && call[1] === nextKey).length, 1);
+  interop.dispose();
+  assert.equal(newCanvas.dataset.localDemoReady, undefined);
+});
+
+test('ordinary viewer listeners are released when a development preview replaces its canvas', async () => {
+  const { interop } = harness();
+  const listeners = [new Set(), new Set()];
+  const canvas = index => ({
+    addEventListener: type => listeners[index].add(type),
+    removeEventListener: type => listeners[index].delete(type),
+  });
+  interop.attach(canvas(0));
+  assert.equal(listeners[0].size, 3);
+  const [key] = interop.beginSelection({ files: [modelFile('a.stl')] });
+  await interop.getGeometryClaim(key);
+  assert.equal(interop.retainDevelopmentPreview(key,
+    { isConnected: true, dataset: { localDemoGeneration: '1' } }, 1), true);
+  assert.equal(listeners[0].size, 0);
+  const nextKey = interop.retry(key);
+  await interop.getGeometryClaim(nextKey);
+  interop.admit(nextKey, 'part-a');
+  interop.attach(canvas(1));
+  assert.equal(listeners[1].size, 3);
+  interop.dispose();
+  assert.deepEqual(listeners.map(value => value.size), [0, 0]);
+});
+
 test('preview colors accept custom hex and fail closed to the neutral material color', () => {
   assert.equal(previewColorForSelection('#Aa00fF'), '#aa00ff');
   assert.equal(previewColorForSelection('Blue'), '#2563eb');
@@ -419,4 +520,419 @@ test('unadmitted cleanup disposes shared geometry, materials, and textures once 
   interop.release(keys[0]);
   interop.release(keys[1]);
   assert.deepEqual(counts, { geometry: 1, material: 1, texture: 1 });
+});
+
+test('quote intent starts once at first size and extension accepted file before parse/hash', async () => {
+  const order = [];
+  const interop = createWorkflowPreviewInterop({
+    loadModel: async () => { order.push('parse'); throw new Error('unreadable private-model.stl'); },
+    analyzeGeometry: () => ({}),
+    createViewer: () => ({}),
+    reportQuoteStarted: () => { order.push('started'); },
+  });
+  try {
+    interop.beginSelection({ files: [{ ...modelFile('too-large.stl'), size: 11 }] }, 10);
+    interop.beginSelection({ files: [{ ...modelFile('unsupported.exe'), size: 1 }] }, 10);
+    assert.deepEqual(order, []);
+    const keys = interop.beginSelection({ files: [{ ...modelFile('accepted.stl'), size: 1 }] }, 10);
+    await assert.rejects(interop.getGeometryClaim(keys[0]));
+    interop.beginSelection({ files: [{ ...modelFile('second.obj'), size: 1 }] }, 10);
+    assert.deepEqual(order, ['started', 'parse', 'parse']);
+  } finally { interop.dispose(); }
+});
+
+test('a failing quote intent callback never blocks parsing', async () => {
+  let parsed = false;
+  const interop = createWorkflowPreviewInterop({
+    loadModel: async () => { parsed = true; return disposableObject(); },
+    analyzeGeometry: () => ({ version: 1, dimensionZMm: 10, volumeMm3: 1000 }),
+    createViewer: () => ({}),
+    reportQuoteStarted: () => { throw new Error('analytics unavailable'); },
+  });
+  try {
+    const [key] = interop.beginSelection({ files: [modelFile('accepted.stl')] });
+    await interop.getGeometryClaim(key);
+    assert.equal(parsed, true);
+  } finally { interop.dispose(); }
+});
+
+test('empty scene wave has a complete sweep and a still rest without flattening the centre', async () => {
+  const { emptySceneRelief, emptySceneMask } = await import('../wwwroot/src/app/js/instant-quotation/empty-scene.mjs');
+  const leading = { u: 0, gain: 1, rest: 0, mask: 1 };
+  const trailing = { ...leading, u: 1 };
+  assert.equal(emptySceneRelief(0, leading), 0);
+  assert.ok(Math.abs(emptySceneRelief(0.26, leading) - 0.8) < 1e-12);
+  assert.ok(Math.abs(emptySceneRelief(1.94, trailing) - 0.8) < 1e-12);
+  for (const time of [2.34, 3, 3.529]) {
+    assert.equal(emptySceneRelief(time, leading), 0);
+    assert.equal(emptySceneRelief(time, trailing), 0);
+  }
+  assert.equal(emptySceneMask(0, 0, 16, 10), 0);
+  assert.equal(emptySceneMask(0.64, 0, 16, 10), 0);
+  assert.equal(emptySceneMask(1, 0, 16, 10), 1);
+  assert.equal(emptySceneRelief(0.26, { ...leading, rest: 0.5, mask: 0 }), 0.3);
+});
+
+test('empty decoration pauses hidden work and reduced motion renders only the still scene', async () => {
+  const { createEmptyScene } = await import('../wwwroot/src/app/js/instant-quotation/empty-scene.mjs');
+  const f = emptySceneFixture();
+  const scene = createEmptyScene(f.root, f.options);
+  assert.equal(f.frames.size, 1);
+  f.tick(260);
+  assert.ok(f.renderers.every(renderer => renderer.draws > 0));
+  f.document.hidden = true;
+  f.document.dispatchEvent(new Event('visibilitychange'));
+  assert.equal(f.frames.size, 0);
+  const draws = f.renderers.map(renderer => renderer.draws);
+  f.document.hidden = false;
+  f.document.dispatchEvent(new Event('visibilitychange'));
+  assert.equal(f.frames.size, 1);
+  f.media.matches = true;
+  f.media.dispatchEvent(new Event('change'));
+  assert.equal(f.frames.size, 0);
+  assert.ok(f.renderers.every((renderer, index) => renderer.draws > draws[index]));
+  const mesh = f.renderers[1].lastScene.children.find(child => child.isInstancedMesh);
+  const before = mesh.instanceMatrix.array.slice();
+  f.window.dispatchEvent(new Event('pagehide'));
+  f.window.dispatchEvent(new Event('pageshow'));
+  assert.equal(f.frames.size, 0);
+  assert.deepEqual(mesh.instanceMatrix.array, before);
+  scene.dispose();
+  assert.equal(f.listeners.size, 0);
+});
+
+test('empty decoration releases frames resize timers and every GPU resource once', async () => {
+  const { createEmptyScene } = await import('../wwwroot/src/app/js/instant-quotation/empty-scene.mjs');
+  const f = emptySceneFixture();
+  const scene = createEmptyScene(f.root, f.options);
+  f.tick(0);
+  const resources = new Set();
+  for (const renderer of f.renderers) renderer.lastScene.traverse(object => {
+    if (object.isInstancedMesh) resources.add(object);
+    if (object.geometry) resources.add(object.geometry);
+    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+      if (material) resources.add(material);
+    }
+  });
+  let released = 0;
+  for (const resource of resources) resource.addEventListener('dispose', () => { released += 1; });
+  f.window.dispatchEvent(new Event('resize'));
+  assert.equal(f.timers.size, 1);
+  scene.dispose();
+  scene.dispose();
+  assert.equal(f.frames.size, 0);
+  assert.equal(f.timers.size, 0);
+  assert.equal(f.listeners.size, 0);
+  assert.equal(f.observerDisconnected(), true);
+  assert.equal(released, resources.size);
+  assert.ok(f.renderers.every(renderer => renderer.disposals === 1 && renderer.losses === 1));
+});
+
+test('empty decoration isolates a failed renderer from its healthy sibling and upload affordance', async () => {
+  const { createEmptyScene } = await import('../wwwroot/src/app/js/instant-quotation/empty-scene.mjs');
+  for (const failed of [0, 1]) {
+    const f = emptySceneFixture();
+    f.options.createRenderer = canvas => {
+      if (canvas === f.canvases[failed]) throw new Error('synthetic renderer refusal');
+      return f.makeRenderer();
+    };
+    const scene = createEmptyScene(f.root, f.options);
+    f.tick(260);
+    assert.equal(f.renderers.length, 1);
+    assert.ok(f.renderers[0].draws > 0);
+    assert.equal(f.root.dataset.cubeReady, failed === 0 ? 'false' : 'true');
+    scene.dispose();
+    assert.equal(f.frames.size, 0);
+    assert.equal(f.listeners.size, 0);
+  }
+  const f = emptySceneFixture();
+  const primary = new Error('synthetic listener refusal');
+  f.window.addEventListener = () => { throw primary; };
+  assert.throws(() => createEmptyScene(f.root, f.options), error => error === primary);
+  assert.equal(f.root.dataset.cubeReady, 'false');
+  assert.equal(f.root.dataset.hexReady, 'false');
+  assert.equal(f.listeners.size, 0);
+  assert.ok(f.renderers.every(renderer => renderer.disposals === 1 && renderer.losses === 1));
+});
+
+test('empty decoration attempts remaining releases even when one renderer disposal throws', async () => {
+  const { createEmptyScene } = await import('../wwwroot/src/app/js/instant-quotation/empty-scene.mjs');
+  const f = emptySceneFixture();
+  const scene = createEmptyScene(f.root, f.options);
+  f.renderers[0].dispose = () => { f.renderers[0].disposals += 1; throw new Error('synthetic disposal refusal'); };
+  assert.throws(() => scene.dispose(), /synthetic disposal refusal/);
+  assert.ok(f.renderers.every(renderer => renderer.disposals === 1 && renderer.losses === 1));
+  assert.equal(f.frames.size, 0);
+  assert.equal(f.listeners.size, 0);
+});
+
+
+test('non-hover whole-workflow drag cues change real hex relief and tint without owning file events', async () => {
+  const { createEmptyScene } = await import('../wwwroot/src/app/js/instant-quotation/empty-scene.mjs');
+  const f = emptySceneFixture();
+  const scene = createEmptyScene(f.root, f.options);
+  assert.notEqual(f.zone, f.label);
+  const hex = () => f.renderers[1].lastScene.children.find(child => child.isInstancedMesh);
+  const snapshot = () => ({
+    height: hex().instanceMatrix.array[14],
+    tint: hex().instanceColor.array[0] / hex().instanceColor.array[2],
+  });
+  const send = type => {
+    const event = new Event(type, { cancelable: true });
+    Object.defineProperty(event, 'dataTransfer', { get() { throw new Error('No file inspection is permitted.'); } });
+    event.stopPropagation = () => { throw new Error('No propagation cancellation is permitted.'); };
+    assert.equal(f.zone.dispatchEvent(event), true);
+    assert.equal(event.defaultPrevented, false);
+  };
+  f.tick(260);
+  const baseline = snapshot();
+  send('dragenter');
+  send('dragenter');
+  send('dragover');
+  f.tick(260);
+  const dragging = snapshot();
+  assert.ok(dragging.height > baseline.height);
+  assert.ok(dragging.tint < baseline.tint);
+  send('dragleave');
+  f.tick(260);
+  assert.ok(snapshot().height > dragging.height, 'Leaving a nested child must keep the outer drag cue active.');
+  send('drop');
+  f.tick(260);
+  assert.deepEqual(snapshot(), baseline);
+  send('dragover');
+  f.tick(260);
+  assert.ok(snapshot().height > baseline.height);
+  send('dragleave');
+  f.tick(260);
+  assert.deepEqual(snapshot(), baseline);
+  send('dragenter');
+  f.tick(260);
+  f.document.hidden = true;
+  f.document.dispatchEvent(new Event('visibilitychange'));
+  f.document.hidden = false;
+  f.document.dispatchEvent(new Event('visibilitychange'));
+  f.tick(260);
+  assert.deepEqual(snapshot(), baseline);
+  send('dragenter');
+  f.tick(260);
+  f.window.dispatchEvent(new Event('pagehide'));
+  f.window.dispatchEvent(new Event('pageshow'));
+  f.tick(260);
+  assert.deepEqual(snapshot(), baseline);
+  assert.equal([...f.listeners].filter(entry => entry.value === f.zone).length, 4);
+  const draws = f.renderers.map(renderer => renderer.draws);
+  scene.dispose();
+  send('dragenter');
+  send('dragover');
+  send('dragleave');
+  send('drop');
+  f.tick(260);
+  assert.deepEqual(f.renderers.map(renderer => renderer.draws), draws);
+  assert.equal(f.listeners.size, 0);
+  assert.equal(f.frames.size, 0);
+
+  const partial = emptySceneFixture();
+  const add = partial.zone.addEventListener;
+  const primary = new Error('Synthetic second drag-listener refusal.');
+  let registrations = 0;
+  partial.zone.addEventListener = (...args) => {
+    registrations += 1;
+    if (registrations === 2) throw primary;
+    add(...args);
+  };
+  assert.throws(() => createEmptyScene(partial.root, partial.options), error => error === primary);
+  assert.equal(partial.listeners.size, 0);
+  assert.equal(partial.frames.size, 0);
+  assert.ok(partial.renderers.every(renderer => renderer.disposals === 1 && renderer.losses === 1));
+});
+
+function emptySceneFixture() {
+  const listeners = new Set();
+  function target() {
+    const value = new EventTarget();
+    const add = value.addEventListener.bind(value);
+    const remove = value.removeEventListener.bind(value);
+    value.addEventListener = (type, listener) => { listeners.add({ value, type, listener }); add(type, listener); };
+    value.removeEventListener = (type, listener) => {
+      for (const entry of listeners) if (entry.value === value && entry.type === type && entry.listener === listener) listeners.delete(entry);
+      remove(type, listener);
+    };
+    return value;
+  }
+  const frames = new Map();
+  const timers = new Map();
+  const window = target();
+  const document = target();
+  const media = target();
+  const label = target();
+  const zone = target();
+  label.matches = () => false;
+  media.matches = false;
+  document.hidden = false;
+  window.devicePixelRatio = 3;
+  window.matchMedia = () => media;
+  window.performance = { now: () => 0 };
+  let serial = 0;
+  window.requestAnimationFrame = callback => { frames.set(++serial, callback); return serial; };
+  window.cancelAnimationFrame = id => frames.delete(id);
+  window.setTimeout = callback => { timers.set(++serial, callback); return serial; };
+  window.clearTimeout = id => timers.delete(id);
+  let disconnected = false;
+  window.ResizeObserver = class {
+    observe() {}
+    disconnect() { disconnected = true; }
+  };
+  const canvases = [
+    { clientWidth: 240, clientHeight: 180 },
+    { clientWidth: 640, clientHeight: 400 },
+  ];
+  const root = {
+    dataset: {}, isConnected: true,
+    querySelector: selector => selector.includes('cube') ? canvases[0] : canvases[1],
+    closest: selector => selector === 'label' ? label : zone,
+  };
+  const renderers = [];
+  function makeRenderer() {
+    const renderer = {
+      draws: 0, disposals: 0, losses: 0,
+      setPixelRatio(ratio) { assert.equal(ratio, 2); },
+      setSize() {},
+      render(scene) { this.draws += 1; this.lastScene = scene; },
+      dispose() { this.disposals += 1; },
+      forceContextLoss() { this.losses += 1; },
+    };
+    renderers.push(renderer);
+    return renderer;
+  }
+  return {
+    root, canvases, renderers, frames, timers, listeners, window, document, media, label, zone, makeRenderer,
+    observerDisconnected: () => disconnected,
+    tick(time) {
+      const callbacks = [...frames.values()];
+      frames.clear();
+      for (const callback of callbacks) callback(time);
+    },
+    options: { windowObject: window, documentObject: document, createRenderer: makeRenderer },
+  };
+}
+
+test('whole-workflow file drops feed the existing input change snapshot exactly once', async () => {
+  const { interop } = harness();
+  const zone = new EventTarget();
+  const input = new EventTarget();
+  input.closest = selector => selector === '.instant-quote__workflow' ? zone : null;
+  input.files = [];
+  input.disabled = false;
+  zone.getAttribute = () => 'false';
+  const first = { ...modelFile('drop-first.stl'), size: 1 };
+  const second = { ...modelFile('drop-second.obj'), size: 1 };
+  const dropped = [first, second];
+  let changes = 0;
+  try {
+    interop.bindInput(input);
+    input.addEventListener('change', () => { changes += 1; });
+    const over = new Event('dragover', { cancelable: true });
+    Object.defineProperty(over, 'dataTransfer', { value: { types: ['Files'], files: [] } });
+    assert.equal(zone.dispatchEvent(over), false);
+    const drop = new Event('drop', { cancelable: true });
+    Object.defineProperty(drop, 'dataTransfer', { value: { types: ['Files'], files: dropped } });
+    assert.equal(zone.dispatchEvent(drop), false);
+    assert.equal(input.files, dropped);
+    assert.equal(changes, 1);
+    input.files = [{ ...modelFile('later.stl'), size: 1 }];
+    const keys = interop.beginSelection(input, 1);
+    assert.equal(keys.length, 2);
+    await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
+    assert.equal(changes, 1);
+  } finally { interop.dispose(); }
+});
+
+test('whole-workflow drops ignore non-files and refuse disabled or busy uploads without changing selection', () => {
+  const { interop } = harness();
+  const zone = new EventTarget();
+  const input = new EventTarget();
+  const original = [{ ...modelFile('retained.stl'), size: 1 }];
+  input.files = original;
+  input.closest = () => zone;
+  let busy = 'false';
+  zone.getAttribute = () => busy;
+  let changes = 0;
+  const send = transfer => {
+    const event = new Event('drop', { cancelable: true });
+    Object.defineProperty(event, 'dataTransfer', { value: transfer });
+    return zone.dispatchEvent(event);
+  };
+  try {
+    interop.bindInput(input);
+    input.addEventListener('change', () => { changes += 1; });
+    assert.equal(send({ types: ['text/plain'], files: [] }), true);
+    assert.equal(send({ types: ['Files'], files: [] }), false);
+    input.disabled = true;
+    assert.equal(send({ types: ['Files'], files: [modelFile('disabled.stl')] }), false);
+    input.disabled = false;
+    busy = 'true';
+    assert.equal(send({ types: ['Files'], files: [modelFile('busy.stl')] }), false);
+    assert.equal(input.files, original);
+    assert.equal(changes, 0);
+  } finally { interop.dispose(); }
+});
+
+test('whole-workflow drop bindings move with the bound input and release on disposal', async () => {
+  const { interop } = harness();
+  const zone = new EventTarget();
+  const replacementZone = new EventTarget();
+  const input = new EventTarget();
+  const replacement = new EventTarget();
+  input.closest = () => zone;
+  replacement.closest = () => replacementZone;
+  input.files = [];
+  replacement.files = [];
+  zone.getAttribute = replacementZone.getAttribute = () => 'false';
+  let changes = 0;
+  replacement.addEventListener('change', () => { changes += 1; });
+  const send = target => {
+    const event = new Event('drop', { cancelable: true });
+    Object.defineProperty(event, 'dataTransfer', {
+      value: { types: ['Files'], files: [{ ...modelFile('current.stl'), size: 1 }] },
+    });
+    return target.dispatchEvent(event);
+  };
+  try {
+    interop.bindInput(input);
+    interop.bindInput(replacement);
+    interop.bindInput(replacement);
+    assert.equal(send(zone), true);
+    assert.deepEqual(input.files, []);
+    assert.equal(send(replacementZone), false);
+    assert.equal(changes, 1);
+    interop.dispose();
+    assert.equal(send(replacementZone), true);
+    assert.equal(changes, 1);
+  } finally { interop.dispose(); }
+  const primary = new Error('Synthetic preview cleanup refusal.');
+  const failed = harness(async () => ({
+    traverse(visitor) { visitor({ geometry: { dispose() { throw primary; } } }); },
+  }));
+  const failedInput = new EventTarget();
+  const failedZone = new EventTarget();
+  failedInput.files = [];
+  failedInput.closest = () => failedZone;
+  failedZone.getAttribute = () => 'false';
+  try {
+    failed.interop.bindInput(failedInput);
+    const [key] = failed.interop.beginSelection({ files: [{ ...modelFile('cleanup.stl'), size: 1 }] });
+    await failed.interop.getGeometryClaim(key);
+    assert.throws(() => failed.interop.dispose(), error => error === primary);
+    assert.equal(send(failedZone), true);
+    assert.deepEqual(failedInput.files, []);
+  } finally { failed.interop.dispose(); }
+});
+
+test('empty decoration shares the viewer entry owner instead of the workflow entry', async () => {
+  const viewer = await import('../wwwroot/src/app/js/instant-quotation/model-viewer.mjs');
+  const workflow = await import('../wwwroot/src/app/js/instant-quotation/workflow-interop.mjs');
+  const emptyScene = await import('../wwwroot/src/app/js/instant-quotation/empty-scene.mjs');
+  assert.equal(typeof viewer.createEmptyScene, 'function');
+  assert.equal(viewer.createEmptyScene, emptyScene.createEmptyScene);
+  assert.equal(Object.hasOwn(workflow, 'createEmptyScene'), false);
 });

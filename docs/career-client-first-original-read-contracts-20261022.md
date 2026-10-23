@@ -1,6 +1,6 @@
 # Client-first Career original read compatibility
 
-Status: source proposal, independent review and hosted execution pending.
+Status: dependent integration against PR761 candidate 63a1d4b8972ad24262dbcedd8ef9739c4aa6da5a; protected-main acceptance and exact-head validation pending.
 Publish this Web consumer slice before the paired Career producer slice.
 No deployment or financial/provider execution is included.
 
@@ -62,48 +62,38 @@ payloads did; they are not converted to successful zero or a new503 response.
 Existing404 creates the same available empty page. HTTP failures/unowned timeout
 retain the existing unavailable result; caller cancellation still propagates.
 
-CareerDetailContentModel `5a6f82b31b9898da36cb382932da4f19d2bf880d` uses
-offer.Level?.Name or the existing "not specified" display. It is shared by
-current SSR detail `2782ac51ea8eaaa7a36e4a3539dd177ca81be004` and Razor
-rollback page `2e005a4c2383b07e64e5cce4af5678dbe0513702`.
-A producer-only level omission would lose that displayed metadata.
-The consumer now consults the existing anonymous levels endpoint only when the
-detail has no Level and LevelId is positive. An already supplied Level causes
-no extra request. One exact matching level may enrich the client-local model;
-no arbitrary duplicate winner or invented name is used.
+The PR761 candidate restores the original detail flow in both
+CareerDetailPage.razor and Pages/Career/View.cshtml.cs: each starts the offer
+read and an independent levels read, then presents the matching LevelId from
+that independent list. It deliberately ignores a conflicting nested Level.
+The 24 existing actual-HTTP cases cover both renderers, English/Thai, omitted
+and conflicting nested levels, missing metadata, null names and 404/503 levels.
+They require exactly one offer request and one levels request.
 
-Missing/404/unavailable/empty/null/ambiguous metadata leaves the offer available.
-Malformed JSON, unsupported decode or invalid charset also leaves the offer
-available with the existing display fallback. Those catches are scoped to the
-new secondary lookup; malformed original offer/page responses keep their prior
-semantics. A nullable matched Name remains nullable. Caller cancellation during
-the lookup propagates. Existing GetLevelsAsync handles the remote transport;
-there is no new endpoint, authentication, cache or global error classifier.
+The older PR738 proposal enriched GetOfferAsync with another levels request.
+That proposal predates the restored source flow and would now make three calls.
+This integration retains the raw detail reader and the independent presentation
+lookup byte-for-byte from PR761. Four raw-reader cases additionally preserve
+omitted, null, empty and supplied nested Level values without another request.
+The 19 old enrichment expectations are replaced because they described the
+superseded implementation, not the original two-request route contract.
 
-Scoped organization ICareerClient search identified only Web production and
-test references. The actual typed client, page contracts, both detail render
-owners and their shared presentation model were inspected. This is source
-consumer qualification, not a live deployed join or financial acceptance.
+## Validation and publication order
 
-## Authored checks and publication order
+The count reader retains its 23 malformed/duplicate/alias/status/query/cancellation
+rows. The Career focused workflow adds those 23 and the four raw-detail rows to
+the existing 213 cases; expected focus is 240, subject to actual discovery.
+The original four Offers materialization oracles and all 24 detail HTTP rows
+remain unchanged. No test or coverage threshold, timeout or skip is relaxed.
 
-23 count-reader/query/error/status/cancellation rows and19 detail-metadata/
-display/error/cancellation cases are authored, not executed. They drive the
-actual CareerClient with controlled HTTP transport and the existing shared
-CareerDetailContentModel. No UI route files or DTO contracts are modified.
-Each test disposes its HTTP client/handler and cancellation source; no host,
-provider fixture or new worker is started by these tests.
+PR761 must first reach protected main. Then this consumer requires exact-head
+Release with zero warnings/errors, focused and full tests, formatting,
+static/security, contract/browser and coverage gates, normal protected merge
+and exact-main checks. CareerService #58 stays behind accepted consumer main.
+Local Release builds completed with zero warnings/errors; all 27 client cases and the four original materialization oracles passed with zero skips. The combined 240-case route/client focus encountered System.OutOfMemoryException under the unchanged 1.5 GiB private-job cap and was stopped; it is not a passing result. Complete hosted focus, full-suite and protected-main evidence remain pending.
 
-Root routes this exact source to the existing Web owner for independent review.
-Required exact-head Release0warnings/errors, focused42 new cases plus existing
-CareerClient/SSR/Razor tests, admitted full Web suite and unchanged formatting,
-static/security/audit/contract/browser/coverage gates remain mandatory.
-Verify the protected consumer main and its checks first. Then publish the
-Career producer correction against fresh main and run its exact-head/main gates.
-Do not substitute a permanent producer response alias or lower checks because
-Web baseline validation is difficult. No hosted or local pass is claimed here.
-
-Legacy totalItems support is deliberately bounded to this reader during staged
-mains; removing it later requires separate confirmed consumer retirement.
-All financial/provider/frozen FX and Comment/TrackingNumber holds remain inactive.
-Root remains sole publisher, canonical writer and official collector.
+The staged totalItems alias is bounded to this reader. Its later removal needs
+confirmed retirement of old producer responses. No producer response alias,
+DTO rewrite, cache, authentication or global error-policy change is included.
+Original source SHA obligations retain their separate owners; this consumer
+bundle does not retire whole mixed commits, shared helpers or all Career actions.

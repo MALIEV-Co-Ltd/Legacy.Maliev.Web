@@ -1,4 +1,6 @@
-# Web738 residual ownership repair and custody diagnostics
+#
+Current integration disposition: PR761 candidate `63a1d4b8972ad24262dbcedd8ef9739c4aa6da5a` supersedes this historical ownership proposal with explicit `TestingWebRootLease` creation ownership. The earlier provider-discovery implementation is not restored. Its ten cases map to retained `WebSurfaceOwnedLifetimeTests`: two direct/configured factories, four quotation owners, four failed-start combinations (including the two shared-factory cases), lease-resolution failure, and actual Kestrel dynamic-port/static-response behavior. Those checks also preserve borrowed-provider isolation. PR738 retains only its three-line original child-start failure diagnostic beyond the PR761 ownership implementation. Exact-head and protected-main validation remain required.
+Web738 residual ownership repair and custody diagnostics
 
 Source proposal at exact head `923f2d14617640d244f7c35cd667afd06a7ba58f`, tree `9c93f1ed7a9a2a0cc5ca8039e2e575eb77a321d9`. Author execution stays source-only. Root owns refs, publication, official evidence collection and GitHub Actions.
 

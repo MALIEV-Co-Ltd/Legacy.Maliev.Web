@@ -24,6 +24,8 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
     [InlineData("th", 820)]
     [InlineData("en", 992)]
     [InlineData("th", 992)]
+    [InlineData("en", 1024)]
+    [InlineData("th", 1024)]
     [InlineData("en", 1280)]
     [InlineData("th", 1280)]
     public async Task RealPartsRailExposesLongNamesAndKeyboardActions(string culture, int width)
@@ -179,6 +181,10 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         failureEvidence.Stage("PartsRail");
         var rail = page.Locator("[data-workflow-parts]");
         await Assertions.Expect(rail.Locator("[data-workflow-part]")).ToHaveCountAsync(2);
+        await Assertions.Expect(rail.Locator("[data-workflow-part-count]")).ToBeVisibleAsync();
+        await Assertions.Expect(rail.Locator("[data-workflow-part-count]")).ToHaveAttributeAsync("aria-live", "polite");
+        await Assertions.Expect(rail.Locator("[data-workflow-part-count]")).ToHaveTextAsync(culture == "th" ? "2 ชิ้น" : "2 parts");
+        await Assertions.Expect(rail.Locator(".iq-compact-dropzone strong")).ToHaveTextAsync(culture == "th" ? "เพิ่มชิ้นงาน" : "Add parts");
         var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
         await Assertions.Expect(review).ToBeEnabledAsync();
         var directory = Environment.GetEnvironmentVariable("MALIEV_BROWSER_EVIDENCE_DIR");
@@ -203,13 +209,28 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
             await File.WriteAllTextAsync(Path.Combine(directory, $"sidebar-{culture}-{width}-{state}.json"), geometry.GetRawText());
             failureEvidence.AwaitBoundary(state + "-write", true);
         }
+        if (width >= 1024)
+        {
+            Assert.True(await page.EvaluateAsync<bool>("""
+                () => {
+                  const workflow=document.querySelector('.instant-quote__workflow');
+                  const viewer=workflow.querySelector(':scope > [data-workflow-viewer]').getBoundingClientRect();
+                  const rail=workflow.querySelector(':scope > [data-workflow-parts]').getBoundingClientRect();
+                  const configuration=workflow.querySelector(':scope > [data-workflow-configuration]').getBoundingClientRect();
+                  return Math.abs(rail.left-viewer.left)<=1 && Math.abs(rail.right-viewer.right)<=1
+                    && rail.top>=viewer.bottom-1 && viewer.width>0 && viewer.height>0
+                    && configuration.left>=viewer.right-1 && Math.abs(configuration.top-viewer.top)<=1
+                    && configuration.bottom>=rail.bottom-1;
+                }
+                """), "The actual parts dock must sit below the preview while configuration owns the other column.");
+        }
         await rail.ScrollIntoViewIfNeededAsync();
         await Capture("initial");
         Assert.Contains("/instantquotation/3d-printing", page.Url, StringComparison.Ordinal);
         Assert.False(string.IsNullOrWhiteSpace(await page.TitleAsync()));
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
-        if (width < 992)
+        if (width < 1024)
             Assert.True(await rail.EvaluateAsync<bool>("rail => rail.scrollWidth <= rail.clientWidth + 1"),
                 "A narrow parts rail must expose names and actions without nested horizontal clipping.");
         foreach (var name in names)
@@ -259,11 +280,13 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         await Assertions.Expect(page.Locator("[data-workflow-review-part]")).ToHaveCountAsync(2);
         // Complete the application's native accessibility focus transition before moving focus.
         await Assertions.Expect(page.Locator("[data-workflow-review]")).ToBeFocusedAsync();
+        Assert.Equal(0, await page.Locator("[data-workflow-parts]").CountAsync());
         var continueButton = page.Locator("[data-review-continue]");
         await continueButton.FocusAsync();
         await Assertions.Expect(continueButton).ToBeFocusedAsync();
         await page.Keyboard.PressAsync("Enter");
         await Assertions.Expect(page.Locator("[data-workflow-customer-details]")).ToBeFocusedAsync();
+        Assert.Equal(0, await page.Locator("[data-workflow-parts]").CountAsync());
         failureEvidence.AwaitBoundary("review", true);
         failureEvidence.Stage("CustomerInput");
         failureEvidence.AwaitBoundary("customer-input", false);

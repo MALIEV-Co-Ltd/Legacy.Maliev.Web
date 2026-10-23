@@ -1,114 +1,134 @@
 using System.Net;
 using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
 
+// The 3c052 source redesign supersedes the former chronology-only presentation.
+// These checks freeze the replacement's public content and enhancement wire contracts.
 public sealed class AboutPageContractTests : IClassFixture<TestingWebApplicationFactory>
 {
-    private static readonly string[] EvidenceUrls =
-    [
-        "https://www.dataforthai.com/company/0125561001573/",
-        "https://www.print3dd.com/maliev-co-ltd/",
-        "https://waa.inter.nstda.or.th/stks/pub/2022/20220613-procurement-winner-co-2565-q02.pdf",
-        "https://fprocurement.egat.co.th/storage/documents/dprocurement/result/domestic_july2024.pdf",
-        "https://shop.maliev.com/blogs/news",
-        "https://shop.maliev.com/collections/sim-racing-solutions",
-    ];
+    private readonly TestingWebApplicationFactory factory;
 
-    private readonly HttpClient client;
+    public AboutPageContractTests(TestingWebApplicationFactory factory) => this.factory = factory;
 
-    public AboutPageContractTests(TestingWebApplicationFactory factory)
+    [Theory]
+    [InlineData("en", "From concept to a working part.", "Manufacturing capabilities", "Selected corporate customers")]
+    [InlineData("th", "จากไอเดีย สู่ชิ้นงานจริง", "ความสามารถด้านการผลิต", "ลูกค้าองค์กรบางส่วนของเรา")]
+    public async Task About_RendersLocalizedSourceStoryAndAccessibleControls(string culture, string heading, string capabilities, string customers)
     {
-        client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        var html = WebUtility.HtmlDecode(await client.GetStringAsync($"/about?culture={culture}"));
+
+        Assert.Single(Regex.Matches(html, "<h1(?:\\s|>)", RegexOptions.IgnoreCase));
+        Assert.Contains($">{heading}<", html, StringComparison.Ordinal);
+        Assert.Contains(capabilities, html, StringComparison.Ordinal);
+        Assert.Contains(customers, html, StringComparison.Ordinal);
+        Assert.Contains("class=\"landing-main profile-about\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-capability-carousel", html, StringComparison.Ordinal);
+        Assert.Contains("data-capability-track", html, StringComparison.Ordinal);
+        Assert.Contains("data-capability-status", html, StringComparison.Ordinal);
+        Assert.Contains("aria-live=\"polite\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-workpiece-gallery", html, StringComparison.Ordinal);
+        Assert.Contains("aria-live=\"off\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-workpiece-toggle", html, StringComparison.Ordinal);
+        foreach (var id in new[] { "cnc", "printing", "scanning", "design", "silicone", "injection" })
         {
-            AllowAutoRedirect = false,
-            BaseAddress = new Uri("https://localhost"),
-        });
+            Assert.Single(Regex.Matches(html, $"id=\"capability-{id}\""));
+            Assert.Contains($"aria-controls=\"capability-{id}\"", html, StringComparison.Ordinal);
+        }
+        for (var index = 0; index < 4; index++)
+        {
+            Assert.Single(Regex.Matches(html, $"id=\"workpiece-photo-{index}\""));
+            Assert.Contains($"aria-controls=\"workpiece-photo-{index}\"", html, StringComparison.Ordinal);
+        }
+        Assert.DoesNotContain("about-records", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("first in Thailand", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("connect.facebook.net", html, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void AboutComponent_SourceContainsResearchedSemanticRecord()
+    public async Task About_PreservesOrderedIllustrativeProjectAndEngineeringLimits()
     {
-        var root = FindRepositoryRoot();
-        var source = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "About", "AboutContent.razor"));
-
-        Assert.Contains("class=\"about-page\"", source, StringComparison.Ordinal);
-        Assert.Contains("<ol class=\"about-records\"", source, StringComparison.Ordinal);
-        Assert.Equal(6, Regex.Matches(source, "class=\"about-record(?:\\s|\")").Count);
-        Assert.Contains("href=\"/Quotation\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Services\"", source, StringComparison.Ordinal);
-        Assert.All(EvidenceUrls, url => Assert.Contains(url, source, StringComparison.Ordinal));
-        Assert.DoesNotContain("direction-l", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("direction-r", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("first in Thailand", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("machine learning", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("wow", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("animate__", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("facebook", source, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void AboutPage_UsesDedicatedStaticStylesWithoutMotionOrFontOverrides()
-    {
-        var root = FindRepositoryRoot();
-        var entry = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "assets", "route-about.css"));
-        var sharedEntry = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "assets", "site-entry.css"));
-        var stylesPath = Path.Combine(root, "Legacy.Maliev.Web", "wwwroot", "src", "app", "css", "about-page.css");
-
-        Assert.True(File.Exists(stylesPath), "The About page stylesheet must exist.");
-        var styles = File.ReadAllText(stylesPath);
-        Assert.Contains("about-page.css", entry, StringComparison.Ordinal);
-        Assert.DoesNotContain("about-page.css", sharedEntry, StringComparison.Ordinal);
-        Assert.Contains(".about-page", styles, StringComparison.Ordinal);
-        Assert.Contains(".about-record", styles, StringComparison.Ordinal);
-        Assert.DoesNotContain("animation:", styles, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("font-family:", styles, StringComparison.OrdinalIgnoreCase);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        var html = WebUtility.HtmlDecode(await client.GetStringAsync("/about?culture=en"));
+        var stages = new[] { "01 · Idea & sketch", "02 · CAD design", "03 · Prototype variations", "04 · CNC batch production" };
+        var previous = -1;
+        foreach (var stage in stages)
+        {
+            var position = html.IndexOf(stage, StringComparison.Ordinal);
+            Assert.True(position > previous, $"Missing or reordered source stage: {stage}");
+            previous = position;
+        }
+        Assert.Contains("Images illustrate the process and are not a named customer case study.", html, StringComparison.Ordinal);
+        Assert.Contains("MJF, SLS, SLM and DMLS require engineering review", html, StringComparison.Ordinal);
+        Assert.Contains("up to 1,000 parts", html, StringComparison.Ordinal);
+        Assert.Contains("Up to 50 g per shot", html, StringComparison.Ordinal);
+        Assert.Contains("up to 350 °C", html, StringComparison.Ordinal);
+        Assert.Contains("Editable CAD and 2D drawings are separately defined work.", html, StringComparison.Ordinal);
+        Assert.Contains("complete and sign the agreement before sending sensitive drawings", html, StringComparison.Ordinal);
     }
 
     [Theory]
-    [InlineData("en", "From a family workshop to connected manufacturing.", "The manufacturing record", "About MALIEV | Connected manufacturing in Thailand")]
-    [InlineData("th", "จากเวิร์กช็อปของครอบครัว สู่ระบบการผลิตที่เชื่อมต่อกัน", "บันทึกเส้นทางการผลิต", "เกี่ยวกับ MALIEV | ระบบการผลิตที่เชื่อมต่อกันในประเทศไทย")]
-    public async Task AboutPage_RendersLocalizedChronologyMetadataAndPreservesContracts(
-        string culture,
-        string hero,
-        string recordHeading,
-        string title)
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task About_PreservesExactCustomerRosterAndCorrectedArtwork(string culture)
     {
-        using var response = await client.GetAsync($"/about?culture={culture}");
-        var source = await response.Content.ReadAsStringAsync();
-        var content = WebUtility.HtmlDecode(source);
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Single(Regex.Matches(content, "<h1(?:\\s|>)", RegexOptions.IgnoreCase));
-        Assert.Contains(hero, content, StringComparison.Ordinal);
-        Assert.Contains(recordHeading, content, StringComparison.Ordinal);
-        Assert.Contains("class=\"about-records\"", content, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Quotation\"", content, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/Services\"", content, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains($"<title>{title}</title>", content, StringComparison.Ordinal);
-        Assert.Contains($"property=\"og:title\" content=\"{title}\"", content, StringComparison.Ordinal);
-        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
-        Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
-        Assert.Contains("hreflang=\"en\"", source, StringComparison.Ordinal);
-        Assert.Contains("hreflang=\"th\"", source, StringComparison.Ordinal);
-        Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("https://www.facebook.com", content, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("connect.facebook.net", content, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("fb:app_id", content, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Legacy.Maliev.Web.slnx")))
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        var html = WebUtility.HtmlDecode(await client.GetStringAsync($"/about?culture={culture}"));
+        string[] expected = [
+            "ptt", "pttep", "bangchak", "siemens-mobility", "mitsubishi-materials", "fabrinet",
+            "minor-food", "kohler", "grohe", "murata", "olympus", "air-liquide", "lixil", "kobelco",
+            "siam-motors", "mektec", "thai-asahi-denso", "yg-1", "sp-syndicate", "singha-kameda",
+            "aeon-fantasy", "lenso", "mfec", "thai-coconut", "khon-kaen-sugar", "bem", "crown-seal",
+            "thai-optical", "kumwell", "tpi-polene-power",
+            "alten-korea", "forth", "do-day-dream", "thai-agri-foods",
+            "sahamitr-pressure-container", "crown-ceramics"
+        ];
+        var actual = Regex.Matches(html, "data-customer=\"([^\"]+)\"").Select(match => match.Groups[1].Value).ToArray();
+        Assert.Equal(expected, actual);
+        Assert.DoesNotContain("index-creative-village", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Index Creative Village", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("อินเด็กซ์ ครีเอทีฟ วิลเลจ", html, StringComparison.Ordinal);
+        Assert.Contains(culture == "th"
+            ? "บริษัทที่เลือกใช้บริการพัฒนาและผลิตชิ้นงานกับ MALIEV"
+            : "Companies that have chosen MALIEV for manufacturing and development work.", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Companies we have completed manufacturing and development work for.", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("บริษัทที่เราเคยร่วมพัฒนาและผลิตชิ้นงานให้", html, StringComparison.Ordinal);
+        (string Slug, string English, string Thai, int Width, int Height, bool Dark)[] additions = [
+            ("alten-korea", "ALTEN Korea", "ALTEN Korea", 50, 83, false),
+            ("forth", "Forth Corporation", "ฟอร์ท คอร์ปอเรชั่น", 169, 50, false),
+            ("do-day-dream", "Do Day Dream", "ดู เดย์ ดรีม", 76, 74, false),
+            ("thai-agri-foods", "Thai Agri Foods", "ไทยอกริฟู้ดส์", 75, 75, false),
+            ("sahamitr-pressure-container", "Sahamitr Pressure Container", "สหมิตรถังแก๊ส", 264, 168, false),
+            ("crown-ceramics", "Crown Ceramics", "คราวน์ เซรามิคส์", 234, 119, false)
+        ];
+        foreach (var customer in additions)
         {
-            directory = directory.Parent;
+            var card = Assert.Single(Regex.Matches(html,
+                $"<li class=\"profile-customer\" data-customer=\"{customer.Slug}\">(?<card>.*?)</li>", RegexOptions.Singleline)).Groups["card"].Value;
+            Assert.Contains($"class=\"profile-customer-logo{(customer.Dark ? " profile-customer-logo-dark" : "")}\"", card, StringComparison.Ordinal);
+            var image = Assert.Single(Regex.Matches(card, "<img\\b[^>]*>", RegexOptions.IgnoreCase)).Value;
+            foreach (var (name, value) in new[]
+            {
+                ("src", $"/src/images/customers/{customer.Slug}.webp"),
+                ("width", customer.Width.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                ("height", customer.Height.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                ("loading", "lazy"), ("decoding", "async"), ("alt", "")
+            })
+            {
+                // Razor can minimize an empty static attribute; its value must still be empty.
+                var attribute = Assert.Single(Regex.Matches(image,
+                    $"""\s{Regex.Escape(name)}(?:="(?<value>[^"]*)")?(?=\s|/?>)""",
+                    RegexOptions.IgnoreCase));
+                Assert.Equal(value, attribute.Groups["value"].Value);
+            }
+            Assert.Contains($">{(culture == "th" ? customer.Thai : customer.English)}<", card, StringComparison.Ordinal);
         }
-
-        return directory?.FullName ?? throw new DirectoryNotFoundException("Repository root was not found.");
+        Assert.Contains("/src/images/customers/kobelco.webp", html, StringComparison.Ordinal);
+        Assert.Contains("/src/images/customers/yg-1-official-mark.webp", html, StringComparison.Ordinal);
+        Assert.Contains("/src/images/customers/tpi-polene-power-emblem.webp", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("/src/images/customers/yg-1.png", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("/src/images/customers/tpi-polene-power.png", html, StringComparison.Ordinal);
     }
 }

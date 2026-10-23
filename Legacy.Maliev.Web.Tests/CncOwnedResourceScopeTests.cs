@@ -50,6 +50,23 @@ public sealed class CncOwnedResourceScopeTests(Xunit.Abstractions.ITestOutputHel
                 Assert.False(refusal.RootElement.GetProperty("closed").GetBoolean());
                 if (mode == "reader-settlement") Assert.False(refusal.RootElement.GetProperty("readersSettled").GetBoolean());
                 else Assert.False(refusal.RootElement.GetProperty("terminal").GetBoolean());
+                if (mode == "unknown-identity")
+                {
+                    var capturedExecutable = recovery.ExecutableIdentityForControl;
+                    recovery.RejectIdentity = false;
+                    recovery.ExecutableIdentityForControl = null;
+                    try
+                    {
+                        var missingExecutable = await Assert.ThrowsAsync<InvalidOperationException>(() => recovery.CloseAsync());
+                        Assert.Equal("Owned PID/birth/executable identity changed; preserve process.", missingExecutable.Message);
+                        Assert.False(recovery.Process.HasExited);
+                        Assert.True(CncOwnedResourceScope.RetainedCustody.ContainsKey(key));
+                    }
+                    finally
+                    {
+                        recovery.ExecutableIdentityForControl = capturedExecutable;
+                    }
+                }
             }
             finally
             {
@@ -121,6 +138,14 @@ public sealed class CncOwnedResourceScopeTests(Xunit.Abstractions.ITestOutputHel
             Assert.IsType<InvalidOperationException>(Record.Exception(readMetrics));
             var observed = OwnedProcessMetricObservation.TryRead(child.Process, handle, pid, readMetrics);
             Assert.False(observed, "The same real metrics read that faults without the terminal guard must settle the exact owned child.");
+            Action readExecutable = () =>
+            {
+                child.Process.Refresh();
+                _ = child.Process.MainModule?.FileName ?? throw new InvalidOperationException("Executable identity unavailable.");
+            };
+            Assert.IsType<InvalidOperationException>(Record.Exception(readExecutable));
+            Assert.False(OwnedProcessMetricObservation.TryRead(child.Process, handle, pid, readExecutable),
+                "The same exact-terminal guard must also settle executable observation after natural exit.");
             await child.CompleteAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
         }, rows => output.WriteLine(JsonSerializer.Serialize(rows)));
     }

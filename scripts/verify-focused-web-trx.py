@@ -47,7 +47,151 @@ ROSTERS = {'fdm': {'Legacy.Maliev.Web.Tests.FdmOriginalServiceEligibilityBoundar
                                                                'Build_SupportOff_ReportsDemandInsteadOfZeroSuccess': 1,
                                                                'Build_VerticalCube_ProducesNoSupport': 1,
                                                                'CalculateMass_UsesDepositedVolumesAndSeparateDensities': 1}},
- 'sidebar': {'Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests': {'RealPartsRailExposesLongNamesAndKeyboardActions': 10}}}
+ 'sidebar': {'Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests': {'RealPartsRailExposesLongNamesAndKeyboardActions': 12}}}
+
+
+BILLING_LIFETIME_CASES = (
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAdmittedSynchronousBodyBeforeDependencyRelease",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: False)",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: True)",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ProvenNoLiveChild_ClosesOriginalWrapperWithoutLiveExecutableLookup(state: \"exited\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ProvenNoLiveChild_ClosesOriginalWrapperWithoutLiveExecutableLookup(state: \"refused\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ActualIdleExpiry_ClosesOriginalChildBeforeDependency_AndReleasesOwner",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ActualExpiry_DelayedFrontendShutdownRetainsBackendAndCaseWorkUntilSettled",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup(stage: \"start\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup(stage: \"identity\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup(stage: \"readers\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: \"kill\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: \"reap\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: \"readers\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: \"reader-close\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: \"handle-close\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedHostDisposal_IsStickyAndCannotBecomeNoOpClearance",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.InterruptedHostStartup_RefusesHostDisposalAndDependencyRelease",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.SettledChildReaders_BeforeHandleAndDependencyRelease_AllHostsAttemptedFirst",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.SynchronousBlockedHostRelease_IsBoundedRetainedAndReusesOriginalAttempt",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.SettledReaderFault_ReleasesResourcesButRepeatDisposalStillRejectsProof",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"daemon\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"id\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"created\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"owner\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"envelope\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"init\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"signature\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendExactOriginalRemoval_IsReobservedAfterSdkDisposal",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkCreationIdUnavailable_RefusesNameBasedAdoptionAndCleanup",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkIdentityLostBeforeDisposal_RefusesMutation",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendUnsettledRemoval_RefusesAbsenceAndSdkRelease",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"System.IO.IOException\", expected: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"System.Net.Sockets.SocketException\", expected: \"SocketException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Microsoft.AspNetCore.Connections.AddressInUseExcep\"···, expected: \"AddressInUseException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Microsoft.Extensions.Options.OptionsValidationExce\"···, expected: \"OptionsValidationException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"System.InvalidOperationException\", expected: \"InvalidOperationException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Npgsql.NpgsqlException\", expected: \"NpgsqlException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: \"Npgsql.PostgresException\", expected: \"PostgresException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_DiscardsMalformedForeignOversizedAndArbitraryText",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_DrainRetainsOnlyFixedStderrClassificationAcrossChunks(observeStartupFailure: False, expected: \"NotObserved\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_DrainRetainsOnlyFixedStderrClassificationAcrossChunks(observeStartupFailure: True, expected: \"IOException\")",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_ReaderFailureCannotReplaceTheOriginalExitedChildAssertion(cancelled: False)",
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_ReaderFailureCannotReplaceTheOriginalExitedChildAssertion(cancelled: True)",
+)
+ROSTERS["billing-lifetime"] = {
+    "Legacy.Maliev.Web.Tests.BillingProofLifetimeTests": {
+        "StartupFailure_RecognizesOnlyTheExistingPrivateBoundary": 7,
+        "StartupFailure_DiscardsMalformedForeignOversizedAndArbitraryText": 1,
+        "StartupFailure_DrainRetainsOnlyFixedStderrClassificationAcrossChunks": 2,
+        "StartupFailure_ReaderFailureCannotReplaceTheOriginalExitedChildAssertion": 2,
+        "Expiry_JoinsAdmittedSynchronousBodyBeforeDependencyRelease": 1,
+        "Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce": 2,
+        "ProvenNoLiveChild_ClosesOriginalWrapperWithoutLiveExecutableLookup": 2,
+        "ActualIdleExpiry_ClosesOriginalChildBeforeDependency_AndReleasesOwner": 1,
+        "ActualExpiry_DelayedFrontendShutdownRetainsBackendAndCaseWorkUntilSettled": 1,
+        "AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup": 3,
+        "FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease": 5,
+        "FailedHostDisposal_IsStickyAndCannotBecomeNoOpClearance": 1,
+        "InterruptedHostStartup_RefusesHostDisposalAndDependencyRelease": 1,
+        "SettledChildReaders_BeforeHandleAndDependencyRelease_AllHostsAttemptedFirst": 1,
+        "SynchronousBlockedHostRelease_IsBoundedRetainedAndReusesOriginalAttempt": 1,
+        "SettledReaderFault_ReleasesResourcesButRepeatDisposalStillRejectsProof": 1,
+        "BackendGenerationChange_RefusesMutationAndAbsenceReceipt": 7,
+        "BackendExactOriginalRemoval_IsReobservedAfterSdkDisposal": 1,
+        "BackendSdkCreationIdUnavailable_RefusesNameBasedAdoptionAndCleanup": 1,
+        "BackendSdkIdentityLostBeforeDisposal_RefusesMutation": 1,
+        "BackendUnsettledRemoval_RefusesAbsenceAndSdkRelease": 1,
+    }
+}
+
+ROSTERS["migration-consumers"] = {
+    "Legacy.Maliev.Web.Tests.PublicCrawlerInventoryAcceptanceTests": {
+        "SourceInventory_ActualEnglishAndThaiDocumentsKeepTheirDiscoveryContract": 54,
+        "RetainedThreePublicLayouts_KeepTheSameHttpDiscoveryContract": 6,
+        "SourceCommercialPages_RenderIndependentIntentAndDirectQuotationAnchors": 20,
+        "AdditiveNoWeaponsRoute_DoesNotReplaceAnyHistoricalInventoryDocument": 2,
+        "PublicInventoryAcceptance_DoesNotRelaxPrivateAndCredentialUtilities": 4
+    },
+    "Legacy.Maliev.Web.Tests.SitemapResponseCachingHttpTests": {
+        "Public_sitemap_declares_source_one_hour_public_cache_lifetime": 2,
+        "Public_sitemap_keeps_exact_canonical_inventory_localized_alternates_and_private_exclusions": 2,
+        "Public_sitemap_xml_is_identical_across_cultures_and_caller_cookie_input": 1
+    },
+    "Legacy.Maliev.Web.Tests.KnowledgeGuidelinesStaticSsrRouteTests": {
+        "Host_DeclaresTheGuidelinesStaticSsrPageAndKeepsTheRazorRollbackSource": 1,
+        "GuidelinesRoute_RendersCompleteLocalizedAccessibleStaticDocument": 2,
+        "GuidelinesRoute_PreservesCanonicalAndLocalizedAlternates": 2,
+        "GuidelinesRoute_EmitsLocalizedValidHowToStructuredData": 2,
+        "AcceptedConsent_PreservesTheGtmBodyContainerOnTheGuidelinesRoute": 1,
+        "DisabledGuidelinesRoute_UsesTheRetainedRazorFallbackAtTheCanonicalUrl": 1
+    },
+    "Legacy.Maliev.Web.Tests.KnowledgeCncMachiningStaticSsrRouteTests": {
+        "Host_DeclaresTheCncMachiningSpecificationPageAndKeepsTheRazorRollbackSource": 1,
+        "CncMachiningSpecificationRoute_RendersCompleteLocalizedAccessibleDocument": 2,
+        "SourceFinalSurfaceFinishesRoute_PreservesTheRelocatedAnodizingDetail": 2,
+        "CncMachiningSpecificationRoute_PreservesCanonicalAndLocalizedAlternates": 2,
+        "CncMachiningSpecificationRoute_EmitsLocalizedWebPageAndFourLevelBreadcrumbSchema": 2,
+        "AcceptedConsent_PreservesTheGtmBodyContainerOnTheCncMachiningSpecificationRoute": 1,
+        "DisabledCncMachiningSpecificationRoute_UsesTheRetainedRazorFallback": 1
+    },
+    "Legacy.Maliev.Web.Tests.PublicCopyParityTests": {
+        "CareerDirectoryKeepsThePostA40ResponsiveAndCloudflareSafeMarkup": 1,
+        "LegalDocumentsExposeTheLocalizedEffectiveDateAndCompleteTocAnchors": 1,
+        "KnowledgeAndInquirySurfacesKeepLocalizedProjectCopyAndProgressiveEnhancementMarkers": 1
+    },
+    "Legacy.Maliev.Web.Tests.AssetDeliveryContractTests": {
+        "RazorPartials_ReferenceNegotiatedAssetsInsteadOfGzipFiles": 1,
+        "GeneratedProductionAsset_IsPresentAndNonEmpty": 4,
+        "CncQuotationRuntimeAsset_IsPresentAndNonEmpty": 11,
+        "ObsoleteAnimationDependencies_AreAbsentFromSourceAndBundles": 1,
+        "ObsoleteJqueryValidationStack_IsAbsentFromSourceAndBundles": 1,
+        "KnowledgeActionLinks_KeepAccessibleButtonTextContrast": 1,
+        "InstantQuotationAssets_AreBundledAndKeepPricingOnServerEndpoints": 1
+    },
+    "Legacy.Maliev.Web.Tests.PublicWebpImageContractTests": {
+        "SourceDerivedWebpAssets_MatchCommit6509356": 1,
+        "PublicRuntimeSources_ReferenceOnlyWebpRasterImages": 1,
+        "PublicWebpReferences_ResolveToCommittedAssets": 1
+    },
+    "Legacy.Maliev.Web.Tests.AboutPageContractTests": {
+        "About_RendersLocalizedSourceStoryAndAccessibleControls": 2,
+        "About_PreservesOrderedIllustrativeProjectAndEngineeringLimits": 1,
+        "About_PreservesExactCustomerRosterAndCorrectedArtwork": 2
+    },
+    "Legacy.Maliev.Web.Tests.WebSurfaceTests": {
+        "HomePage_RendersLocalizedStaticBlazorBodyWithNavigationParity": 2,
+        "AboutRoute_PreservesLocalizedStaticSsrTimelineWithoutFacebookProfileIntegration": 2,
+        "Sitemap_PublishesEveryIndexedRouteWithLocalizedAlternates": 1
+    }
+}
+
+
+def native_definition_display(name):
+    # xunit.runner.visualstudio3.1.5 VsDiscoverySink Escape -> Truncate.
+    # Producer commit 1b188a7b0a069d7fc94ae3c0b251f1302b602b63, lines 23,139-152.
+    # Discovery stores this display; VSTest18.8.1 can retain the full execution display.
+    escaped = name.replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t")
+    units = escaped.encode("utf-16-le", errors="surrogatepass")
+    if len(units) <= 447 * 2:
+        return escaped
+    return units[:444 * 2].decode("utf-16-le", errors="surrogatepass") + "\u00b7" * 3
 
 
 def verify(path, suite, assembly):
@@ -59,7 +203,18 @@ def verify(path, suite, assembly):
         return rows[0]
     if root.tag != NS + "TestRun":
         raise ValueError("Exact native TRX namespace required")
+    # Every qualified structural element must occur only at its native direct location.
+    if len(list(root.iter(NS + "TestRun"))) != 1:
+        raise ValueError("Nested TRX runs are forbidden")
+    for name in ("ResultSummary", "Results", "TestDefinitions", "TestEntries"):
+        direct = root.findall(NS + name)
+        if len(direct) != 1 or list(root.iter(NS + name)) != direct:
+            raise ValueError("Exactly one global/direct TRX " + name + " required")
     summary = one(root, "ResultSummary")
+    if list(root.iter(NS + "Counters")) != summary.findall(NS + "Counters"):
+        raise ValueError("Unexpected nested or extra TRX counters")
+    if any(row.tag.rsplit("}", 1)[-1] in ("RunInfo", "ErrorInfo") for row in root.iter()):
+        raise ValueError("TRX infrastructure errors and run notices are forbidden")
     counters = one(summary, "Counters")
     if set(counters.attrib) != FIELDS or any(not re.fullmatch(r"0|[1-9][0-9]*", v) for v in counters.attrib.values()):
         raise ValueError("All 16 canonical TRX counters required")
@@ -75,6 +230,8 @@ def verify(path, suite, assembly):
         container = one(root, name)
         if len(container) != total or any(row.tag != NS + child for row in container):
             raise ValueError("Exact result/definition/entry rows required")
+        if list(root.iter(NS + child)) != list(container):
+            raise ValueError("Unexpected nested or extra TRX " + child)
         groups.append(list(container))
     results, definitions, entries = groups
     def ids(rows, key):
@@ -88,8 +245,13 @@ def verify(path, suite, assembly):
         raise ValueError("Execution identity mismatch")
     if {(r.attrib["testId"], r.attrib["executionId"]) for r in results} != {(r.attrib["testId"], r.attrib["executionId"]) for r in entries}:
         raise ValueError("Execution entry association mismatch")
+    for name in ("TestMethod", "Execution"):
+        direct = [one(row, name) for row in definitions]
+        if list(root.iter(NS + name)) != direct:
+            raise ValueError("Unexpected nested or extra TRX " + name)
     definitions = {row.attrib["id"]: row for row in definitions}
     names = set()
+    definition_names = set()
     actual = Counter()
     assembly = str(Path(assembly).resolve())
     for result in results:
@@ -98,8 +260,10 @@ def verify(path, suite, assembly):
         execution = one(definition, "Execution")
         cls, member = method.attrib.get("className"), method.attrib.get("name")
         name = result.attrib.get("testName", "")
+        definition_name = definition.attrib.get("name", "")
+        if definition_name != native_definition_display(name):
+            raise ValueError("native-definition-display-mismatch")
         if (result.attrib.get("outcome") != "Passed" or name in names
-            or definition.attrib.get("name") != name
             or execution.attrib.get("id") != result.attrib["executionId"]
             or cls not in expected or member not in expected[cls]
             or not (name == cls + "." + member or name.startswith(cls + "." + member + "("))
@@ -107,16 +271,21 @@ def verify(path, suite, assembly):
             # Native VSTest emits lowercased storage on Linux; codeBase remains exact case.
             or str(Path(definition.attrib.get("storage", "")).resolve()).casefold() != assembly.casefold()):
             raise ValueError("Unknown, duplicate, failed or mismatched test/definition/execution/assembly")
+        if definition_name in definition_names:
+            raise ValueError("native-definition-display-duplicate")
         names.add(name)
+        definition_names.add(definition_name)
         actual[(cls, member)] += 1
     if actual != Counter({(cls, member): rows for cls, methods in expected.items() for member, rows in methods.items()}):
         raise ValueError("Exact independent class/method row roster required")
+    if suite == "billing-lifetime" and names != set(BILLING_LIFETIME_CASES):
+        raise ValueError("Exact lifecycle control identities required")
     if suite == "sidebar":
         cls = "Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests"
         exact = {f'{cls}.RealPartsRailExposesLongNamesAndKeyboardActions(culture: "{culture}", width: {width})'
-                 for culture in ("en", "th") for width in (320, 375, 820, 992, 1280)}
+                 for culture in ("en", "th") for width in (320, 375, 820, 992, 1024, 1280)}
         if names != exact:
-            raise ValueError("Exact ten sidebar culture/viewport rows required")
+            raise ValueError("Exact twelve sidebar culture/viewport rows required")
     return counts
 
 

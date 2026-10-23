@@ -1,0 +1,254 @@
+{
+  "schemaVersion": 1,
+  "kind": "qualified-corporate-logo-source-custody",
+  "qualificationHead": "cbffa02fa16d15bc685befd9692f4116e6e2bca3",
+  "artifact": {
+    "id": 12089150281,
+    "bytes": 359313,
+    "sha256": "67fcbc17e2d66c3b41a8d2d98def75e1adba48a1835f7206b33db2d80ee64bbd",
+    "reverifiedFromSavedArchive": true,
+    "manifestSha256": "e5ffa25048850be7365840a97adbdf3f3aef69d4b5d53e2d64d4c77d856c0aa6",
+    "run": 38999911761,
+    "attempt": 1,
+    "head": "cbffa02fa16d15bc685befd9692f4116e6e2bca3"
+  },
+  "transfer": {
+    "gitBlob": "a75ca25772aa88e3557c577e67061cfe43d512e8"
+  },
+  "source": {
+    "candidate": "9093de0f5a0a45239100eb4c07ae42106732a873",
+    "inputGit": "9ab07a0b8bbcfa70e5e0b28095f2b864545c48a3",
+    "inputSha256": "0adc394cd1a584046cdfab50b554e2d2258d0c3eae5bd75017fe9caa89a3d2d0",
+    "componentGit": "6c3f49a3c232f2f9b1a32fead5675420ebc4ae59",
+    "pinCount": 18
+  },
+  "controls": 34,
+  "convertedAssets": 18,
+  "scope": "Static lossless RGBA/alpha/dimensions/orientation/normalized EXIF/XMP with explicit reviewed ICC disposition. Source custody only; application CI acceptance required.",
+  "metadata": {
+    "kobelcoXmpBytes": 779,
+    "kobelcoXmpSha256": "68a156909ed175fbf2170fbffafc478f3a2747cd240b5adabd3b8f9e8730f747",
+    "fullNormalizedExifPreserved": true
+  },
+  "assets": [
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/ptt.webp",
+      "gitBlob": "a838c40f8b8fc92c10ce0f5d2a35c4492db50fb3",
+      "sha256": "c014f942b12028d98518f2bf82349dad82cef75f72d4ab0ecb96932d52c37da2",
+      "bytes": 17434,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/ptt.png",
+        "oid": "a2a15c062fd2570efff342b5003a11e4af2d3841",
+        "sha256": "a800ec46765bafee5692624f8c7f8c6efd6d6a818784b740c21fcffafa4fcf76",
+        "bytes": 22718
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mitsubishi-materials.webp",
+      "gitBlob": "c011d36e41ad336ad57a4824f4b6b141983ce447",
+      "sha256": "7c7925d35ade954593472245406fb08592219754e2fa631761e350c3dae3d11d",
+      "bytes": 2972,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mitsubishi-materials.png",
+        "oid": "70266937619a2e576a31788d07de41987746012f",
+        "sha256": "c761ad949ef9e2bed73b99a1bd3886ee3576260daa5b00db6d47a0a66c1d7fa8",
+        "bytes": 8051
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/fabrinet.webp",
+      "gitBlob": "de1bfebfb46ca7bb85b4d3c8a62e4bb89e951c1c",
+      "sha256": "7de6d9ee205cd34f618e4fcd7334e8b697d072ddbdd8342ac91f417e83d413dd",
+      "bytes": 4300,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/fabrinet.png",
+        "oid": "1aed2161ba8f692ef2a523adb12f96b71e84fc69",
+        "sha256": "379453f77d9b8eede9bcf8151372cf632193ba4b9287eceb86fcb11f5616501b",
+        "bytes": 8209
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/minor-food.webp",
+      "gitBlob": "7443b9f820c18a44ddb4df8b179e6a8ddcca45de",
+      "sha256": "a6aeb2291c0b9d2194f3721c250ae2feb7a88226ca3e304f6d9349d0b18af815",
+      "bytes": 13232,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/minor-food.png",
+        "oid": "69544724a554792184b5f39d4835a6e702d4ce0c",
+        "sha256": "56fd7fabf3cdc29f8f64419dcb3b394f466e67bd1289e0684c9627e4f4d53dce",
+        "bytes": 39709
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/kohler.webp",
+      "gitBlob": "40de74184958806a9af20d5599a4d51aeb108de3",
+      "sha256": "62237e63a48283b55248f7148d6cb064d7ba92464815cad522e4434c43c1728e",
+      "bytes": 958,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/kohler.png",
+        "oid": "1d6dd48ac11b710ec0f219bb2c87089a69987f03",
+        "sha256": "3e3572e43a10e72ac4071893c30fd019f470fa84b31ea02dc25c6bee34eb9b47",
+        "bytes": 2539
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/olympus.webp",
+      "gitBlob": "8fffe8ad769a2f46e5bd8e92ce6aec054150f1aa",
+      "sha256": "7e9be6e1d9f5978983661807134805433eed680ad064ee177b49a1d24c083a38",
+      "bytes": 1456,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/olympus.png",
+        "oid": "7e58f285ae59caac385d907beff3bfa4e0f61f58",
+        "sha256": "2f89895cda9d845705cd87e9467d3fda719f1d41cc00f720193ea9ebb4e75591",
+        "bytes": 1925
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/kobelco.webp",
+      "gitBlob": "9f71c8d99ce0311b0d53c9e6fb00e52fb4cba80a",
+      "sha256": "d742feac04d63214a5e2b34438d68ed3499e914c044782d6328afad27514e49f",
+      "bytes": 1706,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/kobelco.gif",
+        "oid": "9bc957bdd8b1d79ad91487b560f76f18c2ebd85a",
+        "sha256": "82963050c2b450c166a2e6f98c16dd2a41e50a9a5da8dd1353998b810856546f",
+        "bytes": 2802
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mektec.webp",
+      "gitBlob": "28305bc8c1df96e5aacff28c9ab834623b46814b",
+      "sha256": "9a78e7a9d5562e0008ddaa91ccbf51afc089b5833faf565e290ca8d76d41ccec",
+      "bytes": 6886,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mektec.png",
+        "oid": "4d6ddca173368afa88b563226c43c4939c4fff7d",
+        "sha256": "42aeb7fb11e9aacf799d9d38cf9a23204e242378e3f370faea8d01d026f64253",
+        "bytes": 7447
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-asahi-denso-en.webp",
+      "gitBlob": "c3d0dd52c10f1c4e70a8fd8325bf9eb560d2688c",
+      "sha256": "cda8b36149136d3caabd915fd405482f75e89418f971f808e8d887387304c2a5",
+      "bytes": 2098,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-asahi-denso-en.png",
+        "oid": "e4110763d9a1e99b7d0cc58c4d11fd89c4646f78",
+        "sha256": "2222f2166ac130ae80a202edd5e823b2d19a4caef5a7ae4e080462f550676088",
+        "bytes": 3403
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/yg-1-official-mark.webp",
+      "gitBlob": "fd6dcafcde3253d4e60d008fcd9076de1e0b438d",
+      "sha256": "ad02ea95a243906ae7f111b631ff0a3aa7118bc854f03e170eff82bfa3bd6697",
+      "bytes": 2172,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/yg-1-official-mark.png",
+        "oid": "2f84b3389a5333b2227e655b24ff4f5e52bd074f",
+        "sha256": "75e7f962223eca5f3a4405adef091249c26d034d02b7c9aa59802ea765bdb1db",
+        "bytes": 7399
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/sp-syndicate.webp",
+      "gitBlob": "0dedc39890c6c37bdcde3944066d0fcaafb4c27d",
+      "sha256": "41e15b90ab84ec629dc32ee5a45c2859f37f5b8167455174f19b76701c0da529",
+      "bytes": 12612,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/sp-syndicate.jpg",
+        "oid": "94019818b17505ddfa0b54c58d0ea34d4b7e2fbf",
+        "sha256": "d5226d3b69e8cd84bc8380ed3b2e5888aafdf4af682e0baf9e9a8faabe83096c",
+        "bytes": 3415
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/singha-kameda-current.webp",
+      "gitBlob": "cf15f10ab13b3398b676a8aea1385a21ace61e09",
+      "sha256": "017dc4229731ff35c52755fb39386da807ae98d16e4e4f17089812e24d47a498",
+      "bytes": 26760,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/singha-kameda-current.png",
+        "oid": "4b72a122cab586f746c110ebad99f8d24acc26de",
+        "sha256": "5ef06d8d337f72b9c03904cf080c7615183345adafe9357c64ca97d12b26e753",
+        "bytes": 38923
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mfec.webp",
+      "gitBlob": "bed7e13d4cd0dd383999740f75de5b5d35ef2a53",
+      "sha256": "ca9a8b2996d5a8caf428f25b838fa4be922ae4625ce8acdaf3ff65f65514c73c",
+      "bytes": 16018,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mfec.png",
+        "oid": "531c23eb7188f44b6c0ce94da12207c271f3bd0a",
+        "sha256": "96d6de2772333c670d0a022cbd7239f763b9280a01936b5aefa20925d43e5a15",
+        "bytes": 22572
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-coconut.webp",
+      "gitBlob": "e0240debc4aa555ee8add9afb57c999ad509933f",
+      "sha256": "e1d95938debc89df78ccb649c0f4e82c7d0affe24df3f6bf860e20f1d158856d",
+      "bytes": 25828,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-coconut.jpg",
+        "oid": "221d22c268dd45d3841b81d6b546d28e824aa802",
+        "sha256": "dc1fbb9e8dbfdbdedbe4637ae7860f76bedad30189751c3a183042ef2f33f9a5",
+        "bytes": 35071
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/khon-kaen-sugar.webp",
+      "gitBlob": "f4f861508f5f99eb31969f38e337fceb3236c869",
+      "sha256": "0e5f9403f6488d06e074d1546ae6d4c9c8b353520fbbec3ebccce9c0689ccb33",
+      "bytes": 2788,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/khon-kaen-sugar.png",
+        "oid": "63e658b3739da162d41c61ff16ba7f8a5b3aea65",
+        "sha256": "7abfb51c3ce6ebc058cc0e0d854beddd83743f41b70a800aac9913c97236fe96",
+        "bytes": 4559
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/crown-seal.webp",
+      "gitBlob": "26b4c4477dded4c04c4811791c2bcaed4f6d941f",
+      "sha256": "c556c12445db2ae7d8079728a2232bdabe05f9fc8459923cc9637ce365c90f6d",
+      "bytes": 4480,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/crown-seal.png",
+        "oid": "bd72b4b00d8d65848241919f517eb692eaa886f4",
+        "sha256": "8796dce4263902d6633810f0e510f66636ebecf6ad6f7e0bc644a9f3557f9f68",
+        "bytes": 9426
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-optical.webp",
+      "gitBlob": "4845345dc82394658378c39b2772ee7e9e3ccbb3",
+      "sha256": "4b5bba96fdfd3ca366fbca5128381e11f8ec67971964aefa717267b5c48ccd45",
+      "bytes": 5996,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-optical.png",
+        "oid": "86b20b55e4533cf5f3a1ed9ee29dbbc414711d30",
+        "sha256": "2c0265a1bad345f534ed3fd86659608e223ce9cf19ea789fa72fcb6156746dfc",
+        "bytes": 6809
+      }
+    },
+    {
+      "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/tpi-polene-power-emblem.webp",
+      "gitBlob": "272237cff5036229afc32576c26cd6cd7109a125",
+      "sha256": "7eee5df88018bb420fbb09376bb4ed3555401d9845a3878c9e1ca5a9b60285f8",
+      "bytes": 4428,
+      "source": {
+        "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/tpi-polene-power-emblem.png",
+        "oid": "6d25ffb99bd420f594f5b091b9817e0789a7f879",
+        "sha256": "e3f5687098b53f137e4ed9bac25bba62deba91404fea50a0b360c92d186e9535",
+        "bytes": 6041
+      }
+    }
+  ],
+  "contactSheetSha256": "42db3da7df96883edd16f43d55c5ad7397a020ff64995636e8744161cdc2335c",
+  "resourceCleanup": "Exact hosted controls/proof workers and supervisors absent; disposable venv removed. Transfer buffers closed/released; no new native workers.",
+  "deployment": false
+}

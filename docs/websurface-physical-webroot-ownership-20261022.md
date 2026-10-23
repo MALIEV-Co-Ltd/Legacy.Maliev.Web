@@ -1,4 +1,6 @@
-# WebSurface physical web-root ownership proposal
+#
+Current integration disposition: PR761 candidate `63a1d4b8972ad24262dbcedd8ef9739c4aa6da5a` supersedes this historical ownership proposal with explicit `TestingWebRootLease` creation ownership. The earlier provider-discovery implementation is not restored. Its ten cases map to retained `WebSurfaceOwnedLifetimeTests`: two direct/configured factories, four quotation owners, four failed-start combinations (including the two shared-factory cases), lease-resolution failure, and actual Kestrel dynamic-port/static-response behavior. Those checks also preserve borrowed-provider isolation. PR738 retains only its three-line original child-start failure diagnostic beyond the PR761 ownership implementation. Exact-head and protected-main validation remain required.
+WebSurface physical web-root ownership proposal
 
 Status: source-only proposal based on Web head `859db9b6d0d35ffa036384bf9695208692a605a8`, tree `bc8b81bad11f013caa73e673e316a664472b4d01`. No build, SDK, test host, CI dispatch, production change, or financial/provider execution was performed by the author.
 

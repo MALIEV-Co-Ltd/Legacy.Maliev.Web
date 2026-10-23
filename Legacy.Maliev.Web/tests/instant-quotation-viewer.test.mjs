@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import * as viewerModule from '../wwwroot/src/app/js/instant-quotation/model-viewer.mjs';
 
 import {
   addCadPreviewEdges,
@@ -9,6 +10,7 @@ import {
   createModelViewer,
   createOcctLoader,
   ensurePreviewGeometryNormals,
+  frameObject,
   loadStandaloneModel,
   orientGltfForPrinting,
   stableBodyColor,
@@ -16,11 +18,17 @@ import {
   validateStandaloneGltfDocument,
 } from '../wwwroot/src/app/js/instant-quotation/model-viewer.mjs';
 import {
+  Box3,
+  BoxGeometry,
   BufferGeometry,
   Float32BufferAttribute,
+  Frustum,
+  Matrix4,
   Mesh,
   MeshStandardMaterial,
+  PerspectiveCamera,
   Texture,
+  Vector3,
 } from 'three';
 
 test('indexed preview geometry is expanded and flat-shaded before analysis', () => {
@@ -330,6 +338,122 @@ test('canvas resize caches CSS dimensions and DPR without repeated DPR 2 setSize
   assert.deepEqual(calls, [['ratio', 2], ['size', 400, 200, false], ['projection']]);
 });
 
+test('aspect reframe settles for 180 ms and ignores DPR-only changes and subpixel churn', () => {
+  let time = 0;
+  let ratio = 1;
+  const reframes = [];
+  const renderer = { setPixelRatio() {}, setSize() {} };
+  const camera = { aspect: 1, updateProjectionMatrix() {} };
+  const canvas = { clientWidth: 400, clientHeight: 200 };
+  const resize = createCanvasResizeController({
+    renderer, camera, canvas, devicePixelRatio: () => ratio,
+    now: () => time, onAspectSettled: () => reframes.push(camera.aspect),
+  });
+  resize.sync();
+  ratio = 2;
+  time = 200;
+  resize.sync();
+  canvas.clientWidth = 401;
+  time = 400;
+  resize.sync();
+  time = 600;
+  resize.sync();
+  assert.deepEqual(reframes, []);
+  canvas.clientWidth = 200;
+  resize.sync();
+  time = 779;
+  resize.sync();
+  assert.deepEqual(reframes, []);
+  canvas.clientWidth = 100;
+  resize.sync();
+  time = 958;
+  resize.sync();
+  assert.deepEqual(reframes, []);
+  time = 959;
+  resize.sync();
+  assert.deepEqual(reframes, [0.5]);
+  time = 2000;
+  resize.sync();
+  assert.deepEqual(reframes, [0.5]);
+});
+
+test('settled portrait resize frames the selected mesh through the production camera formula', () => {
+  const mesh = new Mesh(new BoxGeometry(120, 60, 20), new MeshStandardMaterial());
+  mesh.position.set(42, -17, 5);
+  mesh.rotation.set(0.2, 0.4, 0.1);
+  const camera = new PerspectiveCamera(45, 1, 0.1, 100000);
+  const controls = {
+    target: new Vector3(),
+    update() { camera.lookAt(this.target); camera.updateMatrixWorld(true); },
+  };
+  let fits = 0;
+  const adapter = {
+    show() {}, hide() {},
+    fit(object) { fits += 1; frameObject(object, camera, controls); },
+  };
+  const viewer = createModelViewer({ adapter });
+  let time = 0;
+  const canvas = { clientWidth: 600, clientHeight: 300 };
+  const resize = createCanvasResizeController({
+    renderer: { setPixelRatio() {}, setSize() {} }, camera, canvas,
+    devicePixelRatio: () => 1, now: () => time, onAspectSettled: () => viewer.fit(),
+  });
+  resize.sync();
+  viewer.addPart('selected', mesh);
+  const initialPosition = camera.position.toArray();
+  canvas.clientWidth = 150;
+  resize.sync();
+  time = 180;
+  resize.sync();
+  assert.equal(fits, 2);
+  assert.notDeepEqual(camera.position.toArray(), initialPosition);
+  const bounds = new Box3().setFromObject(mesh);
+  assert.deepEqual(controls.target.toArray(), bounds.getCenter(new Vector3()).toArray());
+  for (const aspect of [0.25, 0.5, 2]) {
+    camera.aspect = aspect;
+    frameObject(mesh, camera, controls);
+    const frustum = new Frustum().setFromProjectionMatrix(
+      new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+    for (const x of [bounds.min.x, bounds.max.x]) {
+      for (const y of [bounds.min.y, bounds.max.y]) {
+        for (const z of [bounds.min.z, bounds.max.z]) {
+          assert.equal(frustum.containsPoint(new Vector3(x, y, z)), true);
+        }
+      }
+    }
+  }
+  viewer.dispose();
+});
+
+test('aspect reframe uses the current selection and empty viewers do not fit a missing object', () => {
+  const fitted = [];
+  const adapter = { show() {}, hide() {}, fit: object => fitted.push(object) };
+  const viewer = createModelViewer({ adapter });
+  viewer.fit();
+  assert.deepEqual(fitted, []);
+  const first = disposableObject();
+  const second = disposableObject();
+  viewer.addPart('first', first);
+  viewer.addPart('second', second);
+  let time = 0;
+  const canvas = { clientWidth: 600, clientHeight: 300 };
+  const resize = createCanvasResizeController({
+    renderer: { setPixelRatio() {}, setSize() {} },
+    camera: { aspect: 1, updateProjectionMatrix() {} }, canvas,
+    now: () => time, onAspectSettled: () => viewer.fit(),
+  });
+  resize.sync();
+  canvas.clientWidth = 150;
+  resize.sync();
+  viewer.select('second');
+  time = 180;
+  resize.sync();
+  assert.equal(fitted.at(-1), second);
+  viewer.dispose();
+  assert.equal(first.disposeCount(), 1);
+  assert.equal(second.disposeCount(), 1);
+});
+
 test('OCCT loader clears a rejected promise so a transient script failure can retry', async () => {
   const scripts = [];
   const globalObject = {};
@@ -348,6 +472,121 @@ test('OCCT loader clears a rejected promise so a transient script failure can re
   globalObject.occtimportjs = async () => ({ recovered: true });
   scripts[1].load();
   assert.deepEqual(await second, { recovered: true });
+});
+
+test('production preview scene retains the source neutral background and four-light rig', () => {
+  const scene = viewerModule.createPreviewScene();
+  assert.equal(scene.isScene, true);
+  assert.equal(scene.background.getHex(), 0xf7f9fc);
+  assert.equal(scene.children.length, 4);
+  const [hemisphere, key, fill, rim] = scene.children;
+  assert.equal(hemisphere.isHemisphereLight, true);
+  assert.equal(hemisphere.color.getHex(), 0xffffff);
+  assert.equal(hemisphere.groundColor.getHex(), 0xd6dfe6);
+  assert.equal(hemisphere.intensity, 0.56);
+  for (const [light, color, intensity, position] of [
+    [key, 0xffffff, 0.64, [50, 30, 60]],
+    [fill, 0xdbe6ef, 0.26, [-50, -15, 30]],
+    [rim, 0xb8c8d8, 0.1, [-20, 50, -30]],
+  ]) {
+    assert.equal(light.isDirectionalLight, true);
+    assert.equal(light.color.getHex(), color);
+    assert.equal(light.intensity, intensity);
+    assert.deepEqual(light.position.toArray(), position);
+  }
+});
+
+test('production capture renders white then restores the exact live background and camera', () => {
+  const scene = viewerModule.createPreviewScene();
+  const liveBackground = scene.background;
+  const camera = new PerspectiveCamera(45, 1, 0.1, 100000);
+  camera.position.set(12, 23, 34);
+  const renders = [];
+  const renderer = {
+    render(actualScene, actualCamera) {
+      assert.equal(actualScene, scene);
+      assert.equal(actualCamera, camera);
+      renders.push(actualScene.background.getHex());
+    },
+  };
+  for (const image of ['data:image/png;base64,preview', 'data:,']) {
+    const canvas = {
+      toDataURL(type) {
+        assert.equal(type, 'image/png');
+        assert.equal(scene.background.getHex(), 0xffffff);
+        return image;
+      },
+    };
+    assert.equal(viewerModule.capturePreviewSnapshot({ scene, camera, renderer, canvas }),
+      image === 'data:,' ? null : image);
+    assert.equal(scene.background, liveBackground);
+    assert.deepEqual(camera.position.toArray(), [12, 23, 34]);
+  }
+  assert.deepEqual(renders, [0xffffff, 0xf7f9fc, 0xffffff, 0xf7f9fc]);
+});
+
+test('production capture restores and redraws the live background after render or encoding failure', () => {
+  for (const phase of ['render', 'encode']) {
+    const scene = viewerModule.createPreviewScene();
+    const liveBackground = scene.background;
+    const primary = new Error('synthetic capture failure');
+    const renders = [];
+    const renderer = {
+      render() {
+        renders.push(scene.background.getHex());
+        if (phase === 'render' && renders.length === 1) throw primary;
+      },
+    };
+    const canvas = { toDataURL() { throw primary; } };
+    assert.throws(
+      () => viewerModule.capturePreviewSnapshot({ scene, camera: new PerspectiveCamera(), renderer, canvas }),
+      error => error === primary);
+    assert.equal(scene.background, liveBackground);
+    assert.deepEqual(renders, [0xffffff, 0xf7f9fc]);
+  }
+});
+
+test('production capture retains both failures if the live redraw also fails', () => {
+  const scene = viewerModule.createPreviewScene();
+  const liveBackground = scene.background;
+  const primary = new Error('synthetic capture failure');
+  const redraw = new Error('synthetic redraw failure');
+  let renders = 0;
+  const renderer = { render() { renders += 1; if (renders === 2) throw redraw; } };
+  assert.throws(
+    () => viewerModule.capturePreviewSnapshot({
+      scene, camera: new PerspectiveCamera(), renderer,
+      canvas: { toDataURL() { throw primary; } },
+    }),
+    error => error instanceof AggregateError
+      && error.errors.length === 2 && error.errors[0] === primary && error.errors[1] === redraw);
+  assert.equal(scene.background, liveBackground);
+  assert.equal(renders, 2);
+});
+
+test('a failed background-part capture restores the prior selected part and its camera', () => {
+  const adapter = createAdapter();
+  const primary = new Error('synthetic snapshot failure');
+  adapter.snapshot = () => { throw primary; };
+  const viewer = createModelViewer({ adapter });
+  const first = disposableObject();
+  const second = disposableObject();
+  try {
+    viewer.addPart('first', first);
+    viewer.addPart('second', second);
+    viewer.select('first');
+    adapter.cameraState = { position: [3, 4, 5], target: [1, 2, 3] };
+    assert.throws(() => viewer.snapshot('second'), error => error === primary);
+    assert.deepEqual(adapter.cameraState, { position: [3, 4, 5], target: [1, 2, 3] });
+    const changed = [];
+    adapter.setColor = object => changed.push(object);
+    assert.equal(viewer.setColor('#123456'), true);
+    assert.deepEqual(changed, [first]);
+  } finally {
+    viewer.dispose();
+  }
+  assert.equal(first.disposeCount(), 1);
+  assert.equal(second.disposeCount(), 1);
 });
 
 function createAdapter() {

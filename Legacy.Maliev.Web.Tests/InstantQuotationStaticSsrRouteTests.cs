@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>, IDisposable
+public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>, IAsyncLifetime
 {
     private readonly WebApplicationFactory<Program> factory;
 
@@ -19,7 +19,13 @@ public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<TestingW
             .UseSetting("Recaptcha:SiteKey", "test-site-key"));
     }
 
-    public void Dispose() => factory.Dispose();
+    /// <summary>Completes setup after the per-test child factory has been created.</summary>
+    /// <returns>A completed setup task.</returns>
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    /// <summary>Releases this test's child host and its tracked clients without disposing the borrowed parent.</summary>
+    /// <returns>A task that completes after the owned child factory has been disposed.</returns>
+    public async Task DisposeAsync() => await factory.DisposeAsync();
 
     [Fact]
     public async Task BlazorRoute_OwnsDocumentGet_WhileLegacyEstimateQueryReturnsExactJsonContract()
