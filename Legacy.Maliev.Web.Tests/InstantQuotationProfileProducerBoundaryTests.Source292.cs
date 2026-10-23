@@ -4,6 +4,8 @@ using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Infrastructure;
+using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -23,11 +25,16 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
         var quotes = new Quotes(connection);
         var tempData = new TempData();
         var uploads = new Source292ProfileUploads();
+        var identityObservations = new System.Collections.Concurrent.ConcurrentQueue<Source292IdentityObservation>();
         Exception? fixtureFailure = null;
         try
         {
             await using var web = new ProfileWebFactory(wire, ownerToken, quotes, tempData, redis, services =>
             {
+                services.RemoveAll<IInstantQuotationWorkflowSessionIdentityAccessor>();
+                services.AddScoped<IInstantQuotationWorkflowSessionIdentityAccessor>(provider =>
+                    new Source292IdentityObserver(new AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor(
+                        provider.GetRequiredService<AuthenticationStateProvider>()), identityObservations));
                 services.RemoveAll<IInstantQuotationSessionStore>();
                 services.AddSingleton<IInstantQuotationSessionStore, DistributedInstantQuotationSessionStore>();
                 services.RemoveAll<IInstantQuotationUploadClient>();
@@ -267,6 +274,7 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                             RequestedQuantity = quantity,
                             Stage = quantityStage,
                             Snapshots = quantitySnapshots,
+                            Identity = identityObservations.ToArray(),
                         }));
                     }
                     catch (Exception)
@@ -338,6 +346,7 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                 workflowState: workflow?.getAttribute('data-workflow-state'), workflowBusy: workflow?.getAttribute('aria-busy'),
                 pendingParseCount: document.querySelectorAll('[data-workflow-pending-parse]').length,
                 failedPreviewCount: document.querySelectorAll('[data-workflow-failed-preview]').length,
+                uploadErrorCount: document.querySelectorAll('[data-upload-error="true"]').length,
                 partCount: document.querySelectorAll('[data-workflow-part]').length,
                 events: input?.__source292QuantityEvents ?? [] };
         }
@@ -346,6 +355,52 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
             TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         try { return await capture.WaitAsync(TimeSpan.FromSeconds(1)); }
         catch (Exception) { return JsonSerializer.SerializeToElement(new { Capture = "unavailable" }); }
+    }
+
+    private sealed record Source292IdentityObservation(string Operation, bool? Found, bool? Matches, string? Failure);
+
+    private sealed class Source292IdentityObserver(
+        IInstantQuotationWorkflowSessionIdentityAccessor inner,
+        System.Collections.Concurrent.ConcurrentQueue<Source292IdentityObservation> observations)
+        : IInstantQuotationWorkflowSessionIdentityAccessor
+    {
+        private string? established;
+
+        public async ValueTask<string?> GetProtectedSessionIdentityAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                established = await inner.GetProtectedSessionIdentityAsync(cancellationToken);
+                Record(new("get", established is not null, null, null));
+                return established;
+            }
+            catch (Exception error)
+            {
+                Record(new("get", null, null, error.GetType().Name));
+                throw;
+            }
+        }
+
+        public async ValueTask SetProtectedSessionIdentityAsync(string identity, CancellationToken cancellationToken)
+        {
+            var matches = string.Equals(established, identity, StringComparison.Ordinal);
+            try
+            {
+                await inner.SetProtectedSessionIdentityAsync(identity, cancellationToken);
+                Record(new("set", null, matches, null));
+            }
+            catch (Exception error)
+            {
+                Record(new("set", null, matches, error.GetType().Name));
+                throw;
+            }
+        }
+
+        private void Record(Source292IdentityObservation observation)
+        {
+            // Only categorical results; never retain a session identity or exception payload.
+            if (observations.Count < 32) observations.Enqueue(observation);
+        }
     }
 
     private sealed class Source292ProfileUploads : IInstantQuotationUploadClient, IAsyncDisposable
