@@ -1959,10 +1959,25 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 });
                 using var readiness = await client.GetAsync($"/instantquotation/3d-printing?culture={culture}");
                 Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
-                using var identityResponse = await client.GetAsync("/instantquotation/cnc-machining");
-                Assert.Equal(HttpStatusCode.OK, identityResponse.StatusCode);
-                BrowserHostIdentityVerifier.EnsureCurrentBuild(await identityResponse.Content.ReadAsStringAsync());
-                Assert.Equal(environment, factory.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostEnvironment>().EnvironmentName);
+                var hostEnvironment = factory.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostEnvironment>();
+                Assert.Equal(environment, hostEnvironment.EnvironmentName);
+                Assert.Equal(typeof(Program).Assembly.GetName().Name, hostEnvironment.ApplicationName);
+                Assert.Equal(Path.GetFullPath(BrowserHostIdentityVerifier.SourceProjectDirectory()),
+                    Path.GetFullPath(hostEnvironment.ContentRootPath));
+                Assert.Contains("/_framework/blazor.web.js", await readiness.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+                // The production startup fixture intentionally leaves CNC unavailable; prove this host's assets directly.
+                using var frameworkResponse = await client.GetAsync("/_framework/blazor.web.js");
+                Assert.Equal(HttpStatusCode.OK, frameworkResponse.StatusCode);
+                Assert.Contains("javascript", frameworkResponse.Content.Headers.ContentType?.MediaType ?? string.Empty,
+                    StringComparison.OrdinalIgnoreCase);
+                Assert.NotEmpty(await frameworkResponse.Content.ReadAsByteArrayAsync());
+                const string workflowAsset = "dist/instant-quotation-workflow.mjs";
+                var expectedWorkflow = await File.ReadAllBytesAsync(Path.Combine(
+                    BrowserHostIdentityVerifier.SourceProjectDirectory(), "wwwroot", workflowAsset));
+                using var workflowResponse = await client.GetAsync("/" + workflowAsset);
+                Assert.Equal(HttpStatusCode.OK, workflowResponse.StatusCode);
+                Assert.NotEmpty(expectedWorkflow);
+                Assert.Equal(expectedWorkflow, await workflowResponse.Content.ReadAsByteArrayAsync());
                 using var playwright = await Playwright.CreateAsync();
                 await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
                 await using var page = await browser.NewPageAsync();

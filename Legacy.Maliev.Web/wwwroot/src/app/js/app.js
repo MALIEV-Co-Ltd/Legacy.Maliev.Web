@@ -1,3 +1,5 @@
+var singleSubmitForms = new WeakSet();
+
 function initializeApplication() {
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
         window.bootstrap.Tooltip.getOrCreateInstance(element);
@@ -154,17 +156,7 @@ function initializeApplication() {
         });
     });
 
-    document.querySelectorAll('[data-single-submit]').forEach(function (form) {
-        form.addEventListener('submit', function (event) {
-            if (form.dataset.submitting === 'true') {
-                event.preventDefault();
-                return;
-            }
-
-            form.dataset.submitting = 'true';
-            form.setAttribute?.('aria-busy', 'true');
-        });
-    });
+    document.querySelectorAll('[data-single-submit]').forEach(bindSingleSubmitForm);
 
     document.querySelectorAll('[data-member-workspace]').forEach(function (workspace) {
         var navigation = workspace.querySelector('#member-navigation');
@@ -352,11 +344,15 @@ function GuardRecaptchaSubmit(formId, buttonId, siteKey, action, submittingText,
 }
 
 function GuardSingleSubmit(formId) {
-    var form = document.getElementById(formId);
-    if (!form) {
+    bindSingleSubmitForm(document.getElementById(formId));
+}
+
+function bindSingleSubmitForm(form) {
+    if (!form || singleSubmitForms.has(form)) {
         return;
     }
 
+    singleSubmitForms.add(form);
     form.addEventListener('submit', function (event) {
         if (form.dataset.submitting === 'true') {
             event.preventDefault();

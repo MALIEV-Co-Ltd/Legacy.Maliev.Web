@@ -141,6 +141,13 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         using var hostClient = application.CreateClient();
         var origin = hostClient.BaseAddress!.GetLeftPart(UriPartial.Authority);
         probe.ObserveRoutes(application.Services.GetRequiredService<EndpointDataSource>());
+        using (var directPost = new HttpRequestMessage(HttpMethod.Post, "/InstantQuotation/3D-Printing?handler=SubmitRequest"))
+        {
+            directPost.Headers.Accept.ParseAdd("text/html");
+            directPost.Content = new FormUrlEncodedContent(new Dictionary<string, string> { ["Country"] = "Thailand" });
+            using var directResponse = await hostClient.SendAsync(directPost);
+            output.WriteLine($"[customer-layout-direct-post] status={(int)directResponse.StatusCode}; razorEndpoint={probe.RazorEndpoint}; allowsPost={probe.AllowsPost}; methodRejection={probe.MethodRejection}; secureTransport={probe.SecureTransport}; antiforgeryCookie={probe.AntiforgeryCookie}");
+        }
         await context.AddCookiesAsync(
         [
             new Cookie { Name = ".AspNetCore.Culture", Value = $"c={culture}|uic={culture}", Url = origin },
@@ -176,7 +183,7 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
                 && string.IsNullOrEmpty(redirect.Fragment);
             try
             {
-                output.WriteLine($"[customer-layout-submit] status={response.Status}; redirectsToQuotation={redirectsToQuotation}; routes={probe.PrintingRoutes}; postRoutes={probe.PrintingPostRoutes}; razorPostRoutes={probe.PrintingRazorPostRoutes}; routeDetails={probe.PrintingRouteDetails}; observed={probe.Observed}; originalStatus={probe.OriginalStatus}; reExecuted={probe.ReExecuted}; razorEndpoint={probe.RazorEndpoint}; allowsPost={probe.AllowsPost}; antiforgery={probe.Antiforgery}; observerFailed={probe.ObserverFailed}");
+                output.WriteLine($"[customer-layout-submit] status={response.Status}; redirectsToQuotation={redirectsToQuotation}; routes={probe.PrintingRoutes}; postRoutes={probe.PrintingPostRoutes}; razorPostRoutes={probe.PrintingRazorPostRoutes}; routeDetails={probe.PrintingRouteDetails}; observed={probe.Observed}; originalStatus={probe.OriginalStatus}; reExecuted={probe.ReExecuted}; razorEndpoint={probe.RazorEndpoint}; allowsPost={probe.AllowsPost}; methodRejection={probe.MethodRejection}; secureTransport={probe.SecureTransport}; antiforgeryCookie={probe.AntiforgeryCookie}; antiforgery={probe.Antiforgery}; observerFailed={probe.ObserverFailed}");
             }
             catch { /* Secondary diagnostic output must not replace the original test failure. */ }
             Assert.Equal(302, response.Status);
@@ -311,6 +318,9 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         internal bool ReExecuted { get; private set; }
         internal bool RazorEndpoint { get; private set; }
         internal bool AllowsPost { get; private set; }
+        internal bool MethodRejection { get; private set; }
+        internal bool SecureTransport { get; private set; }
+        internal bool AntiforgeryCookie { get; private set; }
         internal int Antiforgery { get; private set; }
         internal bool ObserverFailed { get; private set; }
 
@@ -351,6 +361,11 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
                             ReExecuted = reExecute is not null;
                             RazorEndpoint = endpoint is not null && IsPrintingPage(endpoint);
                             AllowsPost = endpoint is RouteEndpoint && AcceptsPost(endpoint);
+                            MethodRejection = string.Equals(endpoint?.DisplayName,
+                                "405 HTTP Method Not Supported", StringComparison.Ordinal);
+                            SecureTransport = context.Request.IsHttps;
+                            AntiforgeryCookie = context.Request.Cookies.Keys.Any(name =>
+                                name.StartsWith(".AspNetCore.Antiforgery.", StringComparison.Ordinal));
                             Antiforgery = antiforgery is null ? 0 : antiforgery.IsValid ? 1 : 2;
                             Observed = true;
                         }
