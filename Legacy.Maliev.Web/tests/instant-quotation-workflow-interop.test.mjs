@@ -346,6 +346,10 @@ test('thumbnail mutation callbacks cannot resurrect invalidated released or disc
     root.isConnected = false;
     mutations.deliver();
     assert.equal(root.images[0].src, '/fallback.svg');
+    root.isConnected = true;
+    interop.quarantine(keys[0]);
+    mutations.deliver();
+    assert.equal(root.images[0].src, '/fallback.svg');
   } finally { interop.dispose(); mutations.restore(); }
 });
 
@@ -366,14 +370,26 @@ test('thumbnail observer root replacement and disposal reject late callbacks and
     first.images[0].src = '/fallback.svg';
     old.callback([]);
     assert.equal(first.images[0].src, '/fallback.svg');
-    const current = mutations.observers[1];
+    const released = mutations.observers[1];
+    interop.release(key);
+    assert.equal(released.disconnected, true);
+    second.images[0].src = '/fallback.svg';
+    released.callback([]);
+    assert.equal(second.images[0].src, '/fallback.svg');
+    const [replacement] = interop.beginSelection({ files: [modelFile('replacement.stl')] });
+    await interop.getGeometryClaim(replacement);
+    interop.admit(replacement, 'part-a');
+    released.callback([]);
+    assert.equal(second.images[0].src, '/fallback.svg');
+    interop.renderReviewThumbnails(second);
+    const current = mutations.observers[2];
     interop.dispose();
     assert.equal(current.disconnected, true);
     second.images[0].src = '/fallback.svg';
     current.callback([]);
     assert.equal(second.images[0].src, '/fallback.svg');
     interop.renderReviewThumbnails(second);
-    assert.equal(mutations.observers.length, 2);
+    assert.equal(mutations.observers.length, 3);
   } finally { interop.dispose(); mutations.restore(); }
 });
 
