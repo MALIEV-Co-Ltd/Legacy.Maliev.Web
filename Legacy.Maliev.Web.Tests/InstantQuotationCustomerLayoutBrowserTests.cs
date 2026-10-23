@@ -176,7 +176,7 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
                 && string.IsNullOrEmpty(redirect.Fragment);
             try
             {
-                output.WriteLine($"[customer-layout-submit] status={response.Status}; redirectsToQuotation={redirectsToQuotation}; routes={probe.PrintingRoutes}; postRoutes={probe.PrintingPostRoutes}; razorPostRoutes={probe.PrintingRazorPostRoutes}; observed={probe.Observed}; originalStatus={probe.OriginalStatus}; reExecuted={probe.ReExecuted}; razorEndpoint={probe.RazorEndpoint}; allowsPost={probe.AllowsPost}; antiforgery={probe.Antiforgery}; observerFailed={probe.ObserverFailed}");
+                output.WriteLine($"[customer-layout-submit] status={response.Status}; redirectsToQuotation={redirectsToQuotation}; routes={probe.PrintingRoutes}; postRoutes={probe.PrintingPostRoutes}; razorPostRoutes={probe.PrintingRazorPostRoutes}; routeDetails={probe.PrintingRouteDetails}; observed={probe.Observed}; originalStatus={probe.OriginalStatus}; reExecuted={probe.ReExecuted}; razorEndpoint={probe.RazorEndpoint}; allowsPost={probe.AllowsPost}; antiforgery={probe.Antiforgery}; observerFailed={probe.ObserverFailed}");
             }
             catch { /* Secondary diagnostic output must not replace the original test failure. */ }
             Assert.Equal(302, response.Status);
@@ -305,6 +305,7 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         internal int PrintingRoutes { get; private set; }
         internal int PrintingPostRoutes { get; private set; }
         internal int PrintingRazorPostRoutes { get; private set; }
+        internal string PrintingRouteDetails { get; private set; } = string.Empty;
         internal bool Observed { get; private set; }
         internal int OriginalStatus { get; private set; }
         internal bool ReExecuted { get; private set; }
@@ -320,6 +321,11 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
                     "InstantQuotation/3D-Printing", StringComparison.OrdinalIgnoreCase)))
             {
                 PrintingRoutes++;
+                var methodMetadata = endpoint.Metadata.GetOrderedMetadata<IHttpMethodMetadata>();
+                var methods = string.Join("/", methodMetadata.Select(metadata =>
+                    string.Join(",", metadata.HttpMethods.Select(method => method is "GET" or "HEAD" or "POST"
+                        ? method : "other"))));
+                PrintingRouteDetails += $"[pattern={endpoint.RoutePattern.RawText}; order={endpoint.Order}; razor={IsPrintingPage(endpoint)}; suppressed={endpoint.Metadata.GetMetadata<ISuppressMatchingMetadata>()?.SuppressMatching == true}; dynamic={endpoint.Metadata.GetMetadata<IDynamicEndpointMetadata>()?.IsDynamic == true}; methods={methods}]";
                 if (!AcceptsPost(endpoint)) continue;
                 PrintingPostRoutes++;
                 if (IsPrintingPage(endpoint)) PrintingRazorPostRoutes++;

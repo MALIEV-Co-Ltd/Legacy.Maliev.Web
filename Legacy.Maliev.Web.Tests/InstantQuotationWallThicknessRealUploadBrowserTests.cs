@@ -176,7 +176,7 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         Assert.Contains(session.PhysicalReceipts!, receipt => receipt.PartId == partId
             && receipt.UploadSha256 == expectedDigest && receipt.MotionSeconds > 0);
         await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button").ClickAsync();
-        Assert.Equal(1, await page.Locator("[data-workflow-review-part]").CountAsync());
+        await Microsoft.Playwright.Assertions.Expect(page.Locator("[data-workflow-review-part]")).ToHaveCountAsync(1);
         Assert.Contains("mobile-picker.stl",
             await page.Locator("[data-workflow-review-part]").InnerTextAsync(), StringComparison.Ordinal);
         Assert.Equal(0, upload.FinalizeCalls);
@@ -1692,6 +1692,18 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
         await singleColor.SelectOptionAsync("White");
         await MaterialCardBrowserActions.SelectAsync(page, "PETG");
         await page.WaitForFunctionAsync(
+            "id => document.querySelector('#color-' + id)?.value === 'White' && !document.querySelector('[data-pricing-loading-status]')",
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
+        Assert.Equal("White", await singleColor.InputValueAsync());
+        // A compatible named color survives; an unsupported custom color uses the source default.
+        await MaterialCardBrowserActions.SelectAsync(page, "PLA");
+        await page.Locator("[data-workflow-material-picker] input[type='color']").EvaluateAsync(
+            "input => { input.value = '#123abc'; input.dispatchEvent(new Event('change', { bubbles: true })); }");
+        await page.WaitForFunctionAsync(
+            "id => document.querySelector('#color-' + id)?.value?.toLowerCase() === '#123abc' && !document.querySelector('[data-pricing-loading-status]')",
+            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
+        await MaterialCardBrowserActions.SelectAsync(page, "PETG");
+        await page.WaitForFunctionAsync(
             "id => document.querySelector('#color-' + id)?.value === 'Any' && !document.querySelector('[data-pricing-loading-status]')",
             singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
         Assert.Equal("Any", await singleColor.InputValueAsync());
@@ -1919,18 +1931,24 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 upload.FailNextUpload();
                 var pricing = new CountingPricingService();
                 var observation = new MaterialCompletionObservation();
-                await using var factory = startup.CreateFactory(environment, builder => builder.ConfigureServices(services =>
+                await using var factory = startup.CreateFactory(environment, builder =>
                 {
-                    services.RemoveAll<IInstantQuotationUploadClient>();
-                    services.AddSingleton<IInstantQuotationUploadClient>(upload);
-                    services.RemoveAll<IInstantQuotationPricingService>();
-                    services.AddSingleton<IInstantQuotationPricingService>(pricing);
-                    services.RemoveAll<IInstantQuotationPhysicalAnalysisInputReader>();
-                    services.AddScoped<IInstantQuotationPhysicalAnalysisInputReader>(provider =>
-                        new BrowserMultiUploadInputReader(upload,
-                            provider.GetRequiredService<IInstantQuotationSessionStore>()));
-                    observation.Decorate(services);
-                }));
+                    builder.UseContentRoot(BrowserHostIdentityVerifier.SourceProjectDirectory());
+                    // Production source hosts also need the SDK manifest for Blazor framework assets.
+                    builder.UseStaticWebAssets();
+                    builder.ConfigureServices(services =>
+                    {
+                        services.RemoveAll<IInstantQuotationUploadClient>();
+                        services.AddSingleton<IInstantQuotationUploadClient>(upload);
+                        services.RemoveAll<IInstantQuotationPricingService>();
+                        services.AddSingleton<IInstantQuotationPricingService>(pricing);
+                        services.RemoveAll<IInstantQuotationPhysicalAnalysisInputReader>();
+                        services.AddScoped<IInstantQuotationPhysicalAnalysisInputReader>(provider =>
+                            new BrowserMultiUploadInputReader(upload,
+                                provider.GetRequiredService<IInstantQuotationSessionStore>()));
+                        observation.Decorate(services);
+                    });
+                });
                 var port = ReserveFreePort();
                 var origin = new Uri($"http://127.0.0.1:{port}");
                 factory.UseKestrel(port);
@@ -1941,6 +1959,9 @@ public sealed class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOut
                 });
                 using var readiness = await client.GetAsync($"/instantquotation/3d-printing?culture={culture}");
                 Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+                using var identityResponse = await client.GetAsync("/instantquotation/cnc-machining");
+                Assert.Equal(HttpStatusCode.OK, identityResponse.StatusCode);
+                BrowserHostIdentityVerifier.EnsureCurrentBuild(await identityResponse.Content.ReadAsStringAsync());
                 Assert.Equal(environment, factory.Services.GetRequiredService<Microsoft.Extensions.Hosting.IHostEnvironment>().EnvironmentName);
                 using var playwright = await Playwright.CreateAsync();
                 await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });

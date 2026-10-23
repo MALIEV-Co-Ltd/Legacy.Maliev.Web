@@ -8,7 +8,6 @@ using System.Text.Json;
 using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.Playwright;
@@ -44,13 +43,20 @@ public sealed class AuthenticatedConsentNavigationBrowserTests(MemberAuthorityFi
         var port = ((IPEndPoint)listener.LocalEndpoint).Port;
         listener.Stop();
         var origin = new Uri($"https://127.0.0.1:{port}");
-        await using var host = authority.Web(retained).WithWebHostBuilder(builder =>
+        await using var parent = authority.Web(retained);
+        await using var host = parent.WithWebHostBuilder(builder =>
+            builder.UseContentRoot(BrowserHostIdentityVerifier.SourceProjectDirectory()));
+        // The derived factory delegates CreateHost to its parent, which does not hold its port setting.
+        host.UseKestrel(options => options.Listen(IPAddress.Loopback, port, endpoint => endpoint.UseHttps(certificate)));
+        host.StartServer();
+        using var transport = new HttpClientHandler
         {
-            builder.UseContentRoot(BrowserHostIdentityVerifier.SourceProjectDirectory());
-            builder.ConfigureKestrel(options => options.ConfigureEndpointDefaults(endpoint => endpoint.UseHttps(certificate)));
-        });
-        host.UseKestrel(port);
-        using var startup = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
+            ServerCertificateCustomValidationCallback = (request, peer, _, _) => request.RequestUri?.Host == "127.0.0.1"
+                && peer is not null && CryptographicOperations.FixedTimeEquals(peer.GetCertHash(), certificate.GetCertHash()),
+        };
+        using var startup = new HttpClient(transport) { BaseAddress = origin, Timeout = TimeSpan.FromSeconds(15) };
+        using var loginReady = await startup.GetAsync($"/Account/Login?culture={culture}");
+        Assert.Equal(HttpStatusCode.OK, loginReady.StatusCode);
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
         await using var context = await browser.NewContextAsync(new() { IgnoreHTTPSErrors = true });

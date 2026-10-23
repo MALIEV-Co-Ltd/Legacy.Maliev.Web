@@ -197,6 +197,15 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~BrowserFailureEvidenceTests|FullyQualifiedName~MaterialInitialNavigationDiagnosticsTests|FullyQualifiedName~MaterialInitialRequestStagesTests"
           --logger trx --results-directory ./browser-failure-evidence-test-results
+      - name: Verify current source integration browser and submission regressions
+        run: |
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj \
+            --configuration Release --no-build --no-restore \
+            -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath= \
+            --filter "FullyQualifiedName~AuthenticatedConsentNavigationBrowserTests|FullyQualifiedName~ColorEditingPreservesSourceDefaultsHexRestoreAndMultipartIsolation|FullyQualifiedName~MobileCadPickerPreservesAllowlistAndRejectsPdfBeforeRealStlUpload|FullyQualifiedName~FailedUploadDemoIsDevelopmentOnlyAdvisoryAndCannotSubmit|FullyQualifiedName~RealCustomerFormPreservesStructuredSectionsCounterAndResponsiveOrder|FullyQualifiedName~QuotationRequiredLabels_RetainVisibleSourceMarkers|FullyQualifiedName~InquiryRedesign_RendersRequiredMarkersGuidanceAndStyledFieldsWithoutChangingPostBoundary|FullyQualifiedName~LineFriendshipRoute_IsLocalizedNoindexAndFailsSafeWithoutLiff" \
+            --logger 'trx;LogFileName=source-integration-regressions.trx' \
+            --results-directory ./source-integration-regression-test-results
+          python3 -B -c 'import xml.etree.ElementTree as E; r=E.parse("source-integration-regression-test-results/source-integration-regressions.trx").getroot(); c=r.find(".//{*}Counters"); assert c is not None and all(c.get(k)==v for k,v in {"total":"27","executed":"27","passed":"27","failed":"0","notExecuted":"0"}.items()), "All 27 source integration regression rows must pass"'
       - name: Verify all twelve sidebar culture and viewport browser cases
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -542,6 +551,7 @@ jobs:
             material-progress-test-results/**/*.trx
             fx-handler-test-results/**/*.trx
             material-card-test-results/**/*.trx
+            source-integration-regression-test-results/**/*.trx
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-controls/*.png
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-controls/*.json
             Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-diagnostics/*.json

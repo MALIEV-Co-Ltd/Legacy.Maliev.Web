@@ -86,7 +86,16 @@ public sealed class QuotationStaticSsrRouteTests : IClassFixture<TestingWebAppli
             Assert.Contains("enctype=\"multipart/form-data\"", form.Value, StringComparison.Ordinal);
             Assert.Contains("name=\"SubmissionId\"", source, StringComparison.Ordinal);
             Assert.Contains("name=\"ServiceContext\"", source, StringComparison.Ordinal);
-            Assert.Contains("aria-describedby=\"quotation-files-help Files-error\"", source, StringComparison.Ordinal);
+            var files = Assert.Single(Regex.Matches(source,
+                """<input\b(?=[^>]*\bid="Files")[^>]*>""",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.Contains("type=\"file\"", files.Value, StringComparison.Ordinal);
+            Assert.Contains("name=\"Files\"", files.Value, StringComparison.Ordinal);
+            Assert.Contains("aria-describedby=\"quotation-files-help Files-error quotation-file-too-large\"", files.Value, StringComparison.Ordinal);
+            foreach (var target in new[] { "quotation-files-help", "Files-error", "quotation-file-too-large" })
+            {
+                Assert.Single(Regex.Matches(source, $"\\bid=\"{target}\"", RegexOptions.CultureInvariant).Cast<Match>());
+            }
             var guidance = culture == "th"
                 ? new[]
                 {
@@ -221,7 +230,11 @@ public sealed class QuotationStaticSsrRouteTests : IClassFixture<TestingWebAppli
         Assert.Contains("class=\"inquiry-required-note\"", form.Value, StringComparison.Ordinal);
         Assert.Contains("class=\"inquiry-field-grid\"", form.Value, StringComparison.Ordinal);
         Assert.Contains("class=\"inquiry-field inquiry-field--full\"", form.Value, StringComparison.Ordinal);
-        Assert.Contains("class=\"inquiry-submit\"", form.Value, StringComparison.Ordinal);
+        var submit = Assert.Single(Regex.Matches(form.Value,
+            """<button\b(?=[^>]*\bid="submit-button")[^>]*>""",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("type=\"submit\"", submit.Value, StringComparison.Ordinal);
+        Assert.Contains("class=\"btn btn-primary inquiry-submit\"", submit.Value, StringComparison.Ordinal);
         Assert.Contains("<fieldset class=\"border-0 p-0 m-0\" data-upload-size-gate", form.Value, StringComparison.Ordinal);
         Assert.Contains("id=\"quotation-file-too-large\" class=\"inquiry-file-error\" role=\"alert\" data-upload-size-error", form.Value, StringComparison.Ordinal);
         Assert.Contains("data-upload-total-size", form.Value, StringComparison.Ordinal);
