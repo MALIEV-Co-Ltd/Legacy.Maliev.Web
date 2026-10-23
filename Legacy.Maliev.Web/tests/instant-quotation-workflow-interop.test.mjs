@@ -232,6 +232,29 @@ test('unrelated rerenders preserve admitted thumbnail bytes while appearance and
   assert.equal(listeners.size, 0);
 });
 
+test('replacement review images receive exact cached bytes without recapturing the unchanged part', async () => {
+  const { interop, calls } = harness();
+  const keys = interop.beginSelection({ files: [modelFile('single.stl'), modelFile('multi.stl')] });
+  await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
+  interop.attach({});
+  interop.admit(keys[0], 'single');
+  interop.admit(keys[1], 'multi');
+  const images = () => ['single', 'multi'].map(partId => ({ dataset: { partId }, src: '/fallback.svg' }));
+  let current = images();
+  const root = { querySelectorAll: () => current };
+  assert.equal(interop.renderReviewThumbnails(root), 2);
+  const retained = current[1].src;
+  interop.updatePartAppearance('single', 'Red');
+  current = images();
+  assert.equal(current[1].src, '/fallback.svg');
+  assert.equal(interop.renderReviewThumbnails(root), 2);
+  assert.equal(current[1].src, retained);
+  assert.equal(current[0].src, 'data:image/webp;base64,single');
+  assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'multi').length, 1);
+  assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'single').length, 2);
+  interop.dispose();
+});
+
 test('empty viewer detach releases old canvas listeners before reattach and disposal', () => {
   const { interop, calls } = harness();
   function canvas() {
