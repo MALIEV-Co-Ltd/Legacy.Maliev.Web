@@ -221,7 +221,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~PublishWorkflowPermissionContractTests|FullyQualifiedName~NineGeneratedStlUploadsKeepDistinctReviewAndPreliminaryPreviews|FullyQualifiedName~OneMillimeterFdmUploadDoesNotInventAThinWallWarning|FullyQualifiedName~ComparisonCallback|FullyQualifiedName~ModelViewerCadSourceBrowserTests|FullyQualifiedName~ModelViewerWorkerBrowserTests|FullyQualifiedName~CncNativeImportBrowserTests|FullyQualifiedName~WorkerAssetFingerprintTests|FullyQualifiedName~BrowserHostIdentityTests"
+          --filter "FullyQualifiedName~PublishWorkflowPermissionContractTests|FullyQualifiedName~NineGeneratedStlUploadsKeepDistinctReviewAndPreliminaryPreviews|FullyQualifiedName~OneMillimeterFdmUploadDoesNotInventAThinWallWarning|FullyQualifiedName~ComparisonCallback|FullyQualifiedName~ModelViewerCadSourceBrowserTests|FullyQualifiedName~ModelViewerWorkerBrowserTests|FullyQualifiedName~CncNativeImportBrowserTests|FullyQualifiedName~WorkerAssetFingerprintTests|FullyQualifiedName~BrowserHostIdentityTests|FullyQualifiedName~SpaceMouseDeliveryContractTests|FullyQualifiedName~SpaceMouseOptionalBrowserTests"
           --logger trx --results-directory ./publisher-mesh-test-results
       - name: Verify localized physical result, actual summary and consent browser boundaries
         run: >-
@@ -490,6 +490,18 @@ jobs:
             Legacy.Maliev.Web/wwwroot/dist/route-service-scanning.js
             Legacy.Maliev.Web/wwwroot/dist/route-instant-quotation.css
             Legacy.Maliev.Web/wwwroot/dist/route-instant-quotation.js
+            Legacy.Maliev.Web/wwwroot/dist/app.min.js
+            Legacy.Maliev.Web/wwwroot/dist/asset-manifest.json
+            Legacy.Maliev.Web/wwwroot/dist/instant-quotation-viewer.mjs
+            Legacy.Maliev.Web/wwwroot/dist/instant-quotation-workflow.mjs
+            Legacy.Maliev.Web/wwwroot/dist/route-about.css
+            Legacy.Maliev.Web/wwwroot/dist/route-about.js
+            Legacy.Maliev.Web/wwwroot/dist/route-home.css
+            Legacy.Maliev.Web/wwwroot/dist/route-home.js
+            Legacy.Maliev.Web/wwwroot/dist/route-inquiry.js
+            Legacy.Maliev.Web/wwwroot/dist/route-knowledge.js
+            Legacy.Maliev.Web/wwwroot/dist/route-services-index.css
+            Legacy.Maliev.Web/wwwroot/dist/route-services.css
             Legacy.Maliev.Web.Tests/TestResults/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml
