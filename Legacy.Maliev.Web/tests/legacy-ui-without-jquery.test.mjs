@@ -343,6 +343,108 @@ for (const mode of ['active fallback', 'retained callback', 'active upload delay
     });
 }
 
+for (const order of ['automatic then explicit', 'explicit then automatic', 'repeated automatic']) {
+    test(`native single-submit registration admits the first submit: ${order}`, () => {
+        const harness = createNativeSingleSubmitHarness();
+        const form = harness.forms[0];
+        if (order === 'explicit then automatic') harness.context.GuardSingleSubmit(form.id);
+        harness.ready();
+        if (order === 'automatic then explicit') harness.context.GuardSingleSubmit(form.id);
+        if (order === 'repeated automatic') harness.context.initializeApplication();
+        harness.context.GuardSingleSubmit(form.id);
+
+        assert.equal(form.submit.disabled, false);
+        assert.equal(form.dataset.submitting, undefined);
+        assert.equal(form.attributes.has('aria-busy'), false);
+        const first = form.dispatchSubmit();
+        assert.equal(first.prevented, 0, 'The first native POST must remain allowed.');
+        assert.equal(form.nativePosts, 1);
+        assert.equal(form.dataset.submitting, 'true');
+        assert.equal(form.attributes.get('aria-busy'), 'true');
+        assert.equal(form.submit.disabled, false, 'Keep the native submitter and its formaction enabled.');
+        const second = form.dispatchSubmit();
+        assert.equal(second.prevented, 1, 'One guard must reject the duplicate exactly once.');
+        assert.equal(form.nativePosts, 1);
+        assert.equal(form.listeners.length, 1);
+    });
+}
+
+test('native single-submit registration keeps distinct forms independent', () => {
+    const harness = createNativeSingleSubmitHarness();
+    const other = createNativeSingleSubmitForm('other-login');
+    harness.forms.push(other);
+    harness.ready();
+    for (const form of harness.forms) harness.context.GuardSingleSubmit(form.id);
+
+    const first = harness.forms[0];
+    assert.equal(first.dispatchSubmit().prevented, 0);
+    assert.equal(other.dataset.submitting, undefined);
+    assert.equal(other.attributes.has('aria-busy'), false);
+    assert.equal(other.dispatchSubmit().prevented, 0);
+    assert.equal(first.dispatchSubmit().prevented, 1);
+    assert.equal(other.dispatchSubmit().prevented, 1);
+    assert.equal(first.nativePosts, 1);
+    assert.equal(other.nativePosts, 1);
+});
+
+test('native single-submit registration admits a replacement form with the same ID', () => {
+    const harness = createNativeSingleSubmitHarness();
+    harness.ready();
+    const original = harness.forms[0];
+    assert.equal(original.dispatchSubmit().prevented, 0);
+    const replacement = createNativeSingleSubmitForm(original.id);
+    harness.forms[0] = replacement;
+    harness.context.GuardSingleSubmit(replacement.id);
+    harness.context.initializeApplication();
+
+    assert.equal(replacement.dataset.submitting, undefined);
+    assert.equal(replacement.dispatchSubmit().prevented, 0);
+    assert.equal(replacement.dispatchSubmit().prevented, 1);
+    assert.equal(replacement.nativePosts, 1);
+    assert.equal(original.nativePosts, 1);
+    assert.equal(original.listeners.length, 1);
+    assert.equal(replacement.listeners.length, 1);
+});
+
+function createNativeSingleSubmitHarness() {
+    const forms = [createNativeSingleSubmitForm('customer-login')];
+    const readyListeners = [];
+    const document = createDocument({ '[data-single-submit]': forms });
+    document.readyState = 'loading';
+    document.getElementById = id => forms.find(form => form.id === id) ?? null;
+    document.addEventListener = (name, listener) => {
+        if (name === 'DOMContentLoaded') readyListeners.push(listener);
+    };
+    const context = createBrowserContext(document);
+    vm.runInContext(appSource, context);
+    return {
+        context, forms,
+        ready() {
+            document.readyState = 'complete';
+            for (const listener of readyListeners.splice(0)) listener();
+        },
+    };
+}
+
+function createNativeSingleSubmitForm(id) {
+    const form = {
+        id, dataset: {}, attributes: new Map(), listeners: [], nativePosts: 0,
+        submit: { disabled: false },
+        setAttribute(name, value) { this.attributes.set(name, value); },
+        querySelector() { return this.submit; },
+        addEventListener(name, listener) {
+            if (name === 'submit') this.listeners.push(listener);
+        },
+        dispatchSubmit() {
+            const event = { prevented: 0, preventDefault() { this.prevented += 1; } };
+            for (const listener of this.listeners) listener(event);
+            if (event.prevented === 0) this.nativePosts += 1;
+            return event;
+        },
+    };
+    return form;
+}
+
 function createSubmissionProbe() {
     const listeners = new Map();
     const attributes = new Map();
