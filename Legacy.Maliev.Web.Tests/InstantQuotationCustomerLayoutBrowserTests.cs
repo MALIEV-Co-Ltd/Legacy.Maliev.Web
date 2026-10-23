@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
@@ -140,13 +141,16 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         application.ClientOptions.AllowAutoRedirect = false;
         using var hostClient = application.CreateClient();
         var origin = hostClient.BaseAddress!.GetLeftPart(UriPartial.Authority);
+        probe.Origin = new Uri(origin);
+        using var routingSubscription = application.Services.GetRequiredService<DiagnosticListener>()
+            .Subscribe(probe, name => name == "Microsoft.AspNetCore.Routing.EndpointMatched");
         probe.ObserveRoutes(application.Services.GetRequiredService<EndpointDataSource>());
         using (var directPost = new HttpRequestMessage(HttpMethod.Post, "/InstantQuotation/3D-Printing?handler=SubmitRequest"))
         {
             directPost.Headers.Accept.ParseAdd("text/html");
             directPost.Content = new FormUrlEncodedContent(new Dictionary<string, string> { ["Country"] = "Thailand" });
             using var directResponse = await hostClient.SendAsync(directPost);
-            output.WriteLine($"[customer-layout-direct-post] status={(int)directResponse.StatusCode}; razorEndpoint={probe.RazorEndpoint}; allowsPost={probe.AllowsPost}; methodRejection={probe.MethodRejection}; secureTransport={probe.SecureTransport}; antiforgeryCookie={probe.AntiforgeryCookie}");
+            output.WriteLine($"[customer-layout-direct-post] status={(int)directResponse.StatusCode}; razorEndpoint={probe.RazorEndpoint}; allowsPost={probe.AllowsPost}; methodRejection={probe.MethodRejection}; secureTransport={probe.SecureTransport}; antiforgeryCookie={probe.AntiforgeryCookie}; routingSnapshots={probe.RoutingSnapshots}");
         }
         await context.AddCookiesAsync(
         [
@@ -183,7 +187,7 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
                 && string.IsNullOrEmpty(redirect.Fragment);
             try
             {
-                output.WriteLine($"[customer-layout-submit] status={response.Status}; redirectsToQuotation={redirectsToQuotation}; routes={probe.PrintingRoutes}; postRoutes={probe.PrintingPostRoutes}; razorPostRoutes={probe.PrintingRazorPostRoutes}; routeDetails={probe.PrintingRouteDetails}; observed={probe.Observed}; originalStatus={probe.OriginalStatus}; reExecuted={probe.ReExecuted}; razorEndpoint={probe.RazorEndpoint}; allowsPost={probe.AllowsPost}; methodRejection={probe.MethodRejection}; secureTransport={probe.SecureTransport}; antiforgeryCookie={probe.AntiforgeryCookie}; antiforgery={probe.Antiforgery}; observerFailed={probe.ObserverFailed}");
+                output.WriteLine($"[customer-layout-submit] status={response.Status}; redirectsToQuotation={redirectsToQuotation}; routes={probe.PrintingRoutes}; postRoutes={probe.PrintingPostRoutes}; razorPostRoutes={probe.PrintingRazorPostRoutes}; routeDetails={probe.PrintingRouteDetails}; observed={probe.Observed}; originalStatus={probe.OriginalStatus}; reExecuted={probe.ReExecuted}; razorEndpoint={probe.RazorEndpoint}; allowsPost={probe.AllowsPost}; methodRejection={probe.MethodRejection}; secureTransport={probe.SecureTransport}; antiforgeryCookie={probe.AntiforgeryCookie}; antiforgery={probe.Antiforgery}; observerFailed={probe.ObserverFailed}; routingSnapshots={probe.RoutingSnapshots}");
             }
             catch { /* Secondary diagnostic output must not replace the original test failure. */ }
             Assert.Equal(302, response.Status);
@@ -307,8 +311,11 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         }
     }
 
-    private sealed class SubmitBoundaryProbe : IStartupFilter
+    private sealed class SubmitBoundaryProbe : IStartupFilter, IObserver<KeyValuePair<string, object?>>
     {
+        private readonly object routingSnapshotKey = new();
+        internal Uri? Origin { get; set; }
+        internal string RoutingSnapshots { get; private set; } = string.Empty;
         internal int PrintingRoutes { get; private set; }
         internal int PrintingPostRoutes { get; private set; }
         internal int PrintingRazorPostRoutes { get; private set; }
@@ -323,6 +330,43 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         internal bool AntiforgeryCookie { get; private set; }
         internal int Antiforgery { get; private set; }
         internal bool ObserverFailed { get; private set; }
+
+        public void OnNext(KeyValuePair<string, object?> notification)
+        {
+            if (notification.Key != "Microsoft.AspNetCore.Routing.EndpointMatched"
+                || notification.Value is not HttpContext context
+                || !IsOwnedHost(context)
+                || !context.Items.TryGetValue(routingSnapshotKey, out var value)
+                || value is not int count || count >= 2)
+            {
+                return;
+            }
+
+            context.Items[routingSnapshotKey] = count + 1;
+            try
+            {
+                var reExecute = context.Features.Get<IStatusCodeReExecuteFeature>();
+                var endpoint = context.GetEndpoint();
+                var original = reExecute?.Endpoint;
+                var antiforgery = context.Features.Get<IAntiforgeryValidationFeature>();
+                RoutingSnapshots += $"[match={count + 1}; errorPath={context.Request.Path.Equals("/Error", StringComparison.OrdinalIgnoreCase)}; razor={endpoint is not null && IsPrintingPage(endpoint)}; allowsPost={endpoint is RouteEndpoint && AcceptsPost(endpoint)}; methodRejection={IsMethodRejection(endpoint)}; reExecuted={reExecute is not null}; originalStatus={reExecute?.OriginalStatusCode ?? 0}; originalRazor={original is not null && IsPrintingPage(original)}; originalAllowsPost={original is RouteEndpoint && AcceptsPost(original)}; originalMethodRejection={IsMethodRejection(original)}; antiforgery={(antiforgery is null ? 0 : antiforgery.IsValid ? 1 : 2)}]";
+            }
+            catch
+            {
+                ObserverFailed = true;
+            }
+        }
+
+        public void OnCompleted() { }
+
+        public void OnError(Exception error) => ObserverFailed = true;
+
+        private bool IsOwnedHost(HttpContext context) => Origin is not null
+            && string.Equals(context.Request.Host.Value, Origin.Authority, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(context.Request.Scheme, Origin.Scheme, StringComparison.OrdinalIgnoreCase);
+
+        private static bool IsMethodRejection(Endpoint? endpoint) => string.Equals(endpoint?.DisplayName,
+            "405 HTTP Method Not Supported", StringComparison.Ordinal);
 
         internal void ObserveRoutes(EndpointDataSource source)
         {
@@ -346,10 +390,12 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         {
             application.Use(async (context, requestNext) =>
             {
-                if (HttpMethods.IsPost(context.Request.Method)
+                if (IsOwnedHost(context) && HttpMethods.IsPost(context.Request.Method)
                     && context.Request.Path.Equals("/InstantQuotation/3D-Printing", StringComparison.OrdinalIgnoreCase)
                     && context.Request.Query["handler"] == "SubmitRequest")
                 {
+                    RoutingSnapshots = string.Empty;
+                    context.Items[routingSnapshotKey] = 0;
                     context.Response.OnStarting(() =>
                     {
                         try
