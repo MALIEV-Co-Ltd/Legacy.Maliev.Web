@@ -409,6 +409,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         Assert.Equal(0, await page.Locator("[data-workflow-part]").CountAsync());
         Assert.Equal(0, await page.Locator("[data-workflow-review-part]").CountAsync());
 
+        await WaitForUploadInputReadyAsync(page);
         var bytes = WallThicknessParityBrowserFixture.Box(5);
         var expectedDigest = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
         await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
@@ -423,6 +424,18 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             // Upload admission is not a configuration gesture: explicitly accept the initial color.
             await page.Locator("[data-workflow-configuration] select[id^='color-']").SelectOptionAsync(
                 "Black", new LocatorSelectOptionOptions { Timeout = 30_000 });
+            // A rejected file remains actionable and blocks review until the customer removes it.
+            var rejectedPdf = page.Locator("[data-workflow-failed-preview]").Filter(
+                new LocatorFilterOptions { HasText = "drawing.pdf" });
+            await Microsoft.Playwright.Assertions.Expect(rejectedPdf).ToHaveCountAsync(1);
+            await Microsoft.Playwright.Assertions.Expect(page.Locator(
+                "[data-workflow-configuration] .instant-quote__configuration-actions button")).ToBeDisabledAsync();
+            await rejectedPdf.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions
+            {
+                Name = "Remove drawing.pdf",
+                Exact = true,
+            }).ClickAsync();
+            await Microsoft.Playwright.Assertions.Expect(rejectedPdf).ToHaveCountAsync(0);
             await page.WaitForFunctionAsync(
                 """
                 () => document.querySelectorAll('[data-workflow-parts] > [data-workflow-part]').length === 1
