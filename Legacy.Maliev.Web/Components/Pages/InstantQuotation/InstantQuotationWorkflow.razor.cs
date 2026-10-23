@@ -65,6 +65,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private IJSObjectReference? previewModule;
     private IJSObjectReference? previewInterop;
     private DotNetObjectReference<InstantQuotationWorkflow>? previewStatusReporter;
+    private Task? previewInitialization;
     private readonly Dictionary<Guid, string> previewKeys = [];
     private readonly Dictionary<Guid, ThicknessStatus> thicknessStatuses = [];
     private readonly Dictionary<Guid, long> thicknessToggleRevisions = [];
@@ -464,7 +465,9 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             await EnsurePreviewInteropAsync();
         }
 
+        if (disposed) return;
         await EnsurePreviewInputBoundAsync();
+        if (disposed) return;
         selectedBulkParts.IntersectWith(BulkParts.Select(part => part.PartId));
         if (VisibleSections.Parts && previewInterop is not null)
         {
@@ -1315,24 +1318,60 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task EnsurePreviewInteropAsync()
     {
-        if (previewInterop is not null || previewUnavailable)
+        if (disposed || previewInterop is not null || previewUnavailable)
         {
             return;
         }
 
+        var initialization = previewInitialization ??= InitializePreviewInteropAsync();
         try
         {
-            previewModule = await JS.InvokeAsync<IJSObjectReference>(
+            await initialization;
+        }
+        catch
+        {
+            if (ReferenceEquals(previewInitialization, initialization)) previewInitialization = null;
+            throw;
+        }
+    }
+
+    private async Task InitializePreviewInteropAsync()
+    {
+        IJSObjectReference? module = null;
+        IJSObjectReference? interop = null;
+        DotNetObjectReference<InstantQuotationWorkflow>? reporter = null;
+        bool published = false;
+        try
+        {
+            module = await JS.InvokeAsync<IJSObjectReference>(
                 "import",
                 "/dist/instant-quotation-workflow.mjs");
-            previewStatusReporter = DotNetObjectReference.Create(this);
-            previewInterop = await previewModule.InvokeAsync<IJSObjectReference>(
+            if (disposed) return;
+            reporter = DotNetObjectReference.Create(this);
+            interop = await module.InvokeAsync<IJSObjectReference>(
                 "createInstantQuotationWorkflowInterop",
-                previewStatusReporter);
+                reporter);
+            if (disposed) return;
+            previewModule = module;
+            previewStatusReporter = reporter;
+            previewInterop = interop;
+            published = true;
         }
         catch (JSException)
         {
             await ReportPreviewUnavailableAsync();
+        }
+        finally
+        {
+            if (!published)
+            {
+                try { await DisposePreviewInteropAsync(interop); }
+                finally
+                {
+                    try { await DisposePreviewModuleAsync(module); }
+                    finally { reporter?.Dispose(); }
+                }
+            }
         }
     }
 
@@ -2066,37 +2105,44 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         physicalAnalysisCancellation?.Cancel();
         try
         {
-            await DisposePreviewInteropAsync();
+            if (previewInitialization is { } initialization) await initialization;
         }
         finally
         {
             try
             {
-                await DisposePreviewModuleAsync();
+                await DisposePreviewInteropAsync(previewInterop);
             }
             finally
             {
-                previewStatusReporter?.Dispose();
-                if (!batchInProgress) uploadBatchGate.Dispose();
-
-                if (workflow is not null)
+                try
                 {
-                    await workflow.DisposeAsync();
+                    await DisposePreviewModuleAsync(previewModule);
+                }
+                finally
+                {
+                    previewStatusReporter?.Dispose();
+                    if (!batchInProgress) uploadBatchGate.Dispose();
+
+                    if (workflow is not null)
+                    {
+                        await workflow.DisposeAsync();
+                    }
                 }
             }
         }
     }
 
-    private async Task DisposePreviewInteropAsync()
+    private static async Task DisposePreviewInteropAsync(IJSObjectReference? interop)
     {
-        if (previewInterop is null)
+        if (interop is null)
         {
             return;
         }
 
         try
         {
-            await previewInterop.InvokeVoidAsync("dispose");
+            await interop.InvokeVoidAsync("dispose");
         }
         catch (JSDisconnectedException)
         {
@@ -2107,7 +2153,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
         try
         {
-            await previewInterop.DisposeAsync();
+            await interop.DisposeAsync();
         }
         catch (JSDisconnectedException)
         {
@@ -2117,16 +2163,16 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
-    private async Task DisposePreviewModuleAsync()
+    private static async Task DisposePreviewModuleAsync(IJSObjectReference? module)
     {
-        if (previewModule is null)
+        if (module is null)
         {
             return;
         }
 
         try
         {
-            await previewModule.DisposeAsync();
+            await module.DisposeAsync();
         }
         catch (JSDisconnectedException)
         {

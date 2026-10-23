@@ -38,6 +38,11 @@ public sealed class InstantQuotationPreviewInitializationTests
             try { await Task.WhenAll(initialization, (Task?)selection ?? Task.CompletedTask).WaitAsync(TimeSpan.FromSeconds(5)); }
             finally { await component.DisposeAsync(); }
         }
+        var module = Assert.Single(runtime.Modules);
+        Assert.Equal(1, module.DisposeCalls);
+        Assert.Equal(1, module.Controller.DisposeCalls);
+        Assert.Equal(1, module.Controller.ReleaseCalls);
+        Assert.Throws<ObjectDisposedException>(() => module.Callback!.Value);
     }
 
     [Theory]
@@ -49,7 +54,7 @@ public sealed class InstantQuotationPreviewInitializationTests
         using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var runtime = new HeldInitialization(phase, lease.Token);
         var component = Create(runtime);
-        var initialization = Invoke<Task>(component, "EnsurePreviewInteropAsync");
+        var initialization = Invoke<Task>(component, "OnAfterRenderAsync", true);
         Task? disposal = null;
         bool settledBeforeRelease = false;
         bool callbackOwned = false;
@@ -77,11 +82,14 @@ public sealed class InstantQuotationPreviewInitializationTests
         Assert.Equal(phase == "import" ? 0 : 1, module.CreateCalls);
         Assert.Equal(phase == "create" ? 1 : 0, module.Controller.DisposeCalls);
         Assert.Equal(phase == "create" ? 1 : 0, module.Controller.ReleaseCalls);
+        Assert.Equal(0, module.Controller.OperationalCalls);
         if (callback is not null) Assert.Throws<ObjectDisposedException>(() => callback.Value);
         await component.DisposeAsync();
         await Invoke<Task>(component, "EnsurePreviewInteropAsync");
+        await Invoke<Task>(component, "OnAfterRenderAsync", false);
         Assert.Equal(1, runtime.ImportCalls);
         Assert.Equal(1, module.DisposeCalls);
+        Assert.Equal(0, module.Controller.OperationalCalls);
     }
 
     private static InstantQuotationWorkflow Create(IJSRuntime runtime)
@@ -146,10 +154,12 @@ public sealed class InstantQuotationPreviewInitializationTests
         internal List<string> ReadKeys { get; } = [];
         internal int DisposeCalls { get; private set; }
         internal int ReleaseCalls { get; private set; }
+        internal int OperationalCalls { get; private set; }
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) => InvokeAsync<TValue>(identifier, default, args);
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
             object? result = null;
+            if (identifier != "dispose") OperationalCalls++;
             if (identifier == "beginSelection") result = new[] { ownedKey };
             if (identifier == "getGeometryClaim")
             {
