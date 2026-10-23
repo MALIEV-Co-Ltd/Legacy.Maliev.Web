@@ -233,7 +233,7 @@
         </section>
     }
 
-    @if (incompletePreviewKey is not null)
+    @if (incompletePreviewKey is not null && !VisibleSections.Viewer)
     {
         <section data-workflow-incomplete-preview aria-label="@Localizer["3D preview"]">
             <h3>@Localizer["3D preview"]</h3>
