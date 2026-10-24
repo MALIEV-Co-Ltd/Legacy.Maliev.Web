@@ -92,11 +92,26 @@ public sealed class LegacyAccountFormSourceParityTests
         var web = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web");
         var footer = File.ReadAllText(Path.Combine(web, "Components", "Layout", "PublicFooter.razor"));
         var contactUs = File.ReadAllText(Path.Combine(web, "Pages", "Shared", "_ContactUsSectionPartial.cshtml"));
+        var contactUsThai = File.ReadAllText(Path.Combine(web, "Resources", "Pages", "Shared", "_ContactUsSectionPartial.th.resx"));
+        var socialMedia = File.ReadAllText(Path.Combine(web, "Components", "Pages", "About", "SocialMediaContent.razor"));
 
         Assert.True(footer.IndexOf("+66(0)89-895-0690", StringComparison.Ordinal)
             < footer.IndexOf("+66(0)81-803-0404", StringComparison.Ordinal));
         Assert.Contains("+66(0)89-895-0690", contactUs, StringComparison.Ordinal);
         Assert.DoesNotContain("+66(0)81-803-0404", contactUs, StringComparison.Ordinal);
+        Assert.Contains("row-cols-md-5", contactUs, StringComparison.Ordinal);
+        Assert.Equal(5, contactUs.Split("<div class=\"col\">", StringSplitOptions.None).Length - 1);
+        Assert.Contains("href=\"@Legacy.Maliev.Web.Application.SocialNetworks.WhatsApp\" target=\"_blank\" rel=\"noopener\"", contactUs, StringComparison.Ordinal);
+        Assert.Equal(2, contactUs.Split("data-contact-placement=\"contact_section_whatsapp\"", StringSplitOptions.None).Length - 1);
+        Assert.Equal(2, contactUs.Split("data-contact-placement=\"contact_section_line\"", StringSplitOptions.None).Length - 1);
+        Assert.Equal(2, contactUs.Split("data-maliev-contact-destination=\"whatsapp_business\"", StringSplitOptions.None).Length - 1);
+        Assert.Contains("aria-label=\"@Localizer[\"Contact MALIEV on WhatsApp\"]\"", contactUs, StringComparison.Ordinal);
+        Assert.Contains("@Localizer[\"WhatsApp\"]", contactUs, StringComparison.Ordinal);
+        Assert.Contains("<data name=\"Contact MALIEV on WhatsApp\" xml:space=\"preserve\">", contactUsThai, StringComparison.Ordinal);
+        Assert.Contains("<value>ติดต่อ MALIEV ผ่าน WhatsApp</value>", contactUsThai, StringComparison.Ordinal);
+        Assert.Contains("<data name=\"WhatsApp\" xml:space=\"preserve\">", contactUsThai, StringComparison.Ordinal);
+        Assert.Contains("<value>WhatsApp</value>", contactUsThai, StringComparison.Ordinal);
+        Assert.Contains("href=\"@Legacy.Maliev.Web.Application.SocialNetworks.Line\" target=\"_blank\" rel=\"noopener\" data-contact-placement=\"about_line\"", socialMedia, StringComparison.Ordinal);
     }
 
     [Fact]

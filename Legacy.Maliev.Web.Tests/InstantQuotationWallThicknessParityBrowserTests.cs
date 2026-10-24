@@ -66,6 +66,8 @@ public sealed class InstantQuotationWallThicknessParityBrowserTests(WallThicknes
         Assert.Contains("/instantquotation/3d-printing", page.Url, StringComparison.Ordinal);
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         // Region creation precedes the genuine worker callback; wait for that rendered evidence.
+        await Assertions.Expect(page.Locator("[data-workflow-incomplete-preview]")).ToHaveCountAsync(1);
+        await Assertions.Expect(page.Locator("[data-workflow-incomplete-preview] canvas")).ToHaveCountAsync(1);
         await page.Locator("[data-workflow-incomplete-preview]").GetByText(incomplete, new LocatorGetByTextOptions { Exact = true }).WaitForAsync();
         if (Environment.GetEnvironmentVariable("MALIEV_BROWSER_EVIDENCE_DIR") is { Length: > 0 } directory)
         {
@@ -112,6 +114,8 @@ public sealed class InstantQuotationWallThicknessParityBrowserTests(WallThicknes
             MimeType = "model/stl",
             Buffer = WallThicknessParityBrowserFixture.Sheet(),
         });
+        await Assertions.Expect(page.Locator("[data-workflow-incomplete-preview]")).ToHaveCountAsync(1);
+        await Assertions.Expect(page.Locator("[data-workflow-incomplete-preview] canvas")).ToHaveCountAsync(1);
         await page.Locator("[data-workflow-incomplete-preview]").WaitForAsync();
         await page.WaitForFunctionAsync("() => !document.querySelector('#instant-quote-files').disabled");
         await page.SetInputFilesAsync("#instant-quote-files", new FilePayload

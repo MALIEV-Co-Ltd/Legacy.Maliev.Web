@@ -19,7 +19,9 @@
         <section class="auth-intro">
             <p class="maliev-eyebrow">@Localizer["Member workspace"]</p>
             <h1>@Localizer["Manage manufacturing projects in one place"]</h1>
-            <p>@Localizer["Review quotations, orders, project files, and account details."]</p>
+            <p>@Localizer[model.IsAuthenticated
+                ? "Review quotations, orders, project files, and account details."
+                : "Sign in to review quotations, orders, project files, and account details."]</p>
         </section>
         <section class="auth-card">
             <div class="auth-card__header"><h1>@Localizer["Choose an account action"]</h1></div>

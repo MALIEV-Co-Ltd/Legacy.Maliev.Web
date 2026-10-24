@@ -1,149 +1,191 @@
 @using System.Globalization
+@inject IStringLocalizer<AboutContent> Localizer
 
-<main class="about-page" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
-    <section class="about-hero" aria-labelledby="about-hero-title">
-        <div class="about-shell about-hero-grid">
-            <div class="about-hero-copy">
-                <p class="about-kicker">@T("MALIEV / SINCE 2018", "MALIEV / ตั้งแต่ปี 2018")</p>
-                <h1 id="about-hero-title">@T("From a family workshop to connected manufacturing.", "จากเวิร์กช็อปของครอบครัว สู่ระบบการผลิตที่เชื่อมต่อกัน")</h1>
-                <p class="about-hero-lead">@T(
-                    "We built MALIEV one capability at a time—combining physical production with digital tools that make custom manufacturing easier to start.",
-                    "เราสร้าง MALIEV ทีละความสามารถ โดยเชื่อมงานผลิตจริงเข้ากับเครื่องมือดิจิทัล เพื่อให้การเริ่มต้นผลิตชิ้นงานตามแบบทำได้ง่ายขึ้น")</p>
-                <div class="about-actions">
-                    <a class="about-button about-button-primary" href="/Quotation">@T("Request a quote", "ขอใบเสนอราคา") <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
-                    <a class="about-button about-button-secondary" href="/Services">@T("Explore our services", "ดูบริการของเรา")</a>
-                </div>
+<main class="landing-main profile-about" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+    <section class="landing-hero profile-about-hero profile-partnership-hero" aria-labelledby="profile-about-title">
+        <div class="landing-container landing-hero-grid">
+            <div class="landing-hero-copy">
+                <h1 id="profile-about-title">@T("From concept to a working part.", "จากไอเดีย สู่ชิ้นงานจริง")</h1>
+                <p class="landing-hero-lead">@T("MALIEV specializes in prototype development and reverse engineering. We create new parts from ideas and reconstruct designs from existing parts to make replacements, improve function and develop products further.", "MALIEV เชี่ยวชาญด้านการพัฒนาชิ้นงานต้นแบบและวิศวกรรมย้อนกลับ เราช่วยสร้างชิ้นงานใหม่จากแนวคิด และสร้างแบบจากชิ้นงานเดิม เพื่อผลิตชิ้นส่วนทดแทน ปรับปรุงการใช้งาน และต่อยอดผลิตภัณฑ์")</p>
+                <div class="landing-actions"><a class="landing-button landing-button-primary" href="@Link("/Contact")">@T("Discuss your project", "ปรึกษาโปรเจกต์ของคุณ") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
             </div>
-            <div class="about-hero-media" aria-label="@T("MALIEV manufacturing capabilities", "ความสามารถด้านการผลิตของ MALIEV")">
-                <figure class="about-process about-process-scan">
-                    <img src="/src/images/landing/landing-hero-scanning.webp" alt="@T("3D scanning a manufactured component", "การสแกนชิ้นงานแบบ 3 มิติ")" width="640" height="720" />
-                    <figcaption>@T("Scan", "สแกน")</figcaption>
-                </figure>
-                <figure class="about-process about-process-machine">
-                    <img src="/src/images/landing/landing-hero-cnc.webp" alt="@T("CNC machining in the MALIEV workshop", "งาน CNC ในเวิร์กช็อป MALIEV")" width="640" height="720" />
-                    <figcaption>@T("Machine", "CNC")</figcaption>
-                </figure>
-                <figure class="about-process about-process-print">
-                    <img src="/src/images/landing/landing-hero-printing.webp" alt="@T("Industrial 3D printing", "งานพิมพ์ 3 มิติระดับอุตสาหกรรม")" width="640" height="720" />
-                    <figcaption>@T("Print", "พิมพ์")</figcaption>
-                </figure>
-            </div>
+            <figure class="profile-partnership-photo">
+                <img src="/src/images/landing/about-customer-partnership.webp" width="1440" height="960" loading="eager" fetchpriority="high" decoding="async" alt="@T("Illustrative scenario of a Thai customer and MALIEV engineer reviewing a working camera-mount application together", "ภาพประกอบสถานการณ์ลูกค้าชาวไทยและวิศวกร MALIEV ร่วมกันทบทวนการใช้งานขายึดกล้องตรวจสอบชิ้นงาน")" />
+            </figure>
         </div>
     </section>
+    <section class="landing-value-wrap profile-company-facts" aria-label="@T("Company at a glance", "ข้อมูลบริษัท")"><div class="landing-container landing-value-strip">
+        <article><i class="far fa-building" aria-hidden="true"></i><div><h2>@T("Maliev Co., Ltd.", "บริษัท มาลีฟ จำกัด")</h2><p>@T("A family-owned manufacturing business.", "ธุรกิจครอบครัวด้านการพัฒนาและผลิตชิ้นงาน")</p></div></article>
+        <article><i class="far fa-calendar-alt" aria-hidden="true"></i><div><h2>@T("Established in 2018", "ก่อตั้งในปี 2018")</h2><p>@T("Design and manufacturing, connected.", "เชื่อมการออกแบบเข้ากับการผลิต")</p></div></article>
+        <article><i class="fas fa-map-marker-alt" aria-hidden="true"></i><div><h2>@T("Nonthaburi, Thailand", "นนทบุรี ประเทศไทย")</h2><p>@T("Based in Pak Kret.", "ดำเนินงานในอำเภอปากเกร็ด")</p></div></article>
+    </div></section>
 
-    <section class="about-ledger-wrap" aria-label="@T("MALIEV at a glance", "ข้อมูล MALIEV โดยสรุป")">
-        <div class="about-shell about-ledger">
-            <article><strong>2018</strong><span>@T("Founded in Nonthaburi", "ก่อตั้งในจังหวัดนนทบุรี")</span></article>
-            <article><strong>3 @T("processes", "กระบวนการ")</strong><span>@T("CNC · 3D print · 3D scan", "CNC · พิมพ์ 3 มิติ · สแกน 3 มิติ")</span></article>
-            <article><strong>@T("Thailand", "ประเทศไทย")</strong><span>@T("Workshop and support team", "เวิร์กช็อปและทีมสนับสนุน")</span></article>
-            <article><strong>1 @T("part", "ชิ้น")+</strong><span>@T("Prototype through small production", "ตั้งแต่งานต้นแบบถึงการผลิตจำนวนน้อย")</span></article>
+    <section class="landing-section profile-outcomes" aria-labelledby="profile-outcomes-title"><div class="landing-container">
+        <header class="landing-section-heading"><h2 id="profile-outcomes-title">@T("One bracket. From idea to production line.", "ขายึดหนึ่งชิ้น จากไอเดียสู่สายการผลิต")</h2><span>@T("An illustrative camera-mount project for inspecting bottles: define the requirements, develop the bracket, test variations and prepare the final design for use.", "ตัวอย่างการพัฒนาขายึดกล้องสำหรับตรวจวัดขวด ตั้งแต่กำหนดโจทย์ ออกแบบขายึด ทดลองหลายแนวทาง จนถึงเตรียมแบบสุดท้ายสำหรับใช้งาน")</span></header>
+        <div class="landing-service-grid profile-rapid-workflow-grid">
+            <article class="landing-service-card"><img src="/src/images/landing/camera-bracket-sketch-v6.webp" width="1200" height="800" loading="lazy" decoding="async" alt="@T("Illustrative customer sketches of camera-bracket variations, bottle and handwritten requirements on an office table", "ภาพประกอบภาพร่างขายึดกล้องหลายแบบ ขวด และข้อกำหนดที่เขียนด้วยมือบนโต๊ะสำนักงาน")" /><div><h3>@T("01 · Idea & sketch", "01 · ไอเดียและภาพร่าง")</h3><p>@T("Sketch bracket alternatives around the bottle, camera position and conveyor clearance. Record the basic requirements before developing CAD.", "ร่างขายึดหลายแนวทาง โดยพิจารณาขวด ตำแหน่งกล้อง และระยะหลบสายพาน พร้อมจดข้อกำหนดเบื้องต้นก่อนพัฒนาแบบ CAD")</p><a href="@Link("/Contact")">@T("Discuss your idea", "ปรึกษาไอเดียของคุณ") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
+            <article class="landing-service-card"><img src="/src/images/landing/camera-bracket-cad-v5.webp" width="1200" height="800" loading="lazy" decoding="async" alt="@T("Illustrative Thai MALIEV engineer viewing the customer drawing on the left 30 percent of a monitor and bracket CAD on the right 70 percent", "ภาพประกอบวิศวกร MALIEV ชาวไทยดูภาพร่างลูกค้าฝั่งซ้าย 30 เปอร์เซ็นต์ และแบบ CAD ขายึดฝั่งขวา 70 เปอร์เซ็นต์ของจอ")" /><div><h3>@T("02 · CAD design", "02 · ออกแบบ CAD")</h3><p>@T("Work from the customer sketch alongside the CAD model. Refine the mounting holes, upright supports and camera fit before making prototypes.", "พัฒนาโมเดล CAD ควบคู่กับภาพร่างของลูกค้า ปรับรูยึด ขารองรับ และจุดประกอบกล้อง ก่อนสร้างต้นแบบ")</p><a href="@Link("/Services/3D-Design")">@T("Explore 3D design", "ดูงานออกแบบ 3 มิติ") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
+            <article class="landing-service-card"><img src="/src/images/landing/camera-bracket-prototypes-v4.webp" width="1200" height="800" loading="lazy" decoding="async" alt="@T("Illustrative 3D-printed camera-bracket variations beside the same white inspection bottle in a printer room", "ภาพประกอบต้นแบบขายึดกล้องที่พิมพ์ 3 มิติหลายแบบ ข้างขวดสีขาวในห้องเครื่องพิมพ์")" /><div><h3>@T("03 · Prototype variations", "03 · ทดลองต้นแบบหลายแบบ")</h3><p>@T("3D-print several bracket variations to compare height, stiffness and camera fit. Use the results to refine the final design.", "พิมพ์ขายึด 3 มิติหลายแบบ เพื่อเปรียบเทียบความสูง ความแข็งแรง และการประกอบกล้อง แล้วนำผลมาปรับแบบสุดท้าย")</p><a href="@Link("/Services/3D-Printing")">@T("Explore prototyping", "ดูงานพิมพ์ต้นแบบ") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
+            <article class="landing-service-card"><img src="/src/images/landing/camera-bracket-production-v5.webp" width="1200" height="800" loading="lazy" decoding="async" alt="@T("Illustrative batch machining of identical aluminium camera brackets in a guarded Haas VF-2", "ภาพประกอบการผลิตขายึดกล้องอะลูมิเนียมแบบเดียวกันเป็นชุดในเครื่อง Haas VF-2 ที่ปิดประตูนิรภัย")" /><div><h3>@T("04 · CNC batch production", "04 · ผลิตด้วย CNC เป็นชุด")</h3><p>@T("Machine the approved aluminium bracket in batches, using fixtures to hold the same design for repeat production and inspection.", "ผลิตขายึดอะลูมิเนียมตามแบบที่ยืนยันเป็นชุด โดยใช้ฟิกซ์เจอร์จับยึดสำหรับผลิตแบบเดียวกันซ้ำและตรวจสอบชิ้นงาน")</p><a href="@Link("/Services/Custom-Manufacturing")">@T("Plan production", "วางแผนการผลิต") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></article>
         </div>
-    </section>
+        <p class="profile-workflow-note">@T("Illustrative project: the same camera bracket, bottle and inspection task throughout. Images illustrate the process and are not a named customer case study.", "โปรเจกต์ตัวอย่างที่ใช้ขายึดกล้อง ขวด และโจทย์ตรวจวัดเดียวกันตลอดกระบวนการ ภาพใช้ประกอบการอธิบาย ไม่ใช่กรณีศึกษาของลูกค้าที่ระบุชื่อ")</p>
+    </div></section>
 
-    <section class="about-history" aria-labelledby="about-history-title">
-        <div class="about-shell">
-            <header class="about-section-heading">
-                <p class="about-kicker">@T("THE MANUFACTURING RECORD", "บันทึกการผลิต")</p>
-                <h2 id="about-history-title">@T("The manufacturing record", "บันทึกเส้นทางการผลิต")</h2>
-                <p>@T(
-                    "The moments that changed what we could make—documented through company records, supplier archives, public procurement, and our product journal.",
-                    "เหตุการณ์สำคัญที่เปลี่ยนขีดความสามารถในการผลิตของเรา โดยอ้างอิงจากทะเบียนบริษัท บันทึกผู้จัดจำหน่าย การจัดซื้อสาธารณะ และบันทึกผลิตภัณฑ์ของเรา")</p>
-            </header>
-
-            <ol class="about-records">
-                <li class="about-record">
-                    <time datetime="2018-01-18">18 JAN 2018</time>
-                    <div class="about-record-copy">
-                        <p class="about-record-number" aria-hidden="true">01</p>
-                        <h3>@T("MALIEV is founded", "ก่อตั้ง MALIEV")</h3>
-                        <p>@T("A family manufacturing company begins in Pak Kret, Nonthaburi, with a goal of making CNC machining and additive manufacturing more accessible.", "บริษัทการผลิตของครอบครัวเริ่มต้นในปากเกร็ด จังหวัดนนทบุรี ด้วยเป้าหมายให้การผลิต CNC และการผลิตแบบเติมเนื้อวัสดุเข้าถึงได้ง่ายขึ้น")</p>
-                        <a class="about-evidence" href="https://www.dataforthai.com/company/0125561001573/" target="_blank" rel="noopener noreferrer">@T("Company registration record", "ข้อมูลทะเบียนบริษัท") <span aria-hidden="true">↗</span></a>
-                    </div>
-                    <p class="about-record-stamp" aria-hidden="true">@T("FOUNDING / NONTHABURI", "ก่อตั้ง / นนทบุรี")</p>
-                </li>
-
-                <li class="about-record">
-                    <time datetime="2019-01">JAN 2019</time>
-                    <div class="about-record-copy">
-                        <p class="about-record-number" aria-hidden="true">02</p>
-                        <h3>@T("3D scanning moves in-house", "เพิ่มงานสแกน 3 มิติภายในบริษัท")</h3>
-                        <p>@T("The EinScan Pro 2X+ adds high-detail capture and reverse-engineering support to the workshop.", "EinScan Pro 2X+ เพิ่มความสามารถในการเก็บรายละเอียดชิ้นงานและสนับสนุนงานวิศวกรรมย้อนกลับภายในเวิร์กช็อป")</p>
-                        <a class="about-evidence" href="https://www.print3dd.com/maliev-co-ltd/" target="_blank" rel="noopener noreferrer">@T("Supplier archive", "บันทึกจากผู้จัดจำหน่าย") <span aria-hidden="true">↗</span></a>
-                    </div>
-                    <p class="about-record-stamp about-record-stamp-dark" aria-hidden="true">@T("SCAN / REVERSE ENGINEER", "สแกน / วิศวกรรมย้อนกลับ")</p>
-                </li>
-
-                <li class="about-record">
-                    <time datetime="2019-04">APR—JUN 2019</time>
-                    <div class="about-record-copy">
-                        <p class="about-record-number" aria-hidden="true">03</p>
-                        <h3>@T("Machining meets digital quoting", "เชื่อมงาน CNC เข้ากับการเสนอราคาแบบดิจิทัล")</h3>
-                        <p>@T("The first Haas VF-2 expands machining capability while instant 3D-print pricing shortens the path from uploaded file to estimate.", "Haas VF-2 เครื่องแรกเพิ่มขีดความสามารถด้าน CNC ขณะที่ระบบประเมินราคาพิมพ์ 3 มิติช่วยย่นขั้นตอนจากการอัปโหลดไฟล์สู่ราคาประเมิน")</p>
-                        <span class="about-evidence about-evidence-static">@T("MALIEV company record", "บันทึกภายใน MALIEV")</span>
-                    </div>
-                    <p class="about-record-stamp" aria-hidden="true">@T("MACHINE / QUOTE", "CNC / เสนอราคา")</p>
-                </li>
-
-                <li class="about-record">
-                    <time datetime="2021">2021—2024</time>
-                    <div class="about-record-copy">
-                        <p class="about-record-number" aria-hidden="true">04</p>
-                        <h3>@T("Institutional manufacturing work", "งานผลิตสำหรับหน่วยงาน")</h3>
-                        <p>@T("Public procurement records document MALIEV supplying research and infrastructure organizations in Thailand. These records evidence completed supply work, not customer endorsements.", "บันทึกการจัดซื้อสาธารณะแสดงการส่งมอบงานของ MALIEV ให้หน่วยงานวิจัยและโครงสร้างพื้นฐานในประเทศไทย ข้อมูลนี้เป็นหลักฐานการส่งมอบ ไม่ใช่คำรับรองจากลูกค้า")</p>
-                        <div class="about-evidence-group">
-                            <a class="about-evidence" href="https://waa.inter.nstda.or.th/stks/pub/2022/20220613-procurement-winner-co-2565-q02.pdf" target="_blank" rel="noopener noreferrer">NSTDA 2021 <span aria-hidden="true">↗</span></a>
-                            <a class="about-evidence" href="https://fprocurement.egat.co.th/storage/documents/dprocurement/result/domestic_july2024.pdf" target="_blank" rel="noopener noreferrer">EGAT 2024 <span aria-hidden="true">↗</span></a>
-                        </div>
-                    </div>
-                    <p class="about-record-stamp about-record-stamp-dark" aria-hidden="true">@T("TRUST / PRODUCTION", "ความไว้วางใจ / การผลิต")</p>
-                </li>
-
-                <li class="about-record">
-                    <time datetime="2024">2024—2025</time>
-                    <div class="about-record-copy">
-                        <p class="about-record-number" aria-hidden="true">05</p>
-                        <h3>@T("From projects to products", "จากโครงการสู่ผลิตภัณฑ์")</h3>
-                        <p>@T("MALIEV-designed fixtures, 3D-printed goods, and SimMount hardware bring workshop problem-solving into a public product catalogue.", "ฟิกซ์เจอร์ สินค้าพิมพ์ 3 มิติ และฮาร์ดแวร์ SimMount ที่ออกแบบโดย MALIEV นำการแก้ปัญหาในเวิร์กช็อปมาสู่แค็ตตาล็อกสินค้าสาธารณะ")</p>
-                        <div class="about-evidence-group">
-                            <a class="about-evidence" href="https://shop.maliev.com/blogs/news" target="_blank" rel="noopener noreferrer">@T("Product journal", "บันทึกผลิตภัณฑ์") <span aria-hidden="true">↗</span></a>
-                            <a class="about-evidence" href="https://shop.maliev.com/collections/sim-racing-solutions" target="_blank" rel="noopener noreferrer">SimMount <span aria-hidden="true">↗</span></a>
-                        </div>
-                    </div>
-                    <p class="about-record-stamp" aria-hidden="true">@T("DESIGN / PRODUCT", "ออกแบบ / ผลิตภัณฑ์")</p>
-                </li>
-
-                <li class="about-record about-record-current">
-                    <time datetime="2026">@T("TODAY", "วันนี้")</time>
-                    <div class="about-record-copy">
-                        <p class="about-record-number" aria-hidden="true">06</p>
-                        <h3>@T("Connected manufacturing", "ระบบการผลิตที่เชื่อมต่อกัน")</h3>
-                        <p>@T("CNC machining, 3D printing, and 3D scanning now work as one practical path—from physical part or CAD file to reviewed, manufacturable output.", "ปัจจุบัน CNC การพิมพ์ 3 มิติ และการสแกน 3 มิติทำงานเป็นเส้นทางเดียวกัน ตั้งแต่ชิ้นงานจริงหรือไฟล์ CAD ไปจนถึงผลลัพธ์ที่ผ่านการตรวจสอบและผลิตได้")</p>
-                        <a class="about-evidence" href="/Services">@T("Review current capabilities", "ดูความสามารถในปัจจุบัน") <span aria-hidden="true">→</span></a>
-                    </div>
-                    <p class="about-record-stamp about-record-stamp-accent" aria-hidden="true">@T("SCAN / MAKE / DELIVER", "สแกน / ผลิต / ส่งมอบ")</p>
-                </li>
-            </ol>
+    <section class="landing-section profile-deployment" aria-labelledby="profile-deployment-title"><div class="landing-container profile-story-grid">
+        <figure class="profile-story-media"><img src="/src/images/landing/camera-bracket-deployment.webp" width="1536" height="1024" loading="lazy" decoding="async" alt="@T("Illustrative final aluminium bracket holding the same measurement camera beside white bottles on a customer production conveyor", "ภาพประกอบขายึดอะลูมิเนียมแบบสุดท้ายติดตั้งกล้องตรวจวัดข้างขวดสีขาวบนสายพานผลิตของลูกค้า")" /></figure>
+        <div><header class="landing-section-heading"><h2 id="profile-deployment-title">@T("On the production line", "ติดตั้งบนสายการผลิต")</h2></header>
+            <p class="profile-short-copy">@T("The final bracket holds the measurement camera beside the bottle conveyor. The mounting position, camera view and clearance come together in the application the customer sketched at the start.", "ขายึดแบบสุดท้ายรองรับกล้องตรวจวัดข้างสายพานขวด ตำแหน่งยึด มุมมองกล้อง และระยะหลบ เชื่อมกลับมาสู่โจทย์ที่ลูกค้าร่างไว้ตั้งแต่เริ่มต้น")</p>
         </div>
-    </section>
+    </div></section>
 
-    <section class="about-closing" aria-labelledby="about-closing-title">
-        <div class="about-shell about-closing-grid">
-            <div>
-                <p class="about-kicker">@T("THE NEXT RECORD", "บันทึกบทต่อไป")</p>
-                <h2 id="about-closing-title">@T("Your part could be what we make next.", "ชิ้นงานของคุณอาจเป็นสิ่งที่เราผลิตต่อไป")</h2>
-            </div>
-            <div>
-                <p>@T("Share a drawing, CAD file, scan requirement, or physical sample. Our team will help define a practical manufacturing route.", "ส่งแบบ ไฟล์ CAD ความต้องการสแกน หรือตัวอย่างชิ้นงาน ทีมของเราจะช่วยกำหนดแนวทางการผลิตที่เหมาะสม")</p>
-                <a class="about-button about-button-yellow" href="/Quotation">@T("Start a quotation", "เริ่มขอใบเสนอราคา") <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+    <section class="landing-section profile-development" aria-labelledby="profile-development-title"><div class="landing-container">
+        <div class="profile-story-grid">
+            <AboutWorkpieceGallery />
+            <div><header class="landing-section-heading"><h2 id="profile-development-title">@T("Already have a part? Start there.", "เริ่มจากชิ้นงานเดิมที่มีอยู่ได้")</h2></header>
+                <p class="profile-short-copy">@T("MALIEV also works from existing parts. Reverse engineering reconstructs a CAD design for replacement parts, functional improvements or further product development.", "MALIEV รับพัฒนางานจากชิ้นงานเดิมด้วยวิศวกรรมย้อนกลับ เพื่อสร้างแบบ CAD สำหรับผลิตชิ้นส่วนทดแทน ปรับปรุงการใช้งาน หรือต่อยอดผลิตภัณฑ์")</p>
+                <p class="profile-short-copy">@T("Share your sample and explain how it is used. We review the material, geometry and quantity together before choosing a manufacturing process.", "นำชิ้นงานตัวอย่างมาพร้อมข้อมูลการใช้งาน เพื่อพิจารณาวัสดุ รูปทรง และจำนวนร่วมกัน ก่อนเลือกกระบวนการผลิต")</p>
+                <a class="profile-text-link" href="@Link("/Services/3D-Scanning")"><span class="arrow-link-label">@T("Explore 3D scanning", "ดูงานสแกน 3 มิติ")</span> <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
             </div>
         </div>
-    </section>
+    </div></section>
+
+    <section class="landing-section profile-manufacturing" aria-labelledby="profile-manufacturing-title" aria-roledescription="@T("carousel", "ภาพเลื่อนบริการ")"><div class="landing-container" data-capability-carousel>
+        <header class="landing-section-heading"><h2 id="profile-manufacturing-title">@T("Manufacturing capabilities", "ความสามารถด้านการผลิต")</h2><span>@T("Explore the processes available for your material, geometry and production quantity.", "เลือกดูกระบวนการให้เหมาะกับวัสดุ รูปทรง และจำนวนผลิตของคุณ")</span></header>
+        @{
+            var capabilities = new[] {
+                (Id: "cnc", En: "CNC machining", Th: "งาน CNC", CopyEn: "Machine metal and plastic parts from your drawings, with material, finish and inspection requirements agreed before production.", CopyTh: "ผลิตชิ้นส่วนโลหะและพลาสติกตามแบบ โดยตกลงวัสดุ ผิวงาน และขอบเขตการตรวจสอบก่อนผลิต", Image: "services/cnc/part-bento-cnc-arched-linkage.webp", Page: "/Services/CNC-Machining"),
+                (Id: "printing", En: "3D printing", Th: "พิมพ์ 3 มิติ", CopyEn: "Build prototypes and functional parts to compare fit, form and design variations before committing to a production process.", CopyTh: "สร้างต้นแบบและชิ้นส่วนใช้งาน เพื่อเปรียบเทียบการประกอบ รูปทรง และแบบต่าง ๆ ก่อนเลือกกระบวนการผลิต", Image: "services/printing/part-bento-abs-fan.webp", Page: "/Services/3D-Printing"),
+                (Id: "scanning", En: "3D scanning", Th: "สแกน 3 มิติ", CopyEn: "Capture the geometry of an existing part as a starting point for reverse engineering and CAD reconstruction.", CopyTh: "เก็บข้อมูลรูปทรงชิ้นงานเดิม เพื่อใช้เป็นจุดเริ่มต้นของงานวิศวกรรมย้อนกลับและสร้างแบบ CAD", Image: "services/scanning/scanning-hero.webp", Page: "/Services/3D-Scanning"),
+                (Id: "design", En: "3D design", Th: "ออกแบบ 3 มิติ", CopyEn: "Develop CAD from a sketch, idea or existing part. Review assembly, material and manufacturability before making the first prototype.", CopyTh: "พัฒนาแบบ CAD จากภาพร่าง ไอเดีย หรือชิ้นงานเดิม ทบทวนการประกอบ วัสดุ และความเหมาะสมในการผลิตก่อนสร้างต้นแบบ", Image: "landing/capability-design-mouse-cad.webp", Page: "/Services/3D-Design"),
+                (Id: "silicone", En: "Silicone casting", Th: "หล่อซิลิโคน", CopyEn: "Produce small quantities of silicone parts using a suitable mold, with material and surface requirements reviewed for the application.", CopyTh: "ผลิตชิ้นงานซิลิโคนจำนวนน้อยด้วยแม่พิมพ์ที่เหมาะสม โดยพิจารณาวัสดุและผิวงานตามการใช้งาน", Image: "landing/silicone-owl-sculpture-casting.webp", Page: "/Services/Silicone-Casting"),
+                (Id: "injection", En: "Low-volume injection molding", Th: "ฉีดพลาสติกจำนวนน้อย", CopyEn: "Review the part and tooling before production. Our pneumatic injection route supports the following limits.", CopyTh: "ประเมินชิ้นงานและแม่พิมพ์ก่อนผลิต โดยงานฉีดพลาสติกระบบลมรองรับขอบเขตดังนี้", Image: "services/injection-molding/part-bento-pp-source-derived.webp", Page: "/Services/Low-Volume-Injection-Molding")
+            };
+        }
+        @{
+            var capabilityDetails = new Dictionary<string, (string LabelEn, string LabelTh, string En, string Th)[]> {
+                ["cnc"] = new[] {
+                    ("Materials", "วัสดุ", "Metals and engineering plastics; confirm grade, stock and finish for each job.", "โลหะและพลาสติกวิศวกรรม โดยยืนยันเกรด วัตถุดิบ และผิวงานสำหรับแต่ละงาน"),
+                    ("Files & requirements", "ไฟล์และข้อกำหนด", "STEP/STP or IGES/IGS geometry, plus a PDF drawing for critical dimensions, tolerances, threads and fits.", "ไฟล์ STEP/STP หรือ IGES/IGS พร้อมแบบ PDF ระบุขนาดสำคัญ ค่าความคลาดเคลื่อน เกลียว และจุดสวมประกอบ"),
+                    ("Production scope", "ขอบเขตการผลิต", "One-off parts through repeat batches, with machining access, setup and inspection reviewed before quotation.", "ตั้งแต่ชิ้นเดียวถึงผลิตซ้ำเป็นชุด โดยทบทวนการเข้าถึงของเครื่องมือ การจับยึด และการตรวจสอบก่อนเสนอราคา")
+                },
+                ["printing"] = new[] {
+                    ("Technologies", "เทคโนโลยี", "FDM and resin printing. MJF, SLS, SLM and DMLS require engineering review to confirm the project scope.", "พิมพ์ FDM และเรซิน ส่วน MJF, SLS, SLM และ DMLS ต้องประเมินทางวิศวกรรมเพื่อยืนยันขอบเขตของโปรเจกต์"),
+                    ("Material selection", "การเลือกวัสดุ", "Match stiffness, impact, heat and chemical exposure to the application; review layer direction, supports and finish.", "เลือกตามความแข็ง การรับแรงกระแทก ความร้อน และสารเคมี พร้อมทบทวนทิศทางชั้นพิมพ์ ซัพพอร์ต และผิวงาน"),
+                    ("Files & next step", "ไฟล์และขั้นตอนถัดไป", "STL, STEP, OBJ or 3MF. Compare printed variations for fit and function before approving the production design.", "รับไฟล์ STL, STEP, OBJ หรือ 3MF เปรียบเทียบต้นแบบหลายแบบเพื่อทดสอบการประกอบและการใช้งานก่อนยืนยันแบบผลิต")
+                },
+                ["scanning"] = new[] {
+                    ("Capture", "การเก็บข้อมูล", "Structured-light scanning, in-house or onsite after reviewing access, surface preparation and working conditions.", "สแกนด้วยแสงแบบมีโครงสร้าง ทั้งที่บริษัทและนอกสถานที่ โดยประเมินการเข้าถึง การเตรียมผิว และสภาพแวดล้อมก่อน"),
+                    ("Deliverables", "สิ่งส่งมอบ", "Scan-only work produces a triangular mesh such as STL. Editable CAD and 2D drawings are separately defined work.", "งานสแกนอย่างเดียวส่งมอบเมชสามเหลี่ยม เช่น STL ส่วน CAD ที่แก้ไขได้และแบบ 2 มิติเป็นขอบเขตงานที่ต้องกำหนดเพิ่มเติม"),
+                    ("Engineering review", "การทบทวนทางวิศวกรรม", "Rebuild geometry or compare with nominal CAD. Agree critical features and reporting scope; wear may obscure the original design.", "สร้างรูปทรงใหม่หรือเปรียบเทียบกับ CAD อ้างอิง โดยตกลงจุดสำคัญและขอบเขตรายงาน ทั้งนี้รอยสึกอาจทำให้ระบุแบบเดิมได้ไม่ครบ")
+                },
+                ["design"] = new[] {
+                    ("Starting information", "ข้อมูลเริ่มต้น", "Sketches, reference photos, drawings, sample parts or scanned meshes, with intended use and critical interfaces.", "ภาพร่าง ภาพอ้างอิง แบบงาน ชิ้นงานตัวอย่าง หรือเมชจากการสแกน พร้อมการใช้งานและจุดประกอบสำคัญ"),
+                    ("Design for manufacture", "ออกแบบเพื่อการผลิต", "Review material, tolerances, assembly, machining access, print orientation and mold strategy for the chosen process.", "ทบทวนวัสดุ ค่าความคลาดเคลื่อน การประกอบ การเข้าถึงของเครื่องมือ ทิศทางพิมพ์ และแนวทางแม่พิมพ์ตามกระบวนการที่เลือก"),
+                    ("Deliverables", "สิ่งส่งมอบ", "Agree CAD formats, STEP, STL and 2D drawings before modeling; validate the approved design with a prototype.", "ตกลงรูปแบบไฟล์ CAD, STEP, STL และแบบ 2 มิติก่อนเริ่มงาน แล้วทดสอบแบบที่ยืนยันด้วยต้นแบบ")
+                },
+                ["silicone"] = new[] {
+                    ("Process", "กระบวนการ", "Cast liquid silicone in a 3D-printed mold for suitable prototypes and short runs.", "หล่อซิลิโคนเหลวในแม่พิมพ์พิมพ์ 3 มิติ สำหรับต้นแบบและการผลิตจำนวนน้อยที่เหมาะสม"),
+                    ("Mold review", "การประเมินแม่พิมพ์", "Review parting lines, vents, release, printed mold surface and silicone compatibility before pouring and curing.", "ทบทวนแนวประกบ ช่องระบายอากาศ การถอดแบบ ผิวแม่พิมพ์ และความเข้ากันได้กับซิลิโคนก่อนเทและบ่ม"),
+                    ("Specify the part", "ข้อมูลชิ้นงาน", "Send CAD, quantity, hardness or flexibility, color, finish, inserts and intended use. Cure cycles and mold count affect the schedule.", "ส่ง CAD จำนวน ความแข็งหรือความยืดหยุ่น สี ผิวงาน อินเสิร์ต และการใช้งาน โดยรอบบ่มและจำนวนแม่พิมพ์มีผลต่อระยะเวลา")
+                },
+                ["injection"] = new[] {
+                    ("Technology & batch", "เทคโนโลยีและจำนวน", "Pneumatic PIMM injection molding for pilot runs and repeat batches of up to 1,000 parts.", "ฉีดพลาสติก PIMM ระบบลม สำหรับล็อตทดลองและการผลิตซ้ำไม่เกิน 1,000 ชิ้น"),
+                    ("Machine limits", "ขอบเขตเครื่อง", "Up to 50 g per shot; plastic melting temperature up to 350 °C. Suitability depends on the part, resin and mold.", "น้ำหนักฉีดไม่เกิน 50 กรัมต่อช็อต อุณหภูมิหลอมพลาสติกไม่เกิน 350 °C โดยต้องประเมินชิ้นงาน เม็ดพลาสติก และแม่พิมพ์ร่วมกัน"),
+                    ("Tooling & inspection", "แม่พิมพ์และการตรวจสอบ", "Review an existing mold or scope a new tool. Confirm resin, geometry, finish, quantity and inspection requirements before production.", "ประเมินแม่พิมพ์เดิมหรือกำหนดงานแม่พิมพ์ใหม่ พร้อมยืนยันวัสดุ รูปทรง ผิวงาน จำนวน และข้อกำหนดการตรวจสอบก่อนผลิต")
+                }
+            };
+            var capabilityImages = new Dictionary<string, (string Image, string En, string Th)[]> {
+                ["cnc"] = new[] {
+                    ("landing/capability-cnc-fusion-cam.webp", "Illustrative operator programming toolpaths in Autodesk Fusion Manufacture", "ภาพประกอบการเขียนทางเดินเครื่องมือใน Autodesk Fusion Manufacture"),
+                    ("landing/capability-cnc-vf2-machining.webp", "Illustrative Haas VF-2 machining an aluminium billet", "ภาพประกอบเครื่อง Haas VF-2 กัดชิ้นงานจากแท่งอะลูมิเนียม"),
+                    ("landing/capability-cnc-finished-bracket.webp", "Illustrative finished aluminium brackets with machined faces", "ภาพประกอบขายึดอะลูมิเนียมที่กัดขึ้นรูปเสร็จแล้ว"),
+                    ("landing/capability-cnc-finished-housing-v2.webp", "Illustrative instrument housing machined from aluminium billet", "ภาพประกอบตัวเรือนเครื่องมือที่กัดจากแท่งอะลูมิเนียม")
+                },
+                ["printing"] = new[] {
+                    ("services/printing/part-bento-abs-fan.webp", "FDM printed ABS fan sample", "ตัวอย่างใบพัด ABS พิมพ์ FDM"),
+                    ("services/printing/part-bento-rubber-resin-pulley.webp", "Flexible resin printed pulley sample", "ตัวอย่างพูลเลย์พิมพ์เรซินยืดหยุ่น"),
+                    ("services/printing/part-bento-mjf-pa12-linkage.webp", "MJF PA12 nylon linkage sample", "ตัวอย่างชิ้นส่วนกลไกไนลอน PA12 พิมพ์ MJF")
+                },
+                ["scanning"] = new[] {
+                    ("landing/reverse-engineering-worn-part.webp", "Start with the worn part", "เริ่มจากชิ้นงานที่สึกหรอ"),
+                    ("landing/capability-scan-capture.webp", "Capture the visible surfaces", "สแกนผิวชิ้นงาน"),
+                    ("landing/capability-scan-cad-grey-v2.webp", "Reconstruct the CAD geometry", "สร้างรูปทรง CAD ใหม่")
+                },
+                ["design"] = new[] {
+                    ("landing/capability-design-mouse-sketch.webp", "Explore ergonomic mouse-shell concepts", "สำรวจแนวคิดรูปทรงตัวเรือนเมาส์ตามหลักสรีรศาสตร์"),
+                    ("landing/capability-design-mouse-cad.webp", "Develop the mouse-shell CAD in Autodesk Fusion", "พัฒนาแบบ CAD ตัวเรือนเมาส์ใน Autodesk Fusion"),
+                    ("landing/capability-design-mouse-revisions.webp", "Compare mouse-shell design revisions in Autodesk Fusion", "เปรียบเทียบแบบตัวเรือนเมาส์แต่ละรุ่นใน Autodesk Fusion")
+                },
+                ["silicone"] = new[] {
+                    ("landing/capability-silicone-concept.webp", "Develop the owl and mold", "ออกแบบนกฮูกและแม่พิมพ์"),
+                    ("landing/capability-silicone-pour.webp", "Pour into the closed mold", "เทซิลิโคนลงแม่พิมพ์ที่ประกบแล้ว"),
+                    ("landing/silicone-owl-sculpture-casting.webp", "Demold the detailed sculpture", "ถอดชิ้นงานประติมากรรม")
+                },
+                ["injection"] = new[] {
+                    ("landing/capability-injection-concept.webp", "Review the cover and tooling", "ทบทวนฝาครอบและแม่พิมพ์"),
+                    ("landing/capability-injection-batch.webp", "Mold and check the batch", "ฉีดและตรวจสอบชิ้นงานเป็นชุด"),
+                    ("services/injection-molding/part-bento-pp-source-derived.webp", "Finish the PP cover", "ชิ้นงานฝาครอบ PP")
+                }
+            };
+        }
+        <div class="profile-capability-controls" data-capability-controls hidden>
+            <div class="profile-capability-choices" role="group" aria-label="@T("Choose a capability", "เลือกบริการ")">
+                @for (var i = 0; i < capabilities.Length; i++) {
+                    <button type="button" data-capability-index="@i" aria-controls="capability-@capabilities[i].Id" aria-pressed="@(i == 0 ? "true" : "false")">@T(capabilities[i].En, capabilities[i].Th)</button>
+                }
+            </div>
+            <div class="profile-capability-paging"><button type="button" data-capability-prev aria-label="@T("Previous service", "บริการก่อนหน้า")"><i class="fas fa-arrow-left" aria-hidden="true"></i></button><span data-capability-status role="status" aria-live="polite" aria-atomic="true">1 / 6</span><button type="button" data-capability-next aria-label="@T("Next service", "บริการถัดไป")"><i class="fas fa-arrow-right" aria-hidden="true"></i></button></div>
+        </div>
+        <div class="profile-capability-track" data-capability-track tabindex="0" aria-label="@T("Services, scroll horizontally", "เลื่อนแนวนอนเพื่อดูบริการ")">
+            @for (var i = 0; i < capabilities.Length; i++) {
+                var capability = capabilities[i];
+                <article class="profile-capability-slide" id="capability-@capability.Id" role="group" aria-roledescription="@T("slide", "รายการบริการ")" aria-label="@(i + 1) / @capabilities.Length · @T(capability.En, capability.Th)">
+                    <div><h3>@T(capability.En, capability.Th)</h3><p class="profile-short-copy">@T(capability.CopyEn, capability.CopyTh)</p>
+                        <dl class="profile-capability-details">
+                            @foreach (var detail in capabilityDetails[capability.Id]) {
+                                <div><dt>@T(detail.LabelEn, detail.LabelTh)</dt><dd>@T(detail.En, detail.Th)</dd></div>
+                            }
+                        </dl>
+                        <a class="profile-text-link" href="@Link(capability.Page)"><span class="arrow-link-label">@T("View service", "ดูรายละเอียดบริการ")</span> <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                    </div>
+                    <div class="profile-capability-bento" data-photo-count="@capabilityImages[capability.Id].Length" role="group" aria-label="@T("Process and workpiece examples", "ตัวอย่างกระบวนการและชิ้นงาน")">
+                        @foreach (var photo in capabilityImages[capability.Id]) {
+                            <figure><img src="/src/images/@photo.Image" width="1200" height="800" loading="lazy" decoding="async" alt="@T(photo.En, photo.Th)" /></figure>
+                        }
+                    </div>
+                </article>
+            }
+        </div>
+    </div></section>
+
+    <section class="landing-section profile-collaboration" aria-labelledby="profile-collaboration-title"><div class="landing-container">
+        <header class="landing-section-heading"><h2 id="profile-collaboration-title">@T("Before we quote", "ก่อนเสนอราคา")</h2><span>@T("Clarify the technical requirements, project scope and confidentiality before quotation and manufacturing.", "พูดคุยข้อกำหนดทางเทคนิค ขอบเขตงาน และการรักษาความลับ ก่อนเสนอราคาและเริ่มผลิต")</span></header>
+        <div class="profile-collaboration-grid">
+            <article><h3>@T("Engineering requirements", "โจทย์ทางวิศวกรรม")</h3><p>@T("Review intended use, critical dimensions and mating features using your CAD, drawing or physical sample. Identify missing information before choosing a production route.", "ทบทวนการใช้งาน ขนาดสำคัญ และจุดประกอบ จากไฟล์ CAD แบบงาน หรือชิ้นงานตัวอย่าง พร้อมระบุข้อมูลที่ต้องเพิ่มเติมก่อนเลือกแนวทางผลิต")</p></article>
+            <article><h3>@T("Scope and deliverables", "ขอบเขตงานและสิ่งส่งมอบ")</h3><p>@T("Clarify the process, material, finish, quantity and inspection scope so the quotation reflects the work and deliverables agreed together.", "กำหนดกระบวนการ วัสดุ ผิวงาน จำนวน และขอบเขตการตรวจสอบ ให้ใบเสนอราคาสอดคล้องกับงานและสิ่งส่งมอบที่ตกลงร่วมกัน")</p></article>
+            <article><h3>@T("Project confidentiality", "ความลับของโปรเจกต์")</h3><p>@T("If your project requires an NDA, complete and sign the agreement before sending sensitive drawings, CAD files or samples.", "หากโปรเจกต์ต้องใช้ NDA ให้จัดทำและลงนามข้อตกลงก่อนส่งแบบงาน ไฟล์ CAD หรือชิ้นงานตัวอย่างที่เป็นความลับ")</p><a href="@Link("/Legal/NonDisclosureAgreement")"><span class="arrow-link-label">@T("View our NDA", "ดูข้อตกลงรักษาความลับ")</span> <i class="fas fa-arrow-right" aria-hidden="true"></i></a></article>
+        </div>
+    </div></section>
+    <CorporateCustomers />
+
+    <section class="landing-cta-section"><div class="landing-container landing-cta">
+        <div><h2>@T("Have an idea, drawing or sample part?", "มีไอเดีย แบบงาน หรือชิ้นงานตัวอย่าง?")</h2><p>@T("Talk to us to review a development and manufacturing approach.", "คุยกับเราเพื่อประเมินแนวทางพัฒนาและผลิต")</p><div class="landing-actions"><a class="landing-button landing-button-primary" href="@Link("/Contact")">@T("Discuss your project", "ปรึกษาโปรเจกต์ของคุณ") <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div></div>
+        <img src="/src/images/services/printing/part-bento-pa-cf-wheel.webp" width="1254" height="1254" loading="lazy" decoding="async" alt="@T("Source-based image of a PA-CF printed wheel-like sample", "ภาพจากชิ้นงานพิมพ์ PA-CF ลักษณะคล้ายล้อ")" />
+    </div></section>
 </main>
 
 @code {
     [Parameter]
     public string RouteOwner { get; set; } = "razor-static-ssr";
 
-    private static string T(string english, string thai) =>
-        CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th" ? thai : english;
+    private string T(string english, string thai)
+    {
+        var value = Localizer[english];
+        return value.ResourceNotFound
+            ? CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th" ? thai : english
+            : value.Value;
+    }
+
+    private static string Link(string path) =>
+        $"{path}?culture={CultureInfo.CurrentUICulture.TwoLetterISOLanguageName}";
 }

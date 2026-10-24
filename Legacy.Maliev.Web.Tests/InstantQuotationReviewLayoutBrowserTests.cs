@@ -246,6 +246,12 @@ public sealed class InstantQuotationReviewLayoutBrowserTests(CncNativeBrowserFix
         Assert.True(result[0], "Review controls must not clip their selected values.");
         if (width >= 375) Assert.True(result[1], "PDF and Continue must share a row when space permits.");
         Assert.True(result[2], "Review must not force horizontal overflow.");
+        if (width < 576)
+        {
+            Assert.True(await page.Locator(".instant-quote__review-fields").EvaluateAsync<bool>(
+                "element => getComputedStyle(element).gridTemplateColumns.split(' ').length === 1"),
+                "Phone review fields must follow the source single-column layout.");
+        }
         Assert.True(result[3], "Continue must remain a compact action, not a full-width strip.");
         Assert.True(result[4], "The forward action must stay right aligned.");
 

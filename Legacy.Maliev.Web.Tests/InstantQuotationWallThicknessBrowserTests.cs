@@ -18,7 +18,7 @@ public sealed class InstantQuotationWallThicknessBrowserTests(CncNativeBrowserFi
         var result = await page.EvaluateAsync<JsonElement>("""
             async () => {
               const run = triangles => new Promise((resolve, reject) => {
-                const worker = new Worker('/src/app/js/instant-quotation/wall-thickness-runner.worker.js?v=2');
+                const worker = new Worker('/src/app/js/instant-quotation/wall-thickness-runner.worker.js?v=3');
                 const timer = setTimeout(() => { worker.terminate(); reject(new Error('Worker timed out')); }, 10000);
                 worker.onmessage = event => {
                   clearTimeout(timer);
@@ -81,7 +81,7 @@ public sealed class InstantQuotationWallThicknessBrowserTests(CncNativeBrowserFi
 
         var result = await page.EvaluateAsync<JsonElement>("""
             async () => {
-            const worker = new Worker('/src/app/js/instant-quotation/wall-thickness-runner.worker.js?v=2');
+            const worker = new Worker('/src/app/js/instant-quotation/wall-thickness-runner.worker.js?v=3');
             const box = [
               0, 0, 0, 0, 10, 0, 20, 10, 0, 0, 0, 0, 20, 10, 0, 20, 0, 0,
               0, 0, 0.5, 20, 0, 0.5, 20, 10, 0.5, 0, 0, 0.5, 20, 10, 0.5, 0, 10, 0.5,
