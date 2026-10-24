@@ -1,0 +1,25 @@
+@inject IStringLocalizer<KnowledgeShell> Localizer
+
+<div class="docs-page" data-migration-route-owner="@RouteOwner">
+    <div class="workspace-shell docs-shell">
+        <KnowledgeNavigation CurrentPage="@CurrentPage" />
+        <main id="knowledge-content" class="docs-content" tabindex="-1">
+            <div class="workspace-toolbar">
+                <button type="button" class="workspace-drawer-toggle" aria-controls="knowledge-navigation" aria-expanded="false" data-workspace-open><i class="fas fa-bars" aria-hidden="true"></i> <span>@Localizer["Contents"]</span></button>
+            </div>
+            @ChildContent
+        </main>
+    </div>
+    <button type="button" class="workspace-backdrop" data-workspace-backdrop hidden aria-label="@Localizer["Close contents"]"></button>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string CurrentPage { get; set; } = "/Index";
+
+    [Parameter]
+    public string? RouteOwner { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

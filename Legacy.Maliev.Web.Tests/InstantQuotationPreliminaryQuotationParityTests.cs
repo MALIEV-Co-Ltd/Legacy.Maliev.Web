@@ -69,6 +69,11 @@ public sealed class InstantQuotationPreliminaryQuotationParityTests
         var logo = File.ReadAllBytes(Path.Combine(root, "Legacy.Maliev.Web", "wwwroot", "src", "images", "navbar_logo_black.webp"));
 
         Assert.Contains("data:image/webp;base64,", component, StringComparison.Ordinal);
+        var cnc = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Pages", "InstantQuotation", "CNC-Machining.cshtml"));
+        Assert.Contains("navbar_logo_black.webp", cnc, StringComparison.Ordinal);
+        Assert.Contains("data:image/webp;base64,", cnc, StringComparison.Ordinal);
+        Assert.DoesNotContain("navbar_logo_black.png", cnc, StringComparison.Ordinal);
+        Assert.DoesNotContain("data:image/png;base64,", cnc, StringComparison.Ordinal);
         Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(logo, 0, 4));
         Assert.Equal("WEBP", System.Text.Encoding.ASCII.GetString(logo, 8, 4));
     }

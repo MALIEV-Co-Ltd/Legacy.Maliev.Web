@@ -1,0 +1,80 @@
+@inject IStringLocalizer<MaterialsEngineeringPlasticsContent> Localizer
+
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+<h1>@Localizer["Engineering plastics: match the grade to the environment"]</h1>
+<p class="docs-lead">@Localizer["Plastic selection involves more than replacing metal with a lighter shape. Time, temperature, moisture, and processing history can change dimensions and performance. Start with the function and the actual grade, then validate the finished part under representative conditions. The families below are candidates for discussion, not an availability list."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/engineering-plastics.webp" srcset="/src/images/knowledge/photos/engineering-plastics-small.webp 768w, /src/images/knowledge/photos/engineering-plastics.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["A polymer gear, bushings, ring, seal, housing and transparent cover."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Polymer choice must account for moisture, time under load, temperature and manufacturing route. Illustrative image."]</figcaption>
+</figure>
+<nav class="docs-toc" aria-label="@Localizer["On this page"]">
+<strong>@Localizer["On this page"]</strong>
+<ul>
+<li><a href="#pom-pa">@Localizer["1. POM and PA: guides, gears, and wear parts"]</a></li>
+<li><a href="#peek-ptfe">@Localizer["2. PEEK and PTFE: demanding environments with different limits"]</a></li>
+<li><a href="#pc-abs">@Localizer["3. PC and ABS: visibility, housings, and handling"]</a></li>
+<li><a href="#comparison">@Localizer["4. Use a question-led comparison"]</a></li>
+<li><a href="#route">@Localizer["5. Validate the manufacturing route"]</a></li>
+</ul>
+</nav>
+<section id="pom-pa" class="docs-section">
+<h2>@Localizer["1. POM and PA: guides, gears, and wear parts"]</h2>
+<p>@Localizer["POM, also called acetal, is a useful starting point for dimension-sensitive machined guides and small mechanisms. Ensinger describes its unfilled POM-C TECAFORM AH natural as easy to machine, with low water absorption and useful wear behaviour. Identify POM-C versus POM-H and any lubricant or reinforcing additives before comparing results."]</p>
+<p><a href="https://www.ensingerplastics.com/en-us/shapes/acetal-tecaform-ah-natural">@Localizer["Ensinger TECAFORM AH natural"]</a></p>
+<p>@Localizer["PA, or nylon, covers multiple chemistries and stock-making routes. It can be considered for rollers, gears, and sliding elements, but moisture conditioning belongs in the design. Mitsubishi Chemical Group explains that absorbed moisture can change nylon dimensions, mechanical behaviour, and electrical properties. A dry inspection does not settle the running clearance of a humid-service assembly."]</p>
+<p><a href="https://www.mcam.com/en/products/nylons">@Localizer["Mitsubishi Chemical Group nylon guidance"]</a></p>
+</section>
+<section id="peek-ptfe" class="docs-section">
+<h2>@Localizer["2. PEEK and PTFE: demanding environments with different limits"]</h2>
+<p>@Localizer["PEEK is worth investigating for loaded parts exposed to heat or aggressive process conditions. Ensinger's TECAPEEK natural combines heat, chemical, wear, and creep resistance. That combination is a reason to request grade-specific data, not a universal approval. Confirm the actual chemical mixture, temperature, stress, and duration; modified bearing or reinforced grades need their own comparison."]</p>
+<p><a href="https://www.ensingerplastics.com/en-sg/shapes/tecapeek-natural">@Localizer["Ensinger TECAPEEK natural"]</a></p>
+<p>@Localizer["PTFE offers chemical resistance, electrical insulation, and a useful low-friction surface, but a sliding or sealing choice must also resist deformation. Ensinger's PTFE compound brochure shows creep behaviour changing with filler and temperature. For a clamped gasket or support ring, evaluate retention of compression and extrusion gaps rather than assuming chemical resistance also means load-bearing stability."]</p>
+<p><a href="https://www.ensingerplastics.com/-/media/ensinger/files/document-teaser-files/brochures/p84/tecapowder-ptfe-compounds-en.pdf?rev=-1">@Localizer["Ensinger PTFE compound creep comparison"]</a></p>
+
+<figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["A cantilever bends under a constant force; a qualitative deflection versus time curve rises without numerical property values."]">
+        <img src="/src/images/knowledge/visual-polymer-creep.svg" alt="@Localizer["A cantilever bends under a constant force; a qualitative deflection versus time curve rises without numerical property values."]" width="960" height="480" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>@Localizer["1: sustained load on a plastic beam. 2: qualitative increase in deflection over time at constant force. The curve is illustrative, not measured data or a comparison of polymer grades; temperature, grade, and geometry matter."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-polymer-creep.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
+</section>
+<section id="pc-abs" class="docs-section">
+<h2>@Localizer["3. PC and ABS: visibility, housings, and handling"]</h2>
+<p>@Localizer["PC, polycarbonate, is a candidate when transparency and toughness matter. Ensinger describes those characteristics for its TECANAT family. A viewing panel still needs a defined surface finish and exposure review. Test the intended cleaner, adhesive, and assembly stress together, and specify optical expectations separately from the material name."]</p>
+<p><a href="https://www.ensingerplastics.com/-/media/Ensinger/Files/Document%20Teaser%20Files/Brochures/Shapes/Stock%20Shapes-catalog-en-2024">@Localizer["Ensinger stock-shapes material guide"]</a></p>
+<p>@Localizer["ABS is commonly considered for equipment housings and handled prototypes. INEOS Styrolution describes Terluran GP-22 specifically as an injection-moulding grade for applications including housings. That description does not transfer its properties to every ABS filament, cast imitation, or machined sheet. Check the exact grade, wall geometry, fastening method, and exposure."]</p>
+<p><a href="https://www.ineos-styrolution.com/Product/Terluran-ABS-_Terluran-GP-22_SKU300600120827.html?SKU=300600120827&amp;SelectedRegion=Region_America">@Localizer["INEOS Styrolution Terluran GP-22"]</a></p>
+</section>
+<section id="comparison" class="docs-section">
+<h2>@Localizer["4. Use a question-led comparison"]</h2>
+<div class="docs-table-wrap" role="region" tabindex="0" aria-label="@Localizer["Engineering plastic comparison questions"]">
+<table>
+<caption>@Localizer["Engineering plastic comparison questions"]</caption>
+<thead><tr><th scope="col">@Localizer["Family"]</th><th scope="col">@Localizer["Application question"]</th></tr></thead>
+<tbody>
+<tr><td>@Localizer["POM / PA"]</td><td>@Localizer["What clearance remains after moisture conditioning and wear?"]</td></tr>
+<tr><td>@Localizer["PEEK / PTFE"]</td><td>@Localizer["Does the exact grade retain shape under the sustained load and chemistry?"]</td></tr>
+<tr><td>@Localizer["PC / ABS"]</td><td>@Localizer["Are impact, appearance, cleaning, sunlight, and fastening requirements defined?"]</td></tr>
+</tbody>
+</table>
+</div>
+<p>@Localizer["Specify continuous and brief peak temperatures separately. Heat-deflection temperature is a test result under a stated load, not a universal continuous-use limit. Request creep evidence for sustained loads, wear tests against the intended counterface, and grade-specific electrical data. Conductive fillers and moisture can change the insulation assumptions."]</p>
+<p>@Localizer["For outdoor parts, request weathering evidence for the actual colour and grade. Ensinger warns that sunlight, oxygen, and moisture can degrade plastic characteristics. A black colour or a generic polymer name does not establish UV life. Likewise, food-contact, medical, and flammability requirements need specific supporting documents and finished-part evaluation."]</p>
+<p><a href="https://www.ensingerplastics.com/en-us/faq">@Localizer["Ensinger handling and exposure guidance"]</a></p>
+</section>
+<section id="route" class="docs-section">
+<h2>@Localizer["5. Validate the manufacturing route"]</h2>
+<p>@Localizer["Machined stock and a printed part with the same polymer name are not equivalent. Stratasys documents orientation-dependent properties in FDM PC. Record the build direction, process settings, material condition, and post-processing for printed parts; use matching test evidence rather than importing a stock-shape datasheet into the design."]</p>
+<p><a href="https://www.stratasys.com/siteassets/materials/materials-catalog/fdm-materials/pc/mds_fdm_pc_0823a.pdf?v=4a7074">@Localizer["Stratasys FDM PC material datasheet"]</a></p>
+<aside class="docs-example">
+<h3>@Localizer["Example: a warm enclosure near a motor"]</h3>
+<p>@Localizer["Measure the wall temperature during a full operating cycle and after shutdown. Test a representative fastening boss under sustained assembly load, then repeat with the intended cleaner. Choose the resin and process only after the enclosure retains the required fit, appearance, and function; a successful room-temperature fit check is only the first observation."]</p>
+</aside>
+</section>
+<p>@Localizer["Sources reviewed 16 October 2026. Confirm current grade data and project requirements before production."]</p>
+</article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}

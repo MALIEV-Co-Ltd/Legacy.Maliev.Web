@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Legacy.Maliev.Web.Pages.Shared;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
@@ -8,6 +9,39 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class LeadAnalyticsEventQueueParityTests
 {
+    [Fact]
+    public void ProducerValidationAndActualTempDataSetterFailuresAreReturnedWithoutEscaping()
+    {
+        var invalid = new ThrowingTempDataDictionary();
+        Assert.False(LeadAnalyticsEventQueue.TryQueueContactMessage(invalid, 0, out var invalidFailure));
+        Assert.IsType<ArgumentOutOfRangeException>(invalidFailure);
+        Assert.Equal(0, invalid.SetterCalls);
+
+        var contact = new ThrowingTempDataDictionary();
+        Assert.False(LeadAnalyticsEventQueue.TryQueueContactMessage(contact, 42, out var contactFailure));
+        Assert.Same(contact.WriteFailure, contactFailure);
+        Assert.Equal(1, contact.SetterCalls);
+        Assert.Equal("Maliev.ContactAnalyticsEvent.v1", contact.AttemptedKey);
+        using var contactPayload = JsonDocument.Parse(Assert.IsType<string>(contact.AttemptedValue));
+        Assert.Equal("maliev_contact_submitted", contactPayload.RootElement.GetProperty("event").GetString());
+        Assert.Equal("message-42", contactPayload.RootElement.GetProperty("transaction_id").GetString());
+
+        var quotation = new ThrowingTempDataDictionary();
+        Assert.False(LeadAnalyticsEventQueue.TryQueueManualQuotation(
+            quotation, "request-9043", true, "3d-printing",
+            "11111111-2222-3333-4444-555555555555", out var quotationFailure));
+        Assert.Same(quotation.WriteFailure, quotationFailure);
+        Assert.Equal(1, quotation.SetterCalls);
+        Assert.Equal("Maliev.LeadAnalyticsEvent", quotation.AttemptedKey);
+        using var quotationPayload = JsonDocument.Parse(Assert.IsType<string>(quotation.AttemptedValue));
+        Assert.Equal("request-9043", quotationPayload.RootElement.GetProperty("transaction_id").GetString());
+        Assert.Equal("11111111-2222-3333-4444-555555555555",
+            quotationPayload.RootElement.GetProperty("journey_id").GetString());
+        Assert.True(quotationPayload.RootElement.GetProperty("has_files").GetBoolean());
+        Assert.Equal(0, contact.GetterCalls + quotation.GetterCalls);
+        Assert.Equal(0, contact.SaveCalls + quotation.SaveCalls);
+    }
+
     [Fact]
     public void Pre605ContactProducerAndConsumer_ReproducesLegacyConversion()
     {
@@ -315,5 +349,56 @@ public sealed class LeadAnalyticsEventQueueParityTests
         public void SaveTempData(HttpContext context, IDictionary<string, object> values)
         {
         }
+    }
+    internal sealed class ThrowingTempDataDictionary : Dictionary<string, object?>, ITempDataDictionary
+    {
+        public InvalidOperationException WriteFailure { get; } = new("private-tempdata-setter-fault");
+        public int SetterCalls { get; private set; }
+        public int GetterCalls { get; private set; }
+        public int SaveCalls { get; private set; }
+        public string? AttemptedKey { get; private set; }
+        public object? AttemptedValue { get; private set; }
+
+        object? IDictionary<string, object?>.this[string key]
+        {
+            get
+            {
+                GetterCalls++;
+                return TryGetValue(key, out var value) ? value : null;
+            }
+            set
+            {
+                SetterCalls++;
+                AttemptedKey = key;
+                AttemptedValue = value;
+                throw WriteFailure;
+            }
+        }
+
+        public void Keep()
+        {
+        }
+
+        public void Keep(string key)
+        {
+        }
+
+        public void Load()
+        {
+        }
+        public object? Peek(string key) => TryGetValue(key, out var value) ? value : null;
+        public void Save() => SaveCalls++;
+    }
+
+    internal sealed class RecordingLogger<T> : ILogger<T>
+    {
+        public List<(LogLevel Level, Exception? Exception, string Message)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+            Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Entries.Add((logLevel, exception, formatter(state, exception)));
     }
 }

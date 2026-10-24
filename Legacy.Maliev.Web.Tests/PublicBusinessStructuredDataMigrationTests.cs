@@ -3,15 +3,19 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly HttpClient client;
+    private readonly TestingWebApplicationFactory factory;
 
     public PublicBusinessStructuredDataMigrationTests(TestingWebApplicationFactory factory)
     {
+        this.factory = factory;
         client = factory.CreateClient();
     }
 
@@ -109,9 +113,11 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<T
 
         var organizationContacts = organization.GetProperty("contactPoint").EnumerateArray().ToArray();
         Assert.Equal(2, organizationContacts.Length);
+        Assert.Equal("customer service", organizationContacts[0].GetProperty("contactType").GetString());
+        Assert.Equal("sales", organizationContacts[1].GetProperty("contactType").GetString());
         Assert.Equal("+66898950690", organizationContacts[0].GetProperty("telephone").GetString());
         Assert.Equal("info@maliev.com", organizationContacts[0].GetProperty("email").GetString());
-        Assert.Equal("+66898950690", organizationContacts[1].GetProperty("telephone").GetString());
+        Assert.Equal("+66818030404", organizationContacts[1].GetProperty("telephone").GetString());
         Assert.Equal("manufacturing@maliev.com", organizationContacts[1].GetProperty("email").GetString());
         AssertSocialLinks(organization.GetProperty("sameAs"));
 
@@ -133,11 +139,64 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<T
         AssertAddress(localBusiness.GetProperty("address"));
         Assert.Equal(13.9469417, localBusiness.GetProperty("geo").GetProperty("latitude").GetDouble(), 7);
         Assert.Equal(100.4588118, localBusiness.GetProperty("geo").GetProperty("longitude").GetDouble(), 7);
+        Assert.Single(localBusiness.GetProperty("openingHoursSpecification").EnumerateArray());
         Assert.Equal("09:00", localBusiness.GetProperty("openingHoursSpecification")[0].GetProperty("opens").GetString());
         Assert.Equal("18:00", localBusiness.GetProperty("openingHoursSpecification")[0].GetProperty("closes").GetString());
         Assert.Equal(5, localBusiness.GetProperty("openingHoursSpecification")[0].GetProperty("dayOfWeek").GetArrayLength());
+        var businessDays = localBusiness.GetProperty("openingHoursSpecification")[0]
+            .GetProperty("dayOfWeek").EnumerateArray().Select(day => day.GetString()!).ToArray();
+        Assert.Equal(new[] { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday" }, businessDays);
+        Assert.DoesNotContain("Saturday", businessDays);
+        Assert.DoesNotContain("Sunday", businessDays);
         AssertSocialLinks(localBusiness.GetProperty("sameAs"));
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Verifies the independently rendered Contact and footer schedules against the confirmed source hours in both route owners.</summary>
+    /// <param name="useBlazorRoute">Whether the request uses the active component route or retained Razor page.</param>
+    /// <param name="culture">The English or Thai presentation culture.</param>
+    /// <param name="weekdayHours">The exact confirmed localized weekday interval.</param>
+    /// <param name="weekendHours">The exact confirmed localized weekend closure.</param>
+    /// <returns>A task that completes after the actual HTTP document exposes the correct hours on both visible surfaces.</returns>
+    [Theory]
+    [InlineData(true, "en", "Monday-Friday: 09:00-18:00", "Saturday-Sunday: Closed")]
+    [InlineData(true, "th", "จันทร์-ศุกร์: 09:00-18:00 น.", "เสาร์-อาทิตย์: ปิด")]
+    [InlineData(false, "en", "Monday-Friday: 09:00-18:00", "Saturday-Sunday: Closed")]
+    [InlineData(false, "th", "จันทร์-ศุกร์: 09:00-18:00 น.", "เสาร์-อาทิตย์: ปิด")]
+    public async Task BusinessHours_VisibleContactAndFooterKeepTheConfirmedSchedule(
+        bool useBlazorRoute, string culture, string weekdayHours, string weekendHours)
+    {
+        await using var hoursFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:Contact", useBlazorRoute ? "true" : "false");
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<ICountryClient>();
+                services.AddSingleton<ICountryClient, HealthyCountryClient>();
+            });
+        });
+        using var hoursClient = hoursFactory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using var response = await hoursClient.GetAsync($"/contact?culture={culture}", deadline.Token);
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(deadline.Token));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var contact = Regex.Match(source, "<main\\b[^>]*\\bclass=\"inquiry-page\"[^>]*>[\\s\\S]*?</main>",
+            RegexOptions.CultureInvariant);
+        var footer = Regex.Match(source, "<footer\\b[^>]*\\bdata-migration-component=\"public-footer\"[^>]*>[\\s\\S]*?</footer>",
+            RegexOptions.CultureInvariant);
+        Assert.True(contact.Success);
+        Assert.True(footer.Success);
+        Assert.Contains("contact-method-grid", contact.Value, StringComparison.Ordinal);
+        Assert.Equal(useBlazorRoute,
+            contact.Value.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        foreach (var surface in new[] { contact.Value, footer.Value })
+        {
+            Assert.Contains(weekdayHours, surface, StringComparison.Ordinal);
+            Assert.Contains(weekendHours, surface, StringComparison.Ordinal);
+            Assert.DoesNotContain("10:00-19:00", surface, StringComparison.Ordinal);
+        }
     }
 
     private static Dictionary<string, JsonDocument> ExtractSchemas(string source) => Regex.Matches(
@@ -162,6 +221,7 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<T
         Assert.Equal(
             new[]
             {
+                SocialNetworks.Facebook,
                 SocialNetworks.Instagram,
                 SocialNetworks.Line,
                 SocialNetworks.YouTube,
@@ -169,9 +229,16 @@ public sealed class PublicBusinessStructuredDataMigrationTests : IClassFixture<T
                 SocialNetworks.Threads
             },
             sameAs.EnumerateArray().Select(link => link.GetString()));
-        Assert.DoesNotContain(
-            sameAs.EnumerateArray(),
-            link => link.GetString()?.Contains("facebook", StringComparison.OrdinalIgnoreCase) == true);
+    }
+
+    private sealed class HealthyCountryClient : ICountryClient
+    {
+        public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(new ServiceResponse<IReadOnlyList<Country>>(
+                [new Country(764, "Thailand", "Asia", "66", "TH", "THA", null, null)], true));
+        }
     }
 
     private static string FindRepositoryRoot()
