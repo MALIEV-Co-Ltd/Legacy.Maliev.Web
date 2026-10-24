@@ -16,7 +16,7 @@ public static class PricingEngine
         if (material.Process != PrintProcess.Fdm
             || quantity < 1 || quantity > PricingCatalog.MaximumAdditiveQuantity
             || !double.IsFinite(boundingCm3PerUnit) || boundingCm3PerUnit <= 0
-            || physical.Diagnostics.Count != 0
+            || !physical.HasPriceableDiagnostics
             || !double.IsFinite(physical.TotalDepositedMm3) || physical.TotalDepositedMm3 <= 0
             || !double.IsFinite(physical.Motion.TotalSeconds) || physical.Motion.TotalSeconds <= 0)
         {

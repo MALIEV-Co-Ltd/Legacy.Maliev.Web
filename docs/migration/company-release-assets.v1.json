@@ -1,0 +1,525 @@
+{
+  "schema": "maliev-company-release-assets.v1",
+  "sourceRepository": "MALIEV-Co-Ltd/maliev-web",
+  "targetRepository": "MALIEV-Co-Ltd/Legacy.Maliev.Web",
+  "targetBase": "fc3bebeacbcb4f9932c09973a8d4913104b67b68",
+  "scope": "Exact asset custody only. No About/customer claim activation, disclosure clearance, deployment, or full-source acceptance.",
+  "sourceCommits": [
+    {
+      "sha": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "parent": "d23065d499333ece5ef73013b085a8aaa062b163",
+      "changedPathCount": 60
+    },
+    {
+      "sha": "3c052083d04a46bf36a7e19695ffc5d339300c86",
+      "parent": "72472c1721efc53cad01df35d0340fd74fffab76",
+      "changedPathCount": 20
+    }
+  ],
+  "sourceManifests": [
+    {
+      "commit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "path": "docs/superpowers/verification/2026-10-16-company-release-assets.json",
+      "blob": "91f78602581c5508a2abffb8fcb44725271cad91",
+      "assetCount": 58
+    },
+    {
+      "commit": "3c052083d04a46bf36a7e19695ffc5d339300c86",
+      "path": "docs/superpowers/verification/2026-10-16-company-release-assets.json",
+      "blob": "ac29a2841a4433ae99ceb138d6f05428ed0c502a",
+      "assetCount": 59
+    }
+  ],
+  "provenance": {
+    "assetBytes": "Must match both immutable source Git blob and final source manifest SHA256/size.",
+    "externalCustomerDisclosure": "Unverified; asset identity is not permission, a customer relationship, or endorsement.",
+    "historicalOnly": [
+      {
+        "old": "customers/yg-1.png",
+        "active": "customers/yg-1-official-mark.png",
+        "correctionBlob": "b4597529f6e3184ffd727b9943846c32bf66058f"
+      },
+      {
+        "old": "customers/tpi-polene-power.png",
+        "active": "customers/tpi-polene-power-emblem.png",
+        "correctionBlob": "be504bdeb2c351cd1fd1606f5c5eb645f9afba5f"
+      }
+    ],
+    "groupMarks": "Some are shared-group marks; no subsidiary-specific artwork or wider customer claim is established.",
+    "originalArtwork": "No regeneration, alteration, recolouring, or vendor identity modification."
+  },
+  "assets": [
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/aeon-fantasy.svg",
+      "sourceBlob": "1628fa693987cd9ca3e65662b8191cc3acb1c6d2",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/aeon-fantasy.svg",
+      "bytes": 68761,
+      "sha256": "c59715898f7587672c55bc563d28c554134b6fe53b347441388e9b7242630935"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/air-liquide.svg",
+      "sourceBlob": "906c9f8fc9fca956aa167d05804fe00a30db02c9",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/air-liquide.svg",
+      "bytes": 3373,
+      "sha256": "1d14ac4be72ff4807aeccb908d6054f7b8f06ef99ef2fd11fd3cb8688e1b4e42"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/bangchak.svg",
+      "sourceBlob": "286fa352aedffec2f6b8260c0b49d31c99b26e16",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/bangchak.svg",
+      "bytes": 10484,
+      "sha256": "cc3ae44a668627c20d18ef9594fd572e903f939beffa29d1130100b98c401998"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/bem.svg",
+      "sourceBlob": "14b084f1ee496d84dd9af132e944b5720474f33d",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/bem.svg",
+      "bytes": 7506,
+      "sha256": "76f20526c63d363bcb2c3a8e0aae8bd5cc9b0eca29222d26c62c5a3728fc3d1c"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/crown-seal.png",
+      "sourceBlob": "bd72b4b00d8d65848241919f517eb692eaa886f4",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/crown-seal.png",
+      "bytes": 9426,
+      "sha256": "8796dce4263902d6633810f0e510f66636ebecf6ad6f7e0bc644a9f3557f9f68"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/fabrinet.png",
+      "sourceBlob": "1aed2161ba8f692ef2a523adb12f96b71e84fc69",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/fabrinet.png",
+      "bytes": 8209,
+      "sha256": "379453f77d9b8eede9bcf8151372cf632193ba4b9287eceb86fcb11f5616501b"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/grohe.svg",
+      "sourceBlob": "9372c470e37afe833e04033c7312a699e29e2793",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/grohe.svg",
+      "bytes": 2792,
+      "sha256": "ccbbb8be82912bdb26cd0d291a17163faac0cb378e4600674ef8e9343e9103d5"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/khon-kaen-sugar.png",
+      "sourceBlob": "63e658b3739da162d41c61ff16ba7f8a5b3aea65",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/khon-kaen-sugar.png",
+      "bytes": 4559,
+      "sha256": "7abfb51c3ce6ebc058cc0e0d854beddd83743f41b70a800aac9913c97236fe96"
+    },
+    {
+      "sourceCommit": "3c052083d04a46bf36a7e19695ffc5d339300c86",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/kobelco.gif",
+      "sourceBlob": "9bc957bdd8b1d79ad91487b560f76f18c2ebd85a",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/kobelco.gif",
+      "bytes": 2802,
+      "sha256": "82963050c2b450c166a2e6f98c16dd2a41e50a9a5da8dd1353998b810856546f"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/kohler.png",
+      "sourceBlob": "1d6dd48ac11b710ec0f219bb2c87089a69987f03",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/kohler.png",
+      "bytes": 2539,
+      "sha256": "3e3572e43a10e72ac4071893c30fd019f470fa84b31ea02dc25c6bee34eb9b47"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/kumwell.webp",
+      "sourceBlob": "741bb11fa620f8a1972dacc75e4b1f28d0f82025",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/kumwell.webp",
+      "bytes": 11852,
+      "sha256": "21cbe930a7676c915da510e276ba1bc5677d94a0d5c38a2deeb91c3ee058b567"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/lenso.svg",
+      "sourceBlob": "76008173e1ea56c14548635c0241b0d4346abfe9",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/lenso.svg",
+      "bytes": 2750,
+      "sha256": "3451f21ce02902774d116e410c312bc5268023a8237a9f4384f8d8459d80e06a"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/lixil.svg",
+      "sourceBlob": "723059aff9c8a67a58ef5935e70bc22013bb5df4",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/lixil.svg",
+      "bytes": 1073,
+      "sha256": "1b6659fa8e22836545dd3ee6ffaeff2b7c289f5d3a29150b27dd71dad5ef0f46"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/mektec.png",
+      "sourceBlob": "4d6ddca173368afa88b563226c43c4939c4fff7d",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/mektec.png",
+      "bytes": 7447,
+      "sha256": "42aeb7fb11e9aacf799d9d38cf9a23204e242378e3f370faea8d01d026f64253"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/mfec.png",
+      "sourceBlob": "531c23eb7188f44b6c0ce94da12207c271f3bd0a",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/mfec.png",
+      "bytes": 22572,
+      "sha256": "96d6de2772333c670d0a022cbd7239f763b9280a01936b5aefa20925d43e5a15"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/minor-food.png",
+      "sourceBlob": "69544724a554792184b5f39d4835a6e702d4ce0c",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/minor-food.png",
+      "bytes": 39709,
+      "sha256": "56fd7fabf3cdc29f8f64419dcb3b394f466e67bd1289e0684c9627e4f4d53dce"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/mitsubishi-materials.png",
+      "sourceBlob": "70266937619a2e576a31788d07de41987746012f",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/mitsubishi-materials.png",
+      "bytes": 8051,
+      "sha256": "c761ad949ef9e2bed73b99a1bd3886ee3576260daa5b00db6d47a0a66c1d7fa8"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/murata.svg",
+      "sourceBlob": "80f04b8c96c1c642c584e4670ba9ab21d8268e40",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/murata.svg",
+      "bytes": 8154,
+      "sha256": "89eea0e216896afaa944b1731a51843329ddaaf7c1e7382c2a48d2984a0acaae"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/olympus.png",
+      "sourceBlob": "7e58f285ae59caac385d907beff3bfa4e0f61f58",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/olympus.png",
+      "bytes": 1925,
+      "sha256": "2f89895cda9d845705cd87e9467d3fda719f1d41cc00f720193ea9ebb4e75591"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/ptt.png",
+      "sourceBlob": "a2a15c062fd2570efff342b5003a11e4af2d3841",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/ptt.png",
+      "bytes": 22718,
+      "sha256": "a800ec46765bafee5692624f8c7f8c6efd6d6a818784b740c21fcffafa4fcf76"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/pttep.svg",
+      "sourceBlob": "37aefad58b38854b70339fe94faf9a4c906faeea",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/pttep.svg",
+      "bytes": 6270,
+      "sha256": "ea4c76270d8bbc1e0bdec58e846242f98f21dc7a8c948e664c6d43765ddefab8"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/siam-motors.svg",
+      "sourceBlob": "af72d16b7e1608d7de6d95420578b83d23951748",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/siam-motors.svg",
+      "bytes": 4518,
+      "sha256": "ac01a6c392c6596eadddf4049984eaa83f28498ef2122a8169aeaae1056f878c"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/siemens-mobility.svg",
+      "sourceBlob": "c07e468152f10f3aae247c3817ac8bbe92c71bf7",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/siemens-mobility.svg",
+      "bytes": 1382,
+      "sha256": "6a2ed4b37e8937a053072b06cca0e8cd4024edde804ebff03f14b0315da71033"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/singha-kameda-current.png",
+      "sourceBlob": "4b72a122cab586f746c110ebad99f8d24acc26de",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/singha-kameda-current.png",
+      "bytes": 38923,
+      "sha256": "5ef06d8d337f72b9c03904cf080c7615183345adafe9357c64ca97d12b26e753"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/sp-syndicate.jpg",
+      "sourceBlob": "94019818b17505ddfa0b54c58d0ea34d4b7e2fbf",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/sp-syndicate.jpg",
+      "bytes": 3415,
+      "sha256": "d5226d3b69e8cd84bc8380ed3b2e5888aafdf4af682e0baf9e9a8faabe83096c"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/thai-asahi-denso-en.png",
+      "sourceBlob": "e4110763d9a1e99b7d0cc58c4d11fd89c4646f78",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-asahi-denso-en.png",
+      "bytes": 3403,
+      "sha256": "2222f2166ac130ae80a202edd5e823b2d19a4caef5a7ae4e080462f550676088"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/thai-coconut.jpg",
+      "sourceBlob": "221d22c268dd45d3841b81d6b546d28e824aa802",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-coconut.jpg",
+      "bytes": 35071,
+      "sha256": "dc1fbb9e8dbfdbdedbe4637ae7860f76bedad30189751c3a183042ef2f33f9a5"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/thai-optical.png",
+      "sourceBlob": "86b20b55e4533cf5f3a1ed9ee29dbbc414711d30",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-optical.png",
+      "bytes": 6809,
+      "sha256": "2c0265a1bad345f534ed3fd86659608e223ce9cf19ea789fa72fcb6156746dfc"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/tpi-polene-power-emblem.png",
+      "sourceBlob": "6d25ffb99bd420f594f5b091b9817e0789a7f879",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/tpi-polene-power-emblem.png",
+      "bytes": 6041,
+      "sha256": "e3f5687098b53f137e4ed9bac25bba62deba91404fea50a0b360c92d186e9535"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/customers/yg-1-official-mark.png",
+      "sourceBlob": "2f84b3389a5333b2227e655b24ff4f5e52bd074f",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/customers/yg-1-official-mark.png",
+      "bytes": 7399,
+      "sha256": "75e7f962223eca5f3a4405adef091249c26d034d02b7c9aa59802ea765bdb1db"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/about-customer-partnership.webp",
+      "sourceBlob": "319b8565392b3420ee44b64a9fd60fd21d193fa1",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/about-customer-partnership.webp",
+      "bytes": 129392,
+      "sha256": "ee4a064d4687cf98c14e118f292763b5f297e9cdc6146a1d1fc7e484a2db1301"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/camera-bracket-cad-v5.webp",
+      "sourceBlob": "0d4f2807b9bbe5ff348473cbbe4a75486bf2312e",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/camera-bracket-cad-v5.webp",
+      "bytes": 97398,
+      "sha256": "84c2950d026b00ab35adada7a1c9fda8bfd1e5aa6320dcf26e25399b123d5a85"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/camera-bracket-deployment.webp",
+      "sourceBlob": "00f3fb90b23c3d448f6588b9f5b40b0c8ba3c201",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/camera-bracket-deployment.webp",
+      "bytes": 159202,
+      "sha256": "4960be27ec1c390808fe02aa42c34bdbb2d2f071ed1171412e731a02db18beef"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/camera-bracket-production-v5.webp",
+      "sourceBlob": "1857b2f909ca085e451c701c6c6e8406c2349843",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/camera-bracket-production-v5.webp",
+      "bytes": 140428,
+      "sha256": "4c73cc66aa05fbaa432963e280f79659fd9565dc640168ce527ded92b97868af"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/camera-bracket-prototypes-v4.webp",
+      "sourceBlob": "a88e2c0b3ea0074f2ae1c540e4f3b7026e50eb26",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/camera-bracket-prototypes-v4.webp",
+      "bytes": 117774,
+      "sha256": "8e8c06571c5a2f018d3b9c2b1675748495dfff2af467f7a69be0101fb2f251cd"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/camera-bracket-sketch-v6.webp",
+      "sourceBlob": "73056abd985e57b91e624be97f3c66511bb7b21f",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/camera-bracket-sketch-v6.webp",
+      "bytes": 91428,
+      "sha256": "f6e37e664e248eefb285387d2f19635ebf43e44c25debc41c5bd1c503dca987e"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/capability-cnc-finished-bracket.webp",
+      "sourceBlob": "710449855cb6f1a6c3d46313bf192950559e4597",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-cnc-finished-bracket.webp",
+      "bytes": 122640,
+      "sha256": "24cc2d0dd716975a8cd0452066ec87c93c8eaad3ab4b151ebb494f75afadbe59"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/capability-cnc-finished-housing-v2.webp",
+      "sourceBlob": "d12e92416d8b750ae0ace51b9061b36a40ee9009",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-cnc-finished-housing-v2.webp",
+      "bytes": 160146,
+      "sha256": "acfcffaf740fb5f37dd1c9d3db8d81221527388e4569290a2e6d96933722ed1b"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/capability-cnc-fusion-cam.webp",
+      "sourceBlob": "04317e89e577cc122371a4908bb81dd6f294ab87",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-cnc-fusion-cam.webp",
+      "bytes": 146066,
+      "sha256": "010ebdbcec4141712198a56d79fea6080a0f63e7e0e9f87c652bf01d520a254e"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/capability-cnc-vf2-machining.webp",
+      "sourceBlob": "2ea7500a2818fbcec45950d351184c86c0a8fe6c",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-cnc-vf2-machining.webp",
+      "bytes": 136816,
+      "sha256": "d15945f209ba605001c8857bfbef55c124cbfae1f6b386f138c06bef2aab3e82"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/capability-design-mouse-cad.webp",
+      "sourceBlob": "d042da37d4e2d6d568e9aa9e66d6510c5a14806c",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-design-mouse-cad.webp",
+      "bytes": 79830,
+      "sha256": "ee4e2251fa0b99b950259dd30207b403ebd88f9968b64f31e27c9ded5b95e290"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/capability-design-mouse-revisions.webp",
+      "sourceBlob": "62838be9900159c8a2a9e51e9a297a8bf6a30661",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-design-mouse-revisions.webp",
+      "bytes": 72852,
+      "sha256": "7e4698adb858d20be6c09c0f6bf4c6a753021056bc169b69f3aa78b55a473331"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/capability-design-mouse-sketch.webp",
+      "sourceBlob": "630944c202aca5685661ef4dd7051e04f30346ce",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-design-mouse-sketch.webp",
+      "bytes": 135502,
+      "sha256": "fb645e34f1516909d5fc879d294f4c38aa9d95c6d191fee6ccd15e8a3489ec5e"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/capability-injection-batch.webp",
+      "sourceBlob": "10fdb5f459ed8a5d857ce6e094ca4093b66530eb",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-injection-batch.webp",
+      "bytes": 132752,
+      "sha256": "2c628e4b08a0f496ee9dfbe72da366615a88b3af2bb9a0a7ea3722ed41d5704d"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/capability-injection-concept.webp",
+      "sourceBlob": "bb5e25823d1fd3b77e05c6d412f5406af57860eb",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-injection-concept.webp",
+      "bytes": 109136,
+      "sha256": "0fad8aaef0b061cca66e0cf43340d35e54e115be63ec076b37d07d9b6f6260a1"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/capability-scan-cad-grey-v2.webp",
+      "sourceBlob": "3dac4d3af1cb1634def97c60670afa43167933f1",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-scan-cad-grey-v2.webp",
+      "bytes": 153954,
+      "sha256": "d8d116b98c71be501adc4724c2311cbe1b1da9e78bbe5885111f231a89cc4c58"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/capability-scan-capture.webp",
+      "sourceBlob": "8f21abd2839fb2fd9098cd0c37346cdafce6be93",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-scan-capture.webp",
+      "bytes": 140976,
+      "sha256": "afbe669b263f91d3011e2c0eb362704c169524c130a1e80a86e80b75073c347a"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/capability-silicone-concept.webp",
+      "sourceBlob": "6ff2efbf7f3f12669636a0f417dd12a55ca8c820",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-silicone-concept.webp",
+      "bytes": 104650,
+      "sha256": "f5236d181c525b19d2d17aac0e745441e5ee560cae6ec3619562be7682886ed5"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/capability-silicone-pour.webp",
+      "sourceBlob": "67130dcfa1509236141c0284f1266c863352f540",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-silicone-pour.webp",
+      "bytes": 98562,
+      "sha256": "73e9f7c427a35f7bef2b6fb3a06f4426bd51170b2ce060816158e8d0e4cdb2f0"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/home-enclosure-cad.webp",
+      "sourceBlob": "cc32a604d1c1522cf53e055b317c66220213d34d",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/home-enclosure-cad.webp",
+      "bytes": 83056,
+      "sha256": "c023c1240c6ea2097f949bd4739c67ca71fba9277846adc7e4a8c4f8698dc346"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/home-enclosure-inspection.webp",
+      "sourceBlob": "0fb3c88dc02707f30af6060808cb856fdc283cbf",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/home-enclosure-inspection.webp",
+      "bytes": 152208,
+      "sha256": "b057896fd3d5f565889ebae550732dbecc50c5afa9ada39cae2059a92f9e724c"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/home-enclosure-prototypes.webp",
+      "sourceBlob": "f608582a7a0da67d9f38beea6101561c933e6b52",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/home-enclosure-prototypes.webp",
+      "bytes": 142400,
+      "sha256": "4e977fe989d5865d0f7922c976d07c5c3da922efae12c7996ac4b5f70619aad4"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/home-enclosure-sketch.webp",
+      "sourceBlob": "eb8108139e3074fe10768cb078de82eb4bbf5d72",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/home-enclosure-sketch.webp",
+      "bytes": 137722,
+      "sha256": "cdbdbe0d5d44334383621b25223b899ab3ce3bc8e538dd92e52ae32a303b99f6"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/profile-hybrid-gripper-cutout.webp",
+      "sourceBlob": "f1c3e10743fb90b4532b5a81f76e83f5c29681a7",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/profile-hybrid-gripper-cutout.webp",
+      "bytes": 136366,
+      "sha256": "2dbd349c17d56201b57633dc95b2c091409be7a1e45e1fd2ff81853deaa3b80a"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/reverse-engineering-worn-part.webp",
+      "sourceBlob": "9c6a793678745434cbef0d57ceefee3630fb5841",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/reverse-engineering-worn-part.webp",
+      "bytes": 177352,
+      "sha256": "b588bc2aa3c9c8768aefa1acdaed72b0436371baaff381c581be5078c77e692a"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/reverse-workpiece-adapter.webp",
+      "sourceBlob": "b20111e8ddfd6f8afd885686f4f69cea577796a8",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/reverse-workpiece-adapter.webp",
+      "bytes": 105252,
+      "sha256": "4bcf731434d78132824c22045081fcd6641ca20697057456c2b50818f384c231"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/reverse-workpiece-machinery.webp",
+      "sourceBlob": "a0b627027a179f0e32cd19ab12e16bcd3053ae70",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/reverse-workpiece-machinery.webp",
+      "bytes": 135390,
+      "sha256": "b38ade2e691e535e1e7c77d72d28ce9c5d3384837000ab46be48a214470f8259"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/reverse-workpiece-sculpture.webp",
+      "sourceBlob": "58b9080625f3ca75735a28538e2d5b45c3f91dc7",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/reverse-workpiece-sculpture.webp",
+      "bytes": 93928,
+      "sha256": "cff216adea93dd8bfe5832b11160bfa398de12fc8dd3901b0b8269675829706a"
+    },
+    {
+      "sourceCommit": "f981dce7682606b1c13f04b271163447f3f2709e",
+      "sourcePath": "Maliev.Web/wwwroot/src/images/landing/silicone-owl-sculpture-casting.webp",
+      "sourceBlob": "f381c702f8c7daf1cac334dc1df7b4b1d1bd9d24",
+      "targetPath": "Legacy.Maliev.Web/wwwroot/src/images/landing/silicone-owl-sculpture-casting.webp",
+      "bytes": 94692,
+      "sha256": "0f98be43043ecbf65f73c232be880df11c35450a74e17c843e4a06e126b5fec7"
+    }
+  ]
+}

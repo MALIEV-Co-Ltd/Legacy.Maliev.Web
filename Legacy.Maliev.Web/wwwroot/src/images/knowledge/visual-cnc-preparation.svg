@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 480" role="img" aria-labelledby="title desc">
+<title id="title">CNC preparation: model, drawing and machining setup</title>
+<desc id="desc">The same rectangular plate and central hole appear in CAD, a partial drawing and a sectional vise setup. Example width 60 plus or minus 0.1 mm and hole diameter 10 plus or minus 0.05 mm. This is not a complete production drawing or fixture design.</desc>
+<defs>
+<marker id="dim" viewBox="0 0 10 10" refX="0" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M10 0L0 5L10 10" fill="none" stroke="#071b31" stroke-width="1.4"/></marker>
+<marker id="flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#005bff"/></marker>
+<pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse"><path d="M0 8L8 0" stroke="#9aaac0" stroke-width="1"/></pattern>
+</defs>
+<rect width="960" height="480" rx="16" fill="#f4f7fb"/>
+<g font-family="Arial, sans-serif" fill="#071b31">
+<g font-size="21" font-weight="700"><text x="40" y="54">1 · CAD</text><text x="346" y="54">2 · DRAWING</text><text x="660" y="54">3 · SETUP</text></g>
+<path d="M304 218H333" stroke="#005bff" stroke-width="2" marker-end="url(#flow)"/><path d="M616 218H644" stroke="#005bff" stroke-width="2" marker-end="url(#flow)"/>
+<path d="M53 212L153 154L283 222L183 280Z" fill="#e1e9f4" stroke="#071b31" stroke-width="2"/>
+<path d="M53 212V246L183 314L283 256V222M183 280V314" fill="none" stroke="#071b31" stroke-width="2"/>
+<ellipse cx="168" cy="217" rx="23" ry="13" fill="#fff" stroke="#071b31" stroke-width="2"/>
+<path d="M147 222Q168 201 189 222" fill="none" stroke="#53627b" stroke-width="1"/>
+<text x="68" y="362" font-size="19">PLATE-01 · REV 02</text><text x="68" y="391" font-size="18" fill="#53627b">STEP · mm</text>
+<rect x="370" y="178" width="210" height="126" fill="#fff" stroke="#071b31" stroke-width="2.2"/>
+<circle cx="475" cy="241" r="18" fill="none" stroke="#071b31" stroke-width="2"/>
+<path d="M438 241H512M475 204V278" stroke="#53627b" stroke-width="1" stroke-dasharray="16 4 3 4"/>
+<path d="M370 311V349M580 311V349" stroke="#071b31" stroke-width="1"/>
+<path d="M370 337H580" stroke="#071b31" stroke-width="1.2" marker-start="url(#dim)" marker-end="url(#dim)"/>
+<rect x="419" y="322" width="113" height="27" fill="#f4f7fb"/><text x="475" y="342" text-anchor="middle" font-size="20">60 ±0.1</text>
+<path d="M488 228L520 127H594" fill="none" stroke="#071b31" stroke-width="1.2" marker-start="url(#dim)"/>
+<text x="508" y="113" font-size="19">⌀10 ±0.05</text><text x="370" y="390" font-size="18">mm · REV 02</text>
+<path d="M687 252H776V292H687ZM804 252H893V292H804Z" fill="url(#hatch)" stroke="#071b31" stroke-width="2"/>
+<path d="M790 111V309" stroke="#53627b" stroke-width="1" stroke-dasharray="16 4 3 4"/>
+<rect x="662" y="269" width="25" height="54" fill="#c5d1e2" stroke="#071b31" stroke-width="2"/>
+<rect x="893" y="269" width="25" height="54" fill="#c5d1e2" stroke="#071b31" stroke-width="2"/>
+<path d="M700 293H722V323H700ZM856 293H878V323H856Z" fill="#d6e0ed" stroke="#071b31" stroke-width="2"/>
+<rect x="662" y="324" width="256" height="24" fill="#c5d1e2" stroke="#071b31" stroke-width="2"/>
+<rect x="768" y="131" width="44" height="53" fill="#c5d1e2" stroke="#071b31" stroke-width="2"/>
+<path d="M780 184H800V267H780ZM780 200L800 218M780 222L800 240M780 244L800 262" fill="#e1e9f4" stroke="#071b31" stroke-width="1.5"/>
+<path d="M790 91V120" stroke="#005bff" stroke-width="2" marker-end="url(#flow)"/>
+<text x="677" y="390" font-size="18">SECTION · PLATE-01</text>
+<text x="480" y="450" text-anchor="middle" font-size="16" fill="#53627b">ILLUSTRATIVE ONLY · NOT TO SCALE · NOT A COMPLETE DRAWING OR FIXTURE DESIGN</text>
+</g></svg>

@@ -375,6 +375,12 @@ internal sealed class InstantQuotationFulfillmentClient(
             comment.AppendLine("Geometry warning: topology requires staff verification.");
         }
 
+        if (quote.PhysicalReceipt?.GeometryReconstruction is { } reconstruction)
+        {
+            comment.AppendLine(CultureInfo.InvariantCulture,
+                $"Geometry warning: Voxel-based pricing estimate ({reconstruction.VoxelSizeMm:0.0} mm). Original geometry requires engineering review before manufacture.");
+        }
+
         if (!string.IsNullOrWhiteSpace(customerDescription))
         {
             comment.AppendLine(CultureInfo.InvariantCulture, $"Customer notes: {customerDescription.Trim()}");
