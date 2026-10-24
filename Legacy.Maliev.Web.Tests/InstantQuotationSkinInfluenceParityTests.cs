@@ -60,7 +60,8 @@ public sealed class InstantQuotationSkinInfluenceParityTests
         var claim = new InstantQuotationGeometryClaim(1, Convert.ToHexStringLower(digest),
             size[0] * scale, size[1] * scale, size[2] * scale, volume, 1,
             Enumerable.Repeat(1d, 64).ToArray(), Enumerable.Repeat(1d, 64).ToArray(),
-            12, 1, true, false, false, 1) { GltfUnitPolicy = policy };
+            12, 1, true, false, false, 1)
+        { GltfUnitPolicy = policy };
         Assert.True(AdmittedGltfMeshReader.MatchesClaimScale(bytes, claim, default));
         Assert.False(AdmittedGltfMeshReader.MatchesClaimScale(bytes, claim with { DimensionXmm = claim.DimensionXmm * 2 }, default));
         Assert.Equal(digest, SHA256.HashData(bytes));
