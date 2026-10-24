@@ -64,6 +64,8 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
             var unitPolicy = new InstantQuotationGltfUnitPolicy(1, InstantQuotationGltfLengthUnit.Millimetres);
             foreach (var quantity in new[] { 1, 9, 10, 49, 50, 99, 100, 101 })
             {
+                identityObservations.Clear();
+                uploads.ResetOwnerObservation();
                 tempData.Values.Clear();
                 Assert.Empty(tempData.Values);
                 await using var context = await browser.NewContextAsync(new()
@@ -79,10 +81,14 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                 var receiptTableUnavailable = false;
                 var quantityStage = "before-navigation";
                 var quantitySnapshots = new List<JsonElement>();
+                JsonElement? protectedCookies = null;
                 try
                 {
                     var timer = System.Diagnostics.Stopwatch.StartNew();
                     await page.GotoAsync($"{origin}InstantQuotation/3D-Printing?culture=en", new() { WaitUntil = WaitUntilState.NetworkIdle });
+                    protectedCookies = JsonSerializer.SerializeToElement((await context.CookiesAsync())
+                        .Where(cookie => cookie.Name == InstantQuotationSessionIdentityCookie.CookieName)
+                        .Select(cookie => new { cookie.Secure, cookie.HttpOnly }).ToArray());
                     var reject = page.Locator("#cookieConsent [data-consent-action='reject']");
                     if (await reject.IsVisibleAsync()) await reject.ClickAsync();
                     var remaining = 30000 - timer.ElapsedMilliseconds;
@@ -122,6 +128,14 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                     await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 90000 });
                     await MaterialCardBrowserActions.SelectAsync(page, "PLA");
                     await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 30000 });
+                    quantityStage = "protected-identity-established";
+                    var identity = identityObservations.ToArray();
+                    Assert.InRange(identity.Length, 2, 31);
+                    Assert.All(identity, observation => Assert.Null(observation.Failure));
+                    Assert.Contains(identity, observation => observation.Operation == "get" && observation.Found is true);
+                    Assert.Contains(identity, observation => observation.Operation == "set" && observation.Matches is true);
+                    await Assertions.Expect(page.Locator("[data-workflow-state]")).Not.ToHaveAttributeAsync(
+                        "data-workflow-state", "error");
                     var input = page.Locator("input[name='quantity']");
                     await input.EvaluateAsync("""
                         input => {
@@ -275,6 +289,8 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                             Stage = quantityStage,
                             Snapshots = quantitySnapshots,
                             Identity = identityObservations.ToArray(),
+                            ProtectedCookies = protectedCookies,
+                            UploadOwner = uploads.OwnerState,
                         }));
                     }
                     catch (Exception)
@@ -411,13 +427,22 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
         private readonly Dictionary<Guid, Source292Upload> uploads = [];
         private bool closed;
         private int startedUploads;
+        private int ownerMatched;
         public int StartedUploads => Volatile.Read(ref startedUploads);
+        public string OwnerState => Volatile.Read(ref ownerMatched) switch
+        {
+            1 => "matched",
+            -1 => "unmatched",
+            _ => "not-uploaded",
+        };
+        public void ResetOwnerObservation() => Volatile.Write(ref ownerMatched, 0);
         public string SessionId { get; private set; } = "";
         public int FinalizationCalls { get; private set; }
         public Task<InstantQuotationUploadResult> UploadAsync(string sessionId, string? ownerIdentity, Stream content,
             string fileName, string contentType, long contentLength, InstantQuotationGeometryClaim claim,
             string operationId, CancellationToken cancellationToken)
         {
+            Interlocked.Exchange(ref ownerMatched, ownerIdentity == "customer:1" ? 1 : -1);
             Interlocked.Increment(ref startedUploads);
             return Own(async token =>
             {
