@@ -1,7 +1,7 @@
 # Explicit Testing web-root ownership
 
 The integrated PR723 candidate
-`44c41d0b41b8f81978a994898361e8cc13827877` owns the physical Testing web root at
+`539179229421c3170956583d0a9d54e9dca8aac6` owns the physical Testing web root at
 creation through `Legacy.Maliev.Web/Infrastructure/TestingWebRootLease.cs`.
 Program scopes that lease across build and application lifetime; the owning
 test factory also preserves host cleanup on failed startup. Disposal is

@@ -72,13 +72,35 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
                 }
                 else
                 {
+                    var admitted = (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!;
+                    var admittedPart = Assert.Single(admitted.Parts);
+                    var revision = fixture.Workflow.AuthoritativeQuoteRevision;
+                    Assert.Equal(0, revision);
                     if (transition == "cancel") caller.Cancel();
                     else await fixture.Workflow.DisposeAsync();
                     await uploading.WaitAsync(TimeSpan.FromSeconds(5));
-                    Assert.Equal(InstantQuotationWorkflowUploadStatus.Cancelled, Assert.Single(fixture.Workflow.Uploads).Status);
+                    // Admission completed before pricing was held; retiring pricing retains the uploaded file.
+                    Assert.Equal(InstantQuotationWorkflowUploadStatus.Uploaded, Assert.Single(fixture.Workflow.Uploads).Status);
                     Assert.False(fixture.Workflow.HasCompleteAuthoritativeQuote);
-                    Assert.Null((await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!.QuoteAuthorization);
+                    var cancelled = (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!;
+                    Assert.Null(cancelled.QuoteAuthorization);
+                    var retained = Assert.Single(cancelled.Parts);
+                    Assert.Equal(admittedPart.PartId, retained.PartId);
+                    Assert.Equal(admittedPart.UploadReference, retained.UploadReference);
+                    Assert.Equal(admittedPart.PhysicalAnalysisUpload!.FileId, retained.PhysicalAnalysisUpload!.FileId);
+                    Assert.Equal(admittedPart.Configuration, retained.Configuration);
                     Assert.Contains(fixture.Control.ActualTasks, task => !task.IsCompleted);
+                    fixture.Control.Release.TrySetResult();
+                    await fixture.DrainAsync(null);
+                    Assert.All(fixture.Control.ActualTasks, task => Assert.True(task.IsCompleted));
+                    Assert.Equal(revision, fixture.Workflow.AuthoritativeQuoteRevision);
+                    Assert.Null(fixture.Workflow.OrderQuote);
+                    Assert.False(fixture.Workflow.HasCompleteAuthoritativeQuote);
+                    var settled = (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!;
+                    Assert.Null(settled.QuoteAuthorization);
+                    Assert.Null(settled.PhysicalReceipts);
+                    Assert.Equal(System.Text.Json.JsonSerializer.Serialize(cancelled.RequestState),
+                        System.Text.Json.JsonSerializer.Serialize(settled.RequestState));
                 }
             }
             catch (Exception exception) { primary = exception; throw; }
@@ -488,7 +510,8 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
         {
             var claim = new InstantQuotationGeometryClaim(1, Sha, 10, 10, 10, 1000, 600,
                 Enumerable.Repeat(100d, 64).ToArray(), Enumerable.Repeat(40d, 64).ToArray(),
-                12, 1, true, false, false, 10) { GltfUnitPolicy = UnitPolicy };
+                12, 1, true, false, false, 10)
+            { GltfUnitPolicy = UnitPolicy };
             var task = Workflow.UploadAsync(names.Select(name => new InstantQuotationWorkflowUploadFile(
                 name, "model/gltf-binary", Bytes.Length, claim,
                 current => { current.ThrowIfCancellationRequested(); return Task.FromResult<Stream>(new MemoryStream(Bytes, false)); })).ToArray(), token);

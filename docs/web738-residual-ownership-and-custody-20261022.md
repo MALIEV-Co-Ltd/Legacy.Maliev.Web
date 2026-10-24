@@ -1,8 +1,8 @@
 # Web738 ownership and child-start diagnostics
 
 PR738 normally integrates PR723 candidate
-`44c41d0b41b8f81978a994898361e8cc13827877`, tree
-`2bda3f8f3f80950d914f75af4eeba7513c2aa3d2`. That candidate's explicit
+`539179229421c3170956583d0a9d54e9dca8aac6`, tree
+`ac281a7e9e7a3c87328fe7af963c1bbf5c258c88`. That candidate's explicit
 `TestingWebRootLease` ownership remains authoritative. The older provider-leaf
 discovery proposal is not restored.
 

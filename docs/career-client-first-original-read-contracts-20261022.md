@@ -1,6 +1,6 @@
 # Client-first Career original read compatibility
 
-Status: normal dependent integration of PR723 candidate `44c41d0b41b8f81978a994898361e8cc13827877`, tree `2bda3f8f3f80950d914f75af4eeba7513c2aa3d2`. Combined validation and protected-main acceptance remain pending.
+Status: normal dependent integration of PR723 candidate `539179229421c3170956583d0a9d54e9dca8aac6`, tree `ac281a7e9e7a3c87328fe7af963c1bbf5c258c88`. Combined validation and protected-main acceptance remain pending.
 Publish this Web consumer slice before the paired Career producer slice.
 No deployment or financial/provider execution is included.
 
