@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Sockets;
 using System.Reflection;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Components;
@@ -23,29 +22,7 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
     public IBrowser Browser { get; private set; } = null!;
     public string Url { get; private set; } = "";
 
-    private static int ReserveFreePort()
-    {
-        // Keep test listeners outside the outbound client-port pool on Windows.
-        for (var attempt = 0; attempt < 64; attempt++)
-        {
-            var listener = new TcpListener(IPAddress.Loopback, Random.Shared.Next(20000, 30000));
-            try
-            {
-                listener.Start();
-                return ((IPEndPoint)listener.LocalEndpoint).Port;
-            }
-            catch (SocketException exception) when (exception.SocketErrorCode is SocketError.AddressAlreadyInUse or SocketError.AccessDenied)
-            {
-                // Another task or an excluded port range owns this candidate.
-            }
-            finally
-            {
-                listener.Stop();
-            }
-        }
-
-        throw new InvalidOperationException("No loopback browser-test port is available in the test-server range.");
-    }
+    private static int ReserveFreePort() => BrowserTestServerPort.Reserve();
 
     public async Task InitializeAsync()
     {

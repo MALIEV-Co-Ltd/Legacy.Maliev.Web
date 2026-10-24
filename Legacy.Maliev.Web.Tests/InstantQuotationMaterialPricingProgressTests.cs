@@ -131,7 +131,7 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
             Assert.Equal(2, fixture.Reader.ReadCount);
             Assert.DoesNotContain(frames, frame => frame.MaterialKey == "PLA"
                 && frame.Status == InstantQuotationMaterialPricingStatus.Completed);
-        }, output, gateRead: 2);
+        }, output, gateRead: 2, clock: new ManualClock());
     }
 
     [Theory]
