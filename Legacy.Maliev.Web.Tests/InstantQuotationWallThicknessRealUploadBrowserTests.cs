@@ -1293,6 +1293,16 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         await Assertions.Expect(second).Not.ToBeCheckedAsync();
         await all.CheckAsync();
         await Assertions.Expect(page.Locator("[data-workflow-part-select]:checked")).ToHaveCountAsync(2);
+        // Add file stays reachable while selecting parts; mobile configuration follows in the page scroll path.
+        try
+        {
+            await Assertions.Expect(page.Locator("[data-workflow-parts] .iq-compact-dropzone")).ToBeInViewportAsync();
+        }
+        catch (Exception exception)
+        {
+            await ObserveRealUploadFailureAsync(exception, failureEvidence, page, factory, upload);
+            throw;
+        }
         await page.WaitForFunctionAsync("() => document.querySelector('[data-workflow-select-all]').indeterminate === false");
         await Assertions.Expect(page.Locator("[data-workflow-apply-material]")).ToHaveAccessibleNameAsync(
             culture == "th" ? "ใช้ PETG กับชิ้นงานที่เลือก" : "Apply PETG to selected parts");
@@ -1318,15 +1328,6 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         Assert.Equal("PLA", saved.Parts.Single(part => part.PartId == Guid.Parse(ids[2])).Configuration.MaterialKey);
         Assert.Equal(3, upload.VerifiedUploads);
         Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
-        try
-        {
-            await Assertions.Expect(page.Locator("[data-workflow-parts] .iq-compact-dropzone")).ToBeInViewportAsync();
-        }
-        catch (Exception exception)
-        {
-            await ObserveRealUploadFailureAsync(exception, failureEvidence, page, factory, upload);
-            throw;
-        }
     }
 
 
@@ -1793,8 +1794,11 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 () => {
                     const canvas = document.querySelector('[data-workflow-viewer] > canvas');
                     const bounds = canvas?.getBoundingClientRect();
+                    const ratio = Math.max(1, Math.min(Number(devicePixelRatio) || 1, 2));
                     return document.querySelectorAll('[data-workflow-part]').length === 1 && bounds?.width > 300
-                        && canvas.width >= Math.floor(bounds.width) && canvas.height >= Math.floor(bounds.height);
+                        && canvas.clientWidth > 0 && canvas.clientHeight > 0
+                        && canvas.width === Math.floor(Math.round(canvas.clientWidth) * ratio)
+                        && canvas.height === Math.floor(Math.round(canvas.clientHeight) * ratio);
                 }
                 """, null, new PageWaitForFunctionOptions { Timeout = 90000 });
             Assert.Equal(1, upload.VerifiedUploads);
@@ -2551,7 +2555,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             await MaterialCardBrowserActions.SelectAsync(page, "PETG");
             var strict = await CurrentReceiptAsync(null, "PETG", 1, Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard);
             var strictPart = Assert.Single(strict.Parts);
-            Assert.Null(Assert.Single(strict.PhysicalReceipts!).GeometryReconstruction);
+            Assert.Null(CurrentReceipt(strict, strictPart.PartId).GeometryReconstruction);
             await Microsoft.Playwright.Assertions.Expect(page.Locator("[data-workflow-configuration] [data-geometry-reconstruction]")).ToHaveCountAsync(0);
 
             await page.SetInputFilesAsync("#instant-quote-files", recoveryPath);
@@ -2561,7 +2565,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             var recoveryId = Guid.Parse((await recoveryRow.GetAttributeAsync("data-part-id"))!);
             var beforeBulk = await CurrentReceiptAsync(recoveryId, "PLA", 1, Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard);
             var beforeBulkPart = Assert.Single(beforeBulk.Parts, part => part.PartId == recoveryId);
-            Assert.NotNull(Assert.Single(beforeBulk.PhysicalReceipts!, value => value.PartId == recoveryId).GeometryReconstruction);
+            Assert.NotNull(CurrentReceipt(beforeBulk, recoveryId).GeometryReconstruction);
             await recoveryRow.Locator("[data-workflow-part-select]").CheckAsync();
             var strictRow = page.Locator($"[data-workflow-part][data-part-id='{strictPart.PartId}']");
             await strictRow.Locator("button").First.ClickAsync();
@@ -2578,7 +2582,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             Assert.Equal(strictPart.Configuration, Assert.Single(current.Parts, part => part.PartId == strictPart.PartId).Configuration);
             await recoveryRow.Locator("button").First.ClickAsync();
             var original = Assert.Single(current.Parts, part => part.PartId == recoveryId);
-            var receipt = Assert.Single(current.PhysicalReceipts!, value => value.PartId == recoveryId);
+            var receipt = CurrentReceipt(current, recoveryId);
             Assert.Equal("voxel-majority-v1", receipt.GeometryReconstruction!.Method);
             Assert.Equal(0.2, receipt.GeometryReconstruction.VoxelSizeMm);
             Assert.True(receipt.DepositedMm3 > 0);
@@ -2644,7 +2648,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 System.Text.Json.JsonSerializer.SerializeToNode(original.Geometry),
                 System.Text.Json.JsonSerializer.SerializeToNode(repriced.Geometry)),
                 "The original admitted geometry must remain unchanged by voxel pricing.");
-            Assert.NotNull(Assert.Single(current.PhysicalReceipts!, value => value.PartId == recoveryId).GeometryReconstruction);
+            Assert.NotNull(CurrentReceipt(current, recoveryId).GeometryReconstruction);
             Assert.NotNull(current.QuoteAuthorization);
             Assert.Equal(strictPart.UploadReference, Assert.Single(current.Parts, part => part.PartId == strictPart.PartId).UploadReference);
             await recoveryRow.Locator("button").Last.ClickAsync();
@@ -2653,12 +2657,33 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             current = await CurrentReceiptAsync(strictPart.PartId, "PETG", 1, Legacy.Maliev.Web.Application.Pricing.BuildPreference.Standard);
             Assert.DoesNotContain(current.Parts, part => part.PartId == recoveryId);
             Assert.DoesNotContain(current.PhysicalReceipts!, value => value.PartId == recoveryId);
-            Assert.Null(Assert.Single(current.PhysicalReceipts!).GeometryReconstruction);
+            Assert.Null(CurrentReceipt(current, strictPart.PartId).GeometryReconstruction);
             Assert.NotNull(current.QuoteAuthorization);
             Assert.Equal(2, upload.VerifiedUploads);
             Assert.Equal(0, upload.ValidationRejectedUploads);
             await page.GotoAsync("about:blank");
             Assert.DoesNotContain(upload.PendingPhysicalReads, task => !task.IsCompleted);
+
+            InstantQuotationPhysicalAnalysisReceipt CurrentReceipt(InstantQuotationSessionState state, Guid partId)
+            {
+                Assert.Equal(upload.SessionId, state.SessionId);
+                Assert.Equal(upload.OwnerIdentity, state.OwnerIdentity);
+                var part = Assert.Single(state.Parts, item => item.PartId == partId);
+                return Assert.Single(state.PhysicalReceipts!, item => MatchesCurrentReceipt(item, state, part));
+            }
+
+            static bool MatchesCurrentReceipt(InstantQuotationPhysicalAnalysisReceipt candidate,
+                InstantQuotationSessionState state, InstantQuotationPart part) =>
+                part.PhysicalAnalysisUpload is { } source
+                && candidate.SessionId == state.SessionId && candidate.OwnerIdentity == state.OwnerIdentity
+                && candidate.PartId == part.PartId && candidate.FileId == source.FileId
+                && string.Equals(candidate.UploadSha256, source.Sha256, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(candidate.UploadSha256, part.Geometry.Sha256, StringComparison.OrdinalIgnoreCase)
+                && candidate.GltfUnitPolicy == source.GltfUnitPolicy
+                && candidate.MaterialKey == part.Configuration.MaterialKey
+                && candidate.ConfiguredMaterialKey == part.Configuration.MaterialKey
+                && candidate.Quantity == part.Configuration.Quantity
+                && candidate.BuildPreference == part.Configuration.BuildPreference;
 
             async Task<InstantQuotationSessionState> CurrentReceiptAsync(
                 Guid? partId, string material, int quantityValue, Legacy.Maliev.Web.Application.Pricing.BuildPreference preference)
@@ -2666,11 +2691,18 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 while (true)
                 {
                     var state = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, lease.Token).WaitAsync(lease.Token);
-                    var target = partId ?? state?.Parts.SingleOrDefault()?.PartId;
-                    var value = state?.PhysicalReceipts?.SingleOrDefault(item => item.PartId == target);
+                    var part = partId is { } target
+                        ? state?.Parts.SingleOrDefault(item => item.PartId == target) : state?.Parts.SingleOrDefault();
+                    var value = state is not null && part is not null
+                        ? state.PhysicalReceipts?.SingleOrDefault(item => MatchesCurrentReceipt(item, state, part)) : null;
                     if (state?.QuoteAuthorization is not null && value is not null && value.MaterialKey == material
                         && value.Quantity == quantityValue && value.BuildPreference == preference)
+                    {
+                        Assert.Equal(upload.SessionId, state.SessionId);
+                        Assert.Equal(upload.OwnerIdentity, state.OwnerIdentity);
+                        Assert.Equal(value, CurrentReceipt(state, value.PartId));
                         return state;
+                    }
                     await Task.Delay(25, lease.Token);
                 }
             }
