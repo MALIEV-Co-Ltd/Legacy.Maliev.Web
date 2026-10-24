@@ -492,7 +492,10 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
     private sealed class OwnerAuthentication(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
         : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
-        protected override Task<AuthenticateResult> HandleAuthenticateAsync() => Task.FromResult(Request.Headers["X-Profile-Test-Owner"] == "1"
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync() => Task.FromResult(
+            Request.Headers["X-Profile-Test-Owner"] == "1"
+            || Context.RequestServices.GetService<Source292CircuitOwnerProof>()?.Matches(
+                Request.Cookies[Source292CircuitOwnerProof.CookieName]) is true
             ? AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity([
                 new Claim(ClaimTypes.NameIdentifier, "customer:1"), new Claim("legacy_database_id", "1"), new Claim("identity_kind", "customer"),
                 new Claim(ClaimTypes.Email, "owner@example.test")], "ProfileFixture")), "ProfileFixture")) : AuthenticateResult.NoResult());

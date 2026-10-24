@@ -1,12 +1,14 @@
 using System.Globalization;
+using System.Net;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Playwright;
@@ -25,12 +27,21 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
         var quotes = new Quotes(connection);
         var tempData = new TempData();
         var uploads = new Source292ProfileUploads();
+        var circuitOwner = new Source292CircuitOwnerProof();
         var identityObservations = new System.Collections.Concurrent.ConcurrentQueue<Source292IdentityObservation>();
         Exception? fixtureFailure = null;
         try
         {
+            using var tlsKey = RSA.Create(2048);
+            var certificateRequest = new CertificateRequest("CN=localhost", tlsKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            var names = new SubjectAlternativeNameBuilder();
+            names.AddIpAddress(IPAddress.Loopback);
+            names.AddDnsName("localhost");
+            certificateRequest.CertificateExtensions.Add(names.Build());
+            using var certificate = certificateRequest.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
             await using var web = new ProfileWebFactory(wire, ownerToken, quotes, tempData, redis, services =>
             {
+                services.AddSingleton(circuitOwner);
                 services.RemoveAll<IInstantQuotationWorkflowSessionIdentityAccessor>();
                 services.AddScoped<IInstantQuotationWorkflowSessionIdentityAccessor>(provider =>
                     new Source292IdentityObserver(new AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor(
@@ -52,9 +63,16 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                     authoritativePricingService: provider.GetRequiredService<IInstantQuotationAuthoritativePricingService>(),
                     profileCompletionClient: provider.GetRequiredService<IInstantQuotationProfileCompletionClient>()));
             });
-            var origin = new Uri($"http://127.0.0.1:{FreePort()}");
-            web.UseKestrel(origin.Port);
-            using var readiness = web.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
+            var origin = new Uri($"https://127.0.0.1:{FreePort()}");
+            web.UseKestrel(options => options.Listen(IPAddress.Loopback, origin.Port, endpoint => endpoint.UseHttps(certificate)));
+            web.StartServer();
+            using var transport = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (request, peer, _, _) => request.RequestUri?.Authority == origin.Authority
+                    && peer is not null && CryptographicOperations.FixedTimeEquals(
+                        peer.GetCertHash(HashAlgorithmName.SHA256), certificate.GetCertHash(HashAlgorithmName.SHA256)),
+            };
+            using var readiness = new HttpClient(transport) { BaseAddress = origin, Timeout = TimeSpan.FromSeconds(15) };
             using var response = await readiness.GetAsync("/InstantQuotation/3D-Printing?culture=en");
             Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
             var bytes = Convert.FromBase64String(AdmittedGltfMeshReaderTests.OriginalGlb);
@@ -71,8 +89,24 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                 await using var context = await browser.NewContextAsync(new()
                 {
                     ViewportSize = new() { Width = 1440, Height = 900 },
+                    IgnoreHTTPSErrors = true,
                     ExtraHTTPHeaders = new Dictionary<string, string> { ["X-Profile-Test-Owner"] = "1" },
                 });
+                await context.AddCookiesAsync([new Microsoft.Playwright.Cookie
+                {
+                    Name = Source292CircuitOwnerProof.CookieName,
+                    Value = circuitOwner.Value,
+                    Url = origin.ToString(),
+                    Secure = true,
+                    HttpOnly = true,
+                    SameSite = SameSiteAttribute.Lax,
+                }]);
+                var ownerCookies = (await context.CookiesAsync())
+                    .Where(cookie => cookie.Name == Source292CircuitOwnerProof.CookieName)
+                    .Select(cookie => new { Matches = circuitOwner.Matches(cookie.Value), cookie.Secure, cookie.HttpOnly }).ToArray();
+                var ownerCookie = Assert.Single(ownerCookies);
+                Assert.True(ownerCookie.Matches);
+                Assert.True(ownerCookie.Secure && ownerCookie.HttpOnly);
                 await context.RouteAsync("**/*", route => route.Request.Url.StartsWith(origin.ToString(), StringComparison.Ordinal)
                     ? route.ContinueAsync() : route.AbortAsync());
                 await using var page = await context.NewPageAsync();
@@ -86,9 +120,12 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                 {
                     var timer = System.Diagnostics.Stopwatch.StartNew();
                     await page.GotoAsync($"{origin}InstantQuotation/3D-Printing?culture=en", new() { WaitUntil = WaitUntilState.NetworkIdle });
-                    protectedCookies = JsonSerializer.SerializeToElement((await context.CookiesAsync())
+                    var sessionCookies = (await context.CookiesAsync())
                         .Where(cookie => cookie.Name == InstantQuotationSessionIdentityCookie.CookieName)
-                        .Select(cookie => new { cookie.Secure, cookie.HttpOnly }).ToArray());
+                        .Select(cookie => new { cookie.Secure, cookie.HttpOnly }).ToArray();
+                    protectedCookies = JsonSerializer.SerializeToElement(sessionCookies);
+                    var sessionCookie = Assert.Single(sessionCookies);
+                    Assert.True(sessionCookie.Secure && sessionCookie.HttpOnly);
                     var reject = page.Locator("#cookieConsent [data-consent-action='reject']");
                     if (await reject.IsVisibleAsync()) await reject.ClickAsync();
                     var remaining = 30000 - timer.ElapsedMilliseconds;
@@ -371,6 +408,13 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
             TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         try { return await capture.WaitAsync(TimeSpan.FromSeconds(1)); }
         catch (Exception) { return JsonSerializer.SerializeToElement(new { Capture = "unavailable" }); }
+    }
+
+    private sealed class Source292CircuitOwnerProof
+    {
+        public const string CookieName = "Source292FixtureOwner";
+        public string Value { get; } = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32));
+        public bool Matches(string? value) => string.Equals(Value, value, StringComparison.Ordinal);
     }
 
     private sealed record Source292IdentityObservation(string Operation, bool? Found, bool? Matches, string? Failure);
