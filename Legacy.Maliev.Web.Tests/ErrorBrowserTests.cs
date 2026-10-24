@@ -53,6 +53,36 @@ public sealed class ErrorBrowserTests(ErrorBrowserFixture fixture)
             })"));
     }
 
+    [Theory]
+    [InlineData("en", "Error page preview", "Please include this incident ID when contacting support.")]
+    [InlineData("th", "ตัวอย่างหน้าข้อผิดพลาด", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ")]
+    public async Task ErrorPreview_KeepsLocalizedShellWithoutIncidentDetailsOrSupportInstructions(
+        string culture, string previewLabel, string incidentInstruction)
+    {
+        await using var context = await CreateContextAsync(1920, 1080);
+        await using var page = await context.NewPageAsync();
+
+        var response = await page.GotoAsync(ErrorUrl(500, culture));
+
+        Assert.NotNull(response);
+        Assert.Equal(500, response.Status);
+        Assert.False(response.Headers.ContainsKey("x-incident-id"));
+        Assert.Contains("no-store", response.Headers["cache-control"], StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("no-referrer", response.Headers["referrer-policy"]);
+        Assert.Equal(culture, await page.Locator("html").GetAttributeAsync("lang"));
+        Assert.Equal(0, await page.Locator("main.space-error").CountAsync());
+        Assert.True(await page.Locator("nav").CountAsync() > 0);
+        Assert.Equal(1, await page.Locator("footer").CountAsync());
+        Assert.Equal(0, await page.Locator("#incident-id, #incident-occurred-at").CountAsync());
+        Assert.Equal(0, await page.Locator("a[href^='mailto:support@maliev.com']").CountAsync());
+        string content = await page.Locator("main").TextContentAsync() ?? string.Empty;
+        Assert.Contains(previewLabel, content, StringComparison.Ordinal);
+        Assert.DoesNotContain(incidentInstruction, content, StringComparison.Ordinal);
+        string source = await page.ContentAsync();
+        Assert.DoesNotContain("StackTrace", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("UrlReferrer", source, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task NotFound_WithoutJavaScriptKeepsRecoveryUsable()
     {
@@ -181,6 +211,17 @@ public sealed class ErrorBrowserTests(ErrorBrowserFixture fixture)
         var dragged = Assert.IsType<LocatorBoundingBoxResult>(await astronaut.BoundingBoxAsync());
         Assert.InRange(dragged.X - dragStart.X, 78, 82);
         Assert.InRange(dragged.Y - dragStart.Y, 58, 62);
+        // Finish with a fresh swipe after geometry inspection, then release immediately.
+        for (int step = 1; step <= 2; step++)
+        {
+            await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
+            {
+                ["type"] = "touchMove",
+                ["touchPoints"] = new[] { new { x = x + 80 + (step * 8), y = y + 60 + (step * 6) } },
+            });
+            await page.EvaluateAsync("() => new Promise(requestAnimationFrame)");
+        }
+
         await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
         {
             ["type"] = "touchEnd",
@@ -274,12 +315,33 @@ public sealed class ErrorBrowserFixture : IAsyncLifetime
     public IBrowser Browser { get; private set; } = null!;
     public Uri Origin { get; private set; } = null!;
 
+    private static int ReserveFreePort()
+    {
+        // Keep test listeners outside the outbound client-port pool on Windows.
+        for (var attempt = 0; attempt < 64; attempt++)
+        {
+            var listener = new TcpListener(IPAddress.Loopback, Random.Shared.Next(20000, 30000));
+            try
+            {
+                listener.Start();
+                return ((IPEndPoint)listener.LocalEndpoint).Port;
+            }
+            catch (SocketException exception) when (exception.SocketErrorCode is SocketError.AddressAlreadyInUse or SocketError.AccessDenied)
+            {
+                // Another task or an excluded port range owns this candidate.
+            }
+            finally
+            {
+                listener.Stop();
+            }
+        }
+
+        throw new InvalidOperationException("No loopback browser-test port is available in the test-server range.");
+    }
+
     public async Task InitializeAsync()
     {
-        using var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
+        var port = ReserveFreePort();
         Origin = new Uri($"http://127.0.0.1:{port}");
 
         factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());

@@ -140,7 +140,7 @@ public sealed class MaterialComparisonRepricingContinuityTests
     }
 
     [Fact]
-    public async Task SerializedNewerConfiguration_WinsAfterOlderDelayedCompletion()
+    public async Task NewerSamePartConfiguration_IsPricedBeforeOlderDependencyIsReleased()
     {
         await using var fixture = await Fixture.CreateAsync();
         var older = fixture.Pricing.DelayNext();
@@ -148,15 +148,59 @@ public sealed class MaterialComparisonRepricingContinuityTests
         await older.Reached.Task.WaitAsync(TimeSpan.FromSeconds(5));
         var newer = fixture.Pricing.DelayNext();
         var second = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 3, default);
-        Assert.False(newer.Reached.Task.IsCompleted);
-        older.Completion.SetResult(true);
-        await first;
-        await newer.Reached.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        newer.Completion.SetResult(true);
-        await second;
-        Assert.Equal(3, Assert.Single(fixture.Workflow.Parts).Configuration.Quantity);
-        Assert.Equal(3, Assert.Single(Assert.IsType<InstantQuotationOrderQuote>(fixture.Workflow.OrderQuote).Parts).Quantity);
-        Assert.Equal(3, Assert.Single((await fixture.Store.GetAsync(fixture.SessionId, null, default))!.Parts).Configuration.Quantity);
+        try
+        {
+            await newer.Reached.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await first.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(older.Completion.Task.IsCompleted);
+            newer.Completion.TrySetResult(true);
+            await second.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(3, Assert.Single(fixture.Workflow.Parts).Configuration.Quantity);
+            Assert.Equal(3, Assert.Single(Assert.IsType<InstantQuotationOrderQuote>(fixture.Workflow.OrderQuote).Parts).Quantity);
+            Assert.Equal(3, Assert.Single((await fixture.Store.GetAsync(fixture.SessionId, null, default))!.Parts).Configuration.Quantity);
+        }
+        finally
+        {
+            older.Completion.TrySetResult(true); newer.Completion.TrySetResult(true);
+            await first.WaitAsync(TimeSpan.FromSeconds(5));
+            await second.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Supersession_DoesNotCancelAnInflightProtectedWriteOrHideItsRefusal(bool refusesWrite)
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Boundary.HoldNextPut = true;
+        fixture.Boundary.RefuseHeldPut = refusesWrite;
+        var calls = fixture.Pricing.Calls;
+        var first = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 2, default);
+        await fixture.Boundary.PutReached.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var newer = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 3, default);
+        try
+        {
+            Assert.False(fixture.Boundary.HeldPutToken.IsCancellationRequested);
+            Assert.False(newer.IsCompleted);
+            Assert.Equal(calls, fixture.Pricing.Calls);
+            fixture.Boundary.PutRelease.TrySetResult();
+            if (refusesWrite) await Assert.ThrowsAsync<InvalidOperationException>(() => first);
+            else await first.WaitAsync(TimeSpan.FromSeconds(5));
+            await newer.WaitAsync(TimeSpan.FromSeconds(5));
+            var stored = (await fixture.Store.GetAsync(fixture.SessionId, null, default))!;
+            Assert.Equal(3, Assert.Single(stored.Parts).Configuration.Quantity);
+            Assert.NotNull(stored.QuoteAuthorization);
+            Assert.Equal(3, Assert.Single(Assert.IsType<InstantQuotationOrderQuote>(fixture.Workflow.OrderQuote).Parts).Quantity);
+            Assert.Equal(calls + 1, fixture.Pricing.Calls);
+        }
+        finally
+        {
+            fixture.Boundary.PutRelease.TrySetResult();
+            try { await first.WaitAsync(TimeSpan.FromSeconds(5)); }
+            catch (InvalidOperationException) when (refusesWrite) { }
+            await newer.WaitAsync(TimeSpan.FromSeconds(5));
+        }
     }
 
     private sealed class PendingQuote
@@ -201,6 +245,10 @@ public sealed class MaterialComparisonRepricingContinuityTests
         public bool RefuseNextPut { get; set; }
         public bool PauseNextPut { get; set; }
         public TaskCompletionSource PutReached { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public bool HoldNextPut { get; set; }
+        public bool RefuseHeldPut { get; set; }
+        public CancellationToken HeldPutToken { get; private set; }
+        public TaskCompletionSource PutRelease { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task<InstantQuotationSessionState> CreateAsync(string? owner, InstantQuotationOrderState state, CancellationToken token)
             => store.CreateAsync(owner, state, token);
@@ -223,6 +271,14 @@ public sealed class MaterialComparisonRepricingContinuityTests
                 PauseNextPut = false;
                 PutReached.SetResult();
                 await Task.Delay(Timeout.InfiniteTimeSpan, token);
+            }
+            if (HoldNextPut)
+            {
+                HoldNextPut = false;
+                HeldPutToken = token;
+                PutReached.TrySetResult();
+                await PutRelease.Task.WaitAsync(token);
+                if (RefuseHeldPut) return false;
             }
             return await store.PutAsync(session, owner, token);
         }

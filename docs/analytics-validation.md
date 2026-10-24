@@ -109,6 +109,15 @@ privacy contract. They are diagnostics only and never authorize Ads conversion c
 publication or deployment. `request_quote` remains persisted-only.
 
 `file_upload_start` contains exactly `event`, a controlled `service`, and a positive `file_count`.
+Instant Quotation starts each usable analyzed file as a singleton batch: emit `file_count=1`
+after local validation and stream opening, immediately before its upload attempt. A stable opaque
+per-file work key deduplicates that start internally and never enters the payload. Invalid or
+removed-before-start files emit no start; later files need not finish parsing before an earlier
+file starts. This restores the original per-file timing rather than the former after-all aggregate.
+A start is not a completion: cancellation during asynchronous delivery may prevent the producer
+from starting. Retries retain the same work key and do not refire starts, as before; failure events
+remain per attempt. Other callers may report a grouped positive count under the same frozen wire contract.
+
 `file_upload_complete` contains exactly `event`, the same controlled `service`, and the persisted
 `transaction_id`; it is emitted only after every file is scanned, stored, and linked. A rejected,
 failed, partial, or abandoned upload never emits `file_upload_complete`.

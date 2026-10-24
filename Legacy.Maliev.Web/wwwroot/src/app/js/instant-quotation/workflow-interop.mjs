@@ -96,6 +96,8 @@ export function createWorkflowPreviewInterop({
   const previews = new Map();
   const partKeys = new Map();
   const thumbnails = new Map();
+  let thumbnailRoot = null;
+  let thumbnailObserver = null;
   let selectedPartId = null;
   let thumbnailCanvas = null;
   const invalidateCameraThumbnail = () => thumbnails.delete(selectedPartId);
@@ -109,6 +111,7 @@ export function createWorkflowPreviewInterop({
   let viewer = null;
   let incompleteEntry = null;
   let incompleteViewer = null;
+  let activeLocalPreviewKey = null;
   let developmentViewer = null;
   let developmentCanvas = null;
   const developmentKeys = new Set();
@@ -118,6 +121,8 @@ export function createWorkflowPreviewInterop({
   let quoteStarted = false;
   let inputElement = null;
   let inputChangeHandler = null;
+  let partsRail = null;
+  let partsWheelHandler = null;
   let inputDropZone = null;
   let inputDropHandler = null;
   const selectionSnapshots = [];
@@ -125,10 +130,14 @@ export function createWorkflowPreviewInterop({
   function bindInput(input) {
     assertActive();
     configureFilePickerForPlatform(input);
+    bindPartsWheel(input?.closest?.('.instant-quote__workflow')?.querySelector?.('[data-workflow-parts]') ?? null);
     if (inputElement === input) return;
     unbindInput();
     inputElement = input;
-    inputChangeHandler = () => selectionSnapshots.push(Array.from(input.files ?? []));
+    inputChangeHandler = () => selectionSnapshots.push({
+      files: Array.from(input.files ?? []),
+      unit: input.closest?.('.instant-quote__workflow')?.querySelector?.('[data-workflow-gltf-unit]')?.value ?? null,
+    });
     inputDropZone = inputElement?.closest?.('.instant-quote__workflow') ?? null;
     inputDropHandler = event => {
       const transfer = event.dataTransfer;
@@ -159,27 +168,70 @@ export function createWorkflowPreviewInterop({
     inputDropHandler = null;
   }
 
-  function beginSelection(input, maximumFileSize = Number.POSITIVE_INFINITY) {
+  function bindPartsWheel(rail) {
+    if (partsRail === rail) return;
+    unbindPartsWheel();
+    partsRail = rail;
+    if (!rail) return;
+    partsWheelHandler = event => {
+      if (disposed || partsRail !== rail || event.defaultPrevented || event.cancelable === false
+          || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+      if (event.target?.closest?.('input, select, textarea, [contenteditable], [role="slider"], [role="spinbutton"]')) return;
+      const selection = globalThis.getSelection?.();
+      if (selection && !selection.isCollapsed && rail.contains(selection.anchorNode)) return;
+      // Decide per gesture: the narrow wrapped layout and any vertical overflow stay native.
+      if (rail.scrollHeight > rail.clientHeight || rail.scrollWidth <= rail.clientWidth) return;
+      let delta = event.deltaY || event.deltaX;
+      if (!Number.isFinite(delta) || !delta) return;
+      if (event.deltaMode === 1) delta *= 16;
+      else if (event.deltaMode === 2) delta *= rail.clientWidth;
+      const before = rail.scrollLeft;
+      const target = Math.max(0, Math.min(rail.scrollWidth - rail.clientWidth, before + delta));
+      if (target === before) return;
+      rail.scrollLeft = target;
+      // A pinned or removed rail must not swallow a gesture it did not actually consume.
+      if (rail.scrollLeft !== before) event.preventDefault();
+    };
+    rail.addEventListener('wheel', partsWheelHandler, { passive: false });
+  }
+
+  function unbindPartsWheel() {
+    partsRail?.removeEventListener('wheel', partsWheelHandler);
+    partsRail = null;
+    partsWheelHandler = null;
+  }
+
+  function beginSelection(input, maximumFileSize = Number.POSITIVE_INFINITY, selectedUnit = null) {
     assertActive();
-    const files = selectionSnapshots.shift() ?? Array.from(input?.files ?? []);
-    return files.filter(file => !Number.isFinite(maximumFileSize) || file.size <= maximumFileSize)
-      .map(startPreview);
+    const selection = selectionSnapshots.shift() ?? {
+      files: Array.from(input?.files ?? []),
+      unit: selectedUnit ?? input?.closest?.('.instant-quote__workflow')?.querySelector?.('[data-workflow-gltf-unit]')?.value ?? null,
+    };
+    return selection.files.filter(file => !Number.isFinite(maximumFileSize) || file.size <= maximumFileSize)
+      .map(file => startPreview(file, selection.unit));
   }
 
   function discardSelection() {
-    const files = selectionSnapshots.shift();
-    if (files) files.length = 0;
+    const selection = selectionSnapshots.shift();
+    if (selection) selection.files.length = 0;
   }
 
-  function startPreview(file) {
+  function startPreview(file, selectedUnit) {
     const key = `preview-${++nextKey}`;
     const controller = new AbortController();
     const entry = {
       key,
       file,
+      selectedUnit,
+      gltfUnitPolicy: Object.freeze(['glb', 'gltf'].includes(extensionOf(file?.name))
+        ? { version: 1, unit: selectedUnit === 'metres' ? 1 : 0 }
+        : { version: 0, unit: 0 }),
       controller,
       object: null,
+      loadedObject: null,
+      settleCompletion: null,
       geometryClaim: null,
+      failureCategory: null,
       completion: null,
       partId: null,
       released: false,
@@ -196,6 +248,15 @@ export function createWorkflowPreviewInterop({
     };
     previews.set(key, entry);
     if (!supportedExtensions.has(extensionOf(file?.name))) {
+      entry.failureCategory = 'unreadable';
+      setUnavailable();
+      return key;
+    }
+
+    if (['glb', 'gltf'].includes(extensionOf(file?.name))
+        && selectedUnit !== 'millimetres' && selectedUnit !== 'metres') {
+      entry.failureCategory = 'unit_required';
+      entry.completion = Promise.resolve(null);
       setUnavailable();
       return key;
     }
@@ -210,7 +271,11 @@ export function createWorkflowPreviewInterop({
     }
 
     const operation = Promise.all([
-      Promise.resolve(loadModel(file, { signal: controller.signal })),
+      Promise.resolve().then(() => loadModel(file, { signal: controller.signal, gltfUnitPolicy: entry.gltfUnitPolicy })).then(object => {
+        if (isCurrent(entry)) entry.loadedObject = object;
+        else disposeModel(object, disposedResources);
+        return object;
+      }),
       sha256(file, controller.signal),
     ]).then(([object, hash]) => {
       if (!isCurrent(entry)) {
@@ -221,6 +286,7 @@ export function createWorkflowPreviewInterop({
         entry.geometryClaim = Object.freeze({
           ...analyzeGeometry(object),
           sha256: hash,
+          gltfUnitPolicy: entry.gltfUnitPolicy,
         });
         entry.previewOnly = classifyIncompletePreview(file, entry.geometryClaim);
       } catch (error) {
@@ -240,7 +306,7 @@ export function createWorkflowPreviewInterop({
         entry.evidenceCompleted = true;
         if (entry.attached && evidence) {
           if (entry.thicknessVisible) thumbnails.delete(entry.partId);
-          viewer?.setThicknessEvidence?.(entry.partId, evidence);
+          viewer?.setThicknessEvidence?.(entry.partId ?? entry.key, evidence);
         }
         notifyThickness(entry);
         notifyIncomplete(entry);
@@ -254,26 +320,33 @@ export function createWorkflowPreviewInterop({
       return entry.geometryClaim;
     }).catch(error => {
       failPreview(entry, error);
+      entry.controller?.abort();
+      disposeModel(entry.loadedObject, disposedResources);
+      entry.loadedObject = null;
       return null;
     });
     entry.completion = new Promise((resolve, reject) => {
-      entry.stallTimer = setTimeout(() => {
+      let completed = false;
+      entry.settleCompletion = (value, error = null) => {
+        if (completed) return;
+        completed = true;
+        clearTimeout(entry.stallTimer);
         entry.stallTimer = null;
+        entry.settleCompletion = null;
+        if (error) reject(error);
+        else resolve(value);
+      };
+      entry.stallTimer = setTimeout(() => {
         if (!isCurrent(entry)) return;
-        entry.controller.abort();
         const error = new Error('Preview processing timed out.');
         failPreview(entry, error);
-        reject(error);
+        entry.controller.abort();
+        disposeModel(entry.loadedObject, disposedResources);
+        entry.loadedObject = null;
+        entry.settleCompletion?.(null, error);
       }, STALL_TIMEOUT_MS);
-      operation.then(value => {
-        clearTimeout(entry.stallTimer);
-        entry.stallTimer = null;
-        resolve(value);
-      }, error => {
-        clearTimeout(entry.stallTimer);
-        entry.stallTimer = null;
-        reject(error);
-      });
+      operation.then(value => entry.settleCompletion?.(value),
+        error => entry.settleCompletion?.(null, error));
     });
     return key;
   }
@@ -304,12 +377,26 @@ export function createWorkflowPreviewInterop({
 
     guardModelDisposal(object, guardedResources, viewerDisposedResources);
     entry.object = object;
+    entry.loadedObject = null;
     attachAdmittedPreview(entry);
+    if (activeLocalPreviewKey === entry.key) attachLocalPreview(entry);
   }
 
   function failPreview(entry, error) {
-    if (entry.released || entry.quarantined || isCancellation(error)) return;
+    if (!isCurrent(entry) || isCancellation(error)) return;
+    const message = String(error?.message ?? error ?? '');
+    // Advisory categories never carry decoder text or authorize an upload/price.
+    entry.failureCategory = /^(?:geometry_complexity_exceeded|triangle_budget_exceeded|layer_budget_exceeded|simulation_timeout)\b/.test(message)
+      || /^(?:Preview processing timed out\.|This file is too complex to process\.)/.test(message)
+      ? 'complexity'
+      : /^(?:Unable to load |CAD preview support failed|worker_unavailable\b|Failed to fetch dynamically imported module|Loading chunk |WebGL)/.test(message)
+        || ['NetworkError', 'NotReadableError', 'SecurityError', 'OperationError'].includes(error?.name)
+        ? 'unavailable' : 'unreadable';
     setUnavailable();
+  }
+
+  function getFailureCategory(key) {
+    return previews.get(key)?.failureCategory ?? null;
   }
 
   function attach(canvas) {
@@ -321,13 +408,24 @@ export function createWorkflowPreviewInterop({
       for (const type of ['pointerup', 'wheel', 'keydown']) canvas?.addEventListener?.(type, invalidateCameraThumbnail);
     }
     for (const entry of previews.values()) attachAdmittedPreview(entry);
+    if (activeLocalPreviewKey) selectLocalPreview(activeLocalPreviewKey);
+  }
+
+  function detachEmptyViewer() {
+    if (disposed || partKeys.size !== 0 || [...previews.values()].some(entry => entry.attached)) return false;
+    unbindThumbnailCanvas();
+    viewer?.dispose();
+    viewer = null;
+    return true;
   }
 
   function admit(key, partId, material = '') {
     assertActive();
     const entry = requirePreview(key);
     if (entry.released || entry.quarantined || entry.previewOnly || developmentKeys.has(key) || !partId) return false;
+    if (entry.attached && !entry.partId) viewer.promotePart(entry.key, partId);
     entry.partId = partId;
+    if (activeLocalPreviewKey === key) activeLocalPreviewKey = null;
     thumbnails.delete(partId);
     selectedPartId ??= partId;
     entry.thicknessMaterial = material;
@@ -343,6 +441,8 @@ export function createWorkflowPreviewInterop({
     viewer.addPart(entry.partId, entry.object);
     entry.attached = true;
     if (entry.thicknessEvidence) viewer.setThicknessEvidence?.(entry.partId, entry.thicknessEvidence);
+    if (activeLocalPreviewKey && !previews.get(activeLocalPreviewKey)?.attached)
+      selectLocalPreview(activeLocalPreviewKey);
   }
 
   function quarantine(key) {
@@ -357,20 +457,25 @@ export function createWorkflowPreviewInterop({
       release(key);
       return;
     }
+    if (activeLocalPreviewKey === key) activeLocalPreviewKey = null;
+    entry.settleCompletion?.(null);
     entry.controller?.abort();
     clearTimeout(entry.stallTimer);
     entry.stallTimer = null;
-    if (entry.attached && viewer) viewer.remove(entry.partId);
-    else if (entry.object) disposeModel(entry.object, disposedResources);
+    if (entry.attached && viewer) viewer.remove(entry.partId ?? entry.key);
+    else disposeModel(entry.object ?? entry.loadedObject, disposedResources);
+    entry.loadedObject = null;
     entry.object = null;
     entry.geometryClaim = null;
     entry.attached = false;
     entry.quarantined = true;
+    if (activeLocalPreviewKey) selectLocalPreview(activeLocalPreviewKey);
   }
 
   function release(key) {
     const entry = previews.get(key);
     if (!entry) return;
+    if (activeLocalPreviewKey === key) activeLocalPreviewKey = null;
     thumbnails.delete(entry.partId);
     if (selectedPartId === entry.partId) selectedPartId = null;
     const failures = [];
@@ -390,16 +495,20 @@ export function createWorkflowPreviewInterop({
       incompleteViewer = null;
       attempt(() => ownedViewer?.dispose());
     }
+    attempt(() => entry.settleCompletion?.(null));
     clearTimeout(entry.stallTimer);
     entry.stallTimer = null;
     attempt(() => entry.controller?.abort());
     if (entry.partId) partKeys.delete(entry.partId);
-    if (entry.attached && viewer) attempt(() => viewer.remove(entry.partId));
-    else if (entry.object && !developmentDetached) attempt(() => disposeModel(entry.object, disposedResources));
+    if (partKeys.size === 0) attempt(unbindThumbnailRoot);
+    if (entry.attached && viewer) attempt(() => viewer.remove(entry.partId ?? entry.key));
+    else if (!developmentDetached) attempt(() => disposeModel(entry.object ?? entry.loadedObject, disposedResources));
+    entry.loadedObject = null;
     entry.object = null;
     entry.geometryClaim = null;
     entry.file = null;
     entry.controller = null;
+    if (activeLocalPreviewKey) attempt(() => selectLocalPreview(activeLocalPreviewKey));
     if (failures.length === 1) throw failures[0];
     if (failures.length > 1) throw new AggregateError(failures, 'Preview release failed.');
   }
@@ -408,19 +517,86 @@ export function createWorkflowPreviewInterop({
     assertActive();
     const previous = requirePreview(key);
     const file = previous.file;
+    const selectedUnit = previous.selectedUnit;
     if (!file) throw new Error('The preview source is no longer available.');
     release(key);
-    return startPreview(file);
+    return startPreview(file, selectedUnit);
   }
 
   function select(partId) {
     assertActive();
     if (!partKeys.has(partId) || !viewer) return false;
+    activeLocalPreviewKey = null;
     viewer.select(partId);
     selectedPartId = partId;
     const entry = previews.get(partKeys.get(partId));
     if (entry) notifyThickness(entry);
     return true;
+  }
+
+  function attachLocalPreview(entry) {
+    if (!viewer || !entry.object || entry.partId || entry.previewOnly || !isCurrent(entry)) return false;
+    if (!entry.attached) {
+      // Local keys are renderer-only; only admit() can populate the authoritative correlation map.
+      viewer.addPart(entry.key, entry.object);
+      entry.attached = true;
+      if (entry.thicknessEvidence) viewer.setThicknessEvidence?.(entry.key, entry.thicknessEvidence);
+    }
+    viewer.select(entry.key);
+    return true;
+  }
+
+  function selectLocalPreview(key) {
+    if (disposed) return false;
+    const entry = previews.get(key);
+    if (!entry || !isCurrent(entry) || entry.partId) return false;
+    activeLocalPreviewKey = key;
+    if (incompleteEntry === entry && incompleteViewer) {
+      incompleteViewer.select(key);
+      return true;
+    }
+    const selected = attachLocalPreview(entry);
+    if (!selected) viewer?.clearSelection?.();
+    return selected;
+  }
+
+  function captureFailedThumbnail(key, canvas = null) {
+    const entry = previews.get(key);
+    if (!entry || !isCurrent(entry) || entry.partId || entry.previewOnly || !entry.object) return null;
+    const object = entry.object;
+    entry.object = null;
+    let attached = false;
+    try {
+      if (!viewer && canvas) attach(canvas);
+      if (!viewer) return null;
+      // This temporary local renderer key is never entered in admitted partKeys.
+      if (!entry.attached) viewer.addPart(key, object);
+      attached = true;
+      guardModelDisposal(object, guardedResources, viewerDisposedResources);
+      const source = viewer.snapshot?.(key, 192);
+      return typeof source === 'string' && source.startsWith('data:image/webp;base64,')
+        && source.length <= 262144 ? source : null;
+    } catch {
+      return null; // Thumbnail/WebGL failure must not replace the actual upload failure.
+    } finally {
+      if (attached) {
+        try { viewer.remove(key); }
+        catch { /* Release remaining owned resources below. */ }
+        finally { entry.attached = false; }
+      }
+      try { quarantine(key); }
+      finally {
+        try { disposeModel(object, disposedResources); }
+        catch { setUnavailable(); } // Cleanup reporting must not replace the actual upload failure.
+      }
+    }
+  }
+
+  function getLocalThumbnail(key) {
+    if (disposed || incompleteEntry?.key !== key || !incompleteViewer || !isCurrent(incompleteEntry)) return null;
+    const source = incompleteViewer.snapshot?.(key, 192);
+    return typeof source === 'string' && source.startsWith('data:image/webp;base64,')
+      && source.length <= 262144 ? source : null;
   }
 
   function notifyThickness(entry) {
@@ -480,11 +656,47 @@ export function createWorkflowPreviewInterop({
     if (key) release(key);
   }
 
-  function reset() { thumbnails.delete(selectedPartId); viewer?.reset(); }
-  function fit() { thumbnails.delete(selectedPartId); viewer?.fit(); }
-  function fullscreen() { return viewer?.fullscreen(); }
+  function setBulkSelectionState(input, mixed) {
+    if (disposed || input?.type !== 'checkbox') return;
+    input.indeterminate = mixed === true;
+  }
+
+
+  function revealPart(root, partId) {
+    if (disposed) return false;
+    const rail = root?.querySelector?.('[data-workflow-part-list]');
+    const tile = [...(rail?.querySelectorAll?.('[data-workflow-part]') ?? [])]
+      .find(element => element.dataset.partId === partId);
+    if (!tile) return false;
+    const bounds = rail.getBoundingClientRect();
+    const focused = tile.ownerDocument?.activeElement;
+    // A late render must not scroll an oversized card over its keyboard-focused action.
+    const revealTarget = focused && tile.contains(focused) ? focused : tile;
+    const target = revealTarget.getBoundingClientRect();
+    if (globalThis.getComputedStyle?.(rail)?.overflowY === 'visible') {
+      if (target.top < 0 || target.bottom > globalThis.innerHeight)
+        revealTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+      return true;
+    }
+    const add = rail.querySelector?.('.iq-compact-dropzone');
+    const left = add && globalThis.getComputedStyle?.(add)?.position === 'sticky'
+      ? Math.max(bounds.left, add.getBoundingClientRect().right) : bounds.left;
+    if (target.left < left) rail.scrollLeft = Math.max(0, rail.scrollLeft + target.left - left);
+    else if (target.right > bounds.right) rail.scrollLeft += target.right - bounds.right;
+    if (target.top < bounds.top) rail.scrollTop = Math.max(0, rail.scrollTop + target.top - bounds.top);
+    else if (target.bottom > bounds.bottom) rail.scrollTop += target.bottom - bounds.bottom;
+    return true;
+  }
+
+  function selectedViewer() {
+    return activeLocalPreviewKey && incompleteEntry?.key === activeLocalPreviewKey ? incompleteViewer : viewer;
+  }
+  function reset() { thumbnails.delete(selectedPartId); selectedViewer()?.reset(); }
+  function fit() { thumbnails.delete(selectedPartId); selectedViewer()?.fit(); }
+  function fullscreen() { return selectedViewer()?.fullscreen(); }
   function renderReviewThumbnails(root) {
-    if (!viewer || !root?.querySelectorAll) return 0;
+    if (disposed || !viewer || !root?.querySelectorAll) return 0;
+    observeThumbnailRoot(root);
     let rendered = 0;
     for (const image of root.querySelectorAll('[data-review-thumbnail][data-part-id], [data-workflow-thumbnail][data-part-id]')) {
       let source = null;
@@ -495,10 +707,44 @@ export function createWorkflowPreviewInterop({
       }
       if (typeof source !== 'string' || !source.startsWith('data:image/')) continue;
       thumbnails.set(image.dataset.partId, source);
-      image.src = source;
+      setThumbnailSource(image, source);
       rendered += 1;
     }
     return rendered;
+  }
+
+  function setThumbnailSource(image, source) {
+    if ((image.getAttribute?.('src') ?? image.src) !== source) image.src = source;
+  }
+
+  function observeThumbnailRoot(root) {
+    if (thumbnailRoot === root || partKeys.size === 0) return;
+    unbindThumbnailRoot();
+    const Observer = root.ownerDocument?.defaultView?.MutationObserver ?? globalThis.MutationObserver;
+    if (typeof Observer !== 'function') return;
+    const observer = new Observer(() => {
+      if (disposed || thumbnailObserver !== observer || thumbnailRoot !== root || !root.isConnected) return;
+      // Blazor can replace review images before its asynchronous after-render work resumes.
+      // Restore only current cached bytes; this callback never captures or starts server work.
+      for (const image of root.querySelectorAll('[data-review-thumbnail][data-part-id], [data-workflow-thumbnail][data-part-id]')) {
+        if (!image.isConnected || !root.contains(image)) continue;
+        const partId = image.dataset.partId;
+        const entry = previews.get(partKeys.get(partId));
+        const source = thumbnails.get(partId);
+        if (!entry || entry.partId !== partId || !isCurrent(entry) || typeof source !== 'string') continue;
+        setThumbnailSource(image, source);
+      }
+    });
+    thumbnailRoot = root;
+    thumbnailObserver = observer;
+    observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['src'] });
+  }
+
+  function unbindThumbnailRoot() {
+    const observer = thumbnailObserver;
+    thumbnailObserver = null;
+    thumbnailRoot = null;
+    observer?.disconnect();
   }
 
   function updatePartAppearance(partId, color) {
@@ -653,11 +899,13 @@ export function createWorkflowPreviewInterop({
     const failures = [];
     const attempt = action => { try { action(); } catch (error) { failures.push(error); } };
     attempt(unbindThumbnailCanvas);
+    attempt(unbindThumbnailRoot);
     thumbnails.clear();
     attempt(unbindInput);
     for (const key of [...previews.keys()]) attempt(() => release(key));
-    for (const files of selectionSnapshots) files.length = 0;
+    for (const selection of selectionSnapshots) selection.files.length = 0;
     selectionSnapshots.length = 0;
+    attempt(unbindPartsWheel);
     partKeys.clear();
     const ownedViewer = viewer;
     viewer = null;
@@ -680,14 +928,19 @@ export function createWorkflowPreviewInterop({
   return Object.freeze({
     beginSelection,
     getGeometryClaim,
+    getFailureCategory,
     bindInput,
     discardSelection,
     attach,
+    detachEmptyViewer,
     admit,
     quarantine,
     release,
     retry,
     select,
+    selectLocalPreview,
+    getLocalThumbnail,
+    captureFailedThumbnail,
     setThicknessMaterial,
     toggleThickness,
     remove,
@@ -695,6 +948,8 @@ export function createWorkflowPreviewInterop({
     fit,
     fullscreen,
     renderReviewThumbnails,
+    revealPart,
+    setBulkSelectionState,
     updatePartAppearance,
     isIncompletePreview,
     retainIncompletePreview,

@@ -68,22 +68,24 @@ public sealed class InstantQuotationAnalyticsIntegrationTests : IClassFixture<Te
     }
 
     [Fact]
-    public void UploadStart_IsEmittedOnlyAfterAUsableAnalyzedBatchAndBeforeReservation()
+    public void UploadStart_UsableSingletonEmitsBeforeItsActualProducerWithoutAggregateRefire()
     {
-        var source = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(),
-            "Legacy.Maliev.Web",
-            "Components",
-            "Pages",
-            "InstantQuotation",
-            "InstantQuotationWorkflow.razor.cs"));
-        var nonEmptyGate = source.IndexOf("if (analyzed.Count == 0)", StringComparison.Ordinal);
-        var emission = source.IndexOf("analytics.RecordUploadStartAsync", StringComparison.Ordinal);
-        var reservation = source.IndexOf("workflow.ReserveUploads(files)", StringComparison.Ordinal);
+        var root = FindRepositoryRoot();
+        var source = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages",
+            "InstantQuotation", "InstantQuotationWorkflowCoordinator.cs"));
+        var component = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages",
+            "InstantQuotation", "InstantQuotationWorkflow.razor.cs"));
+        var upload = source[source.IndexOf("private async Task StartUploadAsync", StringComparison.Ordinal)..];
+        var validation = upload.IndexOf("entry.File.GeometryClaim is null", StringComparison.Ordinal);
+        var stream = upload.IndexOf("await entry.File.OpenReadStreamAsync", StringComparison.Ordinal);
+        var emission = upload.IndexOf("analytics.RecordUploadStartAsync", StringComparison.Ordinal);
+        var producer = upload.IndexOf("await uploadClient.UploadAsync", StringComparison.Ordinal);
 
-        Assert.True(nonEmptyGate >= 0 && nonEmptyGate < emission);
-        Assert.True(emission < reservation);
-        Assert.Contains("analyzed.Count", source[emission..reservation], StringComparison.Ordinal);
+        Assert.True(validation >= 0 && validation < stream);
+        Assert.True(stream < emission && emission < producer);
+        Assert.Contains("entry.LocalId:N", upload[emission..producer], StringComparison.Ordinal);
+        Assert.Contains(", 1)", upload[emission..producer], StringComparison.Ordinal);
+        Assert.DoesNotContain("analytics.RecordUploadStartAsync", component, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

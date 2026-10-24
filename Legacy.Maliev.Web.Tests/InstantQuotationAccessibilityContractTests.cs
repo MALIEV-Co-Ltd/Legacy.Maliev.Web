@@ -45,7 +45,11 @@ public sealed class InstantQuotationAccessibilityContractTests
 
         Assert.Contains("Supported files: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS, and IGES. Maximum 100 files, 100 MB each.", workflow, StringComparison.Ordinal);
         Assert.Contains("<strong aria-live=\"polite\" aria-atomic=\"true\">@Money(OrderQuote?.FinalOrderPrice)</strong>", workflow, StringComparison.Ordinal);
-        Assert.DoesNotContain("role=\"status\" aria-live=\"polite\"", workflow, StringComparison.Ordinal);
+        var priceTotal = Assert.Single(workflow.Split('\n'), line =>
+            line.Contains("<strong", StringComparison.Ordinal)
+            && line.Contains("@Money(OrderQuote?.FinalOrderPrice)", StringComparison.Ordinal));
+        Assert.DoesNotContain("role=\"status\" aria-live=\"polite\"", priceTotal, StringComparison.Ordinal);
+        Assert.Contains("<span role=\"status\" aria-live=\"polite\">@Localizer[\"{0} parts selected\", SelectedBulkCount]</span>", workflow, StringComparison.Ordinal);
     }
 
     [Fact]

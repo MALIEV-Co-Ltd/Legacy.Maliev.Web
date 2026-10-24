@@ -241,6 +241,16 @@
     {
         var geometry = part.Geometry;
         var warnings = new List<string>();
+        if (!IsRepricing
+            && Quote?.Parts.SingleOrDefault(line => line.PartId == part.PartId)?.PhysicalReceipt?.GeometryReconstruction is { } reconstruction
+            && reconstruction.IsValid())
+        {
+            warnings.Add(Localizer["Voxel-based estimate ({0} mm) — engineering review required",
+                reconstruction.VoxelSizeMm.ToString("0.0", System.Globalization.CultureInfo.CurrentCulture)]);
+            warnings.Add(Localizer["Pricing uses reconstructed geometry. Small features may change; the original file must be reviewed before manufacture."]);
+        }
+
+
         if (!geometry.TopologyChecked)
         {
             warnings.Add(Localizer["Detailed topology checks were skipped for this large mesh. Engineering review is required."]);

@@ -277,6 +277,22 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         await using var fixture = await Fixture.CreateAsync(output, culture, 1280, scheme, height: 720,
             displayFileName: "maliev-one-millimeter-fdm-00000000000000000000000000000000.stl");
         var card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='ABS']");
+        var units = fixture.Page.Locator("[data-workflow-gltf-unit]");
+        await Assertions.Expect(units).ToBeVisibleAsync();
+        var beforeUnitChoice = await fixture.StoredAsync();
+        await units.SelectOptionAsync("metres");
+        var afterUnitChoice = await fixture.StoredAsync();
+        Assert.True(string.Equals(System.Text.Json.JsonSerializer.Serialize(Assert.Single(beforeUnitChoice.Parts)),
+            System.Text.Json.JsonSerializer.Serialize(Assert.Single(afterUnitChoice.Parts)), StringComparison.Ordinal),
+            "Choosing units for a future import must not reinterpret an existing protected part.");
+        Assert.True(string.Equals(System.Text.Json.JsonSerializer.Serialize(beforeUnitChoice.QuoteAuthorization),
+            System.Text.Json.JsonSerializer.Serialize(afterUnitChoice.QuoteAuthorization), StringComparison.Ordinal),
+            "Choosing units for a future import must not mint or replace the existing quote authorization.");
+        await AssertPartsPaneActionsReachableAsync(fixture);
+        var rail = fixture.Page.Locator("[data-material-card-scroll]");
+        await rail.Locator("[data-material-key='PVA']").ScrollIntoViewIfNeededAsync();
+        Assert.True(await rail.EvaluateAsync<bool>("element => element.scrollTop > 0"),
+            "Lower material choices must remain reachable through the material rail.");
         await card.ScrollIntoViewIfNeededAsync();
         var hitArea = await card.EvaluateAsync<double[]>("""
             card => {
@@ -284,7 +300,22 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                 const content = card.closest('[data-workflow-configuration-content]').getBoundingClientRect();
                 const footer = card.closest('[data-workflow-configuration]').querySelector('.instant-quote__configuration-footer').getBoundingClientRect();
                 const hit = card.ownerDocument.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
-                return [card.contains(hit) ? 1 : 0, bounds.top, bounds.bottom, content.top, content.bottom, footer.top];
+                const workflow = card.closest('.instant-quote__workflow');
+                const units = workflow.querySelector(':scope > .instant-quote__gltf-unit').getBoundingClientRect();
+                const viewer = workflow.querySelector(':scope > [data-workflow-viewer]').getBoundingClientRect();
+                const parts = workflow.querySelector(':scope > [data-workflow-parts-panel]').getBoundingClientRect();
+                const configuration = card.closest('[data-workflow-configuration]').getBoundingClientRect();
+                return [card.contains(hit) ? 1 : 0, bounds.top, bounds.bottom, content.top, content.bottom, footer.top,
+                    units.top, units.bottom, viewer.top, parts.top, footer.bottom, innerHeight,
+                    workflow.getBoundingClientRect().top, configuration.top, configuration.bottom,
+                    card.closest('[data-material-card-scroll]').scrollTop,
+                    card.closest('[data-workflow-configuration-content]').scrollTop,
+                    parts.bottom,
+                    workflow.querySelector('[data-workflow-parts]').getBoundingClientRect().top,
+                    workflow.querySelector('[data-workflow-parts]').getBoundingClientRect().bottom,
+                    workflow.querySelector('[data-workflow-parts]').clientHeight,
+                    workflow.querySelector('[data-workflow-parts]').scrollHeight,
+                    viewer.bottom, parts.right, configuration.left];
             }
             """);
         var evidenceName = $"source-material-safe-hit-area-before-{culture}-1280-720";
@@ -293,6 +324,13 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
             System.Text.Json.JsonSerializer.Serialize(new { Culture = culture, Width = 1280, Height = 720, Geometry = hitArea }));
         Assert.True(hitArea[0] == 1 && hitArea[1] >= hitArea[3] - 1 && hitArea[2] <= hitArea[4] + 1 && hitArea[2] <= hitArea[5] + 1,
             "The complete material card and its normal click target must stay above the summary footer.");
+        Assert.True(hitArea[6] >= hitArea[12] - 1 && hitArea[7] <= Math.Min(hitArea[8], hitArea[9]) + 1,
+            "Import units must own a visible row above the desktop viewer and parts panel.");
+        Assert.True(hitArea[10] <= hitArea[11] + 1 && hitArea[13] >= hitArea[7] - 1 && hitArea[14] <= hitArea[11] + 1,
+            "The configuration rail and its complete summary footer must remain within the short desktop viewport.");
+        Assert.True(hitArea[4] - hitArea[3] >= hitArea[2] - hitArea[1],
+            "The configuration content must retain enough height to show the complete material card.");
+        AssertDesktopPartsDockContained(hitArea);
         await Assertions.Expect(card.Locator("[data-material-card-price]")).ToHaveAttributeAsync("data-price-status", "unavailable");
         // This historical fixture has resin authority; retain ABS geometry coverage before selecting supported resin.
         card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='K']");
@@ -303,6 +341,98 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         await Assertions.Expect(fixture.Page.Locator(".instant-quote__configuration-footer")).ToBeVisibleAsync();
         await Assertions.Expect(fixture.Page.Locator("[data-summary-legal]")).ToBeVisibleAsync();
         await fixture.CaptureAsync($"source-material-safe-hit-area-{culture}-1280-720");
+    }
+
+    [Fact]
+    public void DesktopPartsDockGeometryRejectsOverlapClippingAndLostActionViewport()
+    {
+        // Observed 1280x720 layout: parts below the left viewer, configuration spanning the right column.
+        double[] geometry = [1, 207.984375, 304.734375, 207.5625, 494.6875, 510.6875,
+            73, 195.5625, 195.5625, 442, 720, 720, 73, 195.5625, 720, 135, 805,
+            720, 503, 719, 216, 381, 442, 563, 576];
+        AssertDesktopPartsDockContained(geometry);
+        foreach (var (index, invalid) in new (int, double)[]
+        {
+            (9, 193), // Above the import row.
+            (9, 440), // Overlapping the viewer.
+            (23, 578), // Overlapping the configuration column.
+            (17, 722), // Below the configuration/footer viewport.
+            (18, 440), // List clipped above its panel.
+            (19, 722), // List clipped below its panel.
+            (20, 43), // Lost minimum action viewport.
+        })
+        {
+            var broken = (double[])geometry.Clone();
+            broken[index] = invalid;
+            Assert.ThrowsAny<Xunit.Sdk.XunitException>(() => AssertDesktopPartsDockContained(broken));
+        }
+    }
+
+    private static void AssertDesktopPartsDockContained(double[] geometry) =>
+        Assert.True(geometry[9] >= geometry[7] - 1 && geometry[9] >= geometry[22] - 1
+            && geometry[23] <= geometry[24] + 1 && geometry[17] <= geometry[14] + 1
+            && geometry[18] >= geometry[9] - 1 && geometry[19] <= geometry[17] + 1 && geometry[20] >= 44,
+            "The parts dock must fit below its viewer and beside configuration, keeping the complete list inside its own pane and its action viewport.");
+
+    [Theory]
+    [InlineData("en", ColorScheme.Light)]
+    [InlineData("th", ColorScheme.Dark)]
+    public async Task CompactDesktopPaneMinimumsKeepPartsMaterialAndSummaryActionsReachable(string culture, ColorScheme scheme)
+    {
+        await using var fixture = await Fixture.CreateAsync(output, culture, 1280, scheme, height: 640,
+            displayFileName: "maliev-one-millimeter-fdm-00000000000000000000000000000000.stl");
+        await AssertPartsPaneActionsReachableAsync(fixture);
+        var card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='K']");
+        await card.ScrollIntoViewIfNeededAsync();
+        var geometry = await card.EvaluateAsync<double[]>("""
+            card => {
+                const bounds = card.getBoundingClientRect();
+                const content = card.closest('[data-workflow-configuration-content]').getBoundingClientRect();
+                const hit = card.ownerDocument.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+                return [card.contains(hit) ? 1 : 0, bounds.top, bounds.bottom, content.top, content.bottom];
+            }
+            """);
+        Assert.True(geometry[0] == 1 && geometry[1] >= geometry[3] - 1 && geometry[2] <= geometry[4] + 1,
+            "A compact desktop must keep a complete material card reachable instead of collapsing its content viewport.");
+        await card.ClickAsync();
+        await Assertions.Expect(card).ToHaveAttributeAsync("aria-checked", "true");
+        Assert.Equal("K", Assert.Single((await fixture.StoredAsync()).Parts).Configuration.MaterialKey);
+        await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
+        await fixture.Review.ScrollIntoViewIfNeededAsync();
+        Assert.True(await fixture.Review.EvaluateAsync<bool>("""
+            button => {
+                const bounds = button.getBoundingClientRect();
+                const hit = button.ownerDocument.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+                return bounds.top >= 0 && bounds.bottom <= innerHeight && button.contains(hit);
+            }
+            """), "The complete summary action must remain reachable when pane minimums need outer scrolling.");
+        await fixture.CaptureAsync($"source-material-compact-panes-{culture}-1280-640");
+    }
+
+    private static async Task AssertPartsPaneActionsReachableAsync(Fixture fixture)
+    {
+        var list = fixture.Page.Locator("[data-workflow-parts]");
+        var addFile = list.Locator("[data-workflow-add-file]");
+        await addFile.ScrollIntoViewIfNeededAsync();
+        Assert.True(await addFile.EvaluateAsync<bool>("""
+            label => {
+                const bounds = label.getBoundingClientRect();
+                const hit = label.ownerDocument.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+                return label.contains(hit);
+            }
+            """), "The Add file label must retain its normal hit target inside the parts scroll pane.");
+        var view = list.Locator("[data-workflow-part] button").First;
+        await view.ScrollIntoViewIfNeededAsync();
+        Assert.True(await view.EvaluateAsync<bool>("""
+            button => {
+                const bounds = button.getBoundingClientRect();
+                const list = button.closest('[data-workflow-parts]').getBoundingClientRect();
+                const hit = button.ownerDocument.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+                return bounds.top >= list.top - 1 && bounds.bottom <= list.bottom + 1 && button.contains(hit);
+            }
+            """), "The complete View action must remain reachable through the parts list's own scrolling.");
+        await view.ClickAsync();
+        await Assertions.Expect(view).ToHaveAttributeAsync("aria-pressed", "true");
     }
 
     [Theory]
@@ -391,20 +521,34 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         {
             await fixture.ChangeQuantityAsync(2);
             await two.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            await fixture.ChangeQuantityAsync(3);
+            await fixture.Quantity.FillAsync("3");
             await Assertions.Expect(fixture.Quantity).ToHaveValueAsync("3");
             await Assertions.Expect(fixture.Page.Locator("[data-workflow-material-price] strong")).ToHaveCountAsync(0);
             Assert.False(three.Entered.Task.IsCompleted, "A queued configuration cannot bypass the active state gate.");
-            two.Release.TrySetResult();
+            Assert.False(two.Completed.Task.IsCompleted);
+            await fixture.Quantity.PressAsync("Tab");
             await three.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await two.Completed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.True(two.ConsumerToken.IsCancellationRequested,
+                "A newer accepted configuration must retire the obsolete quote consumer.");
+            Assert.False(two.Release.Task.IsCompleted, "The newer edit must not depend on releasing the obsolete pricing gate.");
+            two.Release.TrySetResult();
             Assert.Equal(3, Assert.Single((await fixture.StoredAsync()).Parts).Configuration.Quantity);
-            await fixture.ChangeQuantityAsync(4);
+            Assert.Null((await fixture.StoredAsync()).QuoteAuthorization);
+            await fixture.Quantity.FillAsync("4");
             await Assertions.Expect(fixture.Quantity).ToHaveValueAsync("4");
             await Assertions.Expect(fixture.Page.Locator("[data-workflow-material-price] strong")).ToHaveCountAsync(0);
             Assert.False(four.Entered.Task.IsCompleted);
-            three.Release.TrySetResult();
+            Assert.False(three.Completed.Task.IsCompleted);
+            await fixture.Quantity.PressAsync("Tab");
             await four.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await three.Completed.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.True(three.ConsumerToken.IsCancellationRequested,
+                "The newest accepted configuration must retire the previous quote consumer.");
+            Assert.False(three.Release.Task.IsCompleted);
+            three.Release.TrySetResult();
             Assert.Equal(4, Assert.Single((await fixture.StoredAsync()).Parts).Configuration.Quantity);
+            Assert.Null((await fixture.StoredAsync()).QuoteAuthorization);
             await fixture.Page.Locator("[data-workflow-material-comparison] > summary").ClickAsync();
             await Assertions.Expect(fixture.Page.Locator("[data-workflow-material-price='M68']")).ToBeVisibleAsync();
             // This is a current-tuple/DOM routing control, not another commercial arithmetic golden.
@@ -418,8 +562,14 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
             two.Release.TrySetResult(); three.Release.TrySetResult(); four.Release.TrySetResult();
         }
         await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
-        Assert.Equal(4, Assert.Single((await fixture.StoredAsync()).Parts).Configuration.Quantity);
+        var stored = await fixture.StoredAsync();
+        Assert.Equal(4, Assert.Single(stored.Parts).Configuration.Quantity);
         Assert.Equal(new[] { 2, 3, 4 }, fixture.Control.AcceptedQuantities.ToArray());
+        var final = Assert.IsType<InstantQuotationOrderQuote>(fixture.Control.FinalQuote);
+        Assert.Equal(4, Assert.Single(final.Parts).Quantity);
+        Assert.NotNull(stored.QuoteAuthorization);
+        Assert.True(fixture.Factory.Services.GetRequiredService<IInstantQuotationQuoteTicketService>()
+            .Validate(stored, final, stored.QuoteAuthorization, DateTimeOffset.UtcNow));
     }
 
     [Theory]
@@ -573,12 +723,14 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         public TaskCompletionSource AuthorizationRelease { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource AuthorizationStored { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource AuthorizationFinished { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public CancellationToken ConsumerToken { get; set; }
         public int Claimed;
         public int AuthorizationClaimed;
     }
 
     private sealed class Control
     {
+        public MaterialCompletionObservation Observation { get; } = new();
         public MaterialInitialRequestStages InitialStages { get; } = new();
         public ConcurrentQueue<Gate> Gates { get; } = new();
         public ConcurrentQueue<int> AcceptedQuantities { get; } = new();
@@ -646,7 +798,11 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
             var quantity = session.Parts.Single().Configuration.Quantity;
             control.Timeline.Enqueue(("attempt", quantity, token.IsCancellationRequested));
             var gate = control.Gates.FirstOrDefault(candidate => candidate.Quantity == quantity && candidate.Claimed == 0);
-            if (gate is not null) control.AcceptedQuantities.Enqueue(quantity);
+            if (gate is not null)
+            {
+                gate.ConsumerToken = token;
+                control.AcceptedQuantities.Enqueue(quantity);
+            }
             try
             {
                 var result = await inner.QuoteAsync(session, owner, comparisons, async (frame, callbackToken) =>
@@ -691,6 +847,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                     new MaterialInitialRequestStages.Store(new AuthorizationStore((IInstantQuotationSessionStore)(store.ImplementationInstance
                         ?? store.ImplementationFactory?.Invoke(provider)
                         ?? ActivatorUtilities.CreateInstance(provider, store.ImplementationType!)), control), control.InitialStages), store.Lifetime));
+                control.Observation.Decorate(services);
             });
         }
     }
@@ -709,6 +866,30 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
         public Fixture() => Factory = new(Control);
 
+        private static int ReserveFreePort()
+        {
+            // Keep test listeners outside the outbound client-port pool on Windows.
+            for (var attempt = 0; attempt < 64; attempt++)
+            {
+                var listener = new TcpListener(IPAddress.Loopback, Random.Shared.Next(20000, 30000));
+                try
+                {
+                    listener.Start();
+                    return ((IPEndPoint)listener.LocalEndpoint).Port;
+                }
+                catch (SocketException exception) when (exception.SocketErrorCode is SocketError.AddressAlreadyInUse or SocketError.AccessDenied)
+                {
+                    // Another task or an excluded port range owns this candidate.
+                }
+                finally
+                {
+                    listener.Stop();
+                }
+            }
+
+            throw new InvalidOperationException("No loopback browser-test port is available in the test-server range.");
+        }
+
         public static async Task<Fixture> CreateAsync(ITestOutputHelper output, string culture, int width, ColorScheme scheme, int height = 800,
             string displayFileName = "historical-controlled.stl", int partCount = 1)
         {
@@ -716,10 +897,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
             var fixture = new Fixture();
             try
             {
-                var listener = new TcpListener(IPAddress.Loopback, 0);
-                listener.Start();
-                var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-                listener.Stop();
+                var port = ReserveFreePort();
                 var origin = new Uri($"http://127.0.0.1:{port}");
                 fixture.Factory.UseKestrel(port);
                 using var client = fixture.Factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
@@ -772,6 +950,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                     parts.Add(new InstantQuotationPart(Guid.NewGuid(), fileName, reference, geometry, new("M68", "White", 1)));
                 }
                 Assert.True(await store.PutAsync(stored with { RequestState = new(parts) }, null, default));
+                fixture.Control.Observation.BeginEdit();
                 using (var responseProbe = fixture.Factory.Services.GetRequiredService<TestResponseProbeRegistry>()
                     .TryBeginNavigation(origin, TestResponseRequestLabel.BaseQuotation))
                 using (var reloadNavigation = new MaterialInitialNavigationDiagnostics(
@@ -796,7 +975,13 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                     """);
                 return fixture;
             }
-            catch (Exception primary) { await fixture.DisposeAsync(primary); throw; }
+            catch (Exception primary)
+            {
+                try { output.WriteLine("[material-initialization-services] " + fixture.Control.Observation.Describe()); }
+                catch { /* Secondary observation must not mask the original fixture failure. */ }
+                await fixture.DisposeAsync(primary);
+                throw;
+            }
         }
         public async Task ChangeQuantityAsync(int quantity)
         {
