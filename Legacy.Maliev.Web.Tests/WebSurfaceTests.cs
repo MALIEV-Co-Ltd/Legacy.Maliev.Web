@@ -8,18 +8,21 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Configuration;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 public sealed class WebSurfaceTests : IDisposable
 {
     private readonly OwnedWebSurfaceHost ownedHost;
+    private readonly ITestOutputHelper? output;
     private WebApplicationFactory<Program> configuredFactory => ownedHost.Factory;
     internal OwnedWebSurfaceHost LifetimeOwner => ownedHost;
     private HttpClient client => ownedHost.Client;
 
-    public WebSurfaceTests()
+    public WebSurfaceTests(ITestOutputHelper? output = null)
     {
+        this.output = output;
         ownedHost = OwnedWebSurfaceHost.Create(builder =>
             {
                 builder.UseEnvironment("Testing");
@@ -398,6 +401,87 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.DoesNotContain("sensitive-access-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("sensitive-refresh-token", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData("en", false)]
+    [InlineData("th", false)]
+    [InlineData("en", true)]
+    [InlineData("th", true)]
+    public async Task MemberNavigation_ContextualQuotesReachPublicRfqWithoutCreatingOrders(string culture, bool retained)
+    {
+        await using var host = configuredFactory.WithWebHostBuilder(
+            builder => builder.UseSetting("BlazorRouting:MemberOrdersIndex", (!retained).ToString()));
+        using var member = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
+        var loginHtml = await member.GetStringAsync("/account/login");
+        var token = Regex.Match(loginHtml, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"", RegexOptions.CultureInvariant);
+        Assert.True(token.Success);
+        using var login = await member.PostAsync("/account/login?handler=Login", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = WebUtility.HtmlDecode(token.Groups[1].Value),
+            ["Email"] = "customer@example.com",
+            ["Password"] = "correct-password",
+            ["RememberMe"] = "false",
+        }));
+        Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
+        using var response = await member.GetAsync($"/member/orders?culture={culture}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        Assert.Equal(!retained, html.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var navigation = Assert.Single(Regex.Matches(html,
+            "<aside\\b[^>]*\\bid=\"member-navigation\"[^>]*>[\\s\\S]*?</aside>", RegexOptions.CultureInvariant).Cast<Match>());
+        if (retained)
+        {
+            Assert.Contains("href=\"/quotation\"", navigation.Value, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var (item, context, english, thai) in new[]
+        {
+            ("CNC-Machining", "cnc_machining", "New CNC machining quote", "ขอใบเสนอราคางาน CNC ใหม่"),
+            ("3D-Printing", "3d_printing", "New 3D printing quote", "ขอใบเสนอราคางานพิมพ์ 3 มิติใหม่"),
+            ("3D-Scanning", "3d_scanning", "New 3D scanning quote", "ขอใบเสนอราคางานสแกน 3 มิติใหม่"),
+        })
+        {
+            var label = culture == "th" ? thai : english;
+            var link = Assert.Single(Regex.Matches(navigation.Value,
+                "<a\\b[^>]*href=\"(?<href>[^\"]+)\"[^>]*>[\\s\\S]*?</a>",
+                RegexOptions.CultureInvariant).Cast<Match>(),
+                match => match.Value.Contains($"<span>{label}</span>", StringComparison.Ordinal));
+            var destination = new Uri(member.BaseAddress!, link.Groups["href"].Value);
+            Assert.Equal(member.BaseAddress!.GetLeftPart(UriPartial.Authority), destination.GetLeftPart(UriPartial.Authority));
+            if (retained)
+            {
+                var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(destination.Query);
+                Assert.Equal("/quotation", destination.AbsolutePath, ignoreCase: true);
+                Assert.Equal(item, query["item"].ToString());
+                Assert.Equal(culture, query["culture"].ToString());
+            }
+            else
+            {
+                Assert.Equal($"/Quotation/{item}", destination.AbsolutePath);
+            }
+
+            using var linked = await member.GetAsync(destination);
+            Assert.True(linked.StatusCode is HttpStatusCode.OK or HttpStatusCode.MovedPermanently);
+            using var quotation = await member.GetAsync(linked.Headers.Location ?? destination);
+            Assert.Equal(HttpStatusCode.OK, quotation.StatusCode);
+            var quotationHtml = WebUtility.HtmlDecode(await quotation.Content.ReadAsStringAsync());
+            Assert.Contains($"name=\"ServiceContext\" value=\"{context}\"", quotationHtml, StringComparison.Ordinal);
+            var message = Assert.Single(Regex.Matches(quotationHtml,
+                "<textarea\\b[^>]*\\bid=\"Message\"[^>]*>(?<message>[\\s\\S]*?)</textarea>",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.Contains(item, message.Groups["message"].Value, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("sensitive-access-token", quotationHtml, StringComparison.Ordinal);
+            Assert.DoesNotContain("sensitive-refresh-token", quotationHtml, StringComparison.Ordinal);
+        }
+
+        Assert.Null(Assert.IsType<StubQuotationClient>(host.Services.GetRequiredService<IQuotationClient>()).LastSubmission);
+        Assert.Null(Assert.IsType<StubCustomerOrderSubmissionService>(host.Services.GetRequiredService<ICustomerOrderSubmissionService>()).LastInvocation);
+        Assert.Empty(Assert.IsType<StubNotificationClient>(host.Services.GetRequiredService<INotificationClient>()).Notifications);
     }
 
     [Theory]
@@ -2086,26 +2170,36 @@ public sealed class WebSurfaceTests : IDisposable
     [InlineData("th", "กรุณากรอกอีเมลที่แตกต่างจากอีเมลปัจจุบัน")]
     public async Task MemberChangeEmail_RejectsCurrentEmailBeforeEitherService(string culture, string expectedMessage)
     {
-        await SignInAsync();
-        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
-            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
-        var accountClient = Assert.IsType<StubCustomerAccountClient>(
-            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
-        authentication.ResetEmailChangeInvocations();
-        accountClient.ResetEmailInvocations();
-        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
-        form["CurrentPassword"] = "current-password";
-        form["NewEmail"] = " CUSTOMER@EXAMPLE.COM ";
+        using var observation = new WebSurfaceLoginPhaseObservation(
+            configuredFactory.Services.GetService<System.Diagnostics.DiagnosticListener>(), output);
+        try
+        {
+            await SignInAsync();
+            var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+                configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+            var accountClient = Assert.IsType<StubCustomerAccountClient>(
+                configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+            authentication.ResetEmailChangeInvocations();
+            accountClient.ResetEmailInvocations();
+            var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
+            form["CurrentPassword"] = "current-password";
+            form["NewEmail"] = " CUSTOMER@EXAMPLE.COM ";
 
-        using var response = await client.PostAsync(
-            $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}",
-            new FormUrlEncodedContent(form));
-        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+            using var response = await client.PostAsync(
+                $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}",
+                new FormUrlEncodedContent(form));
+            var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
-        Assert.Null(authentication.LastEmailChangeInvocation);
-        Assert.Empty(accountClient.EmailUpdateInvocations);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+            Assert.Null(authentication.LastEmailChangeInvocation);
+            Assert.Empty(accountClient.EmailUpdateInvocations);
+        }
+        catch (Exception exception)
+        {
+            observation.WriteFailure(exception);
+            throw;
+        }
     }
 
     [Theory]
