@@ -19,11 +19,14 @@ internal sealed record InstantQuotationPhysicalAnalysisInputResult(
     string? FileName = null,
     string? Sha256 = null)
 {
+    internal InstantQuotationGltfUnitPolicy GltfUnitPolicy { get; init; } = InstantQuotationGltfUnitPolicy.Legacy;
+
     internal bool IsReady => Content is not null
         && Failure == InstantQuotationPhysicalAnalysisInputFailure.None
         && FileId != Guid.Empty
         && !string.IsNullOrWhiteSpace(FileName)
-        && !string.IsNullOrWhiteSpace(Sha256);
+        && !string.IsNullOrWhiteSpace(Sha256)
+        && GltfUnitPolicy?.IsValidForFile(FileName, newUpload: false) is true;
 
     internal static InstantQuotationPhysicalAnalysisInputResult Unavailable(
         InstantQuotationPhysicalAnalysisInputFailure failure) => new(null, failure);

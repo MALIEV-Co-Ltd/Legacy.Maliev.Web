@@ -36,6 +36,7 @@ public sealed partial class TermsConditionsStaticSsrRouteTests : IClassFixture<T
         Assert.Contains("TermsConditionsEnglishContent", content, StringComparison.Ordinal);
         Assert.Contains("TermsConditionsThaiContent", content, StringComparison.Ordinal);
         Assert.Contains("id=\"link-removal\"", englishContent, StringComparison.Ordinal);
+        Assert.Contains("Without prior approval and express written permission, you may not create frames around our Web pages or use other techniques that alter the visual presentation or appearance of our Web site.", englishContent, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -74,6 +75,10 @@ public sealed partial class TermsConditionsStaticSsrRouteTests : IClassFixture<T
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains(firstBodyMarker, source, StringComparison.Ordinal);
         Assert.Contains(finalBodyMarker, source, StringComparison.Ordinal);
+        if (culture == "en")
+        {
+            Assert.Contains("Without prior approval and express written permission, you may not create frames around our Web pages or use other techniques that alter the visual presentation or appearance of our Web site.", source, StringComparison.Ordinal);
+        }
         Assert.Contains("<nav class=\"legal-toc\" aria-label=", source, StringComparison.Ordinal);
         Assert.Contains("<article class=\"legal-document\">", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
@@ -149,6 +154,7 @@ public sealed partial class TermsConditionsStaticSsrRouteTests : IClassFixture<T
         var source = WebUtility.HtmlDecode(await client.GetStringAsync("/legal/termsconditions?culture=en"));
 
         Assert.Contains("<title>Terms and Conditions | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains("Without prior approval and express written permission, you may not create frames around our Web pages or use other techniques that alter the visual presentation or appearance of our Web site.", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }

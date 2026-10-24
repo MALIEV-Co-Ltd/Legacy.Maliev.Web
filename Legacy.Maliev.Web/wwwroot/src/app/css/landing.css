@@ -143,8 +143,8 @@ html::-webkit-scrollbar-thumb:hover { background: rgba(38, 59, 87, .68); }
 .landing-process { padding-top: clamp(6rem, 9vw, 8.5rem); }
 .landing-process-grid { display: grid; gap: 2.1rem; margin: 2.2rem 0 0; padding: 0; list-style: none; }
 .landing-process-grid li { position: relative; text-align: center; }
-.landing-step-icon { display: grid; place-items: center; width: 7.2rem; height: 5.9rem; margin: auto; border: 1px solid var(--landing-line); border-radius: .35rem; background: #fff; color: #101927; font-size: 2.25rem; }
-.landing-step-icon .svg-inline--fa { width: 2.25rem; height: 2.25rem; color: #101927; }
+.landing-step-photo { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; border-radius: .35rem; }
+@media (min-width: 36rem) { .landing-process-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .landing-process-grid h3 { margin: .8rem 0 .35rem; font-size: .96rem; }
 .landing-process-grid p { max-width: 14rem; margin: auto; color: var(--landing-muted); font-size: .84rem; }
 
@@ -187,7 +187,6 @@ html::-webkit-scrollbar-thumb:hover { background: rgba(38, 59, 87, .68); }
     .landing-value-strip article:nth-child(n + 3) { border-top: 1px solid var(--landing-line); }
     .landing-service-grid { grid-template-columns: repeat(3, 1fr); }
     .landing-process-grid { grid-template-columns: repeat(4, 1fr); }
-    .landing-process-grid li:not(:last-child)::after { content: ""; position: absolute; top: 2.7rem; left: calc(50% + 4.2rem); width: calc(100% - 8.4rem); border-top: 2px dashed #b9c6d5; }
     .landing-reason-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
