@@ -3448,8 +3448,8 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             new PageWaitForFunctionOptions { Timeout = 60_000 });
         await page.WaitForFunctionAsync(
             """
-            async id => {
-              const article = document.querySelector('[data-workflow-review-part][data-review-part-id="' + id + '"]');
+            async args => {
+              const article = document.querySelector('[data-workflow-review-part][data-review-part-id="' + args.id + '"]');
               const thumbnail = article?.querySelector('[data-review-thumbnail]');
               if (!thumbnail?.src.startsWith('data:image/webp') || document.querySelector('[data-pricing-loading-status]')) return false;
               const image = new Image();
@@ -3467,10 +3467,15 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 if (pixels[index] > pixels[index + 2] * 1.5 && pixels[index] > pixels[index + 1] * 1.5) red++;
                 if (pixels[index + 2] > pixels[index] * 1.5 && pixels[index + 2] > pixels[index + 1] * 1.5) blue++;
               }
-              return red > 20 && red > blue;
+              const multipart = document.querySelector('[data-workflow-review-part][data-review-part-id="' + args.multiId + '"] [data-review-thumbnail]');
+              if (multipart?.getAttribute('src') !== args.beforeMulti) return false;
+              await multipart.decode();
+              return red > 20 && red > blue && thumbnail.isConnected && thumbnail.src === image.src
+                && multipart.isConnected && multipart.naturalWidth > 0 && multipart.getAttribute('src') === args.beforeMulti;
             }
             """,
-            singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 30_000 });
+            new { id = singleId.ToString(), multiId = multiId.ToString(), beforeMulti },
+            new PageWaitForFunctionOptions { Timeout = 30_000 });
         Assert.Equal(beforeMulti, await multiReview.Locator("[data-review-thumbnail]").GetAttributeAsync("src"));
         Assert.Equal("true", await singleReview.GetAttributeAsync("data-selected"));
         saved = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);

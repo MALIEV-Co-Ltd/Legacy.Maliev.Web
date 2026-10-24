@@ -332,7 +332,7 @@ internal static class AdmittedGltfMeshReader
             int[] orientation = new int[vertices.Length];
             if (node.TryGetProperty("skin", out var skinId))
             {
-                Skin(vertices, orientation, attributes, skins[Index(skinId, skins.Length)]);
+                Skin(vertices, orientation, attributes, skins[Index(skinId, skins.Length)], world);
             }
             else
             {
@@ -384,7 +384,7 @@ internal static class AdmittedGltfMeshReader
             }
         }
 
-        private void Skin(Vector3[] vertices, int[] orientation, JsonElement attributes, JsonElement skin)
+        private void Skin(Vector3[] vertices, int[] orientation, JsonElement attributes, JsonElement skin, Matrix4x4 world)
         {
             JsonElement[] jointIds = Array(skin, "joints", 256);
             if (jointIds.Length == 0) throw Invalid();
@@ -421,7 +421,6 @@ internal static class AdmittedGltfMeshReader
             for (int i = 0; i < vertices.Length; i++)
             {
                 token.ThrowIfCancellationRequested();
-                Matrix4x4 blended = default;
                 double total = 0;
                 foreach (var set in sets)
                 {
@@ -430,14 +429,27 @@ internal static class AdmittedGltfMeshReader
                         double weight = set.Weights.Values[i * 4 + j], joint = set.Joints.Values[i * 4 + j];
                         if (weight < 0 || joint < 0 || joint >= jointMatrices.Length || joint != Math.Truncate(joint)) throw Invalid();
                         total += weight;
-                        blended += jointMatrices[(int)joint] * Float(weight);
                     }
                 }
 
                 if (!double.IsFinite(total) || total <= 0 || Math.Abs(total - 1) > 0.02) throw Invalid();
-                blended *= Float(1 / total);
+                // The source viewer renders only set zero and normalizes floating weights only.
+                var first = sets[0];
+                double firstTotal = 0;
+                for (int j = 0; j < 4; j++) firstTotal += first.Weights.Values[i * 4 + j];
+                Matrix4x4 blended = default;
+                double renderedTotal = 0;
+                for (int j = 0; j < 4; j++)
+                {
+                    double weight = first.Weights.Values[i * 4 + j];
+                    if (!first.Weights.Normalized) weight = firstTotal > 0 ? weight * (1 / firstTotal) : j == 0 ? 1 : 0;
+                    float renderedWeight = Float(weight);
+                    renderedTotal += renderedWeight;
+                    blended += jointMatrices[(int)first.Joints.Values[i * 4 + j]] * renderedWeight;
+                }
                 orientation[i] = Sign(blended);
-                vertices[i] = Vector3.Transform(vertices[i], blended);
+                // The shader discards weighted homogeneous W before applying the mesh world matrix.
+                vertices[i] = Vector3.Transform(vertices[i], blended) + world.Translation * Float(1 - renderedTotal);
             }
         }
 

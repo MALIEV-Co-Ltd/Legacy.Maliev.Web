@@ -718,7 +718,11 @@ export async function loadStandaloneModel(file, { signal, gltfUnitPolicy } = {})
     if (extension === 'gltf') validateStandaloneGltfDocument(input);
     const loader = new GLTFLoader();
     if (extension === 'gltf') loader.register(embeddedGltfBufferViews);
-    const result = await loader.parseAsync(input, '');
+    let sourceSkinWeights;
+    loader.register(parser => (sourceSkinWeights = preserveSourceSkinWeights(parser)));
+    let result;
+    try { result = await loader.parseAsync(input, ''); }
+    finally { sourceSkinWeights?.dispose(); }
     object = orientGltfForPrinting(result.scene);
     // Scale the freshly loaded scene once, before preview, geometry and thickness consumers.
     object.scale.multiplyScalar(gltfUnitPolicy.unit === 1 ? 1000 : 1);
@@ -730,6 +734,45 @@ export async function loadStandaloneModel(file, { signal, gltfUnitPolicy } = {})
   ensurePreviewGeometryNormals(object);
   if (['stp', 'step', 'igs', 'iges'].includes(extension)) addCadPreviewEdges(object);
   return object;
+}
+
+// Three 0.129 left normalized integer skin weights intact; newer loaders normalize them again.
+function preserveSourceSkinWeights(parser) {
+  const snapshots = new Map();
+  return {
+    name: 'MALIEV_source_skin_weights',
+    async beforeRoot() {
+      for (const mesh of parser.json.meshes ?? []) {
+        if (!mesh.isSkinnedMesh) continue;
+        for (const primitive of mesh.primitives ?? []) {
+          const index = primitive.attributes?.WEIGHTS_0;
+          const definition = parser.json.accessors?.[index];
+          if (!definition?.normalized || ![5121, 5123].includes(definition.componentType) || snapshots.has(index)) continue;
+          const original = await parser.getDependency('accessor', index);
+          if (!original.normalized || original.itemSize !== 4) throw new TypeError('Invalid normalized glTF skin weights.');
+          const ArrayType = definition.componentType === 5121 ? Uint8Array : Uint16Array;
+          const retained = new THREE.BufferAttribute(new ArrayType(original.count * 4), 4, true);
+          for (let vertex = 0; vertex < original.count; vertex++)
+            retained.setXYZW(vertex, original.getX(vertex), original.getY(vertex), original.getZ(vertex), original.getW(vertex));
+          snapshots.set(index, { original, retained });
+        }
+      }
+    },
+    afterRoot(result) {
+      // Restore cached accessors too, including any ordinary geometry sharing their storage.
+      for (const { original, retained } of snapshots.values())
+        for (let vertex = 0; vertex < original.count; vertex++)
+          original.setXYZW(vertex, retained.getX(vertex), retained.getY(vertex), retained.getZ(vertex), retained.getW(vertex));
+      for (const scene of result.scenes) scene.traverse(mesh => {
+        if (!mesh.isSkinnedMesh) return;
+        const association = parser.associations.get(mesh);
+        const primitive = parser.json.meshes?.[association?.meshes]?.primitives?.[association?.primitives];
+        const snapshot = snapshots.get(primitive?.attributes?.WEIGHTS_0);
+        if (snapshot) mesh.geometry.setAttribute('skinWeight', snapshot.retained);
+      });
+    },
+    dispose() { snapshots.clear(); },
+  };
 }
 
 // Geometry is already in the selected file. Decode it locally instead of asking

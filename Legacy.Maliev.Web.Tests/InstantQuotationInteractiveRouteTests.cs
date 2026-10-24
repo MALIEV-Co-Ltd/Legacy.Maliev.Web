@@ -369,7 +369,22 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<Testin
         }
 
         Assert.Equal(state is InstantQuotationWorkflowState.Uploading, html.Contains("aria-busy=\"true\"", StringComparison.Ordinal));
-        Assert.Equal(state is InstantQuotationWorkflowState.Error, html.Contains("role=\"alert\"", StringComparison.Ordinal));
+        var alertHtml = html;
+        var fileErrorContainers = Regex.Matches(html,
+            "<div\\b(?=[^>]*\\bdata-workflow-file-error(?:\\s|=|>))[^>]*>(?<content>[\\s\\S]*?)</div>",
+            RegexOptions.None, TimeSpan.FromSeconds(1));
+        Assert.InRange(fileErrorContainers.Count, 0, 1);
+        if (fileErrorContainers.Count == 1)
+        {
+            var container = fileErrorContainers[0];
+            var opening = container.Value[..container.Value.IndexOf('>')];
+            if (Regex.IsMatch(opening, "\\shidden(?:\\s|=|$)", RegexOptions.None, TimeSpan.FromSeconds(1)))
+            {
+                Assert.True(string.IsNullOrWhiteSpace(container.Groups["content"].Value));
+                alertHtml = html.Remove(container.Index, container.Length);
+            }
+        }
+        Assert.Equal(state is InstantQuotationWorkflowState.Error, alertHtml.Contains("role=\"alert\"", StringComparison.Ordinal));
         Assert.Equal(
             state is InstantQuotationWorkflowState.Empty
                 or InstantQuotationWorkflowState.Uploading

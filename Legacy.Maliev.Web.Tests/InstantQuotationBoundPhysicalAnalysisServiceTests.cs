@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Security.Cryptography;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Application.Pricing;
+using Legacy.Maliev.Web.Application.Pricing.Simulation;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -631,6 +632,55 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
         Assert.False(result.IsReady);
         Assert.Null(result.Physical);
         Assert.Equal(InstantQuotationBoundPhysicalAnalysisFailure.ComplexityExceeded, result.Failure);
+    }
+
+    [Fact]
+    public async Task BooleanWorkRefusal_ReportsComplexityWithoutRecoveryEvidenceOrPrice()
+    {
+        var seed = Fixture();
+        var triangles = FdmSimulationGeometryTests.RoundedBody(grouped: true, height: 100).Triangles;
+        var obj = new System.Text.StringBuilder("o rounded-body\n");
+        foreach (var point in triangles.SelectMany(triangle => new[] { triangle.A, triangle.B, triangle.C }))
+            obj.AppendLine(FormattableString.Invariant($"v {point.X:R} {point.Y:R} {point.Z:R}"));
+        for (int index = 0; index < triangles.Count; index++)
+            obj.AppendLine(FormattableString.Invariant($"f {index * 3 + 1} {index * 3 + 2} {index * 3 + 3}"));
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(obj.ToString());
+        string digest = Convert.ToHexStringLower(SHA256.HashData(bytes));
+        var original = Assert.Single(seed.Store.State.Parts);
+        var part = original with
+        {
+            DisplayFileName = "rounded-body.obj",
+            Geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(
+                InstantQuotationUploadResult.Succeeded("operation", original.UploadReference, digest),
+                new InstantQuotationGeometryClaim(1, digest, 20, 20, 100, 31_214, 6900,
+                    Enumerable.Repeat(312d, 64).ToArray(), Enumerable.Repeat(63d, 64).ToArray(),
+                    128, 1, true, false, false, 1))!,
+            PhysicalAnalysisUpload = original.PhysicalAnalysisUpload! with
+            { FileName = "rounded-body.obj", ContentType = "model/obj", SizeBytes = bytes.Length, Sha256 = digest },
+        };
+        seed.Store.State = seed.Store.State with { RequestState = new InstantQuotationOrderState([part]) };
+        var profiles = FdmRuntimeProfileCatalog.LoadEmbedded();
+        Assert.True(profiles.TryResolveTrustedProfile("PLA", BuildPreference.Standard, out var profile));
+        var mesh = MeshNormalizer.Normalize(AdmittedObjMeshReader.Read(bytes), new(0.001, 0.02));
+        Assert.Empty(mesh.Diagnostics);
+        var request = new SimulationRequest(mesh, new("source", Matrix4x4.Identity), profile!, 1,
+            new AnalysisBudget(100_000, 2000, 1_000_000, default));
+        Assert.Equal("boolean_work_budget_exceeded", Assert.Throws<SimulationGeometryException>(() =>
+            FdmSimulationEngine.EstimateRecoverable(request)).ReasonCode);
+
+        var service = new InstantQuotationBoundPhysicalAnalysisService(
+            seed.Store, new InstantQuotationAdmittedMeshService(new BatchInputReader([part], bytes)), profiles);
+        var binding = new InstantQuotationPhysicalAnalysisBinding(SessionId, Owner, part.PartId,
+            FileId, digest, "PLA", BuildPreference.Standard, 1, profiles.ProfileVersion);
+        var result = await service.AnalyzeAsync(binding, default);
+
+        Assert.False(result.IsReady);
+        Assert.Null(result.Physical);
+        Assert.Null(result.Binding);
+        Assert.Equal(InstantQuotationBoundPhysicalAnalysisFailure.ComplexityExceeded, result.Failure);
+        Assert.Throws<InvalidOperationException>(() => new InstantQuotationPricingService().QuoteWithPhysical(
+            seed.Store.State.RequestState,
+            new Dictionary<(Guid, string), InstantQuotationBoundPhysicalAnalysisResult> { [(part.PartId, "PLA")] = result }));
     }
 
     // Independent open 10 mm box: the existing literal BinaryBox's two bottom triangles are absent.

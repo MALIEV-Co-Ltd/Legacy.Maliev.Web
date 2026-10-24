@@ -233,7 +233,7 @@
         </section>
     }
 
-    @if (incompletePreviewKey is not null)
+    @if (incompletePreviewKey is not null && !VisibleSections.Viewer)
     {
         <section data-workflow-incomplete-preview aria-label="@Localizer["3D preview"]">
             <h3>@Localizer["3D preview"]</h3>
@@ -645,7 +645,8 @@
                            @bind:get="QuantityInputValue(part)"
                            @bind:set="raw => OnQuantityInput(part.PartId, new ChangeEventArgs { Value = raw })"
                            @bind:event="oninput"
-                           @onchange="args => ChangeQuantityAsync(part.PartId, args)" />
+                           @onchange="args => ChangeQuantityAsync(part.PartId, args)"
+                           @onblur="() => OnQuantityBlurAsync(part.PartId)" />
                     <small id="quantity-hint-@part.PartId">@Localizer["Maximum {0} pieces", PricingCatalog.MaximumAdditiveQuantity.ToString("N0")]</small>
                     <fieldset data-workflow-build-preference disabled="@(PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)?.Process is PrintProcess.Resin)">
                         <legend>@Localizer["Build preference"]</legend>

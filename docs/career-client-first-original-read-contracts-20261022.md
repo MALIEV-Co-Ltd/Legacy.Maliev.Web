@@ -1,13 +1,14 @@
 # Client-first Career original read compatibility
 
-Status: dependent integration against PR761 candidate 63a1d4b8972ad24262dbcedd8ef9739c4aa6da5a; protected-main acceptance and exact-head validation pending.
+Status: normal dependent integration of PR723 candidate `44c41d0b41b8f81978a994898361e8cc13827877`, tree `2bda3f8f3f80950d914f75af4eeba7513c2aa3d2`. Combined validation and protected-main acceptance remain pending.
 Publish this Web consumer slice before the paired Career producer slice.
 No deployment or financial/provider execution is included.
 
 ## Bounded source and target contract
 
 Original initial `5fac706a7983a6d359b39acbd670e6800afe020e` (no parents) and
-retained final `770cb58032969ae4a0fe169686b53ab61a44fff8` have identical
+retained checkpoint `770cb58032969ae4a0fe169686b53ab61a44fff8` (parent
+`f96a6cbe23407ac25af3ebc4bc669296a09ac164`) have identical
 JobsController `dfcae032646d4951cb0eb6727c9f086407a6fdb3` and shared
 PaginatedListWebApi `9684bc3f0ba2cd399621b3891c00b1b05ba6b398`.
 The original anonymous Jobs page has six camelCase envelope fields:
@@ -29,6 +30,13 @@ automatic or lazy navigation load for that action. Offer initial/final models
 Virtual navigation alone does not enable loading. Bounded data/model inventory
 contains no partial model override. Initial/final project references declare
 no proxy package, and inspected setup has no proxy enablement or AutoInclude.
+Current read-only source head `d23065d499333ece5ef73013b085a8aaa062b163`,
+parent `449d87ea9d1d6ab40f1ec444353ab6aba80a5a76`, retains the same
+`Maliev.JobService.Api/Controllers/JobsController.cs` blob
+`dfcae032646d4951cb0eb6727c9f086407a6fdb3` and
+`Maliev.Entities/ViewModels/PaginatedListWebApi.cs` blob
+`9684bc3f0ba2cd399621b3891c00b1b05ba6b398`. No original files were changed.
+
 Original null-ignore MVC therefore omits detail.level.
 List explicitly includes Level and clears Level.Offers; those list fields stay.
 
@@ -62,7 +70,7 @@ payloads did; they are not converted to successful zero or a new503 response.
 Existing404 creates the same available empty page. HTTP failures/unowned timeout
 retain the existing unavailable result; caller cancellation still propagates.
 
-The PR761 candidate restores the original detail flow in both
+The retained PR723 integration restores the original detail flow in both
 CareerDetailPage.razor and Pages/Career/View.cshtml.cs: each starts the offer
 read and an independent levels read, then presents the matching LevelId from
 that independent list. It deliberately ignores a conflicting nested Level.
@@ -73,7 +81,7 @@ They require exactly one offer request and one levels request.
 The older PR738 proposal enriched GetOfferAsync with another levels request.
 That proposal predates the restored source flow and would now make three calls.
 This integration retains the raw detail reader and the independent presentation
-lookup byte-for-byte from PR761. Four raw-reader cases additionally preserve
+lookup byte-for-byte from PR723. Four raw-reader cases additionally preserve
 omitted, null, empty and supplied nested Level values without another request.
 The 19 old enrichment expectations are replaced because they described the
 superseded implementation, not the original two-request route contract.
@@ -86,11 +94,26 @@ the existing 213 cases; expected focus is 240, subject to actual discovery.
 The original four Offers materialization oracles and all 24 detail HTTP rows
 remain unchanged. No test or coverage threshold, timeout or skip is relaxed.
 
-PR761 must first reach protected main. Then this consumer requires exact-head
-Release with zero warnings/errors, focused and full tests, formatting,
-static/security, contract/browser and coverage gates, normal protected merge
-and exact-main checks. CareerService #58 stays behind accepted consumer main.
-Local Release builds completed with zero warnings/errors; all 27 client cases and the four original materialization oracles passed with zero skips. The combined 240-case route/client focus encountered System.OutOfMemoryException under the unchanged 1.5 GiB private-job cap and was stopped; it is not a passing result. Complete hosted focus, full-suite and protected-main evidence remain pending.
+PR738 may validate this combined candidate while PR723 is active. Its merge is
+held until PR723 reaches protected main with all required exact-main checks.
+Then PR738 requires fresh exact-head Release with zero warnings/errors, the
+complete 240-case consumer identity set and four original oracle identities,
+full tests, formatting, static/security, contract/browser and coverage gates,
+normal protected merge and exact-main checks. CareerService49 (pagination) and
+58 (detail) remain separate producer obligations behind accepted Web738 main.
+
+The fixed consumer roster combines actual retained213 and new27 execution
+identities; the separate oracle retains four actual identities. The new strict
+qualifier reuses the existing native TRX checks and also requires every exact
+parameterized name. Synthetic parser controls establish gate behavior only.
+
+The integrated local Release build passed with zero warnings/errors. Its
+240-case focus first returned an unexpected500 and then explicit
+`OutOfMemoryException` failures during MVC/Razor host creation under the
+unchanged1.5GiB private-job cap. The exact owned root was stopped and its private
+job cleanup verified. This is not passing focus evidence. The new exact240 and
+original4 gates, full suite and every existing policy remain required on hosted
+CI; no memory guard, timeout or assertion was relaxed.
 
 The staged totalItems alias is bounded to this reader. Its later removal needs
 confirmed retirement of old producer responses. No producer response alias,

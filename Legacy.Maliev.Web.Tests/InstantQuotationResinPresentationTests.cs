@@ -857,6 +857,204 @@ public sealed class InstantQuotationResinPresentationTests
     }
 
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("9")]
+    [InlineData("")]
+    public async Task Workflow_QuantityInputReturningToAcceptedValueKeepsReviewAvailableWithoutChangeEvent(string? draft)
+    {
+        var part = Part("PLA", BuildPreference.Standard);
+        var store = new SessionStore(part);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            bool CanReview() => (bool)typeof(InstantQuotationWorkflow)
+                .GetProperty("CanEnterReview", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
+            void Input(string raw) => typeof(InstantQuotationWorkflow)
+                .GetMethod("OnQuantityInput", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(component, [part.PartId, new ChangeEventArgs { Value = raw }]);
+            Assert.True(CanReview());
+            var quote = Assert.IsType<InstantQuotationOrderQuote>(coordinator.OrderQuote);
+            var writes = 0;
+            store.BeforePut = () => { writes++; return Task.CompletedTask; };
+            if (draft is not null)
+            {
+                Input(draft);
+                Assert.False(CanReview());
+            }
+
+            // A native input restored to its original value need not emit change on blur.
+            Input("1");
+            Assert.True(CanReview());
+            Assert.Same(quote, coordinator.OrderQuote);
+            Assert.Equal(1, Assert.Single(coordinator.Parts).Configuration.Quantity);
+            Assert.Equal(0, writes);
+        });
+    }
+
+
+    [Fact]
+    public async Task Workflow_MatchingQuantityInputDoesNotAcceptAnInFlightConfiguration()
+    {
+        var part = Part("PLA", BuildPreference.Standard);
+        var store = new SessionStore(part);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            bool CanReview() => (bool)typeof(InstantQuotationWorkflow)
+                .GetProperty("CanEnterReview", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
+            store.BeforePut = async () =>
+            {
+                store.BeforePut = null;
+                entered.TrySetResult();
+                await release.Task.WaitAsync(lease.Token);
+            };
+            var changing = (Task)typeof(InstantQuotationWorkflow)
+                .GetMethod("ChangeQuantityAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(component, [part.PartId, new ChangeEventArgs { Value = "2" }])!;
+            Exception? primary = null;
+            try
+            {
+                await entered.Task.WaitAsync(lease.Token);
+                Assert.False(changing.IsCompleted);
+                typeof(InstantQuotationWorkflow)
+                    .GetMethod("OnQuantityInput", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .Invoke(component, [part.PartId, new ChangeEventArgs { Value = "2" }]);
+                Assert.False(CanReview());
+                release.TrySetResult();
+                await changing.WaitAsync(lease.Token);
+                Assert.False(CanReview());
+            }
+            catch (Exception error) { primary = error; throw; }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        changing, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "unchanged-quantity-in-flight"));
+            }
+        });
+    }
+
+
+    [Theory]
+    [InlineData("material-in-flight")]
+    [InlineData("change-before-blur")]
+    [InlineData("newer-draft")]
+    [InlineData("idle-accepted")]
+    public async Task Workflow_QuantityBlurAcknowledgesOnlyTheLatestUnclaimedDraft(string scenario)
+    {
+        var part = Part("PLA", BuildPreference.Standard);
+        var store = new SessionStore(part);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            bool CanReview() => (bool)typeof(InstantQuotationWorkflow)
+                .GetProperty("CanEnterReview", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
+            object? Invoke(string method, params object?[] args) => typeof(InstantQuotationWorkflow)
+                .GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(component, args);
+            void Input(string raw) => Invoke("OnQuantityInput", part.PartId, new ChangeEventArgs { Value = raw });
+            Task Change(string raw) => (Task)Invoke("ChangeQuantityAsync", part.PartId, new ChangeEventArgs { Value = raw })!;
+            // The current component has no blur handler. Model that event as a no-op so RED
+            // reports the unacknowledged draft, rather than a missing reflection target.
+            Task Blur() => (Task?)typeof(InstantQuotationWorkflow)
+                .GetMethod("OnQuantityBlurAsync", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?.Invoke(component, [part.PartId]) ?? Task.CompletedTask;
+            Assert.True(CanReview());
+            var originalQuote = coordinator.OrderQuote;
+            var writes = 0;
+            store.BeforePut = async () =>
+            {
+                if (Interlocked.Increment(ref writes) == 1 && scenario != "idle-accepted")
+                {
+                    entered.TrySetResult();
+                    await release.Task.WaitAsync(lease.Token);
+                }
+            };
+            Task changing = Task.CompletedTask;
+            Task blurring = Task.CompletedTask;
+            Exception? primary = null;
+            try
+            {
+                if (scenario == "idle-accepted")
+                {
+                    Input("1");
+                    await Blur();
+                    Assert.True(CanReview());
+                    Assert.Same(originalQuote, coordinator.OrderQuote);
+                    Assert.Equal(0, writes);
+                    return;
+                }
+
+                if (scenario == "material-in-flight")
+                    changing = (Task)Invoke("ChangeMaterialAsync", part.PartId, new ChangeEventArgs { Value = "PETG" })!;
+                else
+                {
+                    Input(scenario == "newer-draft" ? "2" : "9");
+                    changing = Change(scenario == "newer-draft" ? "2" : "9");
+                }
+                await entered.Task.WaitAsync(lease.Token);
+                Assert.False(changing.IsCompleted);
+                if (scenario == "material-in-flight") Input("1");
+                if (scenario == "newer-draft") Input("9");
+                Assert.False(CanReview());
+                blurring = Blur();
+                release.TrySetResult();
+                await Task.WhenAll(changing, blurring).WaitAsync(lease.Token);
+                var accepted = Assert.Single(coordinator.Parts);
+                Assert.Equal(scenario == "material-in-flight" ? "PETG" : "PLA", accepted.Configuration.MaterialKey);
+                Assert.Equal(scenario == "material-in-flight" ? 1 : 9, accepted.Configuration.Quantity);
+                Assert.Equal(accepted.Configuration.Quantity, Assert.Single(coordinator.OrderQuote!.Parts).Quantity);
+                Assert.True(CanReview());
+                if (scenario == "change-before-blur") Assert.Equal(1, writes);
+                var settledWrites = writes;
+                await Blur();
+                Assert.Equal(settledWrites, writes);
+            }
+            catch (Exception error) { primary = error; throw; }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        Task.WhenAll(changing, blurring), () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "quantity-blur-ownership"));
+            }
+        });
+    }
+
+
     [Fact]
     public async Task InvalidSamePartUiEdit_DoesNotRetireAValidReachedRepricingActivity()
     {

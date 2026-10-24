@@ -314,7 +314,8 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                     workflow.querySelector('[data-workflow-parts]').getBoundingClientRect().top,
                     workflow.querySelector('[data-workflow-parts]').getBoundingClientRect().bottom,
                     workflow.querySelector('[data-workflow-parts]').clientHeight,
-                    workflow.querySelector('[data-workflow-parts]').scrollHeight];
+                    workflow.querySelector('[data-workflow-parts]').scrollHeight,
+                    viewer.bottom, parts.right, configuration.left];
             }
             """);
         var evidenceName = $"source-material-safe-hit-area-before-{culture}-1280-720";
@@ -329,9 +330,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
             "The configuration rail and its complete summary footer must remain within the short desktop viewport.");
         Assert.True(hitArea[4] - hitArea[3] >= hitArea[2] - hitArea[1],
             "The configuration content must retain enough height to show the complete material card.");
-        Assert.True(hitArea[9] >= hitArea[7] - 1 && hitArea[17] <= hitArea[13] + 1
-            && hitArea[18] >= hitArea[9] - 1 && hitArea[19] <= hitArea[17] + 1 && hitArea[20] >= 44,
-            "The parts list must fit its own bounded pane above configuration without losing its action viewport.");
+        AssertDesktopPartsDockContained(hitArea);
         await Assertions.Expect(card.Locator("[data-material-card-price]")).ToHaveAttributeAsync("data-price-status", "unavailable");
         // This historical fixture has resin authority; retain ABS geometry coverage before selecting supported resin.
         card = fixture.Page.Locator("[data-material-selector] [role='radio'][data-material-key='K']");
@@ -343,6 +342,37 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         await Assertions.Expect(fixture.Page.Locator("[data-summary-legal]")).ToBeVisibleAsync();
         await fixture.CaptureAsync($"source-material-safe-hit-area-{culture}-1280-720");
     }
+
+    [Fact]
+    public void DesktopPartsDockGeometryRejectsOverlapClippingAndLostActionViewport()
+    {
+        // Observed 1280x720 layout: parts below the left viewer, configuration spanning the right column.
+        double[] geometry = [1, 207.984375, 304.734375, 207.5625, 494.6875, 510.6875,
+            73, 195.5625, 195.5625, 442, 720, 720, 73, 195.5625, 720, 135, 805,
+            720, 503, 719, 216, 381, 442, 563, 576];
+        AssertDesktopPartsDockContained(geometry);
+        foreach (var (index, invalid) in new (int, double)[]
+        {
+            (9, 193), // Above the import row.
+            (9, 440), // Overlapping the viewer.
+            (23, 578), // Overlapping the configuration column.
+            (17, 722), // Below the configuration/footer viewport.
+            (18, 440), // List clipped above its panel.
+            (19, 722), // List clipped below its panel.
+            (20, 43), // Lost minimum action viewport.
+        })
+        {
+            var broken = (double[])geometry.Clone();
+            broken[index] = invalid;
+            Assert.ThrowsAny<Xunit.Sdk.XunitException>(() => AssertDesktopPartsDockContained(broken));
+        }
+    }
+
+    private static void AssertDesktopPartsDockContained(double[] geometry) =>
+        Assert.True(geometry[9] >= geometry[7] - 1 && geometry[9] >= geometry[22] - 1
+            && geometry[23] <= geometry[24] + 1 && geometry[17] <= geometry[14] + 1
+            && geometry[18] >= geometry[9] - 1 && geometry[19] <= geometry[17] + 1 && geometry[20] >= 44,
+            "The parts dock must fit below its viewer and beside configuration, keeping the complete list inside its own pane and its action viewport.");
 
     [Theory]
     [InlineData("en", ColorScheme.Light)]
@@ -700,6 +730,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
 
     private sealed class Control
     {
+        public MaterialCompletionObservation Observation { get; } = new();
         public MaterialInitialRequestStages InitialStages { get; } = new();
         public ConcurrentQueue<Gate> Gates { get; } = new();
         public ConcurrentQueue<int> AcceptedQuantities { get; } = new();
@@ -816,6 +847,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                     new MaterialInitialRequestStages.Store(new AuthorizationStore((IInstantQuotationSessionStore)(store.ImplementationInstance
                         ?? store.ImplementationFactory?.Invoke(provider)
                         ?? ActivatorUtilities.CreateInstance(provider, store.ImplementationType!)), control), control.InitialStages), store.Lifetime));
+                control.Observation.Decorate(services);
             });
         }
     }
@@ -918,6 +950,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                     parts.Add(new InstantQuotationPart(Guid.NewGuid(), fileName, reference, geometry, new("M68", "White", 1)));
                 }
                 Assert.True(await store.PutAsync(stored with { RequestState = new(parts) }, null, default));
+                fixture.Control.Observation.BeginEdit();
                 using (var responseProbe = fixture.Factory.Services.GetRequiredService<TestResponseProbeRegistry>()
                     .TryBeginNavigation(origin, TestResponseRequestLabel.BaseQuotation))
                 using (var reloadNavigation = new MaterialInitialNavigationDiagnostics(
@@ -942,7 +975,13 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                     """);
                 return fixture;
             }
-            catch (Exception primary) { await fixture.DisposeAsync(primary); throw; }
+            catch (Exception primary)
+            {
+                try { output.WriteLine("[material-initialization-services] " + fixture.Control.Observation.Describe()); }
+                catch { /* Secondary observation must not mask the original fixture failure. */ }
+                await fixture.DisposeAsync(primary);
+                throw;
+            }
         }
         public async Task ChangeQuantityAsync(int quantity)
         {

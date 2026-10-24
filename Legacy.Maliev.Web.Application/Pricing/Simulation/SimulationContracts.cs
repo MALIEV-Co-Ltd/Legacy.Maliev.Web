@@ -94,7 +94,11 @@ public sealed record AnalysisBudget(
     int MaximumTriangles,
     int MaximumLayers,
     int MaximumPathSegments,
-    CancellationToken CancellationToken);
+    CancellationToken CancellationToken)
+{
+    /// <summary>Cumulative positive-fill potential edge pairs plus input edges and paths; not measured CPU work.</summary>
+    public int MaximumBooleanWork { get; init; } = 1_000_000;
+}
 
 /// <summary>One closed polygon contour with outer/hole orientation retained.</summary>
 /// <param name="Points">Ordered XY points in millimetres.</param>

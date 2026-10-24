@@ -1,10 +1,14 @@
 using System.Globalization;
+using System.Net;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Infrastructure;
-using Microsoft.AspNetCore.Mvc.Testing;
+using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Playwright;
@@ -23,11 +27,25 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
         var quotes = new Quotes(connection);
         var tempData = new TempData();
         var uploads = new Source292ProfileUploads();
+        var circuitOwner = new Source292CircuitOwnerProof();
+        var identityObservations = new System.Collections.Concurrent.ConcurrentQueue<Source292IdentityObservation>();
         Exception? fixtureFailure = null;
         try
         {
+            using var tlsKey = RSA.Create(2048);
+            var certificateRequest = new CertificateRequest("CN=localhost", tlsKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            var names = new SubjectAlternativeNameBuilder();
+            names.AddIpAddress(IPAddress.Loopback);
+            names.AddDnsName("localhost");
+            certificateRequest.CertificateExtensions.Add(names.Build());
+            using var certificate = certificateRequest.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1));
             await using var web = new ProfileWebFactory(wire, ownerToken, quotes, tempData, redis, services =>
             {
+                services.AddSingleton(circuitOwner);
+                services.RemoveAll<IInstantQuotationWorkflowSessionIdentityAccessor>();
+                services.AddScoped<IInstantQuotationWorkflowSessionIdentityAccessor>(provider =>
+                    new Source292IdentityObserver(new AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor(
+                        provider.GetRequiredService<AuthenticationStateProvider>()), identityObservations));
                 services.RemoveAll<IInstantQuotationSessionStore>();
                 services.AddSingleton<IInstantQuotationSessionStore, DistributedInstantQuotationSessionStore>();
                 services.RemoveAll<IInstantQuotationUploadClient>();
@@ -45,34 +63,69 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                     authoritativePricingService: provider.GetRequiredService<IInstantQuotationAuthoritativePricingService>(),
                     profileCompletionClient: provider.GetRequiredService<IInstantQuotationProfileCompletionClient>()));
             });
-            var origin = new Uri($"http://127.0.0.1:{FreePort()}");
-            web.UseKestrel(origin.Port);
-            using var readiness = web.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
+            var origin = new Uri($"https://127.0.0.1:{FreePort()}");
+            web.UseKestrel(options => options.Listen(IPAddress.Loopback, origin.Port, endpoint => endpoint.UseHttps(certificate)));
+            web.StartServer();
+            using var transport = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (request, peer, _, _) => request.RequestUri?.Authority == origin.Authority
+                    && peer is not null && CryptographicOperations.FixedTimeEquals(
+                        peer.GetCertHash(HashAlgorithmName.SHA256), certificate.GetCertHash(HashAlgorithmName.SHA256)),
+            };
+            using var readiness = new HttpClient(transport) { BaseAddress = origin, Timeout = TimeSpan.FromSeconds(15) };
             using var response = await readiness.GetAsync("/InstantQuotation/3D-Printing?culture=en");
             Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
             var bytes = Convert.FromBase64String(AdmittedGltfMeshReaderTests.OriginalGlb);
             const string sha = "2d31d5a61f110106cf30c0c17d713602b8ab5c9d90c6c802e980e4c1c0bee8dc";
             Assert.Equal(960, bytes.Length);
             Assert.Equal(sha, Convert.ToHexStringLower(SHA256.HashData(bytes)));
+            var unitPolicy = new InstantQuotationGltfUnitPolicy(1, InstantQuotationGltfLengthUnit.Millimetres);
             foreach (var quantity in new[] { 1, 9, 10, 49, 50, 99, 100, 101 })
             {
+                identityObservations.Clear();
+                uploads.ResetOwnerObservation();
                 tempData.Values.Clear();
                 Assert.Empty(tempData.Values);
                 await using var context = await browser.NewContextAsync(new()
                 {
                     ViewportSize = new() { Width = 1440, Height = 900 },
+                    IgnoreHTTPSErrors = true,
                     ExtraHTTPHeaders = new Dictionary<string, string> { ["X-Profile-Test-Owner"] = "1" },
                 });
+                await context.AddCookiesAsync([new Microsoft.Playwright.Cookie
+                {
+                    Name = Source292CircuitOwnerProof.CookieName,
+                    Value = circuitOwner.Value,
+                    Url = origin.ToString(),
+                    Secure = true,
+                    HttpOnly = true,
+                    SameSite = SameSiteAttribute.Lax,
+                }]);
+                var ownerCookies = (await context.CookiesAsync())
+                    .Where(cookie => cookie.Name == Source292CircuitOwnerProof.CookieName)
+                    .Select(cookie => new { Matches = circuitOwner.Matches(cookie.Value), cookie.Secure, cookie.HttpOnly }).ToArray();
+                var ownerCookie = Assert.Single(ownerCookies);
+                Assert.True(ownerCookie.Matches);
+                Assert.True(ownerCookie.Secure && ownerCookie.HttpOnly);
                 await context.RouteAsync("**/*", route => route.Request.Url.StartsWith(origin.ToString(), StringComparison.Ordinal)
                     ? route.ContinueAsync() : route.AbortAsync());
                 await using var page = await context.NewPageAsync();
                 Exception? primary = null;
                 Task<JsonElement>? post = null;
                 var receiptTableUnavailable = false;
+                var quantityStage = "before-navigation";
+                var quantitySnapshots = new List<JsonElement>();
+                JsonElement? protectedCookies = null;
                 try
                 {
                     var timer = System.Diagnostics.Stopwatch.StartNew();
                     await page.GotoAsync($"{origin}InstantQuotation/3D-Printing?culture=en", new() { WaitUntil = WaitUntilState.NetworkIdle });
+                    var sessionCookies = (await context.CookiesAsync())
+                        .Where(cookie => cookie.Name == InstantQuotationSessionIdentityCookie.CookieName)
+                        .Select(cookie => new { cookie.Secure, cookie.HttpOnly }).ToArray();
+                    protectedCookies = JsonSerializer.SerializeToElement(sessionCookies);
+                    var sessionCookie = Assert.Single(sessionCookies);
+                    Assert.True(sessionCookie.Secure && sessionCookie.HttpOnly);
                     var reject = page.Locator("#cookieConsent [data-consent-action='reject']");
                     if (await reject.IsVisibleAsync()) await reject.ClickAsync();
                     var remaining = 30000 - timer.ElapsedMilliseconds;
@@ -80,6 +133,27 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                     await using (var binding = await page.WaitForFunctionAsync(
                         "() => { const input = document.querySelector('#instant-quote-files'); return !!input && !input.disabled && typeof input._blazorInputFileNextFileId === 'number'; }",
                         options: new() { Timeout = remaining })) { }
+                    var units = page.Locator("[data-workflow-gltf-unit]");
+                    await Assertions.Expect(units).ToHaveValueAsync("");
+                    if (quantity == 1)
+                    {
+                        await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+                        {
+                            Name = "source-292-authenticated.glb",
+                            MimeType = "model/gltf-binary",
+                            Buffer = bytes,
+                        });
+                        var refused = page.Locator("article[data-workflow-failed-preview]");
+                        await Assertions.Expect(refused).ToHaveCountAsync(1);
+                        await Assertions.Expect(page.Locator("[data-workflow-file-error]")).ToContainTextAsync(
+                            "Choose units before importing GLB/GLTF");
+                        await Assertions.Expect(page.Locator("[data-workflow-part]")).ToHaveCountAsync(0);
+                        Assert.Equal(0, uploads.StartedUploads);
+                        Assert.Empty(uploads.SessionId);
+                        await refused.Locator("[data-workflow-remove-failed]").ClickAsync();
+                        await Assertions.Expect(refused).ToHaveCountAsync(0);
+                    }
+                    await units.SelectOptionAsync("millimetres");
                     await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
                     {
                         Name = "source-292-authenticated.glb",
@@ -91,10 +165,37 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                     await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 90000 });
                     await MaterialCardBrowserActions.SelectAsync(page, "PLA");
                     await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 30000 });
+                    quantityStage = "protected-identity-established";
+                    var identity = identityObservations.ToArray();
+                    Assert.InRange(identity.Length, 2, 31);
+                    Assert.All(identity, observation => Assert.Null(observation.Failure));
+                    Assert.Contains(identity, observation => observation.Operation == "get" && observation.Found is true);
+                    Assert.Contains(identity, observation => observation.Operation == "set" && observation.Matches is true);
+                    await Assertions.Expect(page.Locator("[data-workflow-state]")).Not.ToHaveAttributeAsync(
+                        "data-workflow-state", "error");
                     var input = page.Locator("input[name='quantity']");
+                    await input.EvaluateAsync("""
+                        input => {
+                            input.__source292QuantityEvents = [];
+                            for (const type of ['input', 'change', 'blur']) {
+                                input.addEventListener(type, event => {
+                                    const events = input.__source292QuantityEvents;
+                                    if (events.length < 32) events.push({ type, trusted: event.isTrusted,
+                                        value: input.value.slice(0, 16), connected: input.isConnected });
+                                });
+                            }
+                        }
+                        """);
+                    quantityStage = "before-fill";
+                    quantitySnapshots.Add(await Source292QuantitySnapshotAsync(page));
                     await input.FillAsync(quantity.ToString(CultureInfo.InvariantCulture));
+                    quantityStage = "after-fill";
+                    quantitySnapshots.Add(await Source292QuantitySnapshotAsync(page));
                     await input.PressAsync("Tab");
+                    quantityStage = "after-tab";
+                    quantitySnapshots.Add(await Source292QuantitySnapshotAsync(page));
                     await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 30000 });
+                    quantityStage = "quantity-accepted";
 
                     using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
                     var store = web.Services.GetRequiredService<IInstantQuotationSessionStore>();
@@ -114,12 +215,17 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                     Assert.Equal("PLA", part.Configuration.MaterialKey);
                     Assert.Equal(quantity, part.Configuration.Quantity);
                     Assert.Equal(sha, part.Geometry.Sha256);
+                    Assert.Equal(10, part.Geometry.DimensionXmm, 3);
+                    Assert.Equal(10, part.Geometry.DimensionYmm, 3);
+                    Assert.Equal(10, part.Geometry.DimensionZmm, 3);
+                    Assert.Equal(unitPolicy, part.PhysicalAnalysisUpload!.GltfUnitPolicy);
                     var physical = Assert.Single(session.PhysicalReceipts!, item =>
                         item.PartId == part.PartId && item.MaterialKey == "PLA" && item.Quantity == quantity);
                     Assert.Equal(session.SessionId, physical.SessionId);
                     Assert.Equal(session.OwnerIdentity, physical.OwnerIdentity);
                     Assert.Equal(part.PhysicalAnalysisUpload!.FileId, physical.FileId);
                     Assert.Equal(sha, physical.UploadSha256);
+                    Assert.Equal(unitPolicy, physical.GltfUnitPolicy);
                     Assert.True(physical.DepositedMm3 > 0 && physical.MotionSeconds > 0);
                     await using var scope = web.Services.CreateAsyncScope();
                     var authority = scope.ServiceProvider.GetRequiredService<IInstantQuotationAuthoritativePricingService>();
@@ -203,7 +309,33 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                     Assert.NotNull(checkpoint.FrozenCustomer?.ProfileCompletion);
                     Assert.Equal(wire.Posts[^1].Key, checkpoint.FrozenCustomer!.ProfileCompletion!.Key.ToString("D"));
                 }
-                catch (Exception error) { primary = error; throw; }
+                catch (Exception error)
+                {
+                    primary = error;
+                    error.Data["Source292RequestedQuantity"] = quantity;
+                    error.Data["Source292QuantityStage"] = quantityStage;
+                    try
+                    {
+                        var capture = Source292QuantitySnapshotAsync(page);
+                        _ = capture.ContinueWith(static done => { _ = done.Exception; }, CancellationToken.None,
+                            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                        quantitySnapshots.Add(await capture.WaitAsync(TimeSpan.FromSeconds(1)));
+                        Console.Error.WriteLine("Source292QuantityDiagnostic: " + JsonSerializer.Serialize(new
+                        {
+                            RequestedQuantity = quantity,
+                            Stage = quantityStage,
+                            Snapshots = quantitySnapshots,
+                            Identity = identityObservations.ToArray(),
+                            ProtectedCookies = protectedCookies,
+                            UploadOwner = uploads.OwnerState,
+                        }));
+                    }
+                    catch (Exception)
+                    {
+                        Console.Error.WriteLine($"Source292QuantityDiagnostic: requested={quantity}; stage={quantityStage}; capture=unavailable");
+                    }
+                    throw;
+                }
                 finally
                 {
                     await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
@@ -251,6 +383,86 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
         }
     }
 
+    private static async Task<JsonElement> Source292QuantitySnapshotAsync(IPage page)
+    {
+        var capture = page.EvaluateAsync<JsonElement>("""
+        () => {
+            const input = document.querySelector("input[name='quantity']");
+            const review = document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button');
+            const summary = document.querySelector('[data-workflow-order-summary]');
+            const workflow = document.querySelector('[data-workflow-state]');
+            return { inputCount: document.querySelectorAll("input[name='quantity']").length,
+                value: input?.value.slice(0, 16), defaultValue: input?.defaultValue.slice(0, 16),
+                valueAsNumber: input && Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : null,
+                inputConnected: input?.isConnected, inputFocused: input === document.activeElement,
+                reviewDisabled: review?.disabled, summaryBusy: summary?.getAttribute('aria-busy'),
+                workflowState: workflow?.getAttribute('data-workflow-state'), workflowBusy: workflow?.getAttribute('aria-busy'),
+                pendingParseCount: document.querySelectorAll('[data-workflow-pending-parse]').length,
+                failedPreviewCount: document.querySelectorAll('[data-workflow-failed-preview]').length,
+                uploadErrorCount: document.querySelectorAll('[data-upload-error="true"]').length,
+                partCount: document.querySelectorAll('[data-workflow-part]').length,
+                events: input?.__source292QuantityEvents ?? [] };
+        }
+        """);
+        _ = capture.ContinueWith(static done => { _ = done.Exception; }, CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        try { return await capture.WaitAsync(TimeSpan.FromSeconds(1)); }
+        catch (Exception) { return JsonSerializer.SerializeToElement(new { Capture = "unavailable" }); }
+    }
+
+    private sealed class Source292CircuitOwnerProof
+    {
+        public const string CookieName = "Source292FixtureOwner";
+        public string Value { get; } = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32));
+        public bool Matches(string? value) => string.Equals(Value, value, StringComparison.Ordinal);
+    }
+
+    private sealed record Source292IdentityObservation(string Operation, bool? Found, bool? Matches, string? Failure);
+
+    private sealed class Source292IdentityObserver(
+        IInstantQuotationWorkflowSessionIdentityAccessor inner,
+        System.Collections.Concurrent.ConcurrentQueue<Source292IdentityObservation> observations)
+        : IInstantQuotationWorkflowSessionIdentityAccessor
+    {
+        private string? established;
+
+        public async ValueTask<string?> GetProtectedSessionIdentityAsync(CancellationToken cancellationToken)
+        {
+            try
+            {
+                established = await inner.GetProtectedSessionIdentityAsync(cancellationToken);
+                Record(new("get", established is not null, null, null));
+                return established;
+            }
+            catch (Exception error)
+            {
+                Record(new("get", null, null, error.GetType().Name));
+                throw;
+            }
+        }
+
+        public async ValueTask SetProtectedSessionIdentityAsync(string identity, CancellationToken cancellationToken)
+        {
+            var matches = string.Equals(established, identity, StringComparison.Ordinal);
+            try
+            {
+                await inner.SetProtectedSessionIdentityAsync(identity, cancellationToken);
+                Record(new("set", null, matches, null));
+            }
+            catch (Exception error)
+            {
+                Record(new("set", null, matches, error.GetType().Name));
+                throw;
+            }
+        }
+
+        private void Record(Source292IdentityObservation observation)
+        {
+            // Only categorical results; never retain a session identity or exception payload.
+            if (observations.Count < 32) observations.Enqueue(observation);
+        }
+    }
+
     private sealed class Source292ProfileUploads : IInstantQuotationUploadClient, IAsyncDisposable
     {
         private readonly CancellationTokenSource lifetime = new();
@@ -258,23 +470,39 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
         private readonly List<Task> pending = [];
         private readonly Dictionary<Guid, Source292Upload> uploads = [];
         private bool closed;
+        private int startedUploads;
+        private int ownerMatched;
+        public int StartedUploads => Volatile.Read(ref startedUploads);
+        public string OwnerState => Volatile.Read(ref ownerMatched) switch
+        {
+            1 => "matched",
+            -1 => "unmatched",
+            _ => "not-uploaded",
+        };
+        public void ResetOwnerObservation() => Volatile.Write(ref ownerMatched, 0);
         public string SessionId { get; private set; } = "";
         public int FinalizationCalls { get; private set; }
         public Task<InstantQuotationUploadResult> UploadAsync(string sessionId, string? ownerIdentity, Stream content,
             string fileName, string contentType, long contentLength, InstantQuotationGeometryClaim claim,
-            string operationId, CancellationToken cancellationToken) => Own(async token =>
+            string operationId, CancellationToken cancellationToken)
         {
-            using var copy = new MemoryStream();
-            await content.CopyToAsync(copy, token);
-            var bytes = copy.ToArray();
-            var sha = Convert.ToHexStringLower(SHA256.HashData(bytes));
-            Assert.Equal(contentLength, bytes.LongLength);
-            Assert.Equal(claim.Sha256, sha);
-            var id = Guid.NewGuid();
-            lock (gate) { SessionId = sessionId; uploads.Add(id, new(sessionId, ownerIdentity, fileName, bytes, sha)); }
-            return InstantQuotationUploadResult.Succeeded(operationId, new(id.ToString("D")), sha,
-                new(id, fileName, contentType, bytes.LongLength, sha, "clean"));
-        }, cancellationToken);
+            Interlocked.Exchange(ref ownerMatched, ownerIdentity == "customer:1" ? 1 : -1);
+            Interlocked.Increment(ref startedUploads);
+            return Own(async token =>
+            {
+                using var copy = new MemoryStream();
+                await content.CopyToAsync(copy, token);
+                var bytes = copy.ToArray();
+                var sha = Convert.ToHexStringLower(SHA256.HashData(bytes));
+                Assert.Equal(contentLength, bytes.LongLength);
+                Assert.Equal(claim.Sha256, sha);
+                Assert.Equal(new InstantQuotationGltfUnitPolicy(1, InstantQuotationGltfLengthUnit.Millimetres), claim.GltfUnitPolicy);
+                var id = Guid.NewGuid();
+                lock (gate) { SessionId = sessionId; uploads.Add(id, new(sessionId, ownerIdentity, fileName, bytes, sha, claim.GltfUnitPolicy)); }
+                return InstantQuotationUploadResult.Succeeded(operationId, new(id.ToString("D")), sha,
+                    new(id, fileName, contentType, bytes.LongLength, sha, "clean") { GltfUnitPolicy = claim.GltfUnitPolicy });
+            }, cancellationToken);
+        }
         public Task<T> Own<T>(Func<CancellationToken, Task<T>> action, CancellationToken cancellationToken)
         {
             lock (gate)
@@ -300,6 +528,7 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
         {
             lock (gate) return uploads.TryGetValue(file, out var upload) && upload.Session == session && upload.Owner == owner
                 ? new(upload.Bytes, InstantQuotationPhysicalAnalysisInputFailure.None, file, upload.Name, upload.Sha)
+                { GltfUnitPolicy = upload.GltfUnitPolicy }
                 : InstantQuotationPhysicalAnalysisInputResult.Unavailable(InstantQuotationPhysicalAnalysisInputFailure.UploadMismatch);
         }
         public Task<InstantQuotationFinalizationResult> FinalizeAsync(string sessionId, string? ownerIdentity, int requestId,
@@ -335,7 +564,8 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
             }
         }
     }
-    private sealed record Source292Upload(string Session, string? Owner, string Name, byte[] Bytes, string Sha);
+    private sealed record Source292Upload(string Session, string? Owner, string Name, byte[] Bytes, string Sha,
+        InstantQuotationGltfUnitPolicy GltfUnitPolicy);
     private sealed class Source292ProfileInput(Source292ProfileUploads upload, IInstantQuotationSessionStore store)
         : IInstantQuotationPhysicalAnalysisInputReader
     {

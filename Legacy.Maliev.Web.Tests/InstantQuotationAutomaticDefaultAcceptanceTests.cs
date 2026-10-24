@@ -196,6 +196,7 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
     }
 
     private const string Owner = "automatic-default-controlled-owner";
+    private static readonly InstantQuotationGltfUnitPolicy UnitPolicy = new(1, InstantQuotationGltfLengthUnit.Millimetres);
 
     private sealed class Control : IDisposable
     {
@@ -352,13 +353,15 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
 
     private sealed class Uploads(Control control) : IInstantQuotationUploadClient, IInstantQuotationPhysicalAnalysisInputReader
     {
-        private sealed record Stored(string Session, string? Owner, Guid File, string Name, byte[] Bytes, string Sha);
+        private sealed record Stored(string Session, string? Owner, Guid File, string Name, byte[] Bytes, string Sha,
+            InstantQuotationGltfUnitPolicy GltfUnitPolicy);
         private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, Stored> files = new();
         internal EvidenceStore? Store { get; set; }
         public async Task<InstantQuotationUploadResult> UploadAsync(string session, string? owner, Stream content,
             string fileName, string contentType, long length, InstantQuotationGeometryClaim claim,
             string operation, CancellationToken token)
         {
+            Assert.Equal(UnitPolicy, claim.GltfUnitPolicy);
             if (control.Mode == "failed-upload")
                 return InstantQuotationUploadResult.Failed(operation, InstantQuotationServiceStatus.Available,
                     InstantQuotationAuthorizationStatus.Authorized, InstantQuotationProblemCategory.Validation);
@@ -369,9 +372,9 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
             Assert.Equal(length, bytes.LongLength);
             Assert.Equal(claim.Sha256, sha);
             var id = Guid.NewGuid();
-            files[id] = new(session, owner, id, fileName, bytes, sha);
+            files[id] = new(session, owner, id, fileName, bytes, sha, claim.GltfUnitPolicy);
             return InstantQuotationUploadResult.Succeeded(operation, new(id.ToString("D")), sha,
-                new(id, fileName, contentType, bytes.Length, sha, "clean"));
+                new(id, fileName, contentType, bytes.Length, sha, "clean") { GltfUnitPolicy = claim.GltfUnitPolicy });
         }
         public async Task<InstantQuotationPhysicalAnalysisInputResult> ReadAsync(string session, string? owner,
             Guid partId, CancellationToken token)
@@ -382,6 +385,7 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
             return id is { } file && files.TryGetValue(file, out var value)
                 && value.Session == session && value.Owner == owner
                 ? new(value.Bytes, InstantQuotationPhysicalAnalysisInputFailure.None, value.File, value.Name, value.Sha)
+                { GltfUnitPolicy = value.GltfUnitPolicy }
                 : InstantQuotationPhysicalAnalysisInputResult.Unavailable(InstantQuotationPhysicalAnalysisInputFailure.UploadUnavailable);
         }
         public Task<InstantQuotationRemoveResult> RemoveAsync(string session, string? owner,
@@ -484,7 +488,7 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
         {
             var claim = new InstantQuotationGeometryClaim(1, Sha, 10, 10, 10, 1000, 600,
                 Enumerable.Repeat(100d, 64).ToArray(), Enumerable.Repeat(40d, 64).ToArray(),
-                12, 1, true, false, false, 10);
+                12, 1, true, false, false, 10) { GltfUnitPolicy = UnitPolicy };
             var task = Workflow.UploadAsync(names.Select(name => new InstantQuotationWorkflowUploadFile(
                 name, "model/gltf-binary", Bytes.Length, claim,
                 current => { current.ThrowIfCancellationRequested(); return Task.FromResult<Stream>(new MemoryStream(Bytes, false)); })).ToArray(), token);
@@ -515,6 +519,8 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
                 var line = Assert.Single(quote.Parts, item => item.PartId == part.PartId);
                 var receipt = Assert.IsType<InstantQuotationPhysicalAnalysisReceipt>(line.PhysicalReceipt);
                 Assert.Equal(part.PhysicalAnalysisUpload!.FileId, receipt.FileId);
+                Assert.Equal(UnitPolicy, part.PhysicalAnalysisUpload.GltfUnitPolicy);
+                Assert.Equal(UnitPolicy, receipt.GltfUnitPolicy);
                 Assert.Equal(Sha, receipt.UploadSha256);
                 Assert.Equal(1, receipt.BoundingCm3PerUnit, 3);
                 Assert.True(receipt.DepositedMm3 > 0);

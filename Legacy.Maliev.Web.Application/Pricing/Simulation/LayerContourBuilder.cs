@@ -86,6 +86,7 @@ public static class LayerContourBuilder
         var output = new List<LayerContours>(layerCount);
         int nextTriangle = 0;
         int generatedSegments = 0;
+        var booleanWork = new BooleanWorkBudget(budget);
         for (int layerIndex = 0; layerIndex < layerCount; layerIndex++)
         {
             budget.CancellationToken.ThrowIfCancellationRequested();
@@ -114,15 +115,14 @@ public static class LayerContourBuilder
                     budget.CancellationToken.ThrowIfCancellationRequested();
                     var segments = ExtractSegments(group.ToArray(), plane, directed: true, budget.CancellationToken);
                     Charge(segments.Count);
-                    foreach (var ring in BuildRings(segments, directed: true, budget, Charge))
+                    foreach (var ring in BuildRings(segments, directed: true, budget, Charge, booleanWork))
                     {
                         var path = new Path64(ring.Points.Select(point => PointKey.Create(point).ToPoint64()));
-                        Charge(path.Count);
                         solids.Add(path);
                     }
                 }
                 budget.CancellationToken.ThrowIfCancellationRequested();
-                rings = Union(solids, FillRule.Positive, budget, Charge);
+                rings = Union(solids, FillRule.Positive, budget, Charge, booleanWork);
                 budget.CancellationToken.ThrowIfCancellationRequested();
 
             }
@@ -138,11 +138,11 @@ public static class LayerContourBuilder
 
         void Charge(int count)
         {
-            generatedSegments = checked(generatedSegments + count);
-            if (generatedSegments > budget.MaximumPathSegments)
+            if (count > budget.MaximumPathSegments - generatedSegments)
             {
                 throw new SimulationGeometryException("path_segment_budget_exceeded", "Generated section paths exceed the analysis budget.");
             }
+            generatedSegments = checked(generatedSegments + count);
         }
     }
 
@@ -208,7 +208,7 @@ public static class LayerContourBuilder
     }
 
     private static IReadOnlyList<PolygonRing> BuildRings(IReadOnlyList<Segment64> segments, bool directed = false,
-        AnalysisBudget? budget = null, Action<int>? charge = null)
+        AnalysisBudget? budget = null, Action<int>? charge = null, BooleanWorkBudget? booleanWork = null)
     {
         var adjacency = new Dictionary<PointKey, List<int>>();
         for (int index = 0; index < segments.Count; index++)
@@ -269,22 +269,18 @@ public static class LayerContourBuilder
             paths.Add(path);
         }
 
-        return Union(paths, directed ? FillRule.Positive : FillRule.EvenOdd, budget, charge);
+        return Union(paths, directed ? FillRule.Positive : FillRule.EvenOdd, budget, charge, booleanWork);
     }
 
     private static IReadOnlyList<PolygonRing> Union(Paths64 paths, FillRule fill,
-        AnalysisBudget? budget = null, Action<int>? charge = null)
+        AnalysisBudget? budget = null, Action<int>? charge = null, BooleanWorkBudget? booleanWork = null)
     {
         long admittedWork = long.MaxValue;
         if (budget is not null)
         {
             budget.CancellationToken.ThrowIfCancellationRequested();
             long edges = paths.Sum(path => (long)path.Count);
-            // Clipper is synchronous: prepay a conservative all-pairs intersection/output bound.
-            admittedWork = checked((4 * edges * (edges - 1)) + (8 * edges) + (4L * paths.Count));
-            if (admittedWork > budget.MaximumPathSegments || admittedWork > int.MaxValue)
-                throw new SimulationGeometryException("path_segment_budget_exceeded", "Positive-fill boolean work exceeds the analysis budget.");
-            charge?.Invoke((int)admittedWork);
+            admittedWork = booleanWork!.Admit(edges, paths.Count);
         }
         var clipper = new Clipper64();
         clipper.AddSubject(paths);
@@ -313,6 +309,7 @@ public static class LayerContourBuilder
                 {
                     if (observedWork + polygon.Count > admittedWork) throw BooleanBudget();
                     observedWork += polygon.Count;
+                    charge?.Invoke(polygon.Count);
                     var points = new Vector2[polygon.Count];
                     int start = 0;
                     for (int index = 0; index < polygon.Count; index++)
@@ -346,6 +343,39 @@ public static class LayerContourBuilder
 
     private static SimulationGeometryException BooleanBudget() => new(
         "path_segment_budget_exceeded", "Positive-fill boolean output exceeded its admitted work bound.");
+
+    internal sealed class BooleanWorkBudget(AnalysisBudget budget)
+    {
+        private long consumed;
+
+        internal long Admit(long edges, long paths)
+        {
+            budget.CancellationToken.ThrowIfCancellationRequested();
+            if (budget.MaximumBooleanWork <= 0)
+                throw new SimulationGeometryException("analysis_budget_invalid", "Analysis budgets must be positive.");
+            if (edges < 0 || paths < 0)
+                throw new ArgumentOutOfRangeException(edges < 0 ? nameof(edges) : nameof(paths));
+
+            long outputBound;
+            long candidates;
+            try
+            {
+                // Keep the synchronous Clipper call's conservative intersection/output admission bound.
+                outputBound = checked((4 * edges * (edges - 1)) + (8 * edges) + (4 * paths));
+                candidates = checked((edges * (edges - 1) / 2) + edges + paths);
+            }
+            catch (OverflowException)
+            {
+                throw BooleanBudget();
+            }
+            if (outputBound > budget.MaximumPathSegments || outputBound > int.MaxValue)
+                throw BooleanBudget();
+            if (candidates > budget.MaximumBooleanWork - consumed)
+                throw new SimulationGeometryException("boolean_work_budget_exceeded", "Cumulative positive-fill candidate work exceeds the analysis budget.");
+            consumed = checked(consumed + candidates);
+            return outputBound;
+        }
+    }
 
     private static void Append(PolyPath64 node, List<PolygonRing> rings)
     {
@@ -418,7 +448,8 @@ public static class LayerContourBuilder
 
     private static void ValidateBudget(AnalysisBudget budget)
     {
-        if (budget.MaximumTriangles <= 0 || budget.MaximumLayers <= 0 || budget.MaximumPathSegments <= 0)
+        if (budget.MaximumTriangles <= 0 || budget.MaximumLayers <= 0 || budget.MaximumPathSegments <= 0
+            || budget.MaximumBooleanWork <= 0)
         {
             throw new SimulationGeometryException("analysis_budget_invalid", "Analysis budgets must be positive.");
         }
