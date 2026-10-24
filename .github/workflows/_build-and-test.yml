@@ -218,6 +218,52 @@ jobs:
           python3 -c 'from pathlib import Path; s=Path("/etc/apt/sources.list.d/ubuntu.sources").read_text(); assert "mirror+file:/etc/apt/apt-mirrors.txt" in s and "Signed-By:" in s, "Unexpected hosted Ubuntu source policy"'
           printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
           pwsh -NoProfile -File ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+      - name: Verify retained quantity and terminal upload browser boundaries
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          test ! -e wall-thickness-terminal-test-results
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj \
+            --configuration Release --no-build --no-restore \
+            -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath= \
+            --filter 'FullyQualifiedName~InstantQuotationWallThicknessRealUploadBrowserTests.Source292QuantityBoundary_|FullyQualifiedName~InstantQuotationWallThicknessRealUploadBrowserTests.BulkSelection_UsesAccessibleNativeControlsAndKeepsServerOwnedPartSettings|FullyQualifiedName~InstantQuotationWallThicknessRealUploadBrowserTests.NewBatch_RevealsItsLatestAdmittedPartAndRetainsAnUnreadableSelectionUntilDismissed|FullyQualifiedName~InstantQuotationWallThicknessRealUploadBrowserTests.RecoveredUpload_ShowsCurrentReceiptWarningWithoutManualAnalysisAndPreservesOriginalFile|FullyQualifiedName~InstantQuotationWallThicknessRealUploadBrowserTests.RemovingPendingLocalParser_UnblocksCurrentProtectedQuoteBeforeActualReadReturns|FullyQualifiedName~InstantQuotationWallThicknessRealUploadBrowserTests.OpenSheetFailsClosedInsteadOfInventingSafeThickness' \
+            --logger 'trx;LogFileName=wall-thickness-terminal.trx' \
+            --results-directory ./wall-thickness-terminal-test-results
+          python3 -B - <<'PY'
+          import runpy
+          from pathlib import Path
+          import xml.etree.ElementTree as E
+          gate = runpy.run_path('scripts/verify-focused-web-trx.py')
+          cls = 'Legacy.Maliev.Web.Tests.InstantQuotationWallThicknessRealUploadBrowserTests'
+          quantities = (1, 9, 10, 49, 50, 99, 100, 101)
+          quantity_methods = ('Source292QuantityBoundary_ProtectedWorkflowTotalsKeepRoundedLinesAndVatOnce', 'Source292QuantityBoundary_PersistedRequestIgnoresPostedMoney', 'Source292QuantityBoundary_BrowserDisplaysProtectedServerMarginOnce')
+          viewport_methods = ('BulkSelection_UsesAccessibleNativeControlsAndKeepsServerOwnedPartSettings', 'NewBatch_RevealsItsLatestAdmittedPartAndRetainsAnUnreadableSelectionUntilDismissed')
+          recovered = 'RecoveredUpload_ShowsCurrentReceiptWarningWithoutManualAnalysisAndPreservesOriginalFile'
+          removing = 'RemovingPendingLocalParser_UnblocksCurrentProtectedQuoteBeforeActualReadReturns'
+          sheet = 'OpenSheetFailsClosedInsteadOfInventingSafeThickness'
+          roster = {**{name: 8 for name in quantity_methods}, **{name: 2 for name in viewport_methods}, recovered: 2, removing: 2, sheet: 1}
+          gate['ROSTERS']['wall-thickness-terminal'] = {cls: roster}
+          trx = Path('wall-thickness-terminal-test-results/wall-thickness-terminal.trx')
+          gate['verify'](trx, 'wall-thickness-terminal', Path('Legacy.Maliev.Web.Tests/bin/Release/net10.0/Legacy.Maliev.Web.Tests.dll'))
+          expected = {f'{cls}.{method}(quantity: {quantity})' for method in quantity_methods for quantity in quantities}
+          expected.update(f'{cls}.{method}(width: {width}, culture: "{culture}")' for method in viewport_methods for width, culture in ((375, 'th'), (1280, 'en')))
+          expected.update(f'{cls}.{recovered}(culture: "{culture}", width: {width})' for culture, width in (('en', 1440), ('th', 390)))
+          expected.update(f'{cls}.{removing}(culture: "{culture}")' for culture in ('en', 'th'))
+          expected.add(f'{cls}.{sheet}')
+          actual = {row.attrib['testName'] for row in E.parse(trx).getroot().iter() if row.tag.rsplit('}', 1)[-1] == 'UnitTestResult'}
+          if len(expected) != 33 or actual != expected:
+              raise ValueError('All thirty-three exact retained quantity and terminal upload browser cases must pass')
+          print('Retained quantity/terminal browser boundaries: all33 exact native identities passed')
+          PY
+      - name: Preserve retained quantity and terminal browser native evidence
+        if: always()
+        timeout-minutes: 3
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: web-wall-thickness-terminal-${{ github.sha }}
+          path: wall-thickness-terminal-test-results/**/*.trx
+          retention-days: 7
+          if-no-files-found: error
       - name: Verify authenticated profile preparation and submission boundaries
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -554,6 +600,7 @@ jobs:
             material-color-switch-test-results/
             preview-initialization-test-results/**/*.trx
             quantity-input-test-results/**/*.trx
+            wall-thickness-terminal-test-results/**/*.trx
             skin-influence-test-results/**/*.trx
             contour-budget-test-results/**/*.trx
             Legacy.Maliev.Web/wwwroot/dist/site.min.css

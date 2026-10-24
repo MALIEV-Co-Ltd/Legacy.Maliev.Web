@@ -213,6 +213,8 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             new BrowserTypeLaunchOptions { Headless = true });
         await using var context = await browser.NewContextAsync();
         await using var page = await context.NewPageAsync();
+        await using var failureEvidence = new BrowserFailureEvidence(page,
+            metadata => output.WriteLine("[real-upload-evidence-cleanup] " + metadata));
         await page.AddInitScriptAsync("""
             (() => {
               const original = File.prototype.arrayBuffer;
@@ -299,7 +301,12 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 (await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default))!));
             await Assertions.Expect(review).ToBeEnabledAsync();
         }
-        catch (Exception exception) { primary = exception; throw; }
+        catch (Exception exception)
+        {
+            primary = exception;
+            await ObserveRealUploadFailureAsync(exception, failureEvidence, page, factory, upload);
+            throw;
+        }
         finally
         {
             try
@@ -1243,6 +1250,8 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         {
             ViewportSize = new ViewportSize { Width = width, Height = 800 },
         });
+        await using var failureEvidence = new BrowserFailureEvidence(page,
+            metadata => output.WriteLine("[real-upload-evidence-cleanup] " + metadata));
         await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
         var bytes = WallThicknessParityBrowserFixture.Box(5);
@@ -1309,7 +1318,15 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         Assert.Equal("PLA", saved.Parts.Single(part => part.PartId == Guid.Parse(ids[2])).Configuration.MaterialKey);
         Assert.Equal(3, upload.VerifiedUploads);
         Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
-        await Assertions.Expect(page.Locator("[data-workflow-parts] .iq-compact-dropzone")).ToBeInViewportAsync();
+        try
+        {
+            await Assertions.Expect(page.Locator("[data-workflow-parts] .iq-compact-dropzone")).ToBeInViewportAsync();
+        }
+        catch (Exception exception)
+        {
+            await ObserveRealUploadFailureAsync(exception, failureEvidence, page, factory, upload);
+            throw;
+        }
     }
 
 
@@ -1376,6 +1393,14 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 if (!tile) return false;
                 const r = rail.getBoundingClientRect(), t = tile.getBoundingClientRect();
                 const add = rail.querySelector('.iq-compact-dropzone');
+                if (getComputedStyle(rail).overflowY === 'visible') {
+                    const a = add.getBoundingClientRect();
+                    const occludesTop = getComputedStyle(add).position === 'sticky'
+                        && a.bottom > 0 && a.top < innerHeight && a.left < t.right && a.right > t.left;
+                    const top = occludesTop ? Math.max(0, a.bottom) : 0;
+                    return t.left >= Math.max(0, r.left) - 1 && t.right <= Math.min(innerWidth, r.right) + 1
+                        && t.top >= top - 1 && t.bottom <= innerHeight + 1;
+                }
                 const left = getComputedStyle(add).position === 'sticky'
                     ? Math.max(r.left, add.getBoundingClientRect().right) : r.left;
                 return t.left >= left - 1 && t.right <= r.right + 1
@@ -1738,6 +1763,8 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
         await using var page = await browser.NewPageAsync();
+        await using var failureEvidence = new BrowserFailureEvidence(page,
+            metadata => output.WriteLine("[real-upload-evidence-cleanup] " + metadata));
         var readinessTimer = System.Diagnostics.Stopwatch.StartNew();
         var response = await page.GotoAsync(quoteUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
         Assert.Equal(200, response?.Status);
@@ -1771,6 +1798,11 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 }
                 """, null, new PageWaitForFunctionOptions { Timeout = 90000 });
             Assert.Equal(1, upload.VerifiedUploads);
+        }
+        catch (Exception exception)
+        {
+            await ObserveRealUploadFailureAsync(exception, failureEvidence, page, factory, upload);
+            throw;
         }
         finally
         {
@@ -2372,6 +2404,69 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         }
     }
 
+    private async Task ObserveRealUploadFailureAsync(Exception original, BrowserFailureEvidence evidence,
+        IPage page, RealUploadTestingWebApplicationFactory factory, HashCheckingUploadClient upload)
+    {
+        await evidence.AttachAsync(original, async () =>
+        {
+            // Only fixed categories and bounded geometry; never DOM text, file names or session identities.
+            var rendered = await page.EvaluateAsync<string>("""
+                () => {
+                    const number = value => Number.isFinite(value) ? Math.round(Math.max(-100000, Math.min(100000, value)) * 100) / 100 : null;
+                    const rect = selector => {
+                        const element = document.querySelector(selector), r = element?.getBoundingClientRect();
+                        return r ? [r.left, r.top, r.right, r.bottom, r.width, r.height].map(number) : null;
+                    };
+                    const count = selector => Math.min(32, document.querySelectorAll(selector).length);
+                    const zone = document.querySelector('.instant-quote__workflow');
+                    const state = zone?.dataset.workflowState;
+                    const rail = document.querySelector('[data-workflow-part-list]');
+                    const canvas = document.querySelector('[data-workflow-viewer] > canvas');
+                    const add = document.querySelector('[data-workflow-parts] .iq-compact-dropzone');
+                    return JSON.stringify({
+                        workflow: ['empty','uploading','uploaded','error','multipart','configured','review','customerdetails','submitted'].includes(state) ? state : 'unavailable',
+                        viewport: [innerWidth, innerHeight, scrollX, scrollY].map(number),
+                        rail: rect('[data-workflow-part-list]'), add: rect('[data-workflow-parts] .iq-compact-dropzone'),
+                        selected: rect('[data-workflow-part]:has(button[aria-pressed="true"])'),
+                        viewer: rect('[data-workflow-viewer]'), canvas: rect('[data-workflow-viewer] > canvas'),
+                        backing: canvas ? [canvas.width, canvas.height].map(number) : null,
+                        railScroll: rail ? [rail.scrollLeft, rail.scrollTop, rail.scrollWidth, rail.scrollHeight, rail.clientWidth, rail.clientHeight].map(number) : null,
+                        railVisibleOverflow: !!rail && getComputedStyle(rail).overflowY === 'visible',
+                        addSticky: !!add && getComputedStyle(add).position === 'sticky',
+                        parts: count('[data-workflow-part]'), failed: count('[data-workflow-failed-preview]'),
+                        pending: count('[data-workflow-pending-parse]'), uploadErrors: count('[data-upload-error]'),
+                        reviewEnabled: !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)'),
+                        progress: zone?.getAttribute('aria-busy') === 'true', repricing: !!document.querySelector('[data-pricing-loading-status]'),
+                        inputReady: typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'number'
+                    });
+                }
+                """);
+            if (rendered.Length > 4096) throw new FormatException();
+            output.WriteLine("[real-upload-geometry] " + rendered);
+            using var document = JsonDocument.Parse(rendered);
+            var state = document.RootElement.GetProperty("workflow").GetString();
+            try
+            {
+                using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+                var session = await factory.Services.GetRequiredService<IInstantQuotationSessionStore>()
+                    .GetAsync(upload.SessionId, upload.OwnerIdentity, deadline.Token);
+                output.WriteLine(JsonSerializer.Serialize(new
+                {
+                    Kind = "real-upload-authority",
+                    SessionPresent = session is not null,
+                    Authorized = session?.QuoteAuthorization is not null,
+                    Parts = Math.Min(session?.Parts.Count ?? 0, 32),
+                    Started = Math.Min(upload.StartedUploads, 32),
+                    Verified = Math.Min(upload.VerifiedUploads, 32),
+                    Rejected = Math.Min(upload.ValidationRejectedUploads, 32),
+                    ExceptionTypes = factory.ExceptionKinds.Take(20).Select(kind => kind.Split(':')[0]).ToArray(),
+                }));
+            }
+            catch { /* Secondary service observation must preserve the browser failure. */ }
+            return JsonSerializer.Serialize(new { workflow = state });
+        }, metadata => output.WriteLine("[real-upload-failure] " + metadata));
+    }
+
     // Network quiet and SSR markup do not prove that this DOM input has a live .NET change binding.
     private static async Task WaitForInteractiveInputFileAsync(
         IPage page, System.Diagnostics.Stopwatch readinessTimer)
@@ -2446,10 +2541,11 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         {
             closedPath = CreateBoxStl(10, 10, 10, "strict-original");
             recoveryPath = CreateRecoverableOpenBoxStl();
+            var readinessTimer = System.Diagnostics.Stopwatch.StartNew();
             await page.GotoAsync(new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString(),
                 new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
             await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
-            await page.WaitForFunctionAsync("() => document.querySelector('#instant-quote-files')?._blazorFilesById != null");
+            await WaitForInteractiveInputFileAsync(page, readinessTimer);
             await page.SetInputFilesAsync("#instant-quote-files", closedPath);
             await Microsoft.Playwright.Assertions.Expect(page.Locator("[data-workflow-part]")).ToHaveCountAsync(1);
             await MaterialCardBrowserActions.SelectAsync(page, "PETG");
