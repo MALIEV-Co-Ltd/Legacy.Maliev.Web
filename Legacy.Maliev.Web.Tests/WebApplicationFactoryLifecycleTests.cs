@@ -101,7 +101,7 @@ public sealed class WebApplicationFactoryLifecycleTests
     [InlineData(false)]
     public async Task RenderedChild_DisposesOwnedWebRootWatcherWithoutDisposingParent(bool active)
     {
-        using var parent = new TestingWebApplicationFactory();
+        using var parent = new WatcherModeFactory(polling: false);
         var cleanup = new HashSet<Microsoft.Extensions.FileProviders.PhysicalFileProvider>(ReferenceEqualityComparer.Instance);
         try
         {
@@ -173,6 +173,79 @@ public sealed class WebApplicationFactoryLifecycleTests
         }
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RenderedPollingChild_DisposesOwnedProviderWithoutDisposingParent(bool active)
+    {
+        await using var parent = new WatcherModeFactory(polling: true);
+        using var parentClient = parent.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+        { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        using var parentResponse = await parentClient.GetAsync("/?culture=en");
+        Assert.Equal(System.Net.HttpStatusCode.OK, parentResponse.StatusCode);
+        var parentEnvironment = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+            .GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(parent.Services);
+        var parentLease = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+            .GetRequiredService<TestingWebRootLease>(parent.Services);
+        AssertPollingWatcher(parentLease.Provider);
+        Assert.True(parentLease.Provider.Watch("dist/site.min.css").ActiveChangeCallbacks);
+
+        await using var child = parent.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:Home", active.ToString());
+            builder.ConfigureServices((context, services) =>
+            {
+                var owned = Assert.IsType<TestingWebRootLease>(Assert.Single(services,
+                    descriptor => descriptor.ServiceType == typeof(TestingWebRootLease)).ImplementationInstance);
+                context.HostingEnvironment.WebRootFileProvider =
+                    new Microsoft.Extensions.FileProviders.CompositeFileProvider(
+                        owned.Provider, parentEnvironment.WebRootFileProvider, parentEnvironment.WebRootFileProvider);
+            });
+        });
+        using var childClient = child.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+        { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        using var childResponse = await childClient.GetAsync("/?culture=en");
+        Assert.Equal(System.Net.HttpStatusCode.OK, childResponse.StatusCode);
+        var childLease = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+            .GetRequiredService<TestingWebRootLease>(child.Services);
+        Assert.NotSame(parentLease.Provider, childLease.Provider);
+        Assert.Equal(parentLease.Provider.Root, childLease.Provider.Root);
+        AssertPollingWatcher(childLease.Provider);
+        Assert.True(childLease.Provider.Watch("dist/site.min.css").ActiveChangeCallbacks);
+        var versioner = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+            .GetRequiredService<Microsoft.AspNetCore.Mvc.ViewFeatures.IFileVersionProvider>(child.Services);
+        Assert.Contains("?v=", versioner.AddFileVersionToPath(default, "/dist/site.min.css"), StringComparison.Ordinal);
+
+        await child.DisposeAsync();
+
+        Assert.True(childLease.IsDisposed);
+        Assert.True(IsDisposed(childLease.Provider));
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => childClient.GetAsync("/?culture=th"));
+        Assert.False(parentLease.IsDisposed);
+        Assert.False(IsDisposed(parentLease.Provider));
+        Assert.True(parentLease.Provider.Watch("dist/site.min.css").ActiveChangeCallbacks);
+        using var stillHealthy = await parentClient.GetAsync("/?culture=th");
+        Assert.Equal(System.Net.HttpStatusCode.OK, stillHealthy.StatusCode);
+    }
+
+    private sealed class WatcherModeFactory(bool polling) : TestingWebApplicationFactory
+    {
+        protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+            builder.ConfigureServices((_, services) =>
+            {
+                // Select this test's owned provider mode before its first Watch or rendered request.
+                var owned = Assert.IsType<TestingWebRootLease>(Assert.Single(services,
+                    descriptor => descriptor.ServiceType == typeof(TestingWebRootLease)).ImplementationInstance);
+                owned.Provider.UsePollingFileWatcher = polling;
+                owned.Provider.UseActivePolling = polling;
+                Assert.Equal(polling, owned.Provider.UsePollingFileWatcher);
+                Assert.Equal(polling, owned.Provider.UseActivePolling);
+            });
+        }
+    }
+
     private static IEnumerable<Microsoft.Extensions.FileProviders.PhysicalFileProvider> PhysicalLeaves(
         Microsoft.Extensions.FileProviders.IFileProvider provider)
     {
@@ -185,6 +258,15 @@ public sealed class WebApplicationFactoryLifecycleTests
     private static bool IsDisposed(Microsoft.Extensions.FileProviders.PhysicalFileProvider provider) =>
         (bool)typeof(Microsoft.Extensions.FileProviders.PhysicalFileProvider).GetField("_disposed",
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(provider)!;
+
+    private static void AssertPollingWatcher(Microsoft.Extensions.FileProviders.PhysicalFileProvider provider)
+    {
+        var physicalWatcher = typeof(Microsoft.Extensions.FileProviders.PhysicalFileProvider).GetField("_fileWatcher",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(provider);
+        Assert.NotNull(physicalWatcher);
+        Assert.Null(physicalWatcher.GetType().GetField("_fileWatcher",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(physicalWatcher));
+    }
 
     private static FileSystemWatcher ActiveWatcher(Microsoft.Extensions.FileProviders.PhysicalFileProvider provider)
     {
