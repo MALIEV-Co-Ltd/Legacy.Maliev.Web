@@ -1,6 +1,7 @@
 """Finite numeric observation of the existing full-Test shell; never runs tests."""
 import hashlib
 import json
+import math
 import os
 from pathlib import Path, PurePosixPath
 import re
@@ -18,6 +19,10 @@ TEST_SCRIPT = (b'if [[ "$USE_LOCAL_MALIEV_DEPENDENCIES" == "true" ]]; then\n'
 TEST_SHA = "d282675eaa0a19f988e9034aa28992cda1ce3e1faa99fe5a8768b4b534ed2ff3"
 LIMIT = 2**63 - 1
 IDENTITY_KEYS = ("pid", "start", "dev", "ino")
+TASK_SCAN_LIMIT = 256
+CHILD_SCAN_LIMIT = 512
+DESCENDANT_LIMIT = 64
+LINEAGE_SCAN_LIMIT = 256
 
 
 def read_small(path, limit=4096):
@@ -71,6 +76,20 @@ def encode_record(row):
     return data
 
 
+def encode_metric(row):
+    row["details_omitted"] = row["owned"]["count"] - len(row["shown"])
+    while True:
+        try:
+            return encode_record(row)
+        except ValueError as error:
+            if error.args != ("record",) or not row["shown"]:
+                raise
+            # Keep ownership/aggregates and the highest RSS entries; never stop on predictable size growth.
+            row["shown"].pop()
+            row["details_omitted"] += 1
+            row["flags"] |= 64
+
+
 def identity(pid):
     # None means verified missing/exited; {} means unknown and never authorizes cleanup/signals.
     try:
@@ -121,35 +140,97 @@ def verified_monitor(ledger, parent_pid, monitor_pid):
             and all(monitor[k] == executable[k] for k in ("dev", "ino")))
 
 
+def child_ids(parent, scan):
+    try:
+        with os.scandir(Path("/proc") / str(parent["pid"]) / "task") as tasks:
+            iterator = iter(tasks)
+            while scan["tasks"] < TASK_SCAN_LIMIT and scan["tokens"] < CHILD_SCAN_LIMIT:
+                try:
+                    task = next(iterator)
+                except StopIteration:
+                    return
+                scan["tasks"] += 1
+                tid = task.name
+                if not tid.isascii() or not tid.isdecimal() or not 0 < len(tid) <= 10:
+                    scan["incomplete"] = 1
+                    continue
+                try:
+                    tokens = read_small(Path("/proc") / str(parent["pid"]) / "task" / tid / "children").split()
+                except (OSError, ValueError):
+                    scan["incomplete"] = 1
+                    continue
+                room = CHILD_SCAN_LIMIT - scan["tokens"]
+                for token in tokens[:room]:
+                    scan["tokens"] += 1
+                    if token.isascii() and token.isdecimal() and 0 < len(token) <= 10:
+                        yield int(token)
+                    else:
+                        scan["incomplete"] = 1
+                if len(tokens) >= room:
+                    scan["incomplete"] = 1
+                    return
+            scan["incomplete"] = 1
+    except OSError:
+        scan["incomplete"] = 1
+
+
 def descendants(anchor):
-    result, pending, seen, omitted = [], [anchor], {anchor["pid"]}, 0
-    while pending and len(result) < 64:
+    result, pending, seen = [], [anchor], {anchor["pid"]}
+    scan = {"tasks": 0, "tokens": 0, "incomplete": 0}
+    while (pending and len(result) < DESCENDANT_LIMIT
+           and scan["tasks"] < TASK_SCAN_LIMIT and scan["tokens"] < CHILD_SCAN_LIMIT):
         parent = pending.pop(0)
-        if not same_identity(parent, identity(parent["pid"])):
+        current = identity(parent["pid"])
+        if not same_identity(parent, current) or current["ppid"] != parent["ppid"]:
+            scan["incomplete"] = 1
             continue
-        try:
-            children = read_small(Path("/proc") / str(parent["pid"]) / "task" / str(parent["pid"]) / "children")
-        except (OSError, ValueError):
-            omitted = 1
+        children = list(child_ids(parent, scan))
+        current = identity(parent["pid"])
+        if not same_identity(parent, current) or current["ppid"] != parent["ppid"]:
+            scan["incomplete"] = 1
             continue
-        for token in children.split():
-            if not token.isascii() or not token.isdecimal() or len(token) > 10:
-                continue
-            pid = int(token)
+        for pid in children:
             if pid in seen:
                 continue
             seen.add(pid)
             child = identity(pid)
             if not child or child["ppid"] != parent["pid"]:
+                scan["incomplete"] = 1
                 continue
-            if len(result) == 64:
-                omitted = 1
-                continue
+            if len(result) == DESCENDANT_LIMIT:
+                scan["incomplete"] = 1
+                break
             result.append(child)
             pending.append(child)
     if pending:
-        omitted = 1
-    return result, omitted
+        scan["incomplete"] = 1
+    # Live all-task enumeration is still best effort, even when no truncation/race is detected.
+    return result, scan["incomplete"], scan
+
+
+def lineage_matches(child, anchor, known, scan, invalid):
+    current_node = child
+    visited = set()
+    while current_node is not None:
+        pid = current_node["pid"]
+        if pid in invalid or pid in visited or scan["lineage"] >= LINEAGE_SCAN_LIMIT:
+            scan["incomplete"] = 1
+            invalid.add(pid)
+            return False
+        visited.add(pid)
+        scan["lineage"] += 1
+        actual = identity(pid)
+        if not same_identity(current_node, actual) or actual["ppid"] != current_node["ppid"]:
+            # A bad observation taints this ancestor for the whole sample; never cache positive liveness.
+            scan["incomplete"] = 1
+            invalid.add(pid)
+            return False
+        if pid == anchor["pid"]:
+            return True
+        current_node = known.get(current_node["ppid"])
+    scan["incomplete"] = 1
+    invalid.add(child["pid"])
+    return False
 
 
 def cgroup_relative(text):
@@ -171,10 +252,29 @@ def cgroup_directory(anchor):
     return directory
 
 
+def cpu_usage(measure=None):
+    try:
+        if measure is None:
+            import resource
+            measure = lambda: resource.getrusage(resource.RUSAGE_SELF)
+        usage = measure()
+        result = {}
+        for attribute, key in (("ru_utime", "user_us"), ("ru_stime", "system_us")):
+            seconds = getattr(usage, attribute)
+            if not math.isfinite(seconds) or not 0 <= seconds <= LIMIT / 1000000:
+                raise ValueError("cpu")
+            result[key] = int(seconds * 1000000)
+        return result
+    except (ImportError, OSError, ValueError, OverflowError):
+        return {}
+
+
 def sample(anchor, workspace, temporary, sequence):
     row = {"event": 2, "sequence": sequence, "monotonic_ns": time.monotonic_ns(), "flags": 0}
     try:
-        row["memory"] = numbers(read_small("/proc/meminfo", 16384), {"MemAvailable", "SwapFree"})
+        row["memory"] = numbers(read_small("/proc/meminfo", 16384), {"MemTotal", "MemAvailable", "SwapTotal", "SwapFree"})
+        if len(row["memory"]) != 4:
+            row["flags"] |= 1
         row["host"] = numbers(read_small("/proc/vmstat", 32768), {"oom_kill"})
         group = cgroup_directory(anchor)
         row["cgroup"] = {}
@@ -185,6 +285,9 @@ def sample(anchor, workspace, temporary, sequence):
                 row["flags"] |= 8  # LIMIT is the explicitly unbounded cgroup sentinel.
         for filename, key in (("memory.events", "events"), ("memory.events.local", "local")):
             row["cgroup"][key] = numbers(read_small(group / filename), {"low", "high", "max", "oom", "oom_kill", "oom_group_kill"})
+        row["cgroup"]["stat"] = numbers(read_small(group / "memory.stat", 16384), {"anon", "file", "kernel"})
+        if len(row["cgroup"]["stat"]) != 3:
+            row["flags"] |= 1
     except (OSError, ValueError):
         row["flags"] |= 1
     for directory, key in ((workspace, "workspace"), (temporary, "temporary")):
@@ -193,16 +296,18 @@ def sample(anchor, workspace, temporary, sequence):
             row[key] = {"bytes": disk.f_bavail * disk.f_frsize, "inodes": disk.f_favail}
         except OSError:
             row["flags"] |= 2
-    children, omitted = descendants(anchor)
+    children, omitted, scan = descendants(anchor)
+    scan["lineage"] = 0
+    known = {node["pid"]: node for node in [anchor, *children]}
+    invalid = set()
     totals = {"rss": 0, "threads": 0, "count": 0}
     totals.update(rss_known=0, threads_known=0)
     shown = []
     for child in children:
         try:
-            values = numbers(read_small(Path("/proc") / str(child["pid"]) / "status"), {"VmRSS", "VmHWM", "Threads"})
-            current = identity(child["pid"])
-            if (not same_identity(child, current) or current["ppid"] != child["ppid"]
-                    or not same_identity(anchor, identity(anchor["pid"]))):
+            values = numbers(read_small(Path("/proc") / str(child["pid"]) / "status"), {"VmRSS", "VmHWM", "Threads", "RssAnon", "RssFile", "RssShmem"})
+            if not lineage_matches(child, anchor, known, scan, invalid):
+                omitted = 1
                 continue
             for source, target in (("VmRSS", "rss"), ("Threads", "threads")):
                 if source in values:
@@ -211,12 +316,20 @@ def sample(anchor, workspace, temporary, sequence):
                 else:
                     row["flags"] |= 16  # A partial sum is not a zero-valued missing measurement.
             totals["count"] += 1
-            if len(shown) < 8:
-                shown.append({"pid": child["pid"], "start": child["start"], **values})
+            if any(key not in values for key in ("RssAnon", "RssFile", "RssShmem")):
+                row["flags"] |= 16
+            shown.append({**child, **values})
         except (OSError, ValueError):
             row["flags"] |= 4
-    row.update(owned=totals, shown=shown, omitted=omitted)
+            omitted = 1
+    shown.sort(key=lambda item: ("VmRSS" in item, item.get("VmRSS", 0), -item["pid"]), reverse=True)
+    scan["incomplete"] = omitted
+    row.update(owned=totals, shown=shown[:8], omitted=omitted, scan=scan, census_scope=2)
     row["observer"] = numbers(read_small("/proc/self/status"), {"VmRSS", "VmHWM", "Threads"})
+    cpu = cpu_usage()
+    if not cpu:
+        row["flags"] |= 32
+    row["observer"].update(cpu)
     return row
 
 
@@ -358,7 +471,7 @@ def observe(parent_pid, workspace, temporary, directory, lease=3600, interval=30
                     row.update(owner=723, run=ledger["run"], attempt=ledger["attempt"])
                     if sequence == 0:
                         row.update(parent=parent, monitor=own, ancestors=ledger["ancestors"])
-                    data = encode_record(row)
+                    data = encode_metric(row)
                     os.write(fd, data)
                     # This daemon may block on stdout; the independent lease/parent watcher never waits for it.
                     os.write(1, data)
@@ -372,7 +485,7 @@ def observe(parent_pid, workspace, temporary, directory, lease=3600, interval=30
     threading.stack_size(256 * 1024)
     threading.Thread(target=measurements, daemon=True).start()
     expires = time.monotonic() + lease
-    while not stopped.wait(.1):
+    while not stopped.wait(.25):
         if (time.monotonic() >= expires or (directory / "stop").exists()
                 or not same_identity(parent, identity(parent_pid))):
             break
