@@ -9,11 +9,13 @@ permissions:
 jobs:
   validate:
     name: validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: '1'
       MSBUILDDISABLENODEREUSE: '1'
       UseSharedCompilation: 'false'
+      # Preserve file change notifications without exhausting hosted inotify instances.
+      DOTNET_USE_POLLING_FILE_WATCHER: '1'
       MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
       MALIEV_WEB_STARTUP_PROOF: hosted-owned
       MALIEV_BILLING_CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -354,6 +356,14 @@ jobs:
           "$WEB_PRELIMINARY_PDF_VENV/bin/python" scripts/verify-preliminary-pdf-proof.py
           --root ./preliminary-pdf-test-results/pdf
           --receipt ./preliminary-pdf-test-results/parser-receipt.json
+      - name: Verify pricing lifetime cancellation and late completion regressions
+        timeout-minutes: 2
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~MaterialPricingLifetimeTests|FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationMaterialPricingProgressTests.ComparisonCallback_WholeQuoteCanCompleteAfterThirtySecondsWithinAbsoluteBudget"
+          --logger trx --results-directory ./pricing-lifetime-test-results
       - name: Validate .NET solution
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@e5732037fe94b7ed6e5be2cd4c23dbf6ef5e2617
         with:
@@ -398,6 +408,7 @@ jobs:
         with:
           name: web-combined-native-${{ github.sha }}
           path: |
+            pricing-lifetime-test-results/**
             Legacy.Maliev.Web.Tests/TestResults/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml

@@ -28,235 +28,258 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
     public async Task BillingTuple_NormalSave_ApiReadbackAndReloadPreserveManualFields(string culture, int width)
     {
         var database = $"profile_contract_{Guid.NewGuid():N}";
-        await using var resources = new BillingProofLifetime(proofCulture: culture);
+        var resources = new BillingProofLifetime(proofCulture: culture);
         try { output.WriteLine("billing-attempt-run " + resources.AttemptRun); }
         catch (Exception) { /* Missing output fails the proof verifier; it must not change the actual journey. */ }
-        await resources.RunAsync(async () =>
+        try
         {
-            var postgres = resources.Postgres(database);
-            using var startup = new CancellationTokenSource(TimeSpan.FromSeconds(120));
-            await resources.OwnOperation(() => resources.StartPostgresAsync(postgres, startup.Token)).WaitAsync(startup.Token);
-            var seed = Child(resources, Required("MALIEV_PROFILE_SEED_DLL"), new()
+            await resources.RunAsync(async () =>
             {
-                ["MALIEV_PROFILE_DISPOSABLE_CONNECTION"] = postgres.GetConnectionString(),
-                ["MALIEV_PROFILE_DISPOSABLE_DATABASE"] = database,
-            });
-            await seed.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(60));
-            Assert.Equal(0, seed.ExitCode);
-            await seed.CloseAsync();
-            var rsa = resources.AcquireDependency(() => RSA.Create(2048), value => { value.Dispose(); return ValueTask.CompletedTask; });
-            var customerOrigin = Origin();
-            var catalogOrigin = Origin();
-            var environment = new Dictionary<string, string>
-            {
-                ["DOTNET_ENVIRONMENT"] = "Development",
-                ["ASPNETCORE_ENVIRONMENT"] = "Development",
-                ["Cache__RedisEnabled"] = "false",
-                ["Jwt__PublicKey"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(rsa.ExportSubjectPublicKeyInfoPem())),
-                ["Jwt__Issuer"] = "https://billing-proof.example.test",
-                ["Jwt__Audience"] = "billing-proof-services",
-                ["Logging__LogLevel__Default"] = "None",
-            };
-            var customer = Child(resources, Required("MALIEV_PROFILE_PRODUCER_DLL"), new(environment)
-            {
-                ["ASPNETCORE_URLS"] = customerOrigin.ToString(),
-                ["ConnectionStrings__CustomerDbContext"] = postgres.GetConnectionString(),
-            });
-            var catalog = Child(resources, Required("MALIEV_BILLING_CATALOG_DLL"), new(environment)
-            {
-                ["ASPNETCORE_URLS"] = catalogOrigin.ToString(),
-                ["ConnectionStrings__CatalogDbContext"] = postgres.GetConnectionString(),
-                ["ConnectionStrings__CountryDbContext"] = postgres.GetConnectionString(),
-                ["ConnectionStrings__CurrencyDbContext"] = postgres.GetConnectionString(),
-                ["InstantQuotationCatalog__ReconciliationEnabled"] = "false",
-            });
-            {
-                using var customerHttp = resources.AcquireHost(() => new HttpClient { BaseAddress = customerOrigin, Timeout = TimeSpan.FromSeconds(15) }, value => { value.Dispose(); return ValueTask.CompletedTask; });
-                using var catalogHttp = resources.AcquireHost(() => new HttpClient { BaseAddress = catalogOrigin, Timeout = TimeSpan.FromSeconds(15) }, value => { value.Dispose(); return ValueTask.CompletedTask; });
-                await Ready(customerHttp, customer, "customers/1");
-                await Ready(catalogHttp, catalog, "api/v1/thai-addresses/autocomplete?postcode=11120");
-                var permissions = new[] { "legacy-customer.customers.read", "legacy-customer.addresses.update", "legacy-catalog.locations.read" };
-                var serviceToken = Token(rsa, permissions);
-                // Service authorization remains enforced, including write permission independently of read permission.
-                customerHttp.DefaultRequestHeaders.Authorization = new("Bearer", Token(rsa, []));
-                using var deniedRead = await customerHttp.GetAsync("customers/1");
-                Assert.Equal(HttpStatusCode.Forbidden, deniedRead.StatusCode);
-                customerHttp.DefaultRequestHeaders.Authorization = new("Bearer", Token(rsa, ["legacy-customer.customers.read"]));
-                using var deniedWrite = await customerHttp.PutAsJsonAsync("customers/addresses/1", new CustomerAddressInput(null, "Forbidden mutation", null, null, null, null, 66));
-                Assert.Equal(HttpStatusCode.Forbidden, deniedWrite.StatusCode);
-                catalogHttp.DefaultRequestHeaders.Authorization = new("Bearer", Token(rsa, []));
-                using var deniedLookup = await catalogHttp.GetAsync("api/v1/thai-addresses/autocomplete?postcode=11120");
-                Assert.Equal(HttpStatusCode.Forbidden, deniedLookup.StatusCode);
-                customerHttp.DefaultRequestHeaders.Authorization = new("Bearer", serviceToken);
-                catalogHttp.DefaultRequestHeaders.Authorization = new("Bearer", serviceToken);
-                using var initial = await customerHttp.GetAsync("customers/1");
-                Assert.Equal(HttpStatusCode.OK, initial.StatusCode);
-                using var before = JsonDocument.Parse(await initial.Content.ReadAsStringAsync());
-                var shippingBefore = AddressContent(before.RootElement.GetProperty("ShippingAddress"));
-                var billingId = before.RootElement.GetProperty("BillingAddressId").GetInt32();
-                using var lookup = await catalogHttp.GetAsync("api/v1/thai-addresses/autocomplete?postcode=11120&limit=8&q=");
-                Assert.Equal(HttpStatusCode.OK, lookup.StatusCode);
-                using var tuplePage = JsonDocument.Parse(await lookup.Content.ReadAsStringAsync());
-                Assert.StartsWith("thailand-geography-json:", tuplePage.RootElement.GetProperty("datasetVersion").GetString());
-                var tuple = tuplePage.RootElement.GetProperty("items")[0];
-                var name = culture == "th" ? "nameTh" : "nameEn";
-                var expectedState = tuple.GetProperty("province").GetProperty(name).GetString();
-                var expectedCity = tuple.GetProperty("district").GetProperty(name).GetString();
+                var postgres = resources.Postgres(database);
+                using var startup = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+                await resources.OwnOperation(() => resources.StartPostgresAsync(postgres, startup.Token)).WaitAsync(startup.Token);
+                var seed = Child(resources, Required("MALIEV_PROFILE_SEED_DLL"), new()
+                {
+                    ["MALIEV_PROFILE_DISPOSABLE_CONNECTION"] = postgres.GetConnectionString(),
+                    ["MALIEV_PROFILE_DISPOSABLE_DATABASE"] = database,
+                });
+                await seed.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(60));
+                Assert.Equal(0, seed.ExitCode);
+                await seed.CloseAsync();
+                var rsa = resources.AcquireDependency(() => RSA.Create(2048), value => { value.Dispose(); return ValueTask.CompletedTask; });
+                var customerOrigin = Origin();
+                var catalogOrigin = Origin();
+                var environment = new Dictionary<string, string>
+                {
+                    ["DOTNET_ENVIRONMENT"] = "Development",
+                    ["ASPNETCORE_ENVIRONMENT"] = "Development",
+                    ["Cache__RedisEnabled"] = "false",
+                    ["Jwt__PublicKey"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(rsa.ExportSubjectPublicKeyInfoPem())),
+                    ["Jwt__Issuer"] = "https://billing-proof.example.test",
+                    ["Jwt__Audience"] = "billing-proof-services",
+                    ["Logging__LogLevel__Default"] = "None",
+                };
+                var customer = Child(resources, Required("MALIEV_PROFILE_PRODUCER_DLL"), new(environment)
+                {
+                    ["ASPNETCORE_URLS"] = customerOrigin.ToString(),
+                    ["ConnectionStrings__CustomerDbContext"] = postgres.GetConnectionString(),
+                });
+                var catalog = Child(resources, Required("MALIEV_BILLING_CATALOG_DLL"), new(environment)
+                {
+                    ["ASPNETCORE_URLS"] = catalogOrigin.ToString(),
+                    ["ConnectionStrings__CatalogDbContext"] = postgres.GetConnectionString(),
+                    ["ConnectionStrings__CountryDbContext"] = postgres.GetConnectionString(),
+                    ["ConnectionStrings__CurrencyDbContext"] = postgres.GetConnectionString(),
+                    ["InstantQuotationCatalog__ReconciliationEnabled"] = "false",
+                });
+                {
+                    using var customerHttp = resources.AcquireHost(() => new HttpClient { BaseAddress = customerOrigin, Timeout = TimeSpan.FromSeconds(15) }, value => { value.Dispose(); return ValueTask.CompletedTask; });
+                    using var catalogHttp = resources.AcquireHost(() => new HttpClient { BaseAddress = catalogOrigin, Timeout = TimeSpan.FromSeconds(15) }, value => { value.Dispose(); return ValueTask.CompletedTask; });
+                    await Ready(customerHttp, customer, "customers/1");
+                    await Ready(catalogHttp, catalog, "api/v1/thai-addresses/autocomplete?postcode=11120");
+                    var permissions = new[] { "legacy-customer.customers.read", "legacy-customer.addresses.update", "legacy-catalog.locations.read" };
+                    var serviceToken = Token(rsa, permissions);
+                    // Service authorization remains enforced, including write permission independently of read permission.
+                    customerHttp.DefaultRequestHeaders.Authorization = new("Bearer", Token(rsa, []));
+                    using var deniedRead = await customerHttp.GetAsync("customers/1");
+                    Assert.Equal(HttpStatusCode.Forbidden, deniedRead.StatusCode);
+                    customerHttp.DefaultRequestHeaders.Authorization = new("Bearer", Token(rsa, ["legacy-customer.customers.read"]));
+                    using var deniedWrite = await customerHttp.PutAsJsonAsync("customers/addresses/1", new CustomerAddressInput(null, "Forbidden mutation", null, null, null, null, 66));
+                    Assert.Equal(HttpStatusCode.Forbidden, deniedWrite.StatusCode);
+                    catalogHttp.DefaultRequestHeaders.Authorization = new("Bearer", Token(rsa, []));
+                    using var deniedLookup = await catalogHttp.GetAsync("api/v1/thai-addresses/autocomplete?postcode=11120");
+                    Assert.Equal(HttpStatusCode.Forbidden, deniedLookup.StatusCode);
+                    customerHttp.DefaultRequestHeaders.Authorization = new("Bearer", serviceToken);
+                    catalogHttp.DefaultRequestHeaders.Authorization = new("Bearer", serviceToken);
+                    using var initial = await customerHttp.GetAsync("customers/1");
+                    Assert.Equal(HttpStatusCode.OK, initial.StatusCode);
+                    using var before = JsonDocument.Parse(await initial.Content.ReadAsStringAsync());
+                    var shippingBefore = AddressContent(before.RootElement.GetProperty("ShippingAddress"));
+                    var billingId = before.RootElement.GetProperty("BillingAddressId").GetInt32();
+                    using var lookup = await catalogHttp.GetAsync("api/v1/thai-addresses/autocomplete?postcode=11120&limit=8&q=");
+                    Assert.Equal(HttpStatusCode.OK, lookup.StatusCode);
+                    using var tuplePage = JsonDocument.Parse(await lookup.Content.ReadAsStringAsync());
+                    Assert.StartsWith("thailand-geography-json:", tuplePage.RootElement.GetProperty("datasetVersion").GetString());
+                    var tuple = tuplePage.RootElement.GetProperty("items")[0];
+                    var name = culture == "th" ? "nameTh" : "nameEn";
+                    var expectedState = tuple.GetProperty("province").GetProperty(name).GetString();
+                    var expectedCity = tuple.GetProperty("district").GetProperty(name).GetString();
 
-                using var initialProbe = new BillingInitialProbeDiagnostics(culture, width, resources.AttemptRun);
-                var baseWeb = resources.AcquireHost(() => authority.Web(retained: false), value => value.DisposeAsync());
-                var web = resources.AcquireHost(() => baseWeb.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
-                {
-                    services.AddSingleton<IStartupFilter>(initialProbe);
-                    services.AddLogging(logging => logging.AddProvider(initialProbe)
-                        .AddFilter<BillingInitialProbeDiagnostics>((category, _) => BillingInitialProbeDiagnostics.ObservedCategory(category)));
-                    services.AddHttpClient("customers", client => client.BaseAddress = customerOrigin);
-                    services.AddHttpClient("catalog", client => client.BaseAddress = catalogOrigin);
-                    services.RemoveAll<IServiceAccessTokenProvider>();
-                    services.AddSingleton<IServiceAccessTokenProvider>(new Tokens(serviceToken));
-                    // Country list is a separate consumer contract; this bounded case fixes the seeded Thailand ID.
-                    services.RemoveAll<ICountryClient>();
-                    services.AddSingleton<ICountryClient, Countries>();
-                })), value => value.DisposeAsync(), out var webLease);
-                var webOrigin = Origin(https: true);
-                var certificateRequest = new CertificateRequest("CN=billing-loopback", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-                var alternativeNames = new SubjectAlternativeNameBuilder();
-                alternativeNames.AddIpAddress(IPAddress.Loopback);
-                certificateRequest.CertificateExtensions.Add(alternativeNames.Build());
-                var certificate = resources.AcquireDependency(() => certificateRequest.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1)), value => { value.Dispose(); return ValueTask.CompletedTask; });
-                web.UseKestrel(options => options.Listen(IPAddress.Loopback, webOrigin.Port, listener => listener.UseHttps(certificate)));
-                try
-                {
-                    initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.ServerStartInvoked);
-                    resources.StartHost(webLease, () => web.StartServer());
-                    initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.ServerStartReturned);
-                }
-                catch (Exception failure)
-                {
-                    initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.InitialProbeFailed, failure: failure);
-                    initialProbe.StopAndPersist();
-                    throw;
-                }
-                // Probe an actual socket rather than CreateClient's factory transport before giving the origin to Chromium.
-                using var transport = resources.AcquireHost(() => new HttpClientHandler
-                {
-                    ServerCertificateCustomValidationCallback = (request, peer, _, _) =>
+                    using var initialProbe = new BillingInitialProbeDiagnostics(culture, width, resources.AttemptRun);
+                    var baseWeb = resources.AcquireHost(() => authority.Web(retained: false), value => value.DisposeAsync());
+                    var web = resources.AcquireHost(() => baseWeb.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
                     {
-                        var accepted = request.RequestUri?.Host == "127.0.0.1"
-                            && peer is not null && CryptographicOperations.FixedTimeEquals(peer.GetCertHash(), certificate.GetCertHash());
-                        initialProbe.Observe(accepted ? BillingInitialProbeDiagnostics.Stage.CertificatePinAccepted : BillingInitialProbeDiagnostics.Stage.CertificatePinRejected);
-                        return accepted;
-                    },
-                }, value => { value.Dispose(); return ValueTask.CompletedTask; });
-                using var host = resources.AcquireHost(() => new HttpClient(transport) { BaseAddress = webOrigin, Timeout = TimeSpan.FromSeconds(15) }, value => { value.Dispose(); return ValueTask.CompletedTask; });
-                async Task<HttpResponseMessage> ProbeInitialLoginAsync()
-                {
+                        services.AddSingleton<IStartupFilter>(initialProbe);
+                        services.AddLogging(logging => logging.AddProvider(initialProbe)
+                            .AddFilter<BillingInitialProbeDiagnostics>((category, _) => BillingInitialProbeDiagnostics.ObservedCategory(category)));
+                        services.AddHttpClient("customers", client => client.BaseAddress = customerOrigin);
+                        services.AddHttpClient("catalog", client => client.BaseAddress = catalogOrigin);
+                        services.RemoveAll<IServiceAccessTokenProvider>();
+                        services.AddSingleton<IServiceAccessTokenProvider>(new Tokens(serviceToken));
+                        // Country list is a separate consumer contract; this bounded case fixes the seeded Thailand ID.
+                        services.RemoveAll<ICountryClient>();
+                        services.AddSingleton<ICountryClient, Countries>();
+                    })), value => value.DisposeAsync(), out var webLease);
+                    var webOrigin = Origin(https: true);
+                    var certificateRequest = new CertificateRequest("CN=billing-loopback", rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+                    var alternativeNames = new SubjectAlternativeNameBuilder();
+                    alternativeNames.AddIpAddress(IPAddress.Loopback);
+                    certificateRequest.CertificateExtensions.Add(alternativeNames.Build());
+                    var certificate = resources.AcquireDependency(() => certificateRequest.CreateSelfSigned(DateTimeOffset.UtcNow.AddMinutes(-1), DateTimeOffset.UtcNow.AddHours(1)), value => { value.Dispose(); return ValueTask.CompletedTask; });
+                    web.UseKestrel(options => options.Listen(IPAddress.Loopback, webOrigin.Port, listener => listener.UseHttps(certificate)));
                     try
                     {
-                        initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.GetInvoked);
-                        var response = await host.GetAsync("/Account/Login?culture=en");
-                        initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.GetReturned, (int)response.StatusCode);
-                        return response;
+                        initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.ServerStartInvoked);
+                        resources.StartHost(webLease, () => web.StartServer());
+                        initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.ServerStartReturned);
                     }
                     catch (Exception failure)
                     {
                         initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.InitialProbeFailed, failure: failure);
+                        initialProbe.StopAndPersist();
                         throw;
                     }
-                    finally { initialProbe.StopAndPersist(); }
+                    // Probe an actual socket rather than CreateClient's factory transport before giving the origin to Chromium.
+                    using var transport = resources.AcquireHost(() => new HttpClientHandler
+                    {
+                        ServerCertificateCustomValidationCallback = (request, peer, _, _) =>
+                        {
+                            var accepted = request.RequestUri?.Host == "127.0.0.1"
+                                && peer is not null && CryptographicOperations.FixedTimeEquals(peer.GetCertHash(), certificate.GetCertHash());
+                            initialProbe.Observe(accepted ? BillingInitialProbeDiagnostics.Stage.CertificatePinAccepted : BillingInitialProbeDiagnostics.Stage.CertificatePinRejected);
+                            return accepted;
+                        },
+                    }, value => { value.Dispose(); return ValueTask.CompletedTask; });
+                    using var host = resources.AcquireHost(() => new HttpClient(transport) { BaseAddress = webOrigin, Timeout = TimeSpan.FromSeconds(15) }, value => { value.Dispose(); return ValueTask.CompletedTask; });
+                    async Task<HttpResponseMessage> ProbeInitialLoginAsync()
+                    {
+                        try
+                        {
+                            initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.GetInvoked);
+                            var response = await host.GetAsync("/Account/Login?culture=en");
+                            initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.GetReturned, (int)response.StatusCode);
+                            return response;
+                        }
+                        catch (Exception failure)
+                        {
+                            initialProbe.Observe(BillingInitialProbeDiagnostics.Stage.InitialProbeFailed, failure: failure);
+                            throw;
+                        }
+                        finally { initialProbe.StopAndPersist(); }
+                    }
+                    using var loginReady = await ProbeInitialLoginAsync();
+                    Assert.Equal(HttpStatusCode.OK, loginReady.StatusCode);
+                    var playwright = await resources.AcquireHostAsync(Playwright.CreateAsync, value => { value.Dispose(); return ValueTask.CompletedTask; });
+                    var browser = await resources.AcquireHostAsync(() => playwright.Chromium.LaunchAsync(new() { Headless = true }), value => value.DisposeAsync());
+                    var context = await resources.AcquireHostAsync(() => browser.NewContextAsync(new() { IgnoreHTTPSErrors = true, ViewportSize = new() { Width = width, Height = 850 } }), value => value.DisposeAsync());
+                    var page = await resources.AcquireHostAsync(context.NewPageAsync, value => value.DisposeAsync());
+                    var route = "/Member/Account/Manage/Address?culture=" + culture;
+                    await page.GotoAsync(new Uri(webOrigin, "/Account/Login?culture=en&returnUrl=" + Uri.EscapeDataString(route)).ToString());
+                    await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+                    await page.Locator("#Email").FillAsync("member-crawl@example.test");
+                    try { await page.Locator("#Password").FillAsync(authority.Password); }
+                    catch (PlaywrightException) { throw new InvalidOperationException("Synthetic login credential entry failed; credential-bearing browser diagnostics suppressed."); }
+                    await page.Locator("button[type=submit]").First.ClickAsync();
+                    await page.Locator("#BillingAddress1").WaitForAsync();
+                    Assert.Equal("Stored billing", await page.Locator("#BillingAddress1").InputValueAsync());
+                    var cookie = Assert.Single(await context.CookiesAsync(), value => value.Name == "__Host-Maliev.Legacy.Session");
+                    Assert.True(cookie.HttpOnly && cookie.Secure);
+                    await page.Locator("#BillingBuilding").FillAsync("Synthetic building");
+                    await page.Locator("#BillingAddress1").FillAsync("36/1 synthetic road");
+                    await page.Locator("#BillingAddress2").FillAsync("Manual district detail retained");
+                    var widget = page.Locator("[data-thai-lookup]:has(#member-billing-lookup-query)");
+                    var reply = resources.OwnOperation(() => page.WaitForResponseAsync(response => response.Url.Contains("/lookups/addresses/search", StringComparison.Ordinal)));
+                    await widget.Locator("[data-lookup-query]").FillAsync("11120");
+                    var lookupResponse = await reply;
+                    Assert.Equal(200, lookupResponse.Status);
+                    var browserPage = await lookupResponse.JsonAsync();
+                    Assert.Equal(tuplePage.RootElement.GetProperty("datasetVersion").GetString(), browserPage!.Value.GetProperty("datasetVersion").GetString());
+                    await widget.Locator("[role=option]").First.ClickAsync();
+                    await widget.Locator("[data-lookup-apply]").ClickAsync();
+                    Assert.Equal(expectedState, await page.Locator("#BillingState").InputValueAsync());
+                    Assert.Equal(expectedCity, await page.Locator("#BillingCity").InputValueAsync());
+                    Assert.Equal("11120", await page.Locator("#BillingPostalCode").InputValueAsync());
+                    Assert.Equal("Manual district detail retained", await page.Locator("#BillingAddress2").InputValueAsync());
+                    var save = resources.OwnOperation(() => page.WaitForResponseAsync(response => response.Request.Method == "POST" && response.Url.Contains("handler=UpdateAddress", StringComparison.Ordinal)));
+                    await page.Locator("[data-migration-component=member-address-content] button[type=submit]").ClickAsync();
+                    Assert.Equal(302, (await save).Status);
+                    await page.Locator("#BillingAddress1").WaitForAsync();
+                    using var readback = await customerHttp.GetAsync("customers/1");
+                    Assert.Equal(HttpStatusCode.OK, readback.StatusCode);
+                    using var after = JsonDocument.Parse(await readback.Content.ReadAsStringAsync());
+                    var billing = after.RootElement.GetProperty("BillingAddress");
+                    Assert.Equal(billingId, after.RootElement.GetProperty("BillingAddressId").GetInt32());
+                    Assert.Equal(expectedState, billing.GetProperty("State").GetString());
+                    Assert.Equal(expectedCity, billing.GetProperty("City").GetString());
+                    Assert.Equal("11120", billing.GetProperty("PostalCode").GetString());
+                    Assert.Equal("Synthetic building", billing.GetProperty("Building").GetString());
+                    Assert.Equal("36/1 synthetic road", billing.GetProperty("AddressLine1").GetString());
+                    Assert.Equal("Manual district detail retained", billing.GetProperty("AddressLine2").GetString());
+                    Assert.Equal(66, billing.GetProperty("CountryId").GetInt32());
+                    // Normal save also PUTs shipping and advances its modification timestamp; compare identity and editable content.
+                    Assert.Equal(shippingBefore, AddressContent(after.RootElement.GetProperty("ShippingAddress")));
+                    await page.GotoAsync(new Uri(webOrigin, route).ToString());
+                    await page.ReloadAsync();
+                    Assert.Equal(expectedState, await page.Locator("#BillingState").InputValueAsync());
+                    Assert.Equal(expectedCity, await page.Locator("#BillingCity").InputValueAsync());
+                    Assert.Equal("11120", await page.Locator("#BillingPostalCode").InputValueAsync());
+                    Assert.Equal("Synthetic building", await page.Locator("#BillingBuilding").InputValueAsync());
+                    Assert.Equal("36/1 synthetic road", await page.Locator("#BillingAddress1").InputValueAsync());
+                    Assert.Equal("Manual district detail retained", await page.Locator("#BillingAddress2").InputValueAsync());
+                    Assert.Equal("Distinct shipping", await page.Locator("#ShippingAddress1").InputValueAsync());
+                    var html = await page.ContentAsync();
+                    Assert.False(html.Contains(serviceToken, StringComparison.Ordinal), "Member HTML must not disclose the fixture workload credential.");
+                    var evidence = Path.Combine(AppContext.BaseDirectory, "TestResults", "billing-persistence");
+                    Directory.CreateDirectory(evidence);
+                    // No traces, cookies, request headers, raw HTML or credentials are retained.
+                    await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, culture + ".png"), FullPage = true });
+                    var overflow = await page.EvaluateAsync<string>("""
+                        () => JSON.stringify({ viewport: innerWidth, document: document.documentElement.scrollWidth,
+                            elements: Array.from(document.querySelectorAll('body *')).map(element => ({ element, rect: element.getBoundingClientRect() }))
+                                .filter(item => item.rect.right > innerWidth + 1 && item.rect.width > 0).slice(0, 20)
+                                .map(item => ({ tag: item.element.tagName, id: item.element.id, classes: item.element.className,
+                                    width: Math.round(item.rect.width), right: Math.round(item.rect.right) })) })
+                        """);
+                    Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth"),
+                        "Synthetic address layout dimensions only: " + overflow);
+                    await resources.WriteBusinessProofAsync(new
+                    {
+                        surface = "member-billing",
+                        culture,
+                        width,
+                        candidateHead = Environment.GetEnvironmentVariable("MALIEV_BILLING_CANDIDATE_HEAD"),
+                        datasetVersion = tuplePage.RootElement.GetProperty("datasetVersion").GetString(),
+                        catalogStatus = (int)lookup.StatusCode,
+                        saveStatus = 302,
+                        readbackStatus = (int)readback.StatusCode,
+                        reloadVerified = true,
+                        shippingPreserved = true,
+                        manualDetailPreserved = true,
+                        auth = "Pinned Auth normal login, encrypted cookie, Redis session; synthetic scoped service JWT",
+                    });
                 }
-                using var loginReady = await ProbeInitialLoginAsync();
-                Assert.Equal(HttpStatusCode.OK, loginReady.StatusCode);
-                var playwright = await resources.AcquireHostAsync(Playwright.CreateAsync, value => { value.Dispose(); return ValueTask.CompletedTask; });
-                var browser = await resources.AcquireHostAsync(() => playwright.Chromium.LaunchAsync(new() { Headless = true }), value => value.DisposeAsync());
-                var context = await resources.AcquireHostAsync(() => browser.NewContextAsync(new() { IgnoreHTTPSErrors = true, ViewportSize = new() { Width = width, Height = 850 } }), value => value.DisposeAsync());
-                var page = await resources.AcquireHostAsync(context.NewPageAsync, value => value.DisposeAsync());
-                var route = "/Member/Account/Manage/Address?culture=" + culture;
-                await page.GotoAsync(new Uri(webOrigin, "/Account/Login?culture=en&returnUrl=" + Uri.EscapeDataString(route)).ToString());
-                await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
-                await page.Locator("#Email").FillAsync("member-crawl@example.test");
-                try { await page.Locator("#Password").FillAsync(authority.Password); }
-                catch (PlaywrightException) { throw new InvalidOperationException("Synthetic login credential entry failed; credential-bearing browser diagnostics suppressed."); }
-                await page.Locator("button[type=submit]").First.ClickAsync();
-                await page.Locator("#BillingAddress1").WaitForAsync();
-                Assert.Equal("Stored billing", await page.Locator("#BillingAddress1").InputValueAsync());
-                var cookie = Assert.Single(await context.CookiesAsync(), value => value.Name == "__Host-Maliev.Legacy.Session");
-                Assert.True(cookie.HttpOnly && cookie.Secure);
-                await page.Locator("#BillingBuilding").FillAsync("Synthetic building");
-                await page.Locator("#BillingAddress1").FillAsync("36/1 synthetic road");
-                await page.Locator("#BillingAddress2").FillAsync("Manual district detail retained");
-                var widget = page.Locator("[data-thai-lookup]:has(#member-billing-lookup-query)");
-                var reply = resources.OwnOperation(() => page.WaitForResponseAsync(response => response.Url.Contains("/lookups/addresses/search", StringComparison.Ordinal)));
-                await widget.Locator("[data-lookup-query]").FillAsync("11120");
-                var lookupResponse = await reply;
-                Assert.Equal(200, lookupResponse.Status);
-                var browserPage = await lookupResponse.JsonAsync();
-                Assert.Equal(tuplePage.RootElement.GetProperty("datasetVersion").GetString(), browserPage!.Value.GetProperty("datasetVersion").GetString());
-                await widget.Locator("[role=option]").First.ClickAsync();
-                await widget.Locator("[data-lookup-apply]").ClickAsync();
-                Assert.Equal(expectedState, await page.Locator("#BillingState").InputValueAsync());
-                Assert.Equal(expectedCity, await page.Locator("#BillingCity").InputValueAsync());
-                Assert.Equal("11120", await page.Locator("#BillingPostalCode").InputValueAsync());
-                Assert.Equal("Manual district detail retained", await page.Locator("#BillingAddress2").InputValueAsync());
-                var save = resources.OwnOperation(() => page.WaitForResponseAsync(response => response.Request.Method == "POST" && response.Url.Contains("handler=UpdateAddress", StringComparison.Ordinal)));
-                await page.Locator("[data-migration-component=member-address-content] button[type=submit]").ClickAsync();
-                Assert.Equal(302, (await save).Status);
-                await page.Locator("#BillingAddress1").WaitForAsync();
-                using var readback = await customerHttp.GetAsync("customers/1");
-                Assert.Equal(HttpStatusCode.OK, readback.StatusCode);
-                using var after = JsonDocument.Parse(await readback.Content.ReadAsStringAsync());
-                var billing = after.RootElement.GetProperty("BillingAddress");
-                Assert.Equal(billingId, after.RootElement.GetProperty("BillingAddressId").GetInt32());
-                Assert.Equal(expectedState, billing.GetProperty("State").GetString());
-                Assert.Equal(expectedCity, billing.GetProperty("City").GetString());
-                Assert.Equal("11120", billing.GetProperty("PostalCode").GetString());
-                Assert.Equal("Synthetic building", billing.GetProperty("Building").GetString());
-                Assert.Equal("36/1 synthetic road", billing.GetProperty("AddressLine1").GetString());
-                Assert.Equal("Manual district detail retained", billing.GetProperty("AddressLine2").GetString());
-                Assert.Equal(66, billing.GetProperty("CountryId").GetInt32());
-                // Normal save also PUTs shipping and advances its modification timestamp; compare identity and editable content.
-                Assert.Equal(shippingBefore, AddressContent(after.RootElement.GetProperty("ShippingAddress")));
-                await page.GotoAsync(new Uri(webOrigin, route).ToString());
-                await page.ReloadAsync();
-                Assert.Equal(expectedState, await page.Locator("#BillingState").InputValueAsync());
-                Assert.Equal(expectedCity, await page.Locator("#BillingCity").InputValueAsync());
-                Assert.Equal("11120", await page.Locator("#BillingPostalCode").InputValueAsync());
-                Assert.Equal("Synthetic building", await page.Locator("#BillingBuilding").InputValueAsync());
-                Assert.Equal("36/1 synthetic road", await page.Locator("#BillingAddress1").InputValueAsync());
-                Assert.Equal("Manual district detail retained", await page.Locator("#BillingAddress2").InputValueAsync());
-                Assert.Equal("Distinct shipping", await page.Locator("#ShippingAddress1").InputValueAsync());
-                var html = await page.ContentAsync();
-                Assert.False(html.Contains(serviceToken, StringComparison.Ordinal), "Member HTML must not disclose the fixture workload credential.");
-                var evidence = Path.Combine(AppContext.BaseDirectory, "TestResults", "billing-persistence");
-                Directory.CreateDirectory(evidence);
-                // No traces, cookies, request headers, raw HTML or credentials are retained.
-                await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, culture + ".png"), FullPage = true });
-                var overflow = await page.EvaluateAsync<string>("""
-                    () => JSON.stringify({ viewport: innerWidth, document: document.documentElement.scrollWidth,
-                        elements: Array.from(document.querySelectorAll('body *')).map(element => ({ element, rect: element.getBoundingClientRect() }))
-                            .filter(item => item.rect.right > innerWidth + 1 && item.rect.width > 0).slice(0, 20)
-                            .map(item => ({ tag: item.element.tagName, id: item.element.id, classes: item.element.className,
-                                width: Math.round(item.rect.width), right: Math.round(item.rect.right) })) })
-                    """);
-                Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth"),
-                    "Synthetic address layout dimensions only: " + overflow);
-                await resources.WriteBusinessProofAsync(new
+            });
+        }
+        catch (Exception failure)
+        {
+            try { output.WriteLine("billing-body-failure type={0}; stack={1}", failure.GetType().FullName, failure.StackTrace); }
+            catch (Exception) { /* Diagnostic output cannot replace the original failure. */ }
+            throw;
+        }
+        finally
+        {
+            try { await resources.DisposeAsync(); }
+            catch (Exception failure)
+            {
+                try
                 {
-                    surface = "member-billing",
-                    culture,
-                    width,
-                    candidateHead = Environment.GetEnvironmentVariable("MALIEV_BILLING_CANDIDATE_HEAD"),
-                    datasetVersion = tuplePage.RootElement.GetProperty("datasetVersion").GetString(),
-                    catalogStatus = (int)lookup.StatusCode,
-                    saveStatus = 302,
-                    readbackStatus = (int)readback.StatusCode,
-                    reloadVerified = true,
-                    shippingPreserved = true,
-                    manualDetailPreserved = true,
-                    auth = "Pinned Auth normal login, encrypted cookie, Redis session; synthetic scoped service JWT",
-                });
+                    output.WriteLine("billing-cleanup-failure type={0}; stack={1}", failure.GetType().FullName, failure.StackTrace);
+                    output.WriteLine("billing-owned-custody " + resources.OwnershipReceipt());
+                }
+                catch (Exception) { /* Diagnostic output cannot replace the cleanup failure. */ }
+                throw;
             }
-        });
+        }
     }
 
     private static string Required(string name) => Environment.GetEnvironmentVariable(name) is { } value && File.Exists(value)
