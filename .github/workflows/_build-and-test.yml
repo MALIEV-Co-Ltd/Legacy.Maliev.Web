@@ -26,6 +26,11 @@ jobs:
         with:
           fetch-depth: 2
           persist-credentials: false
+      - name: Verify full-test observer portable and Linux shell controls
+        timeout-minutes: 3
+        run: |
+          python3 -B tests/FullTestObserverControls.py --require-linux --report observer-control-test-results/normal.json
+          python3 -O -B tests/FullTestObserverControls.py --require-linux --report observer-control-test-results/optimized.json
       - name: Check out Legacy.Maliev.ServiceDefaults
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -181,7 +186,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~CncOwnedResourceScopeTests|FullyQualifiedName~MemberAuthorityOwnershipTests|FullyQualifiedName~MaterialPricingAsyncCleanupTests|FullyQualifiedName~WebSurfaceOwnedLifetimeTests|FullyQualifiedName~WebSurfaceTests.MemberQuotationDetail_RendersLocalizedOwnedStaticSsr"
+          --filter "FullyQualifiedName~CncOwnedResourceScopeTests|FullyQualifiedName~MemberAuthorityOwnershipTests|FullyQualifiedName~MaterialPricingAsyncCleanupTests|FullyQualifiedName~WebSurfaceOwnedLifetimeTests|FullyQualifiedName~WebSurfaceTests.MemberQuotationDetail_RendersLocalizedOwnedStaticSsr|FullyQualifiedName~WebApplicationFactoryLifecycleTests"
           --logger trx --results-directory ./cnc-resource-test-results
       - name: Verify quotation-only conversions and minimal contact diagnostics
         run: >-
@@ -563,11 +568,20 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~MaterialPricingLifetimeTests|FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationMaterialPricingProgressTests.ComparisonCallback_WholeQuoteCanCompleteAfterThirtySecondsWithinAbsoluteBudget"
           --logger trx --results-directory ./pricing-lifetime-test-results
+      - name: Refuse an existing full-test startup hook or observer directory
+        run: python3 -B scripts/web-full-test-observer.py preflight "$GITHUB_WORKSPACE"
       - name: Validate .NET solution
+        id: full_validation
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@e5732037fe94b7ed6e5be2cd4c23dbf6ef5e2617
+        env:
+          BASH_ENV: ${{ github.workspace }}/scripts/web-full-test-observer.bash
         with:
           solution: Legacy.Maliev.Web.slnx
           use-local-maliev-dependencies: 'true'
+      - name: Verify full-test observer activation and cleanup
+        if: always()
+        timeout-minutes: 1
+        run: python3 -B scripts/web-full-test-observer.py verify '${{ steps.full_validation.outcome }}' "$GITHUB_WORKSPACE"
       - name: Gate raw generated-inclusive Web coverage
         if: always()
         shell: pwsh
@@ -634,6 +648,9 @@ jobs:
             Legacy.Maliev.Web/wwwroot/dist/route-services-index.css
             Legacy.Maliev.Web/wwwroot/dist/route-services.css
             pricing-lifetime-test-results/**
+            observer-control-test-results/*.json
+            full-test-observer-results/*.json
+            full-test-observer-results/*.jsonl
             Legacy.Maliev.Web.Tests/TestResults/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml
