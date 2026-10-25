@@ -9,7 +9,7 @@ permissions:
 jobs:
   validate:
     name: validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: '1'
       MSBUILDDISABLENODEREUSE: '1'
