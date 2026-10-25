@@ -320,10 +320,14 @@ class Linux(unittest.TestCase):
                     's=importlib.util.spec_from_file_location("o",' + repr(str(SOURCE)) + '); '
                     'o=importlib.util.module_from_spec(s); s.loader.exec_module(o); ' + body)
             p = subprocess.Popen([sys.executable, "-B", "-c", code, str(directory)],
-                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 pipesize=4096 if not drain else -1)
             resource = record_resource(p, 3)
             try:
                 if not drain:
+                    # Force backpressure on this fresh control pipe within the unchanged lease.
+                    import fcntl
+                    self.assertEqual(fcntl.fcntl(p.stdout.fileno(), fcntl.F_GETPIPE_SZ), 4096)
                     p.wait(timeout=3)
                 out, err = p.communicate(timeout=3)
                 self.assertEqual(p.returncode, 0, err.decode())
