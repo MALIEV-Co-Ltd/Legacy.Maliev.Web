@@ -22,6 +22,8 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
     private IPlaywright? playwright;
     public IBrowser Browser { get; private set; } = null!;
     public string Url { get; private set; } = "";
+    internal Uri Origin { get; private set; } = null!;
+    internal TestResponseProbeRegistry ResponseProbes => factory!.Services.GetRequiredService<TestResponseProbeRegistry>();
 
     private static int ReserveFreePort()
     {
@@ -51,6 +53,7 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
     {
         var port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
+        Origin = origin;
         factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
         factory.UseKestrel(port);
         client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
