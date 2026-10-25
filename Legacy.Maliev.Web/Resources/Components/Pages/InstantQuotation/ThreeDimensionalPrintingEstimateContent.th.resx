@@ -681,4 +681,10 @@
     <value>วัสดุอื่น ๆ</value>
   </data>
   <data name="Smooth, highly detailed appearance for resin-suitable parts · suitability is confirmed during review" xml:space="preserve"><value>ผิวเรียบและรายละเอียดคมชัดสำหรับงานที่เหมาะกับเรซิน · วิศวกรจะตรวจสอบความเหมาะสม</value></data>
+  <data name="Voxel-based estimate ({0} mm) — engineering review required" xml:space="preserve">
+    <value>ราคาประมาณจากแบบจำลองว็อกเซล ({0} มม.) — ต้องให้วิศวกรตรวจสอบ</value>
+  </data>
+  <data name="Pricing uses reconstructed geometry. Small features may change; the original file must be reviewed before manufacture." xml:space="preserve">
+    <value>ใช้แบบจำลองชั่วคราวเพื่อคำนวณราคา รายละเอียดเล็กอาจเปลี่ยนไป ต้องตรวจสอบไฟล์ต้นฉบับก่อนผลิต</value>
+  </data>
 </root>

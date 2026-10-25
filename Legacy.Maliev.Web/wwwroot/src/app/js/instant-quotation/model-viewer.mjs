@@ -637,7 +637,7 @@ async function loadCadModel(buffer, extension, signal) {
   const bytes = new Uint8Array(buffer);
   const result = validateCadTessellation(extension === 'igs' || extension === 'iges'
     ? occt.ReadIgesFile(bytes, null)
-    : occt.ReadStepFile(bytes, null));
+    : occt.ReadStepFile(bytes, { linearDeflection: 0.02 }));
   return buildCadModel(result);
 }
 

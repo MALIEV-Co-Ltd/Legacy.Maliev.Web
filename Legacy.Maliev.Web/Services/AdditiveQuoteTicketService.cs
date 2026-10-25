@@ -112,6 +112,7 @@ namespace Legacy.Maliev.Web.Application.Pricing
                     PhysicalSha256 = physical?.PhysicalSha256 ?? string.Empty,
                     Confidence = "provisional",
                     ReviewState = "engineer_review_required",
+                    GeometryReconstruction = physical?.GeometryReconstruction,
                     GeometryDigest = CreateGeometryDigest(part.Geometry),
                     MaterialKey = line.MaterialKey,
                     BuildPreference = line.BuildPreference,
@@ -225,7 +226,8 @@ namespace Legacy.Maliev.Web.Application.Pricing
                             || !string.Equals(payload.ProfileVersion, physical.ProfileVersion, StringComparison.Ordinal)
                             || !string.Equals(payload.ProfileSha256, physical.ProfileSha256, StringComparison.Ordinal)
                             || !string.Equals(payload.PhysicalAnalysisVersion, physical.AnalysisVersion, StringComparison.Ordinal)
-                            || !string.Equals(payload.PhysicalSha256, physical.PhysicalSha256, StringComparison.Ordinal)))
+                            || !string.Equals(payload.PhysicalSha256, physical.PhysicalSha256, StringComparison.Ordinal)
+                            || payload.GeometryReconstruction != physical.GeometryReconstruction))
                     {
                         return false;
                     }
@@ -314,6 +316,9 @@ namespace Legacy.Maliev.Web.Application.Pricing
                     && (!string.IsNullOrEmpty(payload.PhysicalAnalysisVersion)
                         || !string.IsNullOrEmpty(payload.PhysicalSha256)
                         || !ResinIdentityMatchesCurrent(new ResinQuoteProfileIdentity(payload.ProfileVersion, payload.ProfileSha256))))
+                || (payload.GeometryReconstruction is { } reconstruction
+                    && (payload.Process != PrintProcess.Fdm || !reconstruction.IsValid()
+                        || !string.Equals(payload.ReviewState, "engineer_review_required", StringComparison.Ordinal)))
                 || !string.Equals(payload.Confidence, "provisional", StringComparison.Ordinal)
                 || !string.Equals(payload.ReviewState, "engineer_review_required", StringComparison.Ordinal)
                 || string.IsNullOrWhiteSpace(payload.MaterialKey)
@@ -347,6 +352,7 @@ namespace Legacy.Maliev.Web.Application.Pricing
             InstantQuotationPhysicalAnalysisReceipt receipt) =>
             string.Equals(receipt.SessionId, session.SessionId, StringComparison.Ordinal)
             && string.Equals(receipt.OwnerIdentity, session.OwnerIdentity, StringComparison.Ordinal)
+            && (receipt.GeometryReconstruction is null || receipt.GeometryReconstruction.IsValid())
             && receipt.PartId == part.PartId
             && part.PhysicalAnalysisUpload is { } upload
             && receipt.FileId == upload.FileId

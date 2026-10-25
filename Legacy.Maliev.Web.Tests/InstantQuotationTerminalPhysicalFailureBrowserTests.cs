@@ -152,7 +152,8 @@ public sealed class InstantQuotationTerminalPhysicalFailureBrowserTests
         {
             var bytes = input switch
             {
-                "open" => Box(8, true),
+                // Retained row label: a single open sheet cannot supply a recoverable solid.
+                "open" => IrrecoverableSheet(),
                 "layers" => Box(1000, false),
                 _ => Encoding.ASCII.GetBytes("solid incomplete\nfacet normal 0 0 1\n"),
             };
@@ -224,6 +225,13 @@ public sealed class InstantQuotationTerminalPhysicalFailureBrowserTests
                 }
             }
         }
+    }
+
+    private static byte[] IrrecoverableSheet()
+    {
+        byte[] sheet = Box(8, false)[..134];
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(sheet.AsSpan(80, 4), 1);
+        return sheet;
     }
 
     private static byte[] Box(float height, bool omitLastFace)

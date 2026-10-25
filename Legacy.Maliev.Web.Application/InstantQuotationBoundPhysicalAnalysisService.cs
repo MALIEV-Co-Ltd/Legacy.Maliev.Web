@@ -119,7 +119,7 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
         SimulationResult physical;
         try
         {
-            physical = await Task.Run(() => FdmSimulationEngine.Estimate(new SimulationRequest(
+            physical = await Task.Run(() => FdmSimulationEngine.EstimateRecoverable(new SimulationRequest(
                 admitted.Mesh!, new Pose("source", Matrix4x4.Identity), profile!, binding.Quantity,
                 new AnalysisBudget(MaximumTriangles, MaximumLayers, MaximumPathSegments, cancellationToken))),
                 cancellationToken);
@@ -131,6 +131,7 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
             {
                 "geometry_requires_review" => InstantQuotationBoundPhysicalAnalysisFailure.GeometryReview,
                 "triangle_budget_exceeded" or "layer_budget_exceeded" or "path_segment_budget_exceeded"
+                    or "geometry_complexity_exceeded"
                     => InstantQuotationBoundPhysicalAnalysisFailure.ComplexityExceeded,
                 _ => InstantQuotationBoundPhysicalAnalysisFailure.SimulationUnavailable,
             });
