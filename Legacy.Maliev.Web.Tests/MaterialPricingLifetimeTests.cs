@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Coordinator lifetime proof with a registered protected store and real resin kernel; not upload admission proof.</summary>
-public sealed class MaterialPricingLifetimeTests
+public sealed class MaterialPricingLifetimeTests(Xunit.Abstractions.ITestOutputHelper output)
 {
     [Fact]
     public async Task Disposal_CancelsReachedPricingToken()
@@ -56,10 +56,13 @@ public sealed class MaterialPricingLifetimeTests
         using var caller = new CancellationTokenSource();
         var pending = fixture.Pricing.Arm(ignoreCancellation: true);
         var update = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 2, caller.Token);
+        var stage = "waiting-pricing-entry";
         try
         {
             await pending.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            stage = "stopping-producer-wait";
             if (callerAbort) caller.Cancel(); else await fixture.Workflow.DisposeAsync();
+            stage = "awaiting-producer-completion";
             var winner = await Task.WhenAny(update, Task.Delay(TimeSpan.FromSeconds(2)));
             Assert.Same(update, winner);
             var canceled = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => update);
@@ -68,10 +71,30 @@ public sealed class MaterialPricingLifetimeTests
             Assert.Null(fixture.Workflow.OrderQuote);
             Assert.Null((await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!.QuoteAuthorization);
         }
+        catch (Exception exception)
+        {
+            output.WriteLine("pricing-lifetime stage={0}; exception={1}; entered={2}; exited={3}; update={4}; workingSetBytes={5}; managedBytes={6}; memoryLoadBytes={7}; gcAvailableBytes={8}; threadPoolThreads={9}; pendingWorkItems={10}",
+                stage, exception.GetType().FullName, pending.Entered.Task.IsCompleted, pending.Exited.Task.IsCompleted,
+                update.Status, Environment.WorkingSet, GC.GetTotalMemory(false), GC.GetGCMemoryInfo().MemoryLoadBytes,
+                GC.GetGCMemoryInfo().TotalAvailableMemoryBytes, ThreadPool.ThreadCount, ThreadPool.PendingWorkItemCount);
+            throw;
+        }
         finally
         {
-            pending.Release.TrySetResult(); await IgnoreCancellationAsync(update);
-            await pending.Exited.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            try
+            {
+                pending.Release.TrySetResult(); await IgnoreCancellationAsync(update);
+                await pending.Exited.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+            catch (Exception exception)
+            {
+                stage = "cleanup-after-" + stage;
+                output.WriteLine("pricing-lifetime stage={0}; exception={1}; entered={2}; exited={3}; update={4}; workingSetBytes={5}; managedBytes={6}; memoryLoadBytes={7}; gcAvailableBytes={8}; threadPoolThreads={9}; pendingWorkItems={10}",
+                    stage, exception.GetType().FullName, pending.Entered.Task.IsCompleted, pending.Exited.Task.IsCompleted,
+                    update.Status, Environment.WorkingSet, GC.GetTotalMemory(false), GC.GetGCMemoryInfo().MemoryLoadBytes,
+                    GC.GetGCMemoryInfo().TotalAvailableMemoryBytes, ThreadPool.ThreadCount, ThreadPool.PendingWorkItemCount);
+                throw;
+            }
         }
     }
 
