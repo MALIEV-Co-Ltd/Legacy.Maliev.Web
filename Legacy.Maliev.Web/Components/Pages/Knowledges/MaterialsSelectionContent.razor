@@ -1,0 +1,76 @@
+@inject IStringLocalizer<MaterialsSelectionContent> Localizer
+
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+<h1>@Localizer["Choose a material around the job it must do"]</h1>
+<p class="docs-lead">@Localizer["A material name is only the start of a specification. Build a shortlist around the operating environment, failure modes, manufacturing process, and evidence needed to accept the finished part. This guide is a decision worksheet, not a list of materials held in stock."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/material-selection.webp" srcset="/src/images/knowledge/photos/material-selection-small.webp 768w, /src/images/knowledge/photos/material-selection.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["Metal and polymer samples arranged around a bearing support and mating components."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Start with loads, environment and mating interfaces before selecting a material name. Illustrative image."]</figcaption>
+</figure>
+<nav class="docs-toc" aria-label="@Localizer["On this page"]">
+<strong>@Localizer["On this page"]</strong>
+<ul>
+<li><a href="#requirements">@Localizer["1. Describe service conditions before comparing grades"]</a></li>
+<li><a href="#environment">@Localizer["2. Check heat, chemicals, and time together"]</a></li>
+<li><a href="#specification">@Localizer["3. Specify grade, condition, and manufacturing route"]</a></li>
+<li><a href="#worksheet">@Localizer["4. Build a decision worksheet"]</a></li>
+<li><a href="#release">@Localizer["5. Close tolerances, finishing, and documentation"]</a></li>
+</ul>
+</nav>
+<section id="requirements" class="docs-section">
+<h2>@Localizer["1. Describe service conditions before comparing grades"]</h2>
+<p>@Localizer["Write down normal operation, start-up, cleaning, transport, and foreseeable misuse separately. A light cover, a locating fixture, and a pressure-containing housing have different consequences of failure. Define the required life, maintenance interval, allowable deflection, and what failure would mean before searching for the strongest material."]</p>
+<p>@Localizer["Distinguish one-time overload from repeated loading, impact, and sustained clamping. Strength is resistance to failure; stiffness controls elastic movement. A stronger grade does not automatically solve a deflection problem. Record load direction and contact area, especially around threads, thin walls, press fits, and cantilevered features."]</p>
+
+<figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["Three engineering sketches show a loaded cantilever, fluid and temperature exposure, and clearance between mating parts."]">
+        <img src="/src/images/knowledge/visual-material-criteria.svg" alt="@Localizer["Three engineering sketches show a loaded cantilever, fluid and temperature exposure, and clearance between mating parts."]" width="960" height="480" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>@Localizer["1: define load and allowable deflection. 2: identify actual fluids and temperature. 3: D is hole diameter and d is shaft diameter; diametral clearance c = D − d. For concentric parts the radial gap is c / 2. The gap is exaggerated. Assess these requirements together before choosing a grade; this is not a fit specification."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-material-criteria.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
+</section>
+<section id="environment" class="docs-section">
+<h2>@Localizer["2. Check heat, chemicals, and time together"]</h2>
+<p>@Localizer["Record continuous temperature, brief peaks, and thermal cycling at the part rather than the surrounding room. Include friction and nearby motors or heaters. For plastics, melting temperature, heat-deflection temperature, and long-term service guidance answer different questions; none alone establishes an allowable working load."]</p>
+<p>@Localizer["List actual fluids, concentration, exposure duration, and cleaning temperature. Include humidity, sunlight, salt deposits, trapped liquid, and contact with dissimilar metals. Outokumpu notes that its corrosion tables describe annealed material with clean surfaces; use those conditions to question whether a chart represents your assembled component."]</p>
+<p><a href="https://www.outokumpu.com/en/products/corrosion-tables">@Localizer["Outokumpu corrosion table conditions"]</a></p>
+</section>
+<section id="specification" class="docs-section">
+<h2>@Localizer["3. Specify grade, condition, and manufacturing route"]</h2>
+<p>@Localizer["Specify the material standard or manufacturer grade, product form, temper or heat treatment, and permitted substitutions. Aluminium 6061-T6 is more specific than aluminium. Hydro cautions that welding can reduce strength locally in this temper, so a welded assembly cannot simply inherit the parent-stock assumption."]</p>
+<p><a href="https://www.hydro.com/globalassets/01-products--services/extruded-profiles/americas/ena-resources/alloy-data-sheets/hydro_2019_data_sheet_6061.pdf">@Localizer["Hydro 6061 fabrication guidance"]</a></p>
+<p>@Localizer["Machined stock, cast material, moulded resin, and printed polymer require separate evidence. Identify build orientation, reinforcement, conditioning, porosity, and post-processing where relevant. For a continuously loaded plastic clip, request creep information at the intended temperature and duration; ASTM D2990 covers long-term creep measurements rather than a short tensile snapshot."]</p>
+<p><a href="https://store.astm.org/standards/d2990">@Localizer["ASTM D2990 scope"]</a></p>
+</section>
+<section id="worksheet" class="docs-section">
+<h2>@Localizer["4. Build a decision worksheet"]</h2>
+<p>@Localizer["Separate mandatory requirements from preferences. Reject candidates that fail a mandatory requirement before scoring cost or appearance. Mark unknowns openly and assign an owner to each test or supplier question. Compare total effort, including machining, heat treatment, coating, inspection, replacement, and supporting documents."]</p>
+<div class="docs-table-wrap" role="region" tabindex="0" aria-label="@Localizer["Material decision worksheet"]">
+<table>
+<caption>@Localizer["Material decision worksheet"]</caption>
+<thead><tr><th scope="col">@Localizer["Requirement"]</th><th scope="col">@Localizer["Record or verify"]</th></tr></thead>
+<tbody>
+<tr><td>@Localizer["Function and load"]</td><td>@Localizer["Peak force, cycles, stiffness target, contact pressure, and life."]</td></tr>
+<tr><td>@Localizer["Environment"]</td><td>@Localizer["Part temperature, cleaning chemistry, wet time, UV exposure, and mating materials."]</td></tr>
+<tr><td>@Localizer["Manufacturing and acceptance"]</td><td>@Localizer["Grade, route, finish, critical dimensions, inspection state, and evidence required."]</td></tr>
+</tbody>
+</table>
+</div>
+<aside class="docs-example">
+<h3>@Localizer["Example: a replaceable conveyor guide"]</h3>
+<p>@Localizer["Suppose an indoor guide slides against packaging, is washed daily, and must keep a running clearance. Start with POM and PA as candidates, not approved selections. Measure cleaning exposure and operating temperature, then compare moisture-related dimensional change, wear, and clearance after conditioning. Test a representative guide against the actual mating surface."]</p>
+</aside>
+</section>
+<section id="release" class="docs-section">
+<h2>@Localizer["5. Close tolerances, finishing, and documentation"]</h2>
+<p>@Localizer["Define whether dimensions apply before or after finishing and at what temperature and moisture condition. Mask threads or fits when the coating specification requires it. Check that the finish supports electrical contact, bonding, wear, and appearance requirements rather than selecting it from colour alone."]</p>
+<p>@Localizer["Request traceability and the exact documents needed in the quotation. A resin name does not establish food-contact suitability, medical suitability, flame performance, or electrical approval. Freeze the chosen grade, revision, acceptance method, and unresolved validation work together so that later substitutions trigger a deliberate review."]</p>
+<p>@Localizer["Keep rejected options and the reason beside the selected candidate. If a supplier proposes a substitute, compare the same requirements again, including finish compatibility and document availability. A lower raw-material price is useful only when the complete part still meets the agreed acceptance criteria."]</p>
+</section>
+<p>@Localizer["Sources reviewed 16 October 2026. Confirm current grade data and project requirements before production."]</p>
+</article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}

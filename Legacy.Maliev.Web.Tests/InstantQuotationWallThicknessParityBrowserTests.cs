@@ -6,7 +6,8 @@ namespace Legacy.Maliev.Web.Tests;
 // Source fad52019c898ebe63c39eb0f30e65b0fb59126ca has four scenarios.
 // Coarse projection comes from 483a2fdb0beeafa014bb6b0a5ca1e85cd7bdbb74,
 // refined by 351825232f787ef988c7c058910520a14aa70123.
-public sealed class InstantQuotationWallThicknessParityBrowserTests(WallThicknessParityBrowserFixture fixture)
+public sealed class InstantQuotationWallThicknessParityBrowserTests(
+    WallThicknessParityBrowserFixture fixture, Xunit.Abstractions.ITestOutputHelper output)
     : IClassFixture<WallThicknessParityBrowserFixture>
 {
     [Theory]
@@ -51,21 +52,51 @@ public sealed class InstantQuotationWallThicknessParityBrowserTests(WallThicknes
         var pageErrors = new List<string>();
         await page.SetViewportSizeAsync(width, 800);
         page.PageError += (_, error) => pageErrors.Add(error);
-        await page.GotoAsync(fixture.Url + "?culture=" + culture, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
-        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
-        await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+        await using var failureEvidence = new BrowserFailureEvidence(page);
+        try
         {
-            Name = "source-open-sheet.stl",
-            MimeType = "model/stl",
-            Buffer = WallThicknessParityBrowserFixture.Sheet(),
-        });
-        await page.WaitForFunctionAsync("() => document.querySelector('.instant-quote__workflow')?.dataset.workflowState === 'error' || !!document.querySelector('[data-workflow-incomplete-preview]')");
+            using (var responseProbe = fixture.ResponseProbes.TryBeginNavigation(
+                fixture.Origin, TestResponseRequestLabel.BaseQuotation))
+            using (var navigation = new MaterialInitialNavigationDiagnostics(page, fixture.Origin, responseProbe?.Probe))
+            {
+                await navigation.RunAsync(
+                    () => page.GotoAsync(fixture.Url + "?culture=" + culture, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle }),
+                    output.WriteLine);
+            }
+            await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+            failureEvidence.Stage("UploadAdmission");
+            await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+            {
+                Name = "source-open-sheet.stl",
+                MimeType = "model/stl",
+                Buffer = WallThicknessParityBrowserFixture.Sheet(),
+            });
+            await page.WaitForFunctionAsync("() => document.querySelector('.instant-quote__workflow')?.dataset.workflowState === 'error' || !!document.querySelector('[data-workflow-incomplete-preview]')");
+        }
+        catch (Exception original)
+        {
+            await failureEvidence.AttachAsync(original, () => page.EvaluateAsync<string>("""
+                () => {
+                  const state = document.querySelector('.instant-quote__workflow')?.dataset.workflowState;
+                  return JSON.stringify({
+                    workflow: ['empty','uploading','uploaded','error','multipart','configured','review','customerdetails','submitted'].includes(state) ? state : 'unavailable',
+                    parts: Math.min(32, document.querySelectorAll('[data-workflow-part]').length),
+                    uploadRows: Math.min(32, document.querySelectorAll('[data-workflow-upload-item]').length),
+                    progress: !!document.querySelector('[role="progressbar"]'),
+                    errorVisible: !!document.querySelector('#blazor-error-ui')?.offsetParent
+                  });
+                }
+                """), metadata => output.WriteLine("[sheet-failure] " + metadata));
+            throw;
+        }
         Assert.Equal(0, await page.Locator("[data-workflow-price-tier]").CountAsync());
         Assert.Equal(0, await page.Locator("[data-workflow-dfm-clear]").CountAsync());
         Assert.Empty(pageErrors);
         Assert.Contains("/instantquotation/3d-printing", page.Url, StringComparison.Ordinal);
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         // Region creation precedes the genuine worker callback; wait for that rendered evidence.
+        await Assertions.Expect(page.Locator("[data-workflow-incomplete-preview]")).ToHaveCountAsync(1);
+        await Assertions.Expect(page.Locator("[data-workflow-incomplete-preview] canvas")).ToHaveCountAsync(1);
         await page.Locator("[data-workflow-incomplete-preview]").GetByText(incomplete, new LocatorGetByTextOptions { Exact = true }).WaitForAsync();
         if (Environment.GetEnvironmentVariable("MALIEV_BROWSER_EVIDENCE_DIR") is { Length: > 0 } directory)
         {
@@ -112,6 +143,8 @@ public sealed class InstantQuotationWallThicknessParityBrowserTests(WallThicknes
             MimeType = "model/stl",
             Buffer = WallThicknessParityBrowserFixture.Sheet(),
         });
+        await Assertions.Expect(page.Locator("[data-workflow-incomplete-preview]")).ToHaveCountAsync(1);
+        await Assertions.Expect(page.Locator("[data-workflow-incomplete-preview] canvas")).ToHaveCountAsync(1);
         await page.Locator("[data-workflow-incomplete-preview]").WaitForAsync();
         await page.WaitForFunctionAsync("() => !document.querySelector('#instant-quote-files').disabled");
         await page.SetInputFilesAsync("#instant-quote-files", new FilePayload

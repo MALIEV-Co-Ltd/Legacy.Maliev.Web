@@ -56,6 +56,23 @@ public sealed class BrowserFailureEvidenceTests
         Assert.DoesNotContain("private", json, StringComparison.Ordinal);
         Assert.Equal(json, original.Data[BrowserFailureEvidence.DataKey]);
         Assert.Equal("primary", original.Message);
+        evidence.Stage("Review");
+        var reviewOutput = new List<string>();
+        await evidence.AttachAsync(original, () => Task.FromResult("{\"workflow\":\"unavailable\",\"expectedThumbnails\":2,\"reviewParts\":2,\"actualThumbnails\":2,\"webpReadyThumbnails\":1,\"reviewCountsCapped\":false}"), reviewOutput.Add);
+        using var reviewDocument = JsonDocument.Parse(Assert.Single(reviewOutput));
+        var observation = reviewDocument.RootElement.GetProperty("Observation");
+        Assert.Equal("unavailable", observation.GetProperty("workflow").GetString());
+        Assert.Equal(2, observation.GetProperty("expectedThumbnails").GetInt32());
+        Assert.Equal(2, observation.GetProperty("reviewParts").GetInt32());
+        Assert.Equal(2, observation.GetProperty("actualThumbnails").GetInt32());
+        Assert.Equal(1, observation.GetProperty("webpReadyThumbnails").GetInt32());
+        Assert.False(observation.GetProperty("reviewCountsCapped").GetBoolean());
+        foreach (var field in new[] { "expectedThumbnails", "reviewParts", "actualThumbnails", "webpReadyThumbnails" })
+        {
+            Assert.Throws<FormatException>(() => BrowserFailureEvidence.ParseObservation("{\"workflow\":\"review\",\"" + field + "\":33}"));
+            Assert.Throws<FormatException>(() => BrowserFailureEvidence.ParseObservation("{\"workflow\":\"review\",\"" + field + "\":-1}"));
+            Assert.Throws<FormatException>(() => BrowserFailureEvidence.ParseObservation("{\"workflow\":\"review\",\"" + field + "\":\"private\"}"));
+        }
     }
 
     [Fact]
@@ -512,7 +529,7 @@ public sealed class BrowserFailureEvidenceTests
     [Theory]
     [InlineData("reviewParts")]
     [InlineData("reviewImages")]
-    [InlineData("reviewPngImages")]
+    [InlineData("reviewWebpImages")]
     [InlineData("reviewPlaceholderImages")]
     [InlineData("reviewOtherImages")]
     public void ReviewThumbnailCountsRejectUnboundedOrPrivateValues(string field)
@@ -540,14 +557,14 @@ public sealed class BrowserFailureEvidenceTests
         var original = new TimeoutException("primary");
         var output = new List<string>();
         await evidence.AttachAsync(original, () => Task.FromResult(
-            "{\"workflow\":\"review\",\"reviewParts\":2,\"reviewImages\":2,\"reviewPngImages\":0,\"reviewPlaceholderImages\":2,\"reviewOtherImages\":0,\"errorVisible\":false}"), output.Add);
+            "{\"workflow\":\"review\",\"reviewParts\":2,\"reviewImages\":2,\"reviewWebpImages\":0,\"reviewPlaceholderImages\":2,\"reviewOtherImages\":0,\"errorVisible\":false}"), output.Add);
         var json = Assert.Single(output);
         using var document = JsonDocument.Parse(json);
         var observation = document.RootElement.GetProperty("Observation");
         Assert.Equal("review", observation.GetProperty("workflow").GetString());
         Assert.Equal(2, observation.GetProperty("reviewParts").GetInt32());
         Assert.Equal(2, observation.GetProperty("reviewImages").GetInt32());
-        Assert.Equal(0, observation.GetProperty("reviewPngImages").GetInt32());
+        Assert.Equal(0, observation.GetProperty("reviewWebpImages").GetInt32());
         Assert.Equal(2, observation.GetProperty("reviewPlaceholderImages").GetInt32());
         Assert.Equal(0, observation.GetProperty("reviewOtherImages").GetInt32());
         Assert.False(observation.GetProperty("errorVisible").GetBoolean());
