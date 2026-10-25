@@ -14,6 +14,130 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class WebSurfaceOwnedLifetimeTests
 {
     [Fact]
+    public void WebRootLeaseConcurrentDisposeWaitsForPhysicalProviderCompletion()
+    {
+        var provider = new GatedWebRootProbe(AppContext.BaseDirectory);
+        using var lease = LeaseForProvider(provider);
+        using var secondReturned = new ManualResetEventSlim();
+        Exception? firstFailure = null;
+        Exception? secondFailure = null;
+        var first = new Thread(() =>
+        {
+            try { lease.Dispose(); }
+            catch (Exception failure) { firstFailure = failure; }
+        });
+        var second = new Thread(() =>
+        {
+            try { lease.Dispose(); }
+            catch (Exception failure) { secondFailure = failure; }
+            finally { secondReturned.Set(); }
+        });
+        var secondStarted = false;
+        try
+        {
+            first.Start();
+            Assert.True(provider.Entered.Wait(TimeSpan.FromSeconds(5)));
+            second.Start();
+            secondStarted = true;
+            Assert.True(SpinWait.SpinUntil(() => secondReturned.IsSet
+                || (second.ThreadState & System.Threading.ThreadState.WaitSleepJoin) != 0,
+                TimeSpan.FromSeconds(5)));
+            Assert.False(secondReturned.IsSet);
+            Assert.False(lease.IsDisposed);
+            Assert.False(provider.Completed);
+        }
+        finally
+        {
+            provider.Release.Set();
+            try
+            {
+                Assert.True(first.Join(TimeSpan.FromSeconds(5)));
+                if (secondStarted) Assert.True(second.Join(TimeSpan.FromSeconds(5)));
+            }
+            finally { provider.Cleanup(); }
+        }
+        Assert.Null(firstFailure);
+        Assert.Null(secondFailure);
+        Assert.True(secondReturned.IsSet);
+        Assert.True(lease.IsDisposed);
+        Assert.True(provider.Completed);
+        Assert.Equal(1, provider.Attempts);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void WebRootLeaseReentrantDisposePreservesOneAttemptAndOriginalFailure(bool fail)
+    {
+        TestingWebRootLease? lease = null;
+        var original = new ApplicationException("Synthetic owned provider disposal failure.");
+        var provider = new ReentrantWebRootProbe(AppContext.BaseDirectory, () =>
+        {
+            Assert.False(lease!.IsDisposed);
+            lease.Dispose();
+            Assert.False(lease.IsDisposed);
+        }, fail ? original : null);
+        using (lease = LeaseForProvider(provider))
+        {
+            try
+            {
+                if (fail) Assert.Same(original, Assert.Throws<ApplicationException>(() => lease.Dispose()));
+                else lease.Dispose();
+                Assert.True(lease.IsDisposed);
+                lease.Dispose();
+                Assert.Equal(1, provider.Attempts);
+            }
+            finally { provider.Cleanup(); }
+        }
+    }
+
+    private static TestingWebRootLease LeaseForProvider(PhysicalFileProvider provider) =>
+        Assert.IsType<TestingWebRootLease>(typeof(TestingWebRootLease).GetConstructor(
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic,
+            binder: null, types: [typeof(PhysicalFileProvider)], modifiers: null)!.Invoke([provider]));
+
+    private sealed class GatedWebRootProbe(string root) : PhysicalFileProvider(root)
+    {
+        internal ManualResetEventSlim Entered { get; } = new();
+        internal ManualResetEventSlim Release { get; } = new();
+        internal int Attempts { get; private set; }
+        internal bool Completed { get; private set; }
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Attempts++;
+                Entered.Set();
+                if (!Release.Wait(TimeSpan.FromSeconds(10))) throw new TimeoutException("Owned disposal gate was not released.");
+            }
+            base.Dispose(disposing);
+            Completed = true;
+        }
+        internal void Cleanup()
+        {
+            base.Dispose(true);
+            Entered.Dispose();
+            Release.Dispose();
+        }
+    }
+
+    private sealed class ReentrantWebRootProbe(string root, Action callback, Exception? failure) : PhysicalFileProvider(root)
+    {
+        internal int Attempts { get; private set; }
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Attempts++;
+                callback();
+            }
+            base.Dispose(disposing);
+            if (disposing && failure is not null) throw failure;
+        }
+        internal void Cleanup() => base.Dispose(true);
+    }
+
+    [Fact]
     public void FailedStartReleasesRealWebRootEvenWhenHostedServiceDisposalThrows()
     {
         var original = new InvalidOperationException("private-startup");

@@ -23,6 +23,7 @@ var builder = WebApplication.CreateBuilder(args);
 using var testingWebRoot = TestingWebRootLease.Create(builder.Environment);
 if (builder.Environment.IsEnvironment("Testing"))
 {
+    builder.Services.AddSingleton(_ => new TestingRateLimiterLifetime());
     if (testingWebRoot is not null) builder.Services.AddSingleton(testingWebRoot);
     builder.WebHost.UseStaticWebAssets();
 }
@@ -573,6 +574,8 @@ builder.Services.AddHttpClient<Legacy.Maliev.Web.Application.ICustomerDocumentCl
   .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 #pragma warning restore EXTEXP0001
 var app = builder.Build();
+var testingRateLimiter = app.Environment.IsEnvironment("Testing")
+    ? app.Services.GetRequiredService<TestingRateLimiterLifetime>() : null;
 app.UseMiddleware<BuildIdentityHeaderMiddleware>();
 app.Use(async (context, next) =>
 {
@@ -607,7 +610,8 @@ app.UseMiddleware<QuotationRouteRedirectMiddleware>();
 app.UseMiddleware<Legacy.Maliev.Web.CncUploadAdmissionMiddleware>();
 app.UseRouting();
 app.UseCors();
-app.UseRateLimiter();
+if (testingRateLimiter is not null) testingRateLimiter.Use(app);
+else app.UseRateLimiter();
 app.UseAuthentication();
 app.UseMiddleware<InstantQuotationSessionIdentityMiddleware>();
 app.UseAuthorization();

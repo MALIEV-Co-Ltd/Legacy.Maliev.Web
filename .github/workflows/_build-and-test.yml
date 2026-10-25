@@ -9,11 +9,13 @@ permissions:
 jobs:
   validate:
     name: validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: '1'
       MSBUILDDISABLENODEREUSE: '1'
       UseSharedCompilation: 'false'
+      # Preserve file change notifications without exhausting hosted inotify instances.
+      DOTNET_USE_POLLING_FILE_WATCHER: '1'
       MalievWorkspaceRoot: ${{ github.workspace }}/.dependencies
       MALIEV_WEB_STARTUP_PROOF: hosted-owned
       MALIEV_BILLING_CANDIDATE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -24,6 +26,11 @@ jobs:
         with:
           fetch-depth: 2
           persist-credentials: false
+      - name: Verify full-test observer portable and Linux shell controls
+        timeout-minutes: 3
+        run: |
+          python3 -B tests/FullTestObserverControls.py --require-linux --report observer-control-test-results/normal.json
+          python3 -O -B tests/FullTestObserverControls.py --require-linux --report observer-control-test-results/optimized.json
       - name: Check out Legacy.Maliev.ServiceDefaults
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -188,7 +195,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~CncOwnedResourceScopeTests|FullyQualifiedName~MemberAuthorityOwnershipTests|FullyQualifiedName~MaterialPricingAsyncCleanupTests|FullyQualifiedName~WebSurfaceOwnedLifetimeTests|FullyQualifiedName~WebSurfaceTests.MemberQuotationDetail_RendersLocalizedOwnedStaticSsr"
+          --filter "FullyQualifiedName~CncOwnedResourceScopeTests|FullyQualifiedName~MemberAuthorityOwnershipTests|FullyQualifiedName~MaterialPricingAsyncCleanupTests|FullyQualifiedName~WebSurfaceOwnedLifetimeTests|FullyQualifiedName~WebSurfaceTests.MemberQuotationDetail_RendersLocalizedOwnedStaticSsr|FullyQualifiedName~WebApplicationFactoryLifecycleTests"
           --logger trx --results-directory ./cnc-resource-test-results
       - name: Verify quotation-only conversions and minimal contact diagnostics
         run: >-
@@ -227,6 +234,52 @@ jobs:
           python3 -c 'from pathlib import Path; s=Path("/etc/apt/sources.list.d/ubuntu.sources").read_text(); assert "mirror+file:/etc/apt/apt-mirrors.txt" in s and "Signed-By:" in s, "Unexpected hosted Ubuntu source policy"'
           printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
           pwsh -NoProfile -File ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+      - name: Verify retained quantity and terminal upload browser boundaries
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          test ! -e wall-thickness-terminal-test-results
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj \
+            --configuration Release --no-build --no-restore \
+            -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath= \
+            --filter 'FullyQualifiedName~InstantQuotationWallThicknessRealUploadBrowserTests.Source292QuantityBoundary_|FullyQualifiedName~InstantQuotationWallThicknessRealUploadBrowserTests.BulkSelection_UsesAccessibleNativeControlsAndKeepsServerOwnedPartSettings|FullyQualifiedName~InstantQuotationWallThicknessRealUploadBrowserTests.NewBatch_RevealsItsLatestAdmittedPartAndRetainsAnUnreadableSelectionUntilDismissed|FullyQualifiedName~InstantQuotationWallThicknessRealUploadBrowserTests.RecoveredUpload_ShowsCurrentReceiptWarningWithoutManualAnalysisAndPreservesOriginalFile|FullyQualifiedName~InstantQuotationWallThicknessRealUploadBrowserTests.RemovingPendingLocalParser_UnblocksCurrentProtectedQuoteBeforeActualReadReturns|FullyQualifiedName~InstantQuotationWallThicknessRealUploadBrowserTests.OpenSheetFailsClosedInsteadOfInventingSafeThickness' \
+            --logger 'trx;LogFileName=wall-thickness-terminal.trx' \
+            --results-directory ./wall-thickness-terminal-test-results
+          python3 -B - <<'PY'
+          import runpy
+          from pathlib import Path
+          import xml.etree.ElementTree as E
+          gate = runpy.run_path('scripts/verify-focused-web-trx.py')
+          cls = 'Legacy.Maliev.Web.Tests.InstantQuotationWallThicknessRealUploadBrowserTests'
+          quantities = (1, 9, 10, 49, 50, 99, 100, 101)
+          quantity_methods = ('Source292QuantityBoundary_ProtectedWorkflowTotalsKeepRoundedLinesAndVatOnce', 'Source292QuantityBoundary_PersistedRequestIgnoresPostedMoney', 'Source292QuantityBoundary_BrowserDisplaysProtectedServerMarginOnce')
+          viewport_methods = ('BulkSelection_UsesAccessibleNativeControlsAndKeepsServerOwnedPartSettings', 'NewBatch_RevealsItsLatestAdmittedPartAndRetainsAnUnreadableSelectionUntilDismissed')
+          recovered = 'RecoveredUpload_ShowsCurrentReceiptWarningWithoutManualAnalysisAndPreservesOriginalFile'
+          removing = 'RemovingPendingLocalParser_UnblocksCurrentProtectedQuoteBeforeActualReadReturns'
+          sheet = 'OpenSheetFailsClosedInsteadOfInventingSafeThickness'
+          roster = {**{name: 8 for name in quantity_methods}, **{name: 2 for name in viewport_methods}, recovered: 2, removing: 2, sheet: 1}
+          gate['ROSTERS']['wall-thickness-terminal'] = {cls: roster}
+          trx = Path('wall-thickness-terminal-test-results/wall-thickness-terminal.trx')
+          gate['verify'](trx, 'wall-thickness-terminal', Path('Legacy.Maliev.Web.Tests/bin/Release/net10.0/Legacy.Maliev.Web.Tests.dll'))
+          expected = {f'{cls}.{method}(quantity: {quantity})' for method in quantity_methods for quantity in quantities}
+          expected.update(f'{cls}.{method}(width: {width}, culture: "{culture}")' for method in viewport_methods for width, culture in ((375, 'th'), (1280, 'en')))
+          expected.update(f'{cls}.{recovered}(culture: "{culture}", width: {width})' for culture, width in (('en', 1440), ('th', 390)))
+          expected.update(f'{cls}.{removing}(culture: "{culture}")' for culture in ('en', 'th'))
+          expected.add(f'{cls}.{sheet}')
+          actual = {row.attrib['testName'] for row in E.parse(trx).getroot().iter() if row.tag.rsplit('}', 1)[-1] == 'UnitTestResult'}
+          if len(expected) != 33 or actual != expected:
+              raise ValueError('All thirty-three exact retained quantity and terminal upload browser cases must pass')
+          print('Retained quantity/terminal browser boundaries: all33 exact native identities passed')
+          PY
+      - name: Preserve retained quantity and terminal browser native evidence
+        if: always()
+        timeout-minutes: 3
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: web-wall-thickness-terminal-${{ github.sha }}
+          path: wall-thickness-terminal-test-results/**/*.trx
+          retention-days: 7
+          if-no-files-found: error
       - name: Verify authenticated profile preparation and submission boundaries
         run: >-
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
@@ -522,11 +575,28 @@ jobs:
           "$WEB_PRELIMINARY_PDF_VENV/bin/python" scripts/verify-preliminary-pdf-proof.py
           --root ./preliminary-pdf-test-results/pdf
           --receipt ./preliminary-pdf-test-results/parser-receipt.json
+      - name: Verify pricing lifetime cancellation and late completion regressions
+        timeout-minutes: 2
+        run: >-
+          dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
+          --configuration Release --no-build --no-restore
+          -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
+          --filter "FullyQualifiedName~MaterialPricingLifetimeTests|FullyQualifiedName=Legacy.Maliev.Web.Tests.InstantQuotationMaterialPricingProgressTests.ComparisonCallback_WholeQuoteCanCompleteAfterThirtySecondsWithinAbsoluteBudget"
+          --logger trx --results-directory ./pricing-lifetime-test-results
+      - name: Refuse an existing full-test startup hook or observer directory
+        run: python3 -B scripts/web-full-test-observer.py preflight "$GITHUB_WORKSPACE"
       - name: Validate .NET solution
+        id: full_validation
         uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/actions/dotnet-validate@e5732037fe94b7ed6e5be2cd4c23dbf6ef5e2617
+        env:
+          BASH_ENV: ${{ github.workspace }}/scripts/web-full-test-observer.bash
         with:
           solution: Legacy.Maliev.Web.slnx
           use-local-maliev-dependencies: 'true'
+      - name: Verify full-test observer activation and cleanup
+        if: always()
+        timeout-minutes: 1
+        run: python3 -B scripts/web-full-test-observer.py verify '${{ steps.full_validation.outcome }}' "$GITHUB_WORKSPACE"
       - name: Gate raw generated-inclusive Web coverage
         if: always()
         shell: pwsh
@@ -569,6 +639,7 @@ jobs:
             material-color-switch-test-results/
             preview-initialization-test-results/**/*.trx
             quantity-input-test-results/**/*.trx
+            wall-thickness-terminal-test-results/**/*.trx
             skin-influence-test-results/**/*.trx
             contour-budget-test-results/**/*.trx
             Legacy.Maliev.Web/wwwroot/dist/site.min.css
@@ -591,6 +662,10 @@ jobs:
             Legacy.Maliev.Web/wwwroot/dist/route-knowledge.js
             Legacy.Maliev.Web/wwwroot/dist/route-services-index.css
             Legacy.Maliev.Web/wwwroot/dist/route-services.css
+            pricing-lifetime-test-results/**
+            observer-control-test-results/*.json
+            full-test-observer-results/*.json
+            full-test-observer-results/*.jsonl
             Legacy.Maliev.Web.Tests/TestResults/**/*.trx
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.json
             Legacy.Maliev.Web.Tests/TestResults/**/coverage.cobertura.xml

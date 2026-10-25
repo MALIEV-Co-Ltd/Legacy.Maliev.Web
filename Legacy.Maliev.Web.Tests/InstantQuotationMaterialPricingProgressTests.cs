@@ -242,6 +242,7 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
     public async Task ComparisonCallback_WholeQuoteCanCompleteAfterThirtySecondsWithinAbsoluteBudget()
     {
         var clock = new ManualClock();
+        var completionWait = new System.Diagnostics.Stopwatch();
         await Fixture.RunAsync(async fixture =>
         {
             var session = await fixture.CreateAsync();
@@ -279,9 +280,34 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
                 Assert.False(comparisonCallbackToken.IsCancellationRequested);
                 Assert.False(caller.IsCancellationRequested);
                 comparisonRelease.TrySetResult();
+                completionWait.Start();
                 Assert.NotNull(await run.WaitAsync(TimeSpan.FromSeconds(10)));
             }
-            catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
+            catch (Exception exception)
+            {
+                fixture.PrimaryFailure = exception;
+                try
+                {
+                    using var process = System.Diagnostics.Process.GetCurrentProcess();
+                    output.WriteLine("pricing-completion-resource-state: {0}", JsonSerializer.Serialize(new
+                    {
+                        FailureType = exception.GetType().FullName,
+                        CompletionWaitMilliseconds = completionWait.ElapsedMilliseconds,
+                        QuoteState = run.Status.ToString(),
+                        CallerCanceled = caller.IsCancellationRequested,
+                        CallbackCanceled = comparisonCallbackToken.IsCancellationRequested,
+                        ReaderCount = fixture.Reader.ReadCount,
+                        WorkingSetBytes = Environment.WorkingSet,
+                        ManagedBytes = GC.GetTotalMemory(false),
+                        AvailableMemoryBytes = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes,
+                        ProcessCpuMilliseconds = process.TotalProcessorTime.TotalMilliseconds,
+                        ThreadPoolThreads = ThreadPool.ThreadCount,
+                        ThreadPoolPendingItems = ThreadPool.PendingWorkItemCount,
+                    }));
+                }
+                catch (Exception) { /* Diagnostics cannot replace the original assertion or timeout. */ }
+                throw;
+            }
             finally
             {
                 await fixture.DrainAsync(run, caller.Cancel, () => MaterialPricingTestCleanup.ReleaseAll(

@@ -183,7 +183,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
                 ActivatorUtilities.CreateInstance<InstantQuotationSubmissionService>(provider), boundary));
         }));
         var origin = new Uri($"http://127.0.0.1:{ReserveFreePort()}");
-        application.UseKestrel(origin.Port);
+        application.UseKestrel(options => options.Listen(IPAddress.Loopback, origin.Port));
         using var client = application.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
         var url = new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString();
         using var readiness = await client.GetAsync(url);

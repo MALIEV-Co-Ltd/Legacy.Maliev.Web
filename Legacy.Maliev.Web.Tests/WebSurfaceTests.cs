@@ -8,18 +8,21 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Configuration;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 public sealed class WebSurfaceTests : IDisposable
 {
     private readonly OwnedWebSurfaceHost ownedHost;
+    private readonly ITestOutputHelper? output;
     private WebApplicationFactory<Program> configuredFactory => ownedHost.Factory;
     internal OwnedWebSurfaceHost LifetimeOwner => ownedHost;
     private HttpClient client => ownedHost.Client;
 
-    public WebSurfaceTests()
+    public WebSurfaceTests(ITestOutputHelper? output = null)
     {
+        this.output = output;
         ownedHost = OwnedWebSurfaceHost.Create(builder =>
             {
                 builder.UseEnvironment("Testing");
@@ -2393,8 +2396,14 @@ public sealed class WebSurfaceTests : IDisposable
     [InlineData("th")]
     public async Task QuotationLocales_RenderTheSameControlledUploadEventContract(string culture)
     {
-        var source = await client.GetStringAsync(
-            $"/quotation?culture={culture}&item=cnc-machining");
+        // Capture failure phases while buffering the expected successful response.
+        using var response = await TestResponseFailureEvidence.GetAsync(
+            configuredFactory.Services, client,
+            $"/quotation?culture={culture}&item=cnc-machining",
+            TestResponseRequestLabel.BaseQuotation,
+            output is null ? Console.Error.WriteLine : output.WriteLine);
+        response.EnsureSuccessStatusCode();
+        var source = await response.Content.ReadAsStringAsync();
 
         Assert.Contains("name=\"ServiceContext\"", source, StringComparison.Ordinal);
         Assert.Contains("value=\"cnc_machining\"", source, StringComparison.Ordinal);
