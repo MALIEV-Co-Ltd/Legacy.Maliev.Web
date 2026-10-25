@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using System.Net;
-using System.Net.Sockets;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Hosting;
@@ -16,6 +14,80 @@ namespace Legacy.Maliev.Web.Tests;
 /// <summary>Real DOM/circuit events over controlled historical protected input; not FileService or authentication acceptance.</summary>
 public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
 {
+    [Theory]
+    [InlineData(1)]
+    [InlineData(3)]
+    public async Task MaterialCards_KeepTheirSize_WhenSearchFiltersTheCatalogue(int partCount)
+    {
+        await using var fixture = await Fixture.CreateAsync(output, "en", 1920, ColorScheme.Light, height: 1080, partCount: partCount);
+        var page = fixture.Page;
+        // Measure terminal comparison rows, not a mixture of prices and loading labels.
+        var readiness = System.Diagnostics.Stopwatch.StartNew();
+        await fixture.Control.InitialQuoteCompleted.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        var remaining = 30000 - readiness.Elapsed.TotalMilliseconds;
+        Assert.True(remaining > 0, "Final authority must complete within the existing 30-second readiness bound.");
+        await page.WaitForFunctionAsync("""
+            () => document.querySelector('[data-material-card-price="M68"]')?.dataset.priceStatus === 'completed'
+                && !document.querySelector('[data-material-selector] [data-price-status="pending"]')
+            """, null, new() { Timeout = (float)remaining });
+        Assert.True(await page.Locator("[data-material-selector] [data-price-status='completed']").CountAsync() > 0,
+            "The historical M68 control must include a completed material price.");
+        Assert.True(await page.Locator("[data-material-selector] [data-price-status='unavailable']").CountAsync() > 0,
+            "The historical control must include unavailable prices to exercise both terminal row heights.");
+        Assert.Equal(partCount, Assert.IsType<InstantQuotationOrderQuote>(fixture.Control.FinalQuote).Parts.Count);
+        Assert.Equal(partCount, (await fixture.StoredAsync()).Parts.Count);
+
+        async Task<int[]> VisibleCardHeightsAsync() => await page.EvaluateAsync<int[]>("""
+            () => Array.from(document.querySelectorAll('[data-material-selector] [role="radio"]'))
+                .filter(card => card.offsetParent !== null)
+                .map(card => Math.round(card.getBoundingClientRect().height))
+            """);
+
+        var unfiltered = await VisibleCardHeightsAsync();
+        Assert.True(unfiltered.Length >= 2, $"Expected at least 2 material cards, found {unfiltered.Length}.");
+        try
+        {
+            Assert.Single(unfiltered.Distinct());
+        }
+        catch (Xunit.Sdk.XunitException exception)
+        {
+            var geometry = await page.EvaluateAsync<string>("""
+                () => JSON.stringify({
+                    fonts: document.fonts.status,
+                    cards: Array.from(document.querySelectorAll('[data-material-selector] [role="radio"]'))
+                        .filter(card => card.offsetParent !== null).slice(0, 32).map((card, index) => ({
+                            index, height: card.getBoundingClientRect().height,
+                            width: card.getBoundingClientRect().width,
+                            titleHeight: card.querySelector('.material-card__heading')?.getBoundingClientRect().height,
+                            fullHeight: card.querySelector('.material-card__detail')?.getBoundingClientRect().height,
+                            priceHeight: card.querySelector('[data-material-card-price]')?.getBoundingClientRect().height,
+                            loading: card.querySelector('[data-material-card-price]')?.dataset.priceStatus === 'pending'
+                        }))
+                })
+                """);
+            throw new InvalidOperationException("Material-card uniform-height assertion failed: " + geometry, exception);
+        }
+
+        var baseline = unfiltered[0];
+        foreach (var query in new[] { "PETG", "Nylon", "PLA" })
+        {
+            await page.Locator("[data-material-search]").FillAsync(query);
+            await page.WaitForFunctionAsync("""
+                expected => {
+                    const cards = Array.from(document.querySelectorAll('[data-material-selector] [role="radio"]'))
+                        .filter(card => card.offsetParent !== null);
+                    return cards.length > 0 && cards.length < expected;
+                }
+                """, unfiltered.Length, new() { Timeout = 10000 });
+            var filtered = await VisibleCardHeightsAsync();
+            Assert.True(filtered.Length < unfiltered.Length,
+                $"Search \"{query}\" did not narrow the catalogue, so it cannot detect the defect.");
+            Assert.True(filtered.Distinct().Count() == 1 && filtered[0] == baseline,
+                $"Search \"{query}\" resized the material cards from {baseline}px to [{string.Join(", ", filtered.Distinct())}]px.");
+        }
+        await page.Locator("[data-material-search]").FillAsync(string.Empty);
+    }
+
     [Theory]
     [InlineData("en", 375, ColorScheme.Light)]
     [InlineData("th", 1280, ColorScheme.Dark)]
@@ -736,6 +808,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         public ConcurrentQueue<int> AcceptedQuantities { get; } = new();
         public ConcurrentQueue<(string Stage, int Quantity, bool Canceled)> Timeline { get; } = new();
         public InstantQuotationOrderQuote? FinalQuote { get; set; }
+        public TaskCompletionSource InitialQuoteCompleted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public Gate Arm(int quantity, InstantQuotationMaterialPricingStatus status, bool holdAuthorization = false)
         { var gate = new Gate(quantity, status, holdAuthorization); Gates.Enqueue(gate); return gate; }
         public void ReleaseAll()
@@ -793,6 +866,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                 // Multi-part geometry coverage uses the same real authority without single-part race gates.
                 var quote = await inner.QuoteAsync(session, owner, comparisons, observer, token);
                 control.FinalQuote = quote;
+                if (quote is not null) control.InitialQuoteCompleted.TrySetResult();
                 return quote;
             }
             var quantity = session.Parts.Single().Configuration.Quantity;
@@ -818,6 +892,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                     }
                 }, token);
                 control.FinalQuote = result;
+                if (result is not null) control.InitialQuoteCompleted.TrySetResult();
                 return result;
             }
             finally
@@ -866,29 +941,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
         public Fixture() => Factory = new(Control);
 
-        private static int ReserveFreePort()
-        {
-            // Keep test listeners outside the outbound client-port pool on Windows.
-            for (var attempt = 0; attempt < 64; attempt++)
-            {
-                var listener = new TcpListener(IPAddress.Loopback, Random.Shared.Next(20000, 30000));
-                try
-                {
-                    listener.Start();
-                    return ((IPEndPoint)listener.LocalEndpoint).Port;
-                }
-                catch (SocketException exception) when (exception.SocketErrorCode is SocketError.AddressAlreadyInUse or SocketError.AccessDenied)
-                {
-                    // Another task or an excluded port range owns this candidate.
-                }
-                finally
-                {
-                    listener.Stop();
-                }
-            }
-
-            throw new InvalidOperationException("No loopback browser-test port is available in the test-server range.");
-        }
+        private static int ReserveFreePort() => BrowserTestServerPort.Reserve();
 
         public static async Task<Fixture> CreateAsync(ITestOutputHelper output, string culture, int width, ColorScheme scheme, int height = 800,
             string displayFileName = "historical-controlled.stl", int partCount = 1)
