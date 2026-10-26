@@ -341,6 +341,7 @@
             {
                 <article data-workflow-pending-parse data-browser-preview-key="@pending.Key" class="instant-quote__local-file">
                     <h4>@pending.Value.Name</h4>
+                    <div data-workflow-local-configuration-summary>@MaterialSummary(LocalSummaryConfiguration(pending.Key))</div>
                     <span role="status">@Localizer["Checking physical build…"]</span>
                     <button type="button" disabled="@bulkApplying"
                             aria-label="@Localizer["View {0}", pending.Value.Name]"
@@ -355,6 +356,7 @@
             {
                 <article data-workflow-upload-item data-workflow-failed-preview data-preview-failure="@failure.Value.Category" class="instant-quote__local-file is-error">
                     <h4>@failure.Value.Name</h4>
+                    <div data-workflow-local-configuration-summary>@MaterialSummary(LocalSummaryConfiguration(failure.Key))</div>
                     <span class="instant-quote__local-thumbnail" aria-hidden="true">◇</span>
                     <span data-workflow-file-error-badge class="instant-quote__file-error-badge" role="img"
                           aria-label="@(failure.Value.Name + ": " + LocalPreviewFailureMessage(failure.Value))">!</span>
@@ -376,6 +378,7 @@
                 <article data-workflow-upload-item data-upload-local-id="@upload.LocalId" data-browser-preview-key="@BrowserPreviewKey(upload.LocalId)" data-upload-error="@(failed ? "true" : null)"
                          class="instant-quote__local-file @(failed ? "is-error" : null)" aria-labelledby="upload-name-@upload.LocalId">
                     <h4 id="upload-name-@upload.LocalId">@upload.DisplayFileName</h4>
+                    <div data-workflow-local-configuration-summary>@MaterialSummary(LocalSummaryConfiguration(BrowserPreviewKey(upload.LocalId)))</div>
                     @if (thumbnail is not null)
                     {
                         <img data-workflow-local-thumbnail class="instant-quote__local-thumbnail" src="@thumbnail" alt="@Localizer["3D preview"]" />
@@ -452,7 +455,7 @@
                          src="/src/images/3d-canvas-placeholder.svg"
                          alt="" />
                     <div data-workflow-part-summary>
-                        <span data-workflow-summary-configuration>@part.Configuration.MaterialKey @(part.Configuration.Quantity)×</span>
+                        <span data-workflow-summary-configuration>@MaterialSummary(part.Configuration)</span>
                         <span data-workflow-summary-unit-price
                               aria-label="@(Localizer["Unit price"].Value + " " + Money(DisplayQuote(part)?.UnitPrice))">@Money(DisplayQuote(part)?.UnitPrice)</span>
                     </div>

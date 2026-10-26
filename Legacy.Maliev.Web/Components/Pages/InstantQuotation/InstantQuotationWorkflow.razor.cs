@@ -172,6 +172,14 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private string? LocalThumbnail(string? key) => key is not null ? localPreviewThumbnails.GetValueOrDefault(key) : null;
 
+    private InstantQuotationPartConfiguration? LocalSummaryConfiguration(string? key) =>
+        key is not null && pendingConfigurations.TryGetValue(key, out var pending) ? pending.Configuration : null;
+
+    private static string MaterialSummary(InstantQuotationPartConfiguration? configuration) =>
+        configuration is not null && !string.IsNullOrWhiteSpace(configuration.MaterialKey)
+            ? $"{configuration.MaterialKey.Trim()} {configuration.Quantity}×"
+            : "—";
+
     private WorkflowSectionVisibility VisibleSections
     {
         get
