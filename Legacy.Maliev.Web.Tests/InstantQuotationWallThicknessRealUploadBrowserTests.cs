@@ -1169,8 +1169,8 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
     }
 
     [Theory]
-    [InlineData("en", "Thin walls may print with defects", "Instant 3D Printing Estimate", "0.80 mm", "0.60 mm")]
-    [InlineData("th", "ผนังบางอาจเกิดข้อบกพร่อง", "ประเมินราคาพิมพ์ 3 มิติทันที", "0.80 มม.", "0.60 มม.")]
+    [InlineData("en", "Thin walls may print with defects", "Instant 3D Printing Quote | MALIEV", "0.80 mm", "0.60 mm")]
+    [InlineData("th", "ผนังบางอาจเกิดข้อบกพร่อง", "ประเมินราคาพิมพ์ 3D ออนไลน์ | MALIEV", "0.80 มม.", "0.60 มม.")]
     public async Task ThinFdmUploadWarnsAndHeatmapDoesNotRepriceOrBlockReview(
         string culture, string warningTitle, string pageTitle, string fdmLimit, string resinLimit)
     {

@@ -97,7 +97,7 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
         }
         Assert.Equal(200, response?.Status);
         Assert.Contains("/instantquotation/3d-printing", page.Url, StringComparison.Ordinal);
-        Assert.Contains(culture == "th" ? "ประเมินราคาพิมพ์ 3 มิติทันที" : "Instant 3D Printing Estimate",
+        Assert.Contains(culture == "th" ? "ประเมินราคาพิมพ์ 3D ออนไลน์ | MALIEV" : "Instant 3D Printing Quote | MALIEV",
             await page.TitleAsync(), StringComparison.Ordinal);
         Assert.True(await page.Locator("#instant-quote-files").IsVisibleAsync());
         await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
