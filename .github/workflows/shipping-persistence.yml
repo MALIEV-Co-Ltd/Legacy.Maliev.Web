@@ -3,6 +3,7 @@ name: Member shipping persistence
 on:
   pull_request:
     paths:
+      - 'Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj'
       - 'Legacy.Maliev.Web.Tests/ThaiLookupShippingPersistenceTests.cs'
       - 'Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'
       - 'Legacy.Maliev.Web.Tests/BillingProofLifetimeTests.cs'
@@ -13,6 +14,7 @@ on:
   push:
     branches: [main]
     paths:
+      - 'Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj'
       - 'Legacy.Maliev.Web.Tests/ThaiLookupShippingPersistenceTests.cs'
       - 'Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'
       - 'Legacy.Maliev.Web.Tests/BillingProofLifetimeTests.cs'
