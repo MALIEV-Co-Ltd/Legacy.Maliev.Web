@@ -157,6 +157,22 @@ public sealed class InstantQuotationResinPresentationTests
             return (await renderer.RenderComponentAsync<InstantQuotationReview>(parameters)).ToHtmlString();
         });
 
+        var heading = Assert.Single(Regex.Matches(html, "<h3\\b[^>]*>([\\s\\S]*?)</h3>").Cast<Match>());
+        Assert.Contains("id=\"instant-quote-review-heading\"", heading.Value, StringComparison.Ordinal);
+        Assert.Equal(culture == "th" ? "ตรวจสอบรายการ" : "Review order items",
+            WebUtility.HtmlDecode(heading.Groups[1].Value));
+        var step = Assert.Single(Regex.Matches(html,
+            "<span\\b[^>]*class=\"instant-quote__flow-step\"[^>]*>([\\s\\S]*?)</span>").Cast<Match>());
+        Assert.Equal(culture == "th" ? "ขั้นตอนที่ 2 จาก 3" : "Step 2 of 3",
+            WebUtility.HtmlDecode(step.Groups[1].Value));
+        var item = Assert.Single(Regex.Matches(html,
+            "<article\\b[^>]*data-workflow-review-part[^>]*>[\\s\\S]*?</article>").Cast<Match>());
+        Assert.Contains("data-review-part-id=\"" + part.PartId + "\"", item.Value, StringComparison.Ordinal);
+        var summary = Assert.Single(Regex.Matches(html,
+            "<section\\b[^>]*class=\"instant-quote__pricing-summary\"[^>]*>").Cast<Match>());
+        Assert.True(item.Index + item.Length <= summary.Index);
+        Assert.Contains("data-workflow-review-total", html[summary.Index..], StringComparison.Ordinal);
+
         var details = Regex.Matches(html,
             "<dd\\b[^>]*data-review-build-preference-detail[^>]*>([\\s\\S]*?)</dd>");
         if (expectedDetail is null)

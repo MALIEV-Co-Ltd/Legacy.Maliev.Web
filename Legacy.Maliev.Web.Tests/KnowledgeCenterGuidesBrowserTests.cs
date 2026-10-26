@@ -142,6 +142,7 @@ public sealed class KnowledgeCenterGuidesBrowserTests
     {
         await using var fixture = await PublicKnowledgeFixture.CreateAsync(375);
         var count = 0;
+        var labelStateChecks = 0;
         foreach (var route in new[] { "/", "/about", "/account/login", "/account/signup", "/contact", "/services" })
         {
             // This checks rendered CSS, not completion of unrelated page subresources.
@@ -165,15 +166,32 @@ public sealed class KnowledgeCenterGuidesBrowserTests
                     continue;
                 }
                 count++;
-                Assert.Equal("none", await link.EvaluateAsync<string>("element => getComputedStyle(element).textDecorationLine"));
+                await AssertArrowLinkSeparationAsync(link);
                 await link.HoverAsync();
-                Assert.Equal("none", await link.EvaluateAsync<string>("element => getComputedStyle(element).textDecorationLine"));
+                await AssertArrowLinkSeparationAsync(link);
+                await fixture.Page.Mouse.MoveAsync(0, 0);
                 await link.FocusAsync();
-                Assert.Equal("none", await link.EvaluateAsync<string>("element => getComputedStyle(element).textDecorationLine"));
+                await AssertArrowLinkSeparationAsync(link);
             }
         }
 
         Assert.True(count > 0, "Existing shared public arrow links must be exercised.");
+        Assert.True(labelStateChecks > 0, "Actual shared public arrow labels must retain their text underline.");
+
+        async Task AssertArrowLinkSeparationAsync(ILocator link)
+        {
+            Assert.Equal("none", await link.EvaluateAsync<string>("element => getComputedStyle(element).textDecorationLine"));
+            foreach (var icon in await link.Locator("[class*='fa-arrow-'], svg[data-icon^='arrow-']").AllAsync())
+            {
+                Assert.Equal("none", await icon.EvaluateAsync<string>("element => getComputedStyle(element).textDecorationLine"));
+            }
+            foreach (var label in await link.Locator(".arrow-link-label").AllAsync())
+            {
+                Assert.True(await label.IsVisibleAsync());
+                Assert.Equal("underline", await label.EvaluateAsync<string>("element => getComputedStyle(element).textDecorationLine"));
+                labelStateChecks++;
+            }
+        }
     }
 
 

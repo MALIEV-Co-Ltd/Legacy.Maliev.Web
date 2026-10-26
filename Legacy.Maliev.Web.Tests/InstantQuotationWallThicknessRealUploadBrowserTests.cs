@@ -3443,6 +3443,8 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             null, new PageWaitForFunctionOptions { Timeout = 60_000 });
         var singleId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
         var singleColor = page.Locator($"#color-{singleId}");
+        await Assertions.Expect(page.Locator("[data-workflow-summary-configuration]")).ToHaveTextAsync("PLA 1×");
+        Assert.Equal("Black", await singleColor.InputValueAsync());
         await singleColor.SelectOptionAsync("White");
         await MaterialCardBrowserActions.SelectAsync(page, "PETG");
         await page.WaitForFunctionAsync(

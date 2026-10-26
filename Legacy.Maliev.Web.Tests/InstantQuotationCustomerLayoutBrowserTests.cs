@@ -223,6 +223,13 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         Assert.Equal(0, submissionBoundary.Calls);
         var content = page.Locator("[data-workflow-customer-details-content]");
         await Assertions.Expect(content).ToBeVisibleAsync();
+        await Assertions.Expect(page.Locator("[data-workflow-configuration]")).ToBeHiddenAsync();
+        await Assertions.Expect(page.Locator("[data-workflow-customer-details] h3:visible")).ToHaveCountAsync(1);
+        await Assertions.Expect(content.Locator("#instant-quote-customer-heading"))
+            .ToHaveTextAsync(culture == "th" ? "ข้อมูลลูกค้า" : "Customer details");
+        await Assertions.Expect(content.Locator(".instant-quote__flow-step")).ToBeVisibleAsync();
+        await Assertions.Expect(content.Locator(".instant-quote__flow-step"))
+            .ToHaveTextAsync(culture == "th" ? "ขั้นตอนที่ 3 จาก 3" : "Step 3 of 3");
         var form = content.Locator("#instant-quotation-form");
         await Assertions.Expect(form.Locator(".instant-quote__customer-section")).ToHaveCountAsync(3);
         foreach (var heading in culture == "th"
@@ -250,6 +257,25 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
             .EvaluateAllAsync<string[]>("fields => fields.map(field => field.name)");
         var description = form.Locator("textarea[name='Description']");
         await Assertions.Expect(description).ToHaveAttributeAsync("maxlength", "512");
+        async Task AssertCompactDescriptionAsync()
+        {
+            var sizing = await description.EvaluateAsync<System.Text.Json.JsonElement>("""
+                field => {
+                  const style = getComputedStyle(field);
+                  return {
+                    rootRem:parseFloat(getComputedStyle(document.documentElement).fontSize),
+                    height:parseFloat(style.height), minHeight:parseFloat(style.minHeight),
+                    resize:style.resize
+                  };
+                }
+                """);
+            var rootRem = sizing.GetProperty("rootRem").GetDouble();
+            Assert.True(double.IsFinite(rootRem) && rootRem > 0);
+            Assert.InRange(Math.Abs(sizing.GetProperty("height").GetDouble() - 5.25 * rootRem), 0, 0.5);
+            Assert.InRange(Math.Abs(sizing.GetProperty("minHeight").GetDouble() - 5.25 * rootRem), 0, 0.5);
+            Assert.Equal("vertical", sizing.GetProperty("resize").GetString());
+        }
+        await AssertCompactDescriptionAsync();
         var counter = form.Locator("[data-customer-description-count]");
         await Assertions.Expect(counter).ToHaveTextAsync("0");
         await description.FillAsync(culture == "th" ? "งานทดสอบ" : "Test project");
@@ -305,6 +331,7 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
             Assert.Equal(names, await form.Locator("input[name]:not([type=hidden]), select[name], textarea[name]")
                 .EvaluateAllAsync<string[]>("fields => fields.map(field => field.name)"));
             await Assertions.Expect(counter).ToHaveTextAsync("512");
+            await AssertCompactDescriptionAsync();
             await form.ScreenshotAsync(new() { Path = Path.Combine(screenshotDirectory, $"customer-{culture}-{width}.png") });
         }
         Assert.Equal(1, Volatile.Read(ref submissions));
