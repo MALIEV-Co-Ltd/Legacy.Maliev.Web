@@ -548,7 +548,7 @@
 
             @if (SelectedPendingConfiguration is { } pending && selectedPendingPreviewKey is { } pendingKey)
             {
-                <fieldset data-workflow-material-picker data-workflow-local-settings data-browser-preview-key="@pendingKey"
+                <fieldset @key="pendingKey" data-workflow-material-picker data-workflow-local-settings data-browser-preview-key="@pendingKey"
                           disabled="@bulkApplying" inert="@(bulkApplying ? string.Empty : null)">
                     <legend>@pending.Name — @Localizer["Settings"]</legend>
                     <p role="status">@Localizer["Checking physical build…"]</p>
@@ -590,11 +590,12 @@
             @foreach (var part in ConfigurationParts)
             {
                 var partNumber = PartNumber(part.PartId);
+                var selectorKey = (object?)BrowserPreviewKey(part.PreviewCorrelationId) ?? part.PartId;
                 var displayQuote = DisplayQuote(part);
-                <fieldset data-workflow-material-color-quantity data-workflow-material-picker
+                <fieldset @key="selectorKey" data-workflow-material-color-quantity data-workflow-material-picker
                           disabled="@bulkApplying" inert="@(bulkApplying ? string.Empty : null)">
                     <legend><span data-workflow-part-number>@partNumber.ToString("00")</span> @part.DisplayFileName — @Localizer["Settings"]</legend>
-                    <InstantQuotationMaterialSelector @key="part.PartId" Materials="Materials"
+                    <InstantQuotationMaterialSelector @key="selectorKey" Materials="Materials"
                         SelectedMaterialKey="@part.Configuration.MaterialKey" PriceRows="CardPriceRows(part)"
                         PricingPending="@(IsRepricing || HasUnacceptedConfiguration(part))"
                         FormatPrice="Money"

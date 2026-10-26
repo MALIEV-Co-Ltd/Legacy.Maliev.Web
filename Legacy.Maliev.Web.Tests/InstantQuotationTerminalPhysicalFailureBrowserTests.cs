@@ -1,4 +1,3 @@
-using System.Net.Sockets;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
@@ -148,29 +147,7 @@ public sealed class InstantQuotationTerminalPhysicalFailureBrowserTests
         public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
         private Fixture(byte[] bytes) { Reader = new(bytes); Factory = new(Reader); }
 
-        private static int ReserveFreePort()
-        {
-            // Keep test listeners outside the outbound client-port pool on Windows.
-            for (var attempt = 0; attempt < 64; attempt++)
-            {
-                var listener = new TcpListener(System.Net.IPAddress.Loopback, Random.Shared.Next(20000, 30000));
-                try
-                {
-                    listener.Start();
-                    return ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
-                }
-                catch (SocketException exception) when (exception.SocketErrorCode is SocketError.AddressAlreadyInUse or SocketError.AccessDenied)
-                {
-                    // Another task or an excluded port range owns this candidate.
-                }
-                finally
-                {
-                    listener.Stop();
-                }
-            }
-
-            throw new InvalidOperationException("No loopback browser-test port is available in the test-server range.");
-        }
+        private static int ReserveFreePort() => BrowserTestServerPort.Reserve();
 
         public static async Task<Fixture> CreateAsync(string culture, int width, string input)
         {

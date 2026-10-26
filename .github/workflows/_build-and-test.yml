@@ -53,6 +53,9 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         with:
           dotnet-version: 8.0.x
+      - name: Verify Career focused identity parser controls
+        timeout-minutes: 1
+        run: python3 -B tests/CareerFocusedTrxGate.Tests.py
       - name: Build original Career materialization oracle
         timeout-minutes: 5
         run: >-
@@ -67,6 +70,12 @@ jobs:
           -p:UseSharedCompilation=false -nodeReuse:false
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --logger trx --results-directory ./career-original-materialization-test-results
+      - name: Qualify exact original Career oracle identities
+        timeout-minutes: 1
+        run: >-
+          python3 -B scripts/verify-career-focused-trx.py
+          --directory ./career-original-materialization-test-results --suite original
+          --assembly acceptance/CareerOriginalMaterialization/bin/Release/net8.0/CareerOriginalMaterialization.Tests.dll
       - name: Select .NET 10 for migration builds and tests
         timeout-minutes: 5
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
@@ -431,8 +440,14 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~CareerIndexStaticSsrRouteTests|FullyQualifiedName~CareerClientTests|FullyQualifiedName~CareerDetailStaticSsrRouteTests|FullyQualifiedName~CareerSearchKestrelContractTests"
+          --filter "FullyQualifiedName~CareerIndexStaticSsrRouteTests|FullyQualifiedName~CareerClientTests|FullyQualifiedName~CareerDetailStaticSsrRouteTests|FullyQualifiedName~CareerSearchKestrelContractTests|FullyQualifiedName~CareerPageCountCompatibilityTests|FullyQualifiedName~CareerDetailLevelCompatibilityTests"
           --logger trx --results-directory ./career-consumer-test-results
+      - name: Qualify exact Career consumer identities
+        timeout-minutes: 1
+        run: >-
+          python3 -B scripts/verify-career-focused-trx.py
+          --directory ./career-consumer-test-results --suite consumer
+          --assembly Legacy.Maliev.Web.Tests/bin/Release/net10.0/Legacy.Maliev.Web.Tests.dll
       - name: Preserve successful Career focus and original oracle before the full suite
         timeout-minutes: 3
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

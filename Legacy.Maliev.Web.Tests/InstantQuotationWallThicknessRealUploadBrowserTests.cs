@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
@@ -2483,29 +2482,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         await binding.DisposeAsync();
     }
 
-    private static int ReserveFreePort()
-    {
-        // Keep test listeners outside the outbound client-port pool on Windows.
-        for (var attempt = 0; attempt < 64; attempt++)
-        {
-            var listener = new TcpListener(IPAddress.Loopback, Random.Shared.Next(20000, 30000));
-            try
-            {
-                listener.Start();
-                return ((IPEndPoint)listener.LocalEndpoint).Port;
-            }
-            catch (SocketException exception) when (exception.SocketErrorCode is SocketError.AddressAlreadyInUse or SocketError.AccessDenied)
-            {
-                // Another task or an excluded port range owns this candidate.
-            }
-            finally
-            {
-                listener.Stop();
-            }
-        }
-
-        throw new InvalidOperationException("No loopback browser-test port is available in the test-server range.");
-    }
+    private static int ReserveFreePort() => BrowserTestServerPort.Reserve();
 
     [Theory]
     [InlineData("en", 1440)]
@@ -2543,6 +2520,46 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         Exception? primary = null;
         try
         {
+            await page.AddInitScriptAsync("""
+                (() => {
+                  if (window !== window.top) return;
+                  const records = [];
+                  const clicks = [];
+                  const snapshot = input => {
+                    const addDisabled = document.querySelector('[data-workflow-add-file]')?.getAttribute('aria-disabled');
+                    return {
+                      disabled: input ? input.disabled : null,
+                      bound: typeof input?._blazorInputFileNextFileId === 'number',
+                      files: Math.min(100, input?.files?.length ?? 0),
+                      parts: Math.min(32, document.querySelectorAll('[data-workflow-part]').length),
+                      addFileDisabled: addDisabled === 'true' ? true : addDisabled === 'false' ? false : null
+                    };
+                  };
+                  window.__malievRecoveredFileChanges = {
+                    records, clicks,
+                    current: () => snapshot(document.querySelector('#instant-quote-files'))
+                  };
+                  document.addEventListener('change', event => {
+                    const input = event.target;
+                    if (!(input instanceof HTMLInputElement) || input.id !== 'instant-quote-files' || records.length >= 4) return;
+                    const record = { before: snapshot(input), after: null };
+                    records.push(record);
+                    queueMicrotask(() => { record.after = snapshot(input); });
+                  }, true);
+                  document.addEventListener('click', event => {
+                    const target = event.target;
+                    if (!(target instanceof Element) || clicks.length >= 4) return;
+                    const card = target.closest('[data-workflow-material-picker] [data-material-selector] [role="radio"]');
+                    if (!card) return;
+                    const information = card.querySelector('.material-card__heading button');
+                    clicks.push({ requestedPetg: card.getAttribute('data-material-key') === 'PETG',
+                      targetIsInformationButton: !!information && information.contains(target),
+                      x: Math.round(event.clientX * 100) / 100, y: Math.round(event.clientY * 100) / 100,
+                      connected: card.isConnected, checked: card.getAttribute('aria-checked') === 'true',
+                      informationExpanded: information?.getAttribute('aria-expanded') === 'true' });
+                  }, true);
+                })();
+                """);
             closedPath = CreateBoxStl(10, 10, 10, "strict-original");
             recoveryPath = CreateRecoverableOpenBoxStl();
             var readinessTimer = System.Diagnostics.Stopwatch.StartNew();
@@ -2707,7 +2724,27 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 }
             }
         }
-        catch (Exception error) { primary = error; throw; }
+        catch (Exception error)
+        {
+            primary = error;
+            try
+            {
+                using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+                var capture = page.EvaluateAsync<string>("""
+                    () => {
+                      const state = window.__malievRecoveredFileChanges;
+                      return JSON.stringify(state ? { changes: state.records.slice(0, 4),
+                        clicks: state.clicks.slice(0, 4), current: state.current() } : { unavailable: true });
+                    }
+                    """);
+                _ = capture.ContinueWith(static completed => { _ = completed.Exception; }, CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+                var snapshot = await capture.WaitAsync(deadline.Token);
+                if (snapshot.Length <= 4096) output.WriteLine("[recovered-input-state] " + snapshot);
+            }
+            catch { /* Secondary observation must preserve the original failure. */ }
+            throw;
+        }
         finally
         {
             await MaterialPricingTestCleanup.ReleaseAllAsync(primary,

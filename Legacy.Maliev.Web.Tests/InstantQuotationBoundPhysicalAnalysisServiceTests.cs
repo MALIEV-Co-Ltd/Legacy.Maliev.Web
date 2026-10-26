@@ -510,6 +510,90 @@ public sealed class InstantQuotationBoundPhysicalAnalysisServiceTests
 
         """;
 
+    [Fact]
+    public async Task LiteralOriginalUnitCubeMissingFirstTriangle_ProducesBoundReviewQuote()
+    {
+        var seed = Fixture();
+        byte[] bytes = LiteralOriginalUnitCubeMissingFirstTriangleStl();
+        string digest = Convert.ToHexStringLower(SHA256.HashData(bytes));
+        var original = Assert.Single(seed.Store.State.Parts);
+        var part = original with
+        {
+            DisplayFileName = "source-unit-open-cube.stl",
+            Geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(
+                InstantQuotationUploadResult.Succeeded("operation", original.UploadReference, digest),
+                new InstantQuotationGeometryClaim(1, digest, 1, 1, 1, 1, 5.5,
+                    null, null, 11, 1, true, true, false, 0))!,
+            PhysicalAnalysisUpload = original.PhysicalAnalysisUpload! with
+            { FileName = "source-unit-open-cube.stl", SizeBytes = bytes.Length, Sha256 = digest },
+        };
+        Assert.NotNull(part.Geometry);
+        seed.Store.State = seed.Store.State with { RequestState = new InstantQuotationOrderState([part]) };
+        var reader = new BatchInputReader([part], bytes);
+        var profiles = FdmRuntimeProfileCatalog.LoadEmbedded();
+        var analysis = new InstantQuotationBoundPhysicalAnalysisService(
+            seed.Store, new InstantQuotationAdmittedMeshService(reader), profiles);
+        var pricing = new InstantQuotationAuthoritativePricingService(analysis, profiles, new InstantQuotationPricingService());
+        var binding = new InstantQuotationPhysicalAnalysisBinding(SessionId, Owner, part.PartId,
+            FileId, digest, "PLA", BuildPreference.Standard, 1, profiles.ProfileVersion);
+        Assert.False((await analysis.AnalyzeAsync(binding with { OwnerIdentity = "another-member" }, default)).IsReady);
+        Assert.Empty(reader.RequestedParts);
+        Assert.Null(await pricing.QuoteAsync(seed.Store.State, "another-member", false, default));
+        Assert.Empty(reader.RequestedParts);
+
+        var quote = await pricing.QuoteAsync(seed.Store.State, Owner, false, default);
+
+        Assert.NotNull(quote);
+        Assert.Equal(PartId, Assert.Single(reader.RequestedParts));
+        var line = Assert.Single(quote.Parts);
+        var receipt = Assert.IsType<InstantQuotationPhysicalAnalysisReceipt>(line.PhysicalReceipt);
+        Assert.Equal(digest, receipt.UploadSha256);
+        Assert.Equal(SessionId, receipt.SessionId);
+        Assert.Equal(Owner, receipt.OwnerIdentity);
+        Assert.Equal(PartId, receipt.PartId);
+        Assert.Equal(FileId, receipt.FileId);
+        Assert.Equal("PLA", receipt.MaterialKey);
+        Assert.Equal(BuildPreference.Standard, receipt.BuildPreference);
+        Assert.Equal(1, receipt.Quantity);
+        Assert.True(receipt.DepositedMm3 > 0);
+        Assert.True(receipt.MotionSeconds > 0);
+        Assert.True(line.UnitPrice > 0);
+        Assert.Equal(line.UnitPrice, line.Subtotal);
+        var reconstruction = Assert.IsType<VoxelReconstructionInfo>(receipt.GeometryReconstruction);
+        Assert.Equal("voxel-majority-v1", reconstruction.Method);
+        Assert.Null(seed.Store.State.QuoteAuthorization);
+
+        var state = seed.Store.State with { PhysicalReceipts = [receipt] };
+        var tickets = new AdditiveQuoteTicketService(new EphemeralDataProtectionProvider());
+        var now = DateTimeOffset.UtcNow;
+        var authorization = tickets.Issue(state, quote, now);
+        var payload = tickets.UnprotectLine(Assert.Single(authorization.LineTickets), now);
+        Assert.Equal(reconstruction, payload.GeometryReconstruction);
+        Assert.Equal("engineer_review_required", payload.ReviewState);
+        Assert.Equal(digest, payload.ContentSha256);
+        Assert.Equal(receipt.PhysicalSha256, payload.PhysicalSha256);
+        Assert.True(tickets.Validate(state, quote, authorization, now));
+        Assert.False(tickets.Validate(state with { OwnerIdentity = "another-member" }, quote, authorization, now));
+        await InstantQuotationNotificationPreparationTests.AssertRecoveredQuoteMessagesAsync(state, quote);
+        foreach (var culture in new[] { "en", "th" })
+            await InstantQuotationPhysicalResultRendererTests.AssertRecoveredReviewAsync(part, quote, culture);
+        payload.GeometryReconstruction = null;
+        Assert.False(tickets.Validate(state, quote,
+            authorization with { LineTickets = [tickets.ProtectLine(payload)] }, now));
+    }
+
+    private static byte[] LiteralOriginalUnitCubeMissingFirstTriangleStl()
+    {
+        // BinaryBox has the exact eight vertices and twelve ordered faces of the source JS box helper.
+        byte[] closed = BinaryBox(1);
+        Assert.Equal(84 + 12 * 50, closed.Length);
+        byte[] open = [.. closed[..84], .. closed[134..]];
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(open.AsSpan(80, 4), 11u);
+        Assert.Equal(84 + 11 * 50, open.Length);
+        Assert.Equal(closed[134..], open[84..]);
+        return open;
+    }
+
     [Theory]
     [InlineData(1, false, "stl")]
     [InlineData(2, false, "stl")]

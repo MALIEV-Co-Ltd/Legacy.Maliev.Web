@@ -59,6 +59,8 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<Test
         Assert.Contains("data-migration-route-owner=\"@RouteOwner\"", content, StringComparison.Ordinal);
         Assert.Contains("@page", razorFallback, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(CncMachiningContent)\"", razorFallback, StringComparison.Ordinal);
+        Assert.DoesNotContain("certified", string.Concat(route, content), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("certification", string.Concat(route, content), StringComparison.OrdinalIgnoreCase);
 
         var routedPages = Directory.EnumerateFiles(
             Path.Combine(web, "Components"),

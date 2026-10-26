@@ -33,6 +33,9 @@ public sealed class CncOwnedResourceScopeTests(Xunit.Abstractions.ITestOutputHel
             await Task.CompletedTask;
             throw new InvalidOperationException("original-body-failure");
         }, rows => receipts = rows));
+        // A startup failure precedes the injected refusal; surface it instead of masking it as null custody.
+        if (recovery is null && failure is not null)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
         if (mode != "docker-acquisition")
         {
             Assert.NotNull(recovery);

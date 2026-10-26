@@ -94,6 +94,11 @@ public sealed partial class LowVolumeInjectionMoldingParityTests : IClassFixture
         Assert.Contains("role=\"note\"", component, StringComparison.Ordinal);
         Assert.Contains("purge/shutdown procedures", component, StringComparison.Ordinal);
         Assert.Contains("local exhaust ventilation", component, StringComparison.Ordinal);
+        Assert.Contains("grade-specific processing window", component, StringComparison.Ordinal);
+        Assert.Contains("230 °C", component, StringComparison.Ordinal);
+        Assert.Contains("excessive shear", component, StringComparison.Ordinal);
+        Assert.Contains("long residence time", component, StringComparison.Ordinal);
+        Assert.Contains("PVC", component, StringComparison.Ordinal);
         Assert.Contains("decoding=\"async\"", component, StringComparison.Ordinal);
         Assert.Matches(
             "@media \\(max-width: 47\\.99rem\\) \\{[\\s\\S]*?#injection-part-proof \\.service-part-bento \\{ grid-template-columns: 1fr; \\}[\\s\\S]*?#injection-part-proof \\.service-part-bento-card--feature, #injection-part-proof \\.service-part-bento-card--process, #injection-part-proof \\.service-part-bento-card--guidance, #injection-part-proof \\.service-part-bento-card--cta \\{ grid-column: auto; min-height: 0; \\}",
