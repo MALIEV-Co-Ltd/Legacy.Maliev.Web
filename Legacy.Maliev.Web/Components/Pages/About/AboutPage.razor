@@ -8,17 +8,18 @@
         ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
     var isThai = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
     var title = isThai
-        ? "เกี่ยวกับ MALIEV | ระบบการผลิตที่เชื่อมต่อกันในประเทศไทย"
-        : "About MALIEV | Connected manufacturing in Thailand";
+        ? "เกี่ยวกับ MALIEV | พัฒนาต้นแบบและวิศวกรรมย้อนกลับ"
+        : "About MALIEV | Prototype Development & Reverse Engineering";
     var description = isThai
-        ? "ติดตามเส้นทางที่มีหลักฐานของ MALIEV จากเวิร์กช็อปครอบครัวในนนทบุรี สู่บริการ CNC พิมพ์ 3 มิติ และสแกน 3 มิติที่เชื่อมต่อกัน"
-        : "Follow MALIEV's documented journey from a family workshop in Nonthaburi to connected CNC machining, 3D printing, and 3D scanning services.";
+        ? "รู้จัก MALIEV ผู้พัฒนาชิ้นงานต้นแบบและวิศวกรรมย้อนกลับในนนทบุรี จากแนวคิดและชิ้นงานเดิม สู่แบบ CAD ชิ้นส่วนทดแทน และการต่อยอดผลิตภัณฑ์"
+        : "Meet MALIEV: prototype development and reverse engineering in Nonthaburi, Thailand. From ideas and existing parts to CAD, replacement parts and product development.";
     var keywords = isThai
-        ? "ประวัติ MALIEV, บริษัทผลิตชิ้นส่วน, CNC นนทบุรี, พิมพ์ 3 มิติ, สแกน 3 มิติ"
-        : "MALIEV history, manufacturing company Thailand, CNC Nonthaburi, 3D printing Thailand, 3D scanning Thailand";
+        ? "บริษัท มาลีฟ จำกัด, พัฒนาต้นแบบ, วิศวกรรมย้อนกลับ, ออกแบบ 3 มิติ, CNC, พิมพ์ 3 มิติ, สแกน 3 มิติ"
+        : "MALIEV company profile, prototype development, reverse engineering, CNC machining, 3D design, 3D printing, 3D scanning";
 }
 <PageTitle>@title</PageTitle>
 <HeadContent>
+    <link rel="preload" as="image" href="/src/images/landing/about-customer-partnership.webp" fetchpriority="high" />
     <meta name="description" content="@description" />
     <meta name="keywords" content="@keywords" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />

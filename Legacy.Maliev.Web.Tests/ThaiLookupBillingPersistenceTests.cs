@@ -315,7 +315,7 @@ public sealed class ThaiLookupBillingPersistenceTests(MemberAuthorityFixture aut
         using var ticks = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
         do
         {
-            Assert.False(child.HasExited, "Disposable service startup failed; credential-bearing output suppressed.");
+            Assert.False(child.HasExited, await child.StartupFailureAsync(deadline.Token));
             try { using var response = await http.GetAsync(path, deadline.Token); if (response.StatusCode == HttpStatusCode.Unauthorized) return; }
             catch (HttpRequestException) { }
         } while (await ticks.WaitForNextTickAsync(deadline.Token));
