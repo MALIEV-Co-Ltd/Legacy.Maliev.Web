@@ -32,7 +32,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
         await using var context = await browser.NewContextAsync(new()
         {
-            ViewportSize = new() { Width = 375, Height = 844 }, HasTouch = true, IsMobile = true,
+            ViewportSize = new() { Width = 375, Height = 844 },
+            HasTouch = true,
+            IsMobile = true,
         });
         await using var page = await context.NewPageAsync();
         using var lease = new CancellationTokenSource(TimeSpan.FromMinutes(2));
@@ -48,7 +50,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             await WaitForUploadInputReadyAsync(page);
             await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
             {
-                Name = "touch-existing-box.stl", MimeType = "model/stl", Buffer = WallThicknessParityBrowserFixture.Box(5),
+                Name = "touch-existing-box.stl",
+                MimeType = "model/stl",
+                Buffer = WallThicknessParityBrowserFixture.Box(5),
             });
             await page.WaitForFunctionAsync(
                 "() => document.querySelectorAll('[data-workflow-part]').length === 1 && !!document.querySelector('[data-workflow-price-tier]')",
@@ -103,9 +107,12 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             cdp = await context.NewCDPSessionAsync(page);
             await cdp.SendAsync("Input.synthesizeScrollGesture", new Dictionary<string, object>
             {
-                ["x"] = box.X + box.Width / 2, ["y"] = (top + bottom) / 2,
+                ["x"] = box.X + box.Width / 2,
+                ["y"] = (top + bottom) / 2,
                 ["yDistance"] = down >= up ? -distance : distance,
-                ["gestureSourceType"] = "touch", ["preventFling"] = true, ["speed"] = 400,
+                ["gestureSourceType"] = "touch",
+                ["preventFling"] = true,
+                ["speed"] = 400,
             });
             await page.WaitForFunctionAsync("""
                 start => window.materialTrustedTouchStarts > 0
