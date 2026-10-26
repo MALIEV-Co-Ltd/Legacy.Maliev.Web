@@ -86,7 +86,14 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
             var before = output.ToHtmlString();
             var component = activator.Component!;
             var method = typeof(InstantQuotationWorkflow).GetMethod(operation, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)!;
-            var invoked = method.Invoke(component, operation == "DisposeAsync" ? [] : [localId]);
+            object?[] arguments = operation switch
+            {
+                "DisposeAsync" => [],
+                "QuarantinePreviewAsync" => [localId,
+                    ((Dictionary<Guid, string>)Field("previewKeys").GetValue(component)!)[localId], null],
+                _ => [localId],
+            };
+            var invoked = method.Invoke(component, arguments);
             if (invoked is Task task) await task;
             if (invoked is ValueTask valueTask) await valueTask;
             await component.ReportIncompletePreviewAsync("local-only-preview", 99, true);

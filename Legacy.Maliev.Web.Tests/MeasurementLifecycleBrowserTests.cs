@@ -149,6 +149,7 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
                     && !JSON.stringify(item).includes('browser-measurement@example.test')
                     && !JSON.stringify(item).includes('Synthetic contact lifecycle test.'));
         }"), leadEventsJson);
+        await session.ExternalAnalyticsBlocked.WaitAsync(TimeSpan.FromSeconds(30));
         Assert.Contains(session.BlockedUrls, IsExternalAnalyticsUrl);
 
         await session.Page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
@@ -310,6 +311,7 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
         try
         {
             var blockedUrls = new ConcurrentBag<string>();
+            var externalAnalyticsBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var origin = fixture.Origin.ToString().TrimEnd('/');
             await context.RouteAsync("**/*", async route =>
             {
@@ -321,13 +323,14 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
 
                 blockedUrls.Add(route.Request.Url);
                 await route.AbortAsync();
+                if (IsExternalAnalyticsUrl(route.Request.Url)) externalAnalyticsBlocked.TrySetResult();
             });
             var page = await context.NewPageAsync();
             await page.GotoAsync(new Uri(fixture.Origin, $"/Contact?culture={culture}").ToString(),
                 new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
             await Assertions.Expect(page.Locator("#contact-us")).ToBeVisibleAsync();
             await Assertions.Expect(page.Locator("#cookieConsent")).ToBeVisibleAsync();
-            return new BrowserSession(context, page, blockedUrls);
+            return new BrowserSession(context, page, blockedUrls, externalAnalyticsBlocked.Task);
         }
         catch (Exception primary)
         {
@@ -387,6 +390,7 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
             ViewportSize = new ViewportSize { Width = width, Height = 900 },
         });
         var blockedUrls = new ConcurrentBag<string>();
+        var externalAnalyticsBlocked = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var origin = fixture.Origin.ToString().TrimEnd('/');
         await context.RouteAsync("**/*", async route =>
         {
@@ -398,6 +402,7 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
 
             blockedUrls.Add(route.Request.Url);
             await route.AbortAsync();
+            if (IsExternalAnalyticsUrl(route.Request.Url)) externalAnalyticsBlocked.TrySetResult();
         });
 
         var page = await context.NewPageAsync();
@@ -428,15 +433,17 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
             Assert.EndsWith("/Quotation?culture=en", page.Url, StringComparison.OrdinalIgnoreCase);
         }
 
-        return new BrowserSession(context, page, blockedUrls);
+        return new BrowserSession(context, page, blockedUrls, externalAnalyticsBlocked.Task);
     }
 
-    private sealed class BrowserSession(IBrowserContext context, IPage page, ConcurrentBag<string> blockedUrls)
+    private sealed class BrowserSession(IBrowserContext context, IPage page, ConcurrentBag<string> blockedUrls,
+        Task externalAnalyticsBlocked)
         : IAsyncDisposable
     {
         public IBrowserContext Context { get; } = context;
         public IPage Page { get; } = page;
         public ConcurrentBag<string> BlockedUrls { get; } = blockedUrls;
+        public Task ExternalAnalyticsBlocked { get; } = externalAnalyticsBlocked;
         public ValueTask DisposeAsync() => Context.DisposeAsync();
     }
 }

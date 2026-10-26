@@ -1991,7 +1991,8 @@ public sealed class InstantQuotationResinPresentationTests
     }
 
     private sealed class RetryingFailureClient(
-        TaskCompletionSource entered, TaskCompletionSource release, CancellationToken lease) : IInstantQuotationUploadClient
+        TaskCompletionSource entered, TaskCompletionSource release, CancellationToken lease,
+        InstantQuotationProblemCategory problem = InstantQuotationProblemCategory.Validation) : IInstantQuotationUploadClient
     {
         private int attempts;
         public async Task<InstantQuotationUploadResult> UploadAsync(string sessionId, string? ownerIdentity, Stream content,
@@ -2004,7 +2005,7 @@ public sealed class InstantQuotationResinPresentationTests
                 await release.Task.WaitAsync(lease);
             }
             return InstantQuotationUploadResult.Failed(operationId, InstantQuotationServiceStatus.Available,
-                InstantQuotationAuthorizationStatus.Authorized, InstantQuotationProblemCategory.Validation);
+                InstantQuotationAuthorizationStatus.Authorized, problem);
         }
         public Task<InstantQuotationRemoveResult> RemoveAsync(string sessionId, string? ownerIdentity,
             InstantQuotationUploadReference uploadReference, string operationId, CancellationToken cancellationToken) =>
@@ -2763,6 +2764,202 @@ public sealed class InstantQuotationResinPresentationTests
             {
                 interop.Release.TrySetResult();
                 await pending.WaitAsync(TimeSpan.FromSeconds(5));
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData("retry", false)]
+    [InlineData("retry", true)]
+    [InlineData("selection", true)]
+    [InlineData("thumbnail", false)]
+    public async Task DevelopmentPreview_ReconciliationCannotMutateRetryOwnedOrReboundKey(string boundary, bool cachedThumbnail)
+    {
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var uploadRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        uploadRelease.TrySetResult();
+        var store = new SessionStore();
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new RetryingFailureClient(new(), uploadRelease, lease.Token, InstantQuotationProblemCategory.DependencyUnavailable),
+            new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", lease.Token);
+        var claim = new InstantQuotationGeometryClaim(1, new string('a', 64), 10, 10, 10, 1000, 600,
+            Enumerable.Repeat(100d, 64).ToArray(), Enumerable.Repeat(40d, 64).ToArray(),
+            12, 1, true, false, false, 0.8);
+        var localId = Assert.Single(coordinator.ReserveUploads([
+            new InstantQuotationWorkflowUploadFile("controlled-demo.stl", "model/stl", 3, claim,
+                _ => Task.FromResult<Stream>(new MemoryStream(new byte[] { 1, 2, 3 }, writable: false))),
+        ]));
+        await coordinator.UploadReservedAsync([localId], lease.Token);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        var environment = services.GetRequiredService<IWebHostEnvironment>();
+        environment.EnvironmentName = "Development";
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var type = typeof(InstantQuotationWorkflow);
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            object? Get(string field) => type.GetField(field, flags)!.GetValue(component);
+            void Set(string field, object value) => type.GetField(field, flags)!.SetValue(component, value);
+            Task Invoke(string method, params object?[] args) => (Task)type.GetMethod(method, flags)!.Invoke(component, args)!;
+            var keys = Assert.IsType<Dictionary<Guid, string>>(Get("previewKeys"));
+            keys[localId] = "old";
+            Assert.IsType<Dictionary<Guid, InstantQuotationGeometryClaim>>(Get("developmentClaims"))[localId] = claim;
+            var mutations = new List<(string Name, string Key)>();
+            var attachments = new List<(string Key, string Canvas, long Generation)>();
+            var held = false;
+            var preview = new BulkAppearancePreviewReference(async (name, args) =>
+            {
+                if (name is "captureFailedThumbnail" or "quarantine" or "release")
+                    mutations.Add((name, Assert.IsType<string>(args![0])));
+                if (name == "retainDevelopmentPreview")
+                    attachments.Add((Assert.IsType<string>(args![0]),
+                        Assert.IsType<ElementReference>(args[1]).Id, Assert.IsType<long>(args[2])));
+                if (held && name == (boundary == "retry" ? "getGeometryClaim"
+                    : boundary == "selection" ? "selectLocalPreview" : "captureFailedThumbnail"))
+                {
+                    entered.TrySetResult();
+                    await release.Task.WaitAsync(lease.Token);
+                }
+                return name switch
+                {
+                    "retry" => "fresh",
+                    "getGeometryClaim" => claim,
+                    "retainDevelopmentPreview" => true,
+                    _ => null,
+                };
+            });
+            Set("previewInterop", preview);
+            await Invoke("ReconcilePreviewsAsync", (object?)null).WaitAsync(lease.Token);
+            var parts = Assert.IsAssignableFrom<System.Collections.IDictionary>(Get("developmentPreviews"));
+            var original = Assert.Single(parts.Values.Cast<object>());
+            original.GetType().GetProperty("MaterialKey")!.SetValue(original, "PETG");
+            original.GetType().GetProperty("Quantity")!.SetValue(original, 2);
+            if (cachedThumbnail)
+                Assert.IsType<Dictionary<string, string>>(Get("localPreviewThumbnails"))["old"] = "data:image/webp;base64,AA==";
+            if (boundary != "retry")
+            {
+                // Exercise the ordinary failed-preview fallback rather than the demo retention branch.
+                environment.EnvironmentName = "Testing";
+                if (boundary == "thumbnail") Set("selectedPreviewUploadId", localId);
+            }
+            mutations.Clear();
+            held = true;
+            var pending = boundary == "retry" ? Invoke("RetryUploadAsync", localId)
+                : Invoke("ReconcilePreviewsAsync", (object?)null);
+            Exception? primary = null;
+            try
+            {
+                await entered.Task.WaitAsync(lease.Token);
+                if (boundary == "retry")
+                {
+                    Assert.Equal("fresh", keys[localId]);
+                    if (cachedThumbnail)
+                        Assert.IsType<Dictionary<string, string>>(Get("localPreviewThumbnails"))["fresh"] = "data:image/webp;base64,AA==";
+                    await Invoke("ReconcilePreviewsAsync", (object?)null).WaitAsync(lease.Token);
+                    Assert.Empty(mutations);
+                }
+                else keys[localId] = "fresh";
+                release.TrySetResult();
+                await pending.WaitAsync(lease.Token);
+                Assert.DoesNotContain(mutations, item => item.Name is "quarantine" or "release");
+                Assert.DoesNotContain(mutations, item => item.Key == "fresh");
+                if (boundary == "retry")
+                {
+                    var current = Assert.Single(parts.Values.Cast<object>());
+                    Assert.NotSame(original, current);
+                    Assert.Equal("PETG", current.GetType().GetProperty("MaterialKey")!.GetValue(current));
+                    Assert.Equal(2, current.GetType().GetProperty("Quantity")!.GetValue(current));
+                    Assert.Equal(2L, Get("developmentPreviewGeneration"));
+                    Set("developmentPreviewCanvas", new ElementReference("fresh-canvas"));
+                    await Invoke("OnAfterRenderAsync", false).WaitAsync(lease.Token);
+                    Assert.Equal(("fresh", "fresh-canvas", 2L), Assert.Single(attachments));
+                    Assert.Equal(true, current.GetType().GetProperty("Attached")!.GetValue(current));
+                }
+                Assert.Empty(coordinator.Parts);
+                Assert.False(coordinator.HasCompleteAuthoritativeQuote);
+                Assert.Null((await store.GetAsync("presentation-session", null, lease.Token))!.QuoteAuthorization);
+            }
+            catch (Exception exception) { primary = exception; throw; }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        pending, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        taskKind: "development-preview-reconciliation"));
+            }
+        });
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task DevelopmentPreview_QuarantinePreservesCancellationAndRevalidatesAfterIncompleteRemoval(bool rebound, bool reconciliation)
+    {
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var activator = new CapturingActivator();
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var type = typeof(InstantQuotationWorkflow);
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            object? Get(string field) => type.GetField(field, flags)!.GetValue(component);
+            void Set(string field, object value) => type.GetField(field, flags)!.SetValue(component, value);
+            var localId = Guid.NewGuid();
+            var keys = Assert.IsType<Dictionary<Guid, string>>(Get("previewKeys"));
+            keys[localId] = "old";
+            var retries = Assert.IsType<HashSet<Guid>>(Get("developmentRetries"));
+            if (!reconciliation) retries.Add(localId);
+            Set("incompletePreviewKey", "old");
+            var mutations = new List<(string Name, string Key)>();
+            Set("previewInterop", new BulkAppearancePreviewReference(async (name, args) =>
+            {
+                if (name is "removeIncompletePreview" or "release" or "quarantine")
+                    mutations.Add((name, Assert.IsType<string>(args![0])));
+                if (name == "removeIncompletePreview")
+                {
+                    entered.TrySetResult();
+                    await release.Task.WaitAsync(lease.Token);
+                }
+                return null;
+            }));
+            var pending = reconciliation
+                ? (Task)type.GetMethod("QuarantinePreviewAsync", flags)!.Invoke(component,
+                    [localId, "old", (Func<bool>)(() => !retries.Contains(localId))])!
+                : (Task)type.GetMethod("CancelUpload", flags)!.Invoke(component, [localId])!;
+            Exception? primary = null;
+            try
+            {
+                await entered.Task.WaitAsync(lease.Token);
+                if (rebound) keys[localId] = "fresh";
+                if (reconciliation) retries.Add(localId);
+                release.TrySetResult();
+                await pending.WaitAsync(lease.Token);
+                Assert.Contains(("release", "old"), mutations);
+                Assert.Equal(!rebound && !reconciliation, mutations.Contains(("quarantine", "old")));
+                Assert.DoesNotContain(mutations, item => item.Key == "fresh");
+            }
+            catch (Exception exception) { primary = exception; throw; }
+            finally
+            {
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        pending, () => lease.Cancel(), () => release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        taskKind: "development-preview-cancellation"));
             }
         });
     }

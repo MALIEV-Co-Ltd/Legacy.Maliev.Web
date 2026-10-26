@@ -172,6 +172,14 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private string? LocalThumbnail(string? key) => key is not null ? localPreviewThumbnails.GetValueOrDefault(key) : null;
 
+    private InstantQuotationPartConfiguration? LocalSummaryConfiguration(string? key) =>
+        key is not null && pendingConfigurations.TryGetValue(key, out var pending) ? pending.Configuration : null;
+
+    private static string MaterialSummary(InstantQuotationPartConfiguration? configuration) =>
+        configuration is not null && !string.IsNullOrWhiteSpace(configuration.MaterialKey)
+            ? $"{configuration.MaterialKey.Trim()} {configuration.Quantity}×"
+            : "—";
+
     private WorkflowSectionVisibility VisibleSections
     {
         get
@@ -1179,7 +1187,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         developmentPreviews.Remove(localId);
         developmentClaims.Remove(localId);
         RepriceDevelopmentPreview();
-        await QuarantinePreviewAsync(localId);
+        if (previewKeys.TryGetValue(localId, out var key))
+            await QuarantinePreviewAsync(localId, key);
     }
 
     private async Task RetryUploadAsync(Guid localId)
@@ -1402,6 +1411,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
         foreach (var (localId, key) in previewKeys.ToArray())
         {
+            // A retry owns its fresh correlation until its upload and demo reconciliation settle.
+            if (developmentRetries.Contains(localId)) continue;
             var upload = Uploads.SingleOrDefault(item => item.LocalId == localId);
             var part = Parts.SingleOrDefault(item => item.PreviewCorrelationId == localId);
             if (upload?.Status is InstantQuotationWorkflowUploadStatus.Uploaded && part is not null)
@@ -1453,14 +1464,20 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             }
             else if (upload?.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
             {
+                bool IsCurrentFailure() => !disposed && !developmentRetries.Contains(localId)
+                    && previewKeys.GetValueOrDefault(localId) == key
+                    && Uploads.Any(item => item.LocalId == localId && item.Status == upload.Status)
+                    && !Parts.Any(item => item.PreviewCorrelationId == localId);
+                if (!IsCurrentFailure()) continue;
                 if (upload.Status is InstantQuotationWorkflowUploadStatus.Error
                     && await KeepDevelopmentPreviewAsync(upload, key, retryPresentation))
                     continue;
+                if (!IsCurrentFailure()) continue;
                 if (Parts.Count == 0 && selectedFailedPreviewKey is null && selectedPreviewUploadId is null)
                 {
                     selectedPreviewUploadId = localId;
                     await InvokePreviewAsync("selectLocalPreview", key);
-                    if (disposed) return;
+                    if (!IsCurrentFailure()) continue;
                 }
                 if (upload.Status is InstantQuotationWorkflowUploadStatus.Error && key != incompletePreviewKey
                     && previewInterop is not null && !localPreviewThumbnails.ContainsKey(key))
@@ -1468,17 +1485,16 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                     try
                     {
                         var source = await interop.InvokeAsync<string?>("captureFailedThumbnail", key, previewCanvas);
-                        if (!disposed && previewKeys.GetValueOrDefault(localId) == key
-                            && Uploads.Any(item => item.LocalId == localId && item.Status is InstantQuotationWorkflowUploadStatus.Error)
+                        if (IsCurrentFailure()
                             && source is { Length: <= 262144 } && source.StartsWith("data:image/webp;base64,", StringComparison.Ordinal))
                             localPreviewThumbnails[key] = source;
                     }
                     catch (JSException) { /* Preserve the controlled upload failure if rendering is unavailable. */ }
-                    if (disposed || previewKeys.GetValueOrDefault(localId) != key) continue;
+                    if (!IsCurrentFailure()) continue;
                 }
                 if (key != incompletePreviewKey || upload.Status is InstantQuotationWorkflowUploadStatus.Cancelled)
                 {
-                    await QuarantinePreviewAsync(localId);
+                    if (IsCurrentFailure()) await QuarantinePreviewAsync(localId, key, IsCurrentFailure);
                 }
             }
             else if (upload is null)
@@ -1488,17 +1504,16 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
-    private async Task QuarantinePreviewAsync(Guid localId)
+    private async Task QuarantinePreviewAsync(Guid localId, string key, Func<bool>? isCurrent = null)
     {
+        if (disposed || previewKeys.GetValueOrDefault(localId) != key || isCurrent?.Invoke() == false) return;
         if (autoPreviewLocalId == localId) InvalidatePreviewSelectionIntent();
-        if (previewKeys.TryGetValue(localId, out var key))
+        if (key == incompletePreviewKey)
         {
-            if (key == incompletePreviewKey)
-            {
-                await RemoveIncompletePreviewAsync();
-            }
-            await InvokePreviewAsync("quarantine", key);
+            await RemoveIncompletePreviewAsync();
         }
+        if (!disposed && previewKeys.GetValueOrDefault(localId) == key && isCurrent?.Invoke() != false)
+            await InvokePreviewAsync("quarantine", key);
     }
 
     private async Task ReleasePreviewAsync(Guid localId)
