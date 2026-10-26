@@ -27,6 +27,9 @@ public sealed class Index(
     private const long MaximumUploadBytes = 100L * 1024L * 1024L;
     private const string RecaptchaAction = "submit";
 
+    /// <summary>Gets the service item selected by the public quotation GET route.</summary>
+    public string? RequestedItem { get; private set; }
+
     [BindProperty]
     [StringLength(50)]
     public string? Company { get; set; }
@@ -191,6 +194,7 @@ public sealed class Index(
         string? finish_sheen,
         CancellationToken cancellationToken)
     {
+        RequestedItem = item;
         await LoadCountriesAsync(cancellationToken);
         await ApplyTrustedCustomerAsync(cancellationToken);
         SubmissionId = Guid.NewGuid();
