@@ -131,7 +131,7 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
             Assert.Equal(2, fixture.Reader.ReadCount);
             Assert.DoesNotContain(frames, frame => frame.MaterialKey == "PLA"
                 && frame.Status == InstantQuotationMaterialPricingStatus.Completed);
-        }, output, gateRead: 2);
+        }, output, gateRead: 2, clock: new ManualClock());
     }
 
     [Theory]
@@ -616,12 +616,14 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         {
             var session = await fixture.CreateAsync(materialKey: "M68");
             var frames = new List<InstantQuotationMaterialPricingProgress>();
-            var quote = await fixture.Service.QuoteAsync(session, Owner, includeComparisons,
-                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
+            var quote = await fixture.QuoteWithWallLifetimeAsync(token =>
+                fixture.Service.QuoteAsync(session, Owner, includeComparisons,
+                    (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, token));
             Assert.NotNull(quote);
             if (!includeComparisons)
             {
-                var expected = await fixture.Service.QuoteAsync(session, Owner, false, default);
+                var expected = await fixture.QuoteWithWallLifetimeAsync(token =>
+                    fixture.Service.QuoteAsync(session, Owner, false, token));
                 Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(quote));
             }
             if (!includeComparisons) Assert.Equal(0, fixture.Reader.ReadCount);
@@ -691,6 +693,55 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         }, output, failSelected: true);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PlainOverload_UsesInjectedClockForOwnedDeadlines(bool includeComparisons)
+    {
+        var clock = new ManualClock();
+        await Fixture.RunAsync(async fixture =>
+        {
+            var session = await fixture.CreateAsync(materialKey: includeComparisons ? "M68" : "ABS");
+            using var caller = new CancellationTokenSource();
+            var run = fixture.Service.QuoteAsync(session, Owner, includeComparisons, caller.Token);
+            try
+            {
+                await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.False(run.IsCompleted);
+                Assert.False(fixture.Reader.ObservedCancellation.IsCancellationRequested);
+                clock.Advance(TimeSpan.FromSeconds(includeComparisons ? 3 : 30));
+                Assert.True(fixture.Reader.ObservedCancellation.IsCancellationRequested);
+                var quote = await run.WaitAsync(TimeSpan.FromSeconds(10));
+                if (includeComparisons)
+                {
+                    Assert.NotNull(quote);
+                    var line = Assert.Single(quote.Parts);
+                    Assert.Equal(770, line.UnitPrice);
+                    Assert.Null(line.PhysicalReceipt);
+                    var fdmCards = line.MaterialPrices.Where(
+                        card => PricingCatalog.ResolveMaterial(card.MaterialKey)!.Process == PrintProcess.Fdm).ToArray();
+                    Assert.NotEmpty(fdmCards);
+                    Assert.All(fdmCards, card =>
+                    {
+                        Assert.Null(card.UnitPrice);
+                        Assert.Null(card.PhysicalReceipt);
+                    });
+                }
+                else
+                {
+                    Assert.Null(quote);
+                }
+                Assert.Equal(1, fixture.Reader.ReadCount);
+                Assert.False(caller.IsCancellationRequested);
+            }
+            catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
+            finally
+            {
+                await fixture.DrainAsync(run, caller.Cancel, () => fixture.Reader.Release.TrySetResult(), caller.Token);
+            }
+        }, output, gateRead: 1, clock: clock);
+    }
+
     [Fact]
     public async Task PlainOverload_SelectedDeadlineUsesInjectedClock()
     {
@@ -724,10 +775,12 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         await Fixture.RunAsync(async fixture =>
         {
             var session = await fixture.CreateAsync();
-            var expected = await fixture.Service.QuoteAsync(session, Owner, true, default);
+            var expected = await fixture.QuoteWithWallLifetimeAsync(token =>
+                fixture.Service.QuoteAsync(session, Owner, true, token));
             var frames = new List<InstantQuotationMaterialPricingProgress>();
-            var actual = await fixture.Service.QuoteAsync(session, Owner, true,
-                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
+            var actual = await fixture.QuoteWithWallLifetimeAsync(token =>
+                fixture.Service.QuoteAsync(session, Owner, true,
+                    (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, token));
             Assert.NotNull(actual);
             Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(actual));
             var stored = await fixture.Store.GetAsync(session.SessionId, Owner, default);
@@ -814,6 +867,25 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
             Reader.SessionId = session.SessionId;
             return session;
         }
+        public async Task<InstantQuotationOrderQuote?> QuoteWithWallLifetimeAsync(
+            Func<CancellationToken, Task<InstantQuotationOrderQuote?>> start)
+        {
+            using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(33));
+            Task<InstantQuotationOrderQuote?>? actual = null;
+            try
+            {
+                actual = start(lifetime.Token);
+                return await actual.WaitAsync(lifetime.Token);
+            }
+            catch (Exception exception) { PrimaryFailure ??= exception; throw; }
+            finally
+            {
+                if (actual is not null && !actual.IsCompletedSuccessfully)
+                {
+                    await DrainAsync(actual, lifetime.Cancel, () => { }, lifetime.Token);
+                }
+            }
+        }
         public void Record(string phase, string state) => diagnostics.Record(phase, state);
         public void OwnGate(TaskCompletionSource gate) => gates.Add(() => gate.TrySetResult());
         public void ExpectFailure(Task actual)
@@ -898,6 +970,7 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         public Action<string, bool>? Report { get; set; }
         public string? SessionId { get; set; }
         public int ReadCount { get; private set; }
+        public CancellationToken ObservedCancellation { get; private set; }
         public HashSet<Guid> PartIds { get; set; } = [PartId];
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -906,6 +979,7 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         {
             Assert.Equal(SessionId, sessionId); Assert.Equal(Owner, ownerIdentity); Assert.Contains(partId, PartIds);
             ReadCount++;
+            ObservedCancellation = cancellationToken;
             Report?.Invoke("entered", cancellationToken.IsCancellationRequested);
             if (ReadCount == gateRead) { Entered.TrySetResult(); await Release.Task.WaitAsync(cancellationToken); }
             Report?.Invoke("returned", cancellationToken.IsCancellationRequested);

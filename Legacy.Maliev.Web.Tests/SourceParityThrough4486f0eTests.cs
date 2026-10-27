@@ -241,7 +241,7 @@ public sealed class SourceParityThrough4486f0eTests : IClassFixture<TestingWebAp
         Assert.Equal(digest, root.GetProperty("sequenceSha256").GetString());
         string semanticDigest = Convert.ToHexString(
             SHA256.HashData(Encoding.UTF8.GetBytes(semanticStream.ToString()))).ToLowerInvariant();
-        Assert.Equal("5c3c36b5e6b3d224677e7acb1624fab035c585f6cc35de24b7f06ad8576fa0ae", semanticDigest);
+        Assert.Equal("052b3d3cb7d64a7bfaf0f028c4b6d27728637012a59404ee831abc204c9b7a4e", semanticDigest);
         Assert.Equal(semanticDigest, root.GetProperty("semanticSha256").GetString());
         Assert.Equal("25db5545b0f5f575f61616af2ba54ee45e656a20", commits[0]);
         Assert.Equal("4486f0e964e508e5eb7b43a59eeaec46cc052c67", commits[^1]);

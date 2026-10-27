@@ -205,6 +205,69 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
     }
 
     [Theory]
+    [InlineData("en", "Could not retrieve countries from the server.", "Select a country")]
+    [InlineData("th", "ไม่สามารถดึงรายชื่อประเทศจากเซิร์ฟเวอร์ได้", "เลือกประเทศ")]
+    public async Task RetainedRazorCountryTransportFailure_KeepsContactGetAvailableWithoutDownstreamWrites(
+        string culture, string unavailableMessage, string countryPlaceholder)
+    {
+        var requests = new ConcurrentQueue<(string Client, string Method, string Path)>();
+        await using var unavailableFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:Contact", "false");
+            builder.UseSetting("Services:Country", "https://country-outage.invalid/");
+            builder.ConfigureServices(services =>
+            {
+                foreach (var name in new[] { "countries", "contacts", "notifications", "auth" })
+                {
+                    services.AddHttpClient(name)
+                        .ConfigurePrimaryHttpMessageHandler(() => new CountryOutageTransport(name, requests));
+                }
+
+                // Match the existing SSR outage fixture's real retry/deadline policy and scheduling.
+                services.PostConfigure<HttpStandardResilienceOptions>("countries-standard", options =>
+                {
+                    options.Retry.Delay = TimeSpan.Zero;
+                    options.Retry.UseJitter = false;
+                    options.Retry.DelayGenerator = _ => ValueTask.FromResult<TimeSpan?>(TimeSpan.Zero);
+                });
+            });
+        });
+        using var client = unavailableFactory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+
+        using var response = await client.GetAsync($"/contact?culture={culture}", deadline.Token);
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(deadline.Token));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        var form = Regex.Match(source, "<form\\b[^>]*\\bid=\"contact-us\"[^>]*>");
+        Assert.True(form.Success);
+        Assert.Contains("method=\"post\"", form.Value, StringComparison.Ordinal);
+        Assert.Contains(unavailableMessage, source, StringComparison.Ordinal);
+        Assert.DoesNotContain("controlled-country-private-failure", source, StringComparison.Ordinal);
+        var select = Regex.Match(source, "<select\\b(?<attributes>[^>]*\\bid=\"Country\"[^>]*)>(?<options>.*?)</select>",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        Assert.True(select.Success);
+        Assert.Matches("\\sdisabled(?:\\s|=|$)", select.Groups["attributes"].Value);
+        Assert.Single(Regex.Matches(select.Groups["options"].Value, "<option\\b", RegexOptions.IgnoreCase).Cast<Match>());
+        Assert.Matches("<option\\b[^>]*\\svalue(?:=\"\"|='')?(?=\\s|>)[^>]*>", select.Groups["options"].Value);
+        Assert.Contains(countryPlaceholder, select.Groups["options"].Value, StringComparison.Ordinal);
+        var submit = Regex.Match(source, "<button\\b[^>]*\\bid=\"submit-button\"[^>]*>",
+            RegexOptions.IgnoreCase);
+        Assert.True(submit.Success);
+        Assert.Matches("\\sdisabled(?:\\s|=|>)", submit.Value);
+        Assert.NotEmpty(requests);
+        Assert.All(requests, request =>
+        {
+            Assert.Equal("countries", request.Client);
+            Assert.Equal("GET", request.Method);
+            Assert.Equal("/Countries", request.Path);
+        });
+    }
+
+    [Theory]
     [InlineData(true, "en")]
     [InlineData(true, "th")]
     [InlineData(false, "en")]

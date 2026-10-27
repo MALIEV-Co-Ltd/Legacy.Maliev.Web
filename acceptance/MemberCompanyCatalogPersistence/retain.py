@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
+import current_consumer as current
 import xml.etree.ElementTree as ET
 
 NS = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
@@ -136,7 +138,10 @@ def main():
     candidate = os.environ.get('MALIEV_COMPANY_CANDIDATE_HEAD','')
     require(re.fullmatch('[0-9a-f]{40}',candidate), 'Exact candidate required')
     require(subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip() == candidate, 'Executed checkout must equal candidate')
-    helper_digest = helper_source(Path('Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'))
+    current.authenticate_sources()
+    helper_digest = current.current_helper_source(Path('Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'))
+    build_evidence, build_evidence_sha = current.load_build_evidence()
+    observation_controls = current.verify_observation_controls()
     source = Path('acceptance/MemberCompanyCatalogPersistence/Tests/bin/Release/net10.0/TestResults/member-company')
     output = Path('member-company-retained'); output.mkdir(exist_ok=True)
     native = list(Path('member-company-test-results').glob('*.trx'))
@@ -144,10 +149,10 @@ def main():
     native_rows = rows(native[0])
     seen_ids = set(); seen_runs = set(); raw_cleanup_hashes = {}
     for culture in ['en','th']:
-        case = receipt(json.loads((source/(culture+'.json')).read_text()), culture, candidate)
+        case = current.current_receipt(current.parse((source/(culture+'.json')).read_bytes()), culture, candidate, build_evidence, build_evidence_sha, sys.modules[__name__])
         raw_cleanup = (source/(culture+'-cleanup.json')).read_bytes()
         raw_cleanup_hashes[culture] = hashlib.sha256(raw_cleanup).hexdigest()
-        released = cleanup(json.loads(raw_cleanup))
+        released = current.current_cleanup(current.parse(raw_cleanup), sys.modules[__name__])
         cid = released['backends'][0]['originalId']
         normalized_run = original_run(released['run'])
         require(cid not in seen_ids and normalized_run not in seen_runs, 'Distinct actual journey ownership required')
@@ -180,7 +185,7 @@ def main():
         {'repository':'MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults',
          'revision':'7edcd961024868513fd5f373cab3dcb261197f77'},
     ]
-    (output/'source-provenance.json').write_text(json.dumps({'candidateHead':candidate,'sourceSha256':sources,'lifetimeHelperRevision':HELPER_REVISION,'rawCleanupSha256':raw_cleanup_hashes,'publicServiceGitRevisions':service_git_revisions,'sharedAuthorityLifecycleQualified':False,'wholeAppHostQualified':False,'genuineIamEnrollmentQualified':False,'liveProviderQualified':False},indent=2)+'\n')
+    (output/'source-provenance.json').write_text(json.dumps({'candidateHead':candidate,'sourceSha256':sources,'lifetimeHelperRevision':'a25cf00409b9df2c7164c24f0a399b0752242e2d','historicalLifetimeHelperRevision':HELPER_REVISION,'currentProfileSha256':build_evidence['profileSha256'],'buildEvidenceSha256':build_evidence_sha,'observationControls':observation_controls,'webRuntimeSourceRevisions':build_evidence['sourceRevisions'],'rawCleanupSha256':raw_cleanup_hashes,'publicServiceGitRevisions':service_git_revisions,'sharedAuthorityLifecycleQualified':False,'wholeAppHostQualified':False,'genuineIamEnrollmentQualified':False,'liveProviderQualified':False},indent=2)+'\n')
     print('Accepted exactly two isolated company UPDATE native cases, original PG cleanup and bounded synthetic upstream observations')
 
 if __name__ == '__main__':

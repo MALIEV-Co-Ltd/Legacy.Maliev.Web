@@ -333,20 +333,18 @@ public sealed class MemberCompanyCatalogPersistenceTests(MemberAuthorityFixture 
 internal sealed class CatalogRetryObservation : IHttpMessageHandlerBuilderFilter
 {
     private readonly object gate = new();
-    private readonly List<(string Name, int Count, int OuterMaxRetries, int InnerMaxRetries, string PackageRevision)> samples = [];
+    private readonly List<(string Name, int Count, int OuterMaxRetries, int InnerMaxRetries, string PackageRevision, CurrentCompanySourceObservation Evidence)> samples = [];
     public Action<HttpMessageHandlerBuilder> Configure(Action<HttpMessageHandlerBuilder> next) => builder =>
     {
         next(builder);
         if (builder.Name != "catalog") return;
         var count = builder.AdditionalHandlers.Count(handler => handler is ResilienceHandler);
-        // Pinned runtime default builder.Name=null derives -standard; named Catalog derives catalog-standard.
-        // These are separate actual options reads, not a private handler-to-options inspection.
+        // These remain separate actual options reads. Pipeline key association is source-inferred.
         var options = builder.Services.GetRequiredService<IOptionsMonitor<HttpStandardResilienceOptions>>();
         var outerMaxRetries = options.Get("-standard").Retry.MaxRetryAttempts;
         var innerMaxRetries = options.Get("catalog-standard").Retry.MaxRetryAttempts;
-        var version = typeof(ResilienceHandler).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        var packageRevision = version?.Split('+').ElementAtOrDefault(1) ?? string.Empty;
-        lock (gate) samples.Add((builder.Name, count, outerMaxRetries, innerMaxRetries, packageRevision));
+        var evidence = CurrentCompanySourceObservation.Capture(builder);
+        lock (gate) samples.Add((builder.Name, count, outerMaxRetries, innerMaxRetries, evidence.PackageRevision, evidence));
     };
     internal object Receipt()
     {
@@ -354,14 +352,20 @@ internal sealed class CatalogRetryObservation : IHttpMessageHandlerBuilderFilter
         {
             Assert.NotEmpty(samples);
             var first = samples[0];
-            Assert.All(samples, sample => Assert.Equal(first, sample));
+            Assert.All(samples, sample =>
+            {
+                Assert.Equal((first.Name, first.Count, first.OuterMaxRetries, first.InnerMaxRetries, first.PackageRevision),
+                    (sample.Name, sample.Count, sample.OuterMaxRetries, sample.InnerMaxRetries, sample.PackageRevision));
+                Assert.True(first.Evidence.Equivalent(sample.Evidence));
+                sample.Evidence.VerifyLinkedOrder();
+            });
             var confirmed = first.Name == "catalog" && first.Count == 2 && first.OuterMaxRetries == 3 && first.InnerMaxRetries == 3
-                && first.PackageRevision == "02107c65bab30aad9e35b5133ed643eaa77bccd8";
+                && first.PackageRevision == "25f07afa51034e37b334210642d7dc5f191c142d";
             Assert.True(confirmed, "Actual named retry chain/options/source differ from reviewed bound; no receipt accepted.");
             return new
             {
                 clientName = first.Name,
-                runtimeDefaultsRevision = "3c790ba6414b2a539f24aabb6948549ffd81a86b",
+                runtimeDefaultsRevision = first.Evidence.DefaultsRevision,
                 handlerCount = first.Count,
                 pipelineOptions = new[]
                 {
@@ -371,64 +375,12 @@ internal sealed class CatalogRetryObservation : IHttpMessageHandlerBuilderFilter
                 pipelineOrderFromPinnedSource = new[] { "-standard", "catalog-standard" },
                 runtimePackageSourceRevision = first.PackageRevision,
                 confirmedFromActualHandlerChain = confirmed,
+                assemblyEvidence = first.Evidence.AssemblyReceipt(),
+                linkedHandlerOrder = new[] { 0, 1 },
+                linkedHandlerOrderVerified = true,
+                buildEvidenceSha256 = first.Evidence.BuildEvidenceSha256,
+                sourceProfileSha256 = first.Evidence.SourceProfileSha256,
             };
         }
-    }
-}
-
-/// <summary>Own synchronous request listener; retains only known synthetic phase counts and joins closure before host cleanup.</summary>
-internal sealed class CompanyBrowserRequestObservation : IDisposable
-{
-    private readonly object gate = new();
-    private readonly IPage page;
-    private readonly Uri origin;
-    private readonly string culture;
-    private readonly string[] queries;
-    private readonly int[] counts = new int[3];
-    private bool unexpected, closed;
-    internal CompanyBrowserRequestObservation(IPage page, Uri origin, string culture)
-    {
-        this.page = page; this.origin = origin; this.culture = culture;
-        queries = ["Synthetic " + culture, "Unavailable " + culture, "RateLimited " + culture];
-        page.Request += Observe;
-    }
-    private void Observe(object? sender, IRequest request)
-    {
-        if (!Uri.TryCreate(request.Url, UriKind.Absolute, out var uri) || uri.AbsolutePath != "/lookups/companies/search") return;
-        lock (gate)
-        {
-            if (closed) return;
-            if (uri.Scheme != origin.Scheme || uri.Host != origin.Host || uri.Port != origin.Port || uri.Query.Length != 0 || request.Method != "POST"
-                || request.PostData is not { Length: > 0 and <= 4096 } body)
-            { unexpected = true; return; }
-            try
-            {
-                using var json = JsonDocument.Parse(body);
-                var value = json.RootElement;
-                var phase = Array.IndexOf(queries, value.GetProperty("q").GetString());
-                if (value.EnumerateObject().Count() != 4 || phase < 0 || value.GetProperty("language").GetString() != culture
-                    || value.GetProperty("queryType").GetString() != "name" || value.GetProperty("limit").GetInt32() != 20)
-                { unexpected = true; return; }
-                counts[phase]++;
-            }
-            catch (Exception exception) when (exception is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
-            { unexpected = true; }
-        }
-    }
-    internal object Receipt()
-    {
-        Dispose(); // Close admission, join admitted callbacks and unsubscribe before accepting a final snapshot.
-        lock (gate)
-        {
-            Assert.False(unexpected, "Unexpected company lookup request metadata; private body suppressed.");
-            Assert.All(counts, count => Assert.Equal(1, count));
-            return queries.Select((query, index) => new { query, language = culture, count = counts[index] }).ToArray();
-        }
-    }
-    public void Dispose()
-    {
-        // Waits for any admitted synchronous callback, closes admission, then removes the listener. No background work remains.
-        lock (gate) closed = true;
-        page.Request -= Observe;
     }
 }

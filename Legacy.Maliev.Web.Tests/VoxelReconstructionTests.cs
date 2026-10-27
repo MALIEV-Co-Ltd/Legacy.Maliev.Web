@@ -37,6 +37,25 @@ public sealed class VoxelReconstructionTests
                 PricingEngine.QuoteFdmSimulation(physical, PricingCatalog.ResolveMaterial("PLA")!, 1, 1));
     }
 
+    // Source8fd: box(0, 1, 0, 1).slice(9), not an enlarged or differently opened box.
+    [Fact]
+    public void LiteralOriginalUnitCubeMissingFirstTriangle_RecoversWithReviewProvenance()
+    {
+        MeshTriangle[] closed = Box(Vector3.Zero, Vector3.One).ToArray();
+        Assert.Equal(12, closed.Length);
+        Assert.Equal(new MeshTriangle(Vector3.Zero, new(1, 1, 0), new(1, 0, 0)), closed[0]);
+        MeshTriangle[] original = closed.Skip(1).ToArray();
+        Assert.Equal(11, original.Length);
+        var mesh = Normalize(original);
+        Assert.Contains("mesh_open_edges", mesh.Diagnostics);
+
+        var result = VoxelReconstruction.Build(mesh, Pose(), 0.2, Budget());
+
+        Assert.Equal("voxel-majority-v1", result.Provenance.Method);
+        Assert.NotEmpty(result.Layers);
+        Assert.All(result.Layers, layer => Assert.True(Area(layer) > 0));
+    }
+
     [Fact]
     public void OpenBox_RecoversActualInteriorAndRetainsApproximationProvenance()
     {

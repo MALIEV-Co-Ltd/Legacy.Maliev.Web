@@ -1,0 +1,450 @@
+{
+  "schemaVersion": 1,
+  "profile": "company-current-helper-dependency-source-v1",
+  "predecessorMain": "e77fdd2db35cb31e4a354d76036bc51524050337",
+  "retainedPrHead": "722f701d696e5db885cae1b602651d07d465c1ea",
+  "sourceFiles": {
+    ".github/workflows/_build-and-test.yml": {
+      "bytes": 56086,
+      "gitBlob": "c1558b03ab6b7eee3f385455c8d13b4974a70c7a",
+      "sha256": "1b0a81a7bfa733114b15d8458761dce75e65db7358961c2b498142915607b7c5"
+    },
+    ".github/workflows/billing-persistence.yml": {
+      "bytes": 31419,
+      "gitBlob": "c1a6047e8882d530b21749e8a854200606142743",
+      "sha256": "ab4175d702e4646173ecf6660b6314ca8e9ca57c46cb2f734db484023fae5156"
+    },
+    ".github/workflows/fx-joined.yml": {
+      "bytes": 4941,
+      "gitBlob": "ba3bd6684215992a028bd1be7dd798b45e3746b1",
+      "sha256": "998aeefe51671a6331db14baf5c6e47720be2fdb8e71eba9027ca7cbcc7279ed"
+    },
+    ".github/workflows/member-company-catalog-persistence.yml": {
+      "bytes": 14068,
+      "gitBlob": "e0cfaf9f5951165823c6db9ebf8dbecddd4fc00d",
+      "sha256": "6ac60aba11b1d270e2f0d5a91fe0e97cd6f7fb6df1e9c48e6a8f62d8651b260e"
+    },
+    ".github/workflows/shipping-persistence.yml": {
+      "bytes": 17251,
+      "gitBlob": "1c4fd0561c5a4ceb75e078c3bb530f7b351599c8",
+      "sha256": "9b77b3b82a1b372432efd3f01bf580e30821db6e020389c5b3971dff3533c6f5"
+    },
+    "AGENTS.md": {
+      "bytes": 1581,
+      "gitBlob": "0af1bcba44a03e1563940bc03a81e297c609d8e2",
+      "sha256": "d7e8009d0fea39df60e34bb4e856788c3d1529c08b11959961aa3b83e3875043"
+    },
+    "Legacy.Maliev.Web.Infrastructure/Legacy.Maliev.Web.Infrastructure.csproj": {
+      "bytes": 992,
+      "gitBlob": "0b0edeb90f887078020f78420a92ea4017a93d67",
+      "sha256": "2406572dfe2f68621c58947e209105112d438f46cfd8f74745502328c0d09fca"
+    },
+    "Legacy.Maliev.Web.Tests/AdditiveFxHandlerContractTests.cs": {
+      "bytes": 27027,
+      "gitBlob": "065cab9a21e263ba91bb8634c0593ec6921f7cec",
+      "sha256": "24ea4b010bf84f27e5f1bb603359c40bd90f85d8a1c1deeeffdf43552c5c73bf"
+    },
+    "Legacy.Maliev.Web.Tests/ArchitectureTests.cs": {
+      "bytes": 3679,
+      "gitBlob": "e4e087d8b316d02b1a10e6adbd59fedf4894cc11",
+      "sha256": "5f70c8ce0f5b37229a9620df3a48c7591801dc65fcf96e545a012b3330f7eee8"
+    },
+    "Legacy.Maliev.Web.Tests/BillingProofLifetime.cs": {
+      "bytes": 51759,
+      "gitBlob": "bc8eb80ca2c971db63a6f46a5eb58adb91ed274a",
+      "sha256": "680ff227f0e4e395c44f81f40e69c845d015b637661f6e68c8c5b8828dfba14b"
+    },
+    "Legacy.Maliev.Web.Tests/BillingProofLifetimeTests.cs": {
+      "bytes": 30056,
+      "gitBlob": "da3b7fdb2f6e8892e6ac9019b188fa5dcba7d34a",
+      "sha256": "b72bdc742e33eeadcac82e7f586e35ee881b4a68640beb18ab95fd04501f6541"
+    },
+    "Legacy.Maliev.Web.Tests/InstantQuotationSubmissionStoreTests.cs": {
+      "bytes": 34744,
+      "gitBlob": "fbef447eeeec1b15bba75d2696ae589343bcfc42",
+      "sha256": "00d91ab71e14620e7198853cfba144d821c83f3722c9fb5c745f91fce5d8f04d"
+    },
+    "Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj": {
+      "bytes": 1901,
+      "gitBlob": "28cd8eb5af11657ff6cfe4c9ba6d8b384ef608b1",
+      "sha256": "e0929c2f45309057efb29c2448b9c47b1971ef39dfafa54e407a248a83596576"
+    },
+    "Legacy.Maliev.Web.Tests/LegacyServiceDefaultsIdentityContractTests.cs": {
+      "bytes": 6887,
+      "gitBlob": "e4ac1003ebfa4b546281366828613db17b9e49d7",
+      "sha256": "3d41cc5d47a3e2aadf4082c6159d31d04a147baf92dbfa8fc088fd26426beeb7"
+    },
+    "Legacy.Maliev.Web.Tests/ThaiLookupBillingPersistenceTests.cs": {
+      "bytes": 25876,
+      "gitBlob": "20cf6977fcafa36bc4e2026d727e093abf81ed29",
+      "sha256": "0ab995210bbce6cd53219edc2abafd63c3bfec7ffdbf2d7ae6935eace4068761"
+    },
+    "Legacy.Maliev.Web.Tests/ThaiLookupShippingPersistenceTests.cs": {
+      "bytes": 24560,
+      "gitBlob": "58414d1a92d49423272c67a84b2c820c553a6c1d",
+      "sha256": "c951fa99b9ec2ec17d3de0505080c5b46694ed85aaad6044415cd3fd5218f128"
+    },
+    "Legacy.Maliev.Web/Legacy.Maliev.Web.csproj": {
+      "bytes": 3598,
+      "gitBlob": "7226f0d543247bc73ec4adcbccec7211df644511",
+      "sha256": "8d8a50a193394de6127d37f50871d4a7e10d35e4b63f104c93d2681d43033f80"
+    },
+    "acceptance/CareerOriginalMaterialization/CareerOriginalMaterialization.Tests.csproj": {
+      "bytes": 822,
+      "gitBlob": "9105df41e793cf7c1fa7a41154f3a11f8eb002e3",
+      "sha256": "604c73f7be0f01e4281855df50427e5a2a70009f5ba702063a93f30372c76d0f"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/README.md": {
+      "bytes": 10624,
+      "gitBlob": "bcba6d368601dbbd826a6a7cc7d635964beacb45",
+      "sha256": "54d615ee241988ba2e0a9735e80354e7618c3f209426cf11081bd8d7832e1a9f"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/Tests/CurrentCompanySourceObservation.cs": {
+      "bytes": 8161,
+      "gitBlob": "4c7eedec5c850560e53cdb6ca487cf1f5f7b2872",
+      "sha256": "ae37db2e13538d47940e059a903d108c115b29b6cd2c7b01bd09943a3d135fac"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/Tests/CurrentCompanySourceObservationTests.cs": {
+      "bytes": 3531,
+      "gitBlob": "412c0c1456107cf7f67432fe8f08832119cd0645",
+      "sha256": "4e6afcc904b7548ba96abcfd5b1d5fb08f7f2310ddea628f2a0e16e84f48f746"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistence.Tests.csproj": {
+      "bytes": 699,
+      "gitBlob": "153e1191e101dc146db873fbd42ed29cddedb5d2",
+      "sha256": "990ee1f053bbb02bbdbb08d49989aa88b1cf80fb08604f0e2e09cffe2d8f7ed2"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistenceTests.cs": {
+      "bytes": 30244,
+      "gitBlob": "d5b2992c2f3bc166e1c616e597c55231b681c4fa",
+      "sha256": "9649773d7b752f997ea84ce9c8d60342b084ce1c616b8a3a47c3e9184eb93940"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/capture_build_source.py": {
+      "bytes": 12153,
+      "gitBlob": "2c3fad05e63b1ec1c1be2552dee211d04f1b103b",
+      "sha256": "0e40c1d4dcadcc82a07ea5a71b100b951673b9d8c5c28f5b1f1e0606a2fb63f4"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/historical_controls.py": {
+      "bytes": 3943,
+      "gitBlob": "c0d537b2ce03a9bf9830f959cd193f14f2cb24f0",
+      "sha256": "30d6d022f73537483ef2eddd07796732d89f42b92c3108f3e2c9fd9715e91ada"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/lifecycle-rosters.json": {
+      "bytes": 15844,
+      "gitBlob": "97cc0016e40bd759ee929ae99bdc4e263bfa35e7",
+      "sha256": "8e9561190c803eebdb89bddbe529e1f75b306ca3d6916620053a79d7bdd88988"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/predecessors/before-current-0.bin": {
+      "bytes": 18505,
+      "gitBlob": "f3a653f8c6653a476433d8a7cb4956d55ee58b21",
+      "sha256": "eb3390ae61f09116253210c7e337c2d366ebc97011d8d83dd260a98b10157516"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/predecessors/before-current-1.bin": {
+      "bytes": 698,
+      "gitBlob": "4a16afea49d08f32d019a23e0766580024d40343",
+      "sha256": "365b519a6b46d806a91f62d9c92314d5c053cec30b67c1a46289da1140d9b0a7"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/predecessors/before-current-2.bin": {
+      "bytes": 32564,
+      "gitBlob": "e4b813901dbe30f48a5625dd69fa90aa0a33222b",
+      "sha256": "64ab3ce503697cdb04aa5c5d8e50504d67bb1d17b010295b833267647f521fa7"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/predecessors/before-current-3.bin": {
+      "bytes": 19796,
+      "gitBlob": "2e4c024e1562706ad43374cbdec5222c62b7c8f9",
+      "sha256": "f06dbcebf9cb462764db40c5462c70e6fafb3be2b794017b9d43a1c4c7040d6c"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/predecessors/before-current-4.bin": {
+      "bytes": 8679,
+      "gitBlob": "475d88327eb3caf0784c71b604796c2473a3dbc9",
+      "sha256": "80705a486116ddff2f571526aaefbbb3bc14f5e0d26339faae7e4620f1306638"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/predecessors/helper-pr527.cs.bin": {
+      "bytes": 46531,
+      "gitBlob": "f350d0fdd6224d6ca4d8745b272de85a41c7f45a",
+      "sha256": "096be55636a60184c452ab0c85a562d0b4b0926e310e95c0a6cf841f00bfccd4"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/retain.py": {
+      "bytes": 20429,
+      "gitBlob": "62e3978d390f57291d35fd56484cc96f2d4a342d",
+      "sha256": "db6def19fadfc7b71b9096257c3c37739e72935201775ba2ecbd336bacf9e3ac"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/test_current_consumer.py": {
+      "bytes": 14606,
+      "gitBlob": "08f4f42a7fe263a1fc8304dcd7048f08cad63ea7",
+      "sha256": "58461efc2ebdb1bdf82d48fa2e0e3142ce5bee3a08d4ca902a4ac5c183aeda27"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/test_retain.py": {
+      "bytes": 22334,
+      "gitBlob": "008b5ed1a5d3d3ef2675fe98989e64eeaff1e78f",
+      "sha256": "8827cd060a130a8f8c4b5fac24493f4f62d7c0b5aa99b6430155cdb8df0a4e3a"
+    },
+    "docs/member-billing-catalog-persistence-proof.md": {
+      "bytes": 10433,
+      "gitBlob": "4a80386ae153e479f86469a7ba3d5b6df7310e9b",
+      "sha256": "02c1a46fd5ea756680d6900e996d642e95e7e830966bda8fd859b604fca57452"
+    },
+    "docs/member-shipping-catalog-persistence-proof.md": {
+      "bytes": 2730,
+      "gitBlob": "b770a56a24c4e954f9e5d8bcad397e4532f3a854",
+      "sha256": "7e79575157f2d7292011988a2a20198e7931e21306c4fb3f4b4ca669f4c014bb"
+    },
+    "docs/web-sealed-source-transport.md": {
+      "bytes": 6387,
+      "gitBlob": "4f096c3a432ce545faa7a666b8febdead32823e8",
+      "sha256": "e972896a018eabc97bbbc613c6fd65f6eb61f0277e8df175860e6ca20908fbd8"
+    },
+    "scripts/retain-billing-initial-probe-comparison.py": {
+      "bytes": 12958,
+      "gitBlob": "6fe5d26b35848e84adc3141ff7b196d9891d590d",
+      "sha256": "7fedac1baeb3e9e9127ca84d9577e4bbd20845b5ff35c1624a8994e33d32874f"
+    },
+    "scripts/run-fx-joined-hosted.py": {
+      "bytes": 19307,
+      "gitBlob": "2b677e24574d08ece4003b25fb48aac1befed50b",
+      "sha256": "7b012617049263ccc94cfb86b70be06ddd128c7aabac31cb6b0ba6019f17aba8"
+    },
+    "scripts/tests/test_billing_receipt_attempt_custody.py": {
+      "bytes": 21616,
+      "gitBlob": "f2599691099861f52ad3ccfd7430d4bf48870e05",
+      "sha256": "dc20868d5bae5e62d590a151b227188005b55ce461b50de8d7225eb1a21cb257"
+    },
+    "scripts/verify-billing-persistence-proof.py": {
+      "bytes": 7288,
+      "gitBlob": "41972b01df4c1f65c251df0a76f0187e53781fac",
+      "sha256": "5ae4081f8c4b09e32627854b2345529b8457cc737f1d5496cc7d2ab293f57e11"
+    },
+    "scripts/verify-focused-web-trx.py": {
+      "bytes": 26212,
+      "gitBlob": "9f249235eb32e89f45f543659d6011844c789e1b",
+      "sha256": "113fb4f759692362972921ac610a12b6f812beeaf1a6f909a9766e36317db731"
+    },
+    "scripts/verify-fx-browser-assets.py": {
+      "bytes": 2375,
+      "gitBlob": "3bc8f7c5696b51a5a6c726c3a3201db8a5b02767",
+      "sha256": "27bcd97e957d50733c1b482b0aa5b0161153c0f901ec0d249debcf8ca1b372c1"
+    },
+    "scripts/verify-shipping-persistence-proof.py": {
+      "bytes": 13737,
+      "gitBlob": "cec940bfe054cbee150715a7e19a5a357e56bec2",
+      "sha256": "4a9c9b8a1a74a3fbe742f4775686569adc47de220f98f96797d18a519079d534"
+    },
+    "tests/fx-joined/FxJoined.Tests.csproj": {
+      "bytes": 1138,
+      "gitBlob": "1b6bbffc2d65ee2f8ed2f66c965ff1f9e630f4ec",
+      "sha256": "48557ccec2591f713ae58473267c27943ef9d352379826f2243dd0579ca0c90d"
+    },
+    "tests/fx-joined/JoinedFxNativeHttpTests.cs": {
+      "bytes": 29127,
+      "gitBlob": "edbd7c6676863b2c80163dddd752d6655d655a49",
+      "sha256": "a468e69bbe2d172e121be5c7901b691619857e6a7779f92c98303604e6f18fd6"
+    },
+    "tests/fx-joined/README.md": {
+      "bytes": 2302,
+      "gitBlob": "0245a5fece93f21e223da96354f08ea3a261c9e8",
+      "sha256": "bc2e4c40dd2da1f7cd2710e40cf0858584774630257a584a48896d74716b0eaf"
+    },
+    "tests/fx-joined/candidate-graph.json": {
+      "bytes": 1315,
+      "gitBlob": "489ce73b1cdf40ff9d246042d95f60d4024eaa82",
+      "sha256": "21179877c295d504d281442ca8b7bff9f70a00b4468ab0b608f3a57b748fb190"
+    },
+    "tests/fx-joined/test_orchestration_guards.py": {
+      "bytes": 4863,
+      "gitBlob": "b10cf37d684d09919b1bcc1f5f7eacc62d2a0a4e",
+      "sha256": "9891f43d7b7a2c1e00065cc47b3dd04b9c084ad1bc1a1f7d072b4d25eef072ee"
+    }
+  },
+  "verifier": {
+    "path": "acceptance/MemberCompanyCatalogPersistence/current_consumer.py",
+    "bytes": 428716,
+    "sha256": "083d044d6369fe96927881300087e6602f7df768b433d73d157687ea8ecd59d3",
+    "gitBlob": "87b1f02177388e3c3488f43f00c8ef5f3c99133d"
+  },
+  "fixedTransforms": {
+    ".github/workflows/member-company-catalog-persistence.yml": [
+      {
+        "after": "      - name: Authenticate exact current Company source before SDK or backend allocation\n        timeout-minutes: 1\n        run: python3 -B acceptance/MemberCompanyCatalogPersistence/current_consumer.py\n",
+        "before": "",
+        "oldLineCount": 0,
+        "startLine": 43
+      },
+      {
+        "after": "        run: |\n          set -euo pipefail\n          GITHUB_ACTIONS=false DOTNET_CLI_UI_LANGUAGE=en-US dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj -c Release --nologo | tee member-company-build-web-tests.log\n",
+        "before": "        run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj -c Release --nologo\n",
+        "oldLineCount": 1,
+        "startLine": 76
+      },
+      {
+        "after": "        run: |\n          set -euo pipefail\n          GITHUB_ACTIONS=false DOTNET_CLI_UI_LANGUAGE=en-US dotnet build acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistence.Tests.csproj -c Release --nologo | tee member-company-build-company-tests.log\n      - name: Bind actual current build source and package DLLs before any journey backend\n        timeout-minutes: 1\n        run: python3 -B acceptance/MemberCompanyCatalogPersistence/capture_build_source.py\n      - name: Verify passive linked-instance observation controls without any backend\n        timeout-minutes: 1\n        run: |\n          dotnet test acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistence.Tests.csproj -c Release --no-build --no-restore -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath= --filter \"FullyQualifiedName~CurrentCompanySourceObservationTests\" --logger trx --results-directory ./member-company-observation-controls\n          python3 -B acceptance/MemberCompanyCatalogPersistence/current_consumer.py --verify-observation-controls\n",
+        "before": "        run: GITHUB_ACTIONS=false dotnet build acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistence.Tests.csproj -c Release --nologo\n",
+        "oldLineCount": 1,
+        "startLine": 78
+      },
+      {
+        "after": "      - name: Require original31 plus accepted19 exact current lifecycle identities\n        run: >-\n          python3 -B scripts/verify-focused-web-trx.py\n          --directory billing-lifetime-test-results --suite billing-lifetime\n          --assembly Legacy.Maliev.Web.Tests/bin/Release/net10.0/Legacy.Maliev.Web.Tests.dll\n",
+        "before": "      - name: Require all thirty-one exact unique passed lifecycle control rows\n        run: |\n          python3 -B - <<'PY'\n          from pathlib import Path\n          import xml.etree.ElementTree as ET\n          ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}\n          expected = {\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAdmittedSynchronousBodyBeforeDependencyRelease',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: False)',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: True)',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ProvenNoLiveChild_ClosesOriginalWrapperWithoutLiveExecutableLookup(state: \"exited\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ProvenNoLiveChild_ClosesOriginalWrapperWithoutLiveExecutableLookup(state: \"refused\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ActualIdleExpiry_ClosesOriginalChildBeforeDependency_AndReleasesOwner',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ActualExpiry_DelayedFrontendShutdownRetainsBackendAndCaseWorkUntilSettled',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup(stage: \"start\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup(stage: \"identity\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup(stage: \"readers\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: \"kill\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: \"reap\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: \"readers\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: \"reader-close\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: \"handle-close\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedHostDisposal_IsStickyAndCannotBecomeNoOpClearance',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.InterruptedHostStartup_RefusesHostDisposalAndDependencyRelease',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.SettledChildReaders_BeforeHandleAndDependencyRelease_AllHostsAttemptedFirst',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.SynchronousBlockedHostRelease_IsBoundedRetainedAndReusesOriginalAttempt',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.SettledReaderFault_ReleasesResourcesButRepeatDisposalStillRejectsProof',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"daemon\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"id\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"created\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"owner\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"envelope\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"init\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: \"signature\")',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendExactOriginalRemoval_IsReobservedAfterSdkDisposal',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkCreationIdUnavailable_RefusesNameBasedAdoptionAndCleanup',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkIdentityLostBeforeDisposal_RefusesMutation',\n              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendUnsettledRemoval_RefusesAbsenceAndSdkRelease',\n          }\n          files = list(Path('billing-lifetime-test-results').glob('*.trx'))\n          if len(files) != 1:\n              raise SystemExit('Exactly one lifecycle TRX required')\n          root = ET.parse(files[0]).getroot()\n          rows = root.findall('.//t:UnitTestResult', ns)\n          names = [row.get('testName') for row in rows]\n          if len(rows) != 31 or len(set(names)) != 31 or set(names) != expected or any(row.get('outcome') != 'Passed' for row in rows):\n              raise SystemExit('Missing, duplicate, foreign or unsuccessful lifecycle control row')\n          counters = root.find('.//t:Counters', ns)\n          required = {'total': '31', 'executed': '31', 'passed': '31', 'failed': '0', 'error': '0', 'timeout': '0',\n              'aborted': '0', 'inconclusive': '0', 'passedButRunAborted': '0', 'notRunnable': '0', 'notExecuted': '0',\n              'disconnected': '0', 'warning': '0', 'completed': '0', 'inProgress': '0', 'pending': '0'}\n          if counters is None or any(counters.get(key) != value for key, value in required.items()):\n              raise SystemExit('Lifecycle TRX counters do not match thirty-one completed Passed rows')\n          print('Verified thirty-one exact unique Passed lifecycle controls; no skipped or unsuccessful rows')\n          PY\n",
+        "oldLineCount": 55,
+        "startLine": 186
+      },
+      {
+        "after": "        run: python3 -B acceptance/MemberCompanyCatalogPersistence/test_current_consumer.py --historical\n",
+        "before": "        run: python3 -B acceptance/MemberCompanyCatalogPersistence/test_retain.py\n",
+        "oldLineCount": 1,
+        "startLine": 246
+      }
+    ],
+    "acceptance/MemberCompanyCatalogPersistence/README.md": [
+      {
+        "after": "\n## Current dependency consumer (unpublished)\n\nThe proposed current consumer keeps the accepted723 lifetime helper and all original journey/parent-test bodies unchanged. It authenticates exact working/HEAD source before SDK or backend work, aligns the Company Test SDK with Web.Tests18.11.0, and validates the current released cleanup stage before invoking unchanged historical receipt rules on an explicit temporary projection. Current raw cleanup hashes and current source provenance are retained; PR527 helper assertions remain historical controls against exact predecessor bytes.\n\nThe passive observer reads actual loaded assembly revisions, MVIDs and DLL hashes and checks the same two linked handler instances. It preserves separately read -standard/catalog-standard max-three options and labels key association as inferred from immutable registration source. Same-workflow build evidence joins actual dependency HEADs, generated Defaults metadata, resolved official package SHA512/source and built DLLs. An unreviewed actual Http/Polly revision fails closed with bounded evidence; package minimums are never reported as actual runtime selection.\n\nThe current lifecycle gate retains all original31 identities and the19 already accepted additions, requiring50 exact Passed rows. Six separate owned in-memory observation controls cover linked order/refusals without a socket/backend. Canonical72 retainer controls remain unchanged and execute only against an authenticated historical fixture; distinct current controls exercise current sources and receipts. None of these source controls establishes native Company, FX, source closure, genuine IAM, live-provider, deployment or financial acceptance. All existing hosted exact-head and protected-main gates remain required.\n\nThe original design/provenance below describes the historical predecessor. Its older helper/package identity and31-row statements do not authorize current acceptance.\n",
+        "before": "",
+        "oldLineCount": 0,
+        "startLine": 2
+      }
+    ],
+    "acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistence.Tests.csproj": [
+      {
+        "after": "    <PackageReference Include=\"Microsoft.NET.Test.Sdk\" Version=\"18.11.0\" />\n",
+        "before": "    <PackageReference Include=\"Microsoft.NET.Test.Sdk\" Version=\"18.8.1\" />\n",
+        "oldLineCount": 1,
+        "startLine": 8
+      }
+    ],
+    "acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistenceTests.cs": [
+      {
+        "after": "    private readonly List<(string Name, int Count, int OuterMaxRetries, int InnerMaxRetries, string PackageRevision, CurrentCompanySourceObservation Evidence)> samples = [];\n",
+        "before": "    private readonly List<(string Name, int Count, int OuterMaxRetries, int InnerMaxRetries, string PackageRevision)> samples = [];\n",
+        "oldLineCount": 1,
+        "startLine": 336
+      },
+      {
+        "after": "        // These remain separate actual options reads. Pipeline key association is source-inferred.\n",
+        "before": "        // Pinned runtime default builder.Name=null derives -standard; named Catalog derives catalog-standard.\n        // These are separate actual options reads, not a private handler-to-options inspection.\n",
+        "oldLineCount": 2,
+        "startLine": 342
+      },
+      {
+        "after": "        var evidence = CurrentCompanySourceObservation.Capture(builder);\n        lock (gate) samples.Add((builder.Name, count, outerMaxRetries, innerMaxRetries, evidence.PackageRevision, evidence));\n",
+        "before": "        var version = typeof(ResilienceHandler).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;\n        var packageRevision = version?.Split('+').ElementAtOrDefault(1) ?? string.Empty;\n        lock (gate) samples.Add((builder.Name, count, outerMaxRetries, innerMaxRetries, packageRevision));\n",
+        "oldLineCount": 3,
+        "startLine": 347
+      },
+      {
+        "after": "            Assert.All(samples, sample =>\n            {\n                Assert.Equal((first.Name, first.Count, first.OuterMaxRetries, first.InnerMaxRetries, first.PackageRevision),\n                    (sample.Name, sample.Count, sample.OuterMaxRetries, sample.InnerMaxRetries, sample.PackageRevision));\n                Assert.True(first.Evidence.Equivalent(sample.Evidence));\n                sample.Evidence.VerifyLinkedOrder();\n            });\n",
+        "before": "            Assert.All(samples, sample => Assert.Equal(first, sample));\n",
+        "oldLineCount": 1,
+        "startLine": 357
+      },
+      {
+        "after": "                && first.PackageRevision == \"25f07afa51034e37b334210642d7dc5f191c142d\";\n",
+        "before": "                && first.PackageRevision == \"02107c65bab30aad9e35b5133ed643eaa77bccd8\";\n",
+        "oldLineCount": 1,
+        "startLine": 359
+      },
+      {
+        "after": "                runtimeDefaultsRevision = first.Evidence.DefaultsRevision,\n",
+        "before": "                runtimeDefaultsRevision = \"3c790ba6414b2a539f24aabb6948549ffd81a86b\",\n",
+        "oldLineCount": 1,
+        "startLine": 364
+      },
+      {
+        "after": "                assemblyEvidence = first.Evidence.AssemblyReceipt(),\n                linkedHandlerOrder = new[] { 0, 1 },\n                linkedHandlerOrderVerified = true,\n                buildEvidenceSha256 = first.Evidence.BuildEvidenceSha256,\n                sourceProfileSha256 = first.Evidence.SourceProfileSha256,\n",
+        "before": "",
+        "oldLineCount": 0,
+        "startLine": 374
+      },
+      {
+        "after": "",
+        "before": "\n/// <summary>Own synchronous request listener; retains only known synthetic phase counts and joins closure before host cleanup.</summary>\ninternal sealed class CompanyBrowserRequestObservation : IDisposable\n{\n    private readonly object gate = new();\n    private readonly IPage page;\n    private readonly Uri origin;\n    private readonly string culture;\n    private readonly string[] queries;\n    private readonly int[] counts = new int[3];\n    private bool unexpected, closed;\n    internal CompanyBrowserRequestObservation(IPage page, Uri origin, string culture)\n    {\n        this.page = page; this.origin = origin; this.culture = culture;\n        queries = [\"Synthetic \" + culture, \"Unavailable \" + culture, \"RateLimited \" + culture];\n        page.Request += Observe;\n    }\n    private void Observe(object? sender, IRequest request)\n    {\n        if (!Uri.TryCreate(request.Url, UriKind.Absolute, out var uri) || uri.AbsolutePath != \"/lookups/companies/search\") return;\n        lock (gate)\n        {\n            if (closed) return;\n            if (uri.Scheme != origin.Scheme || uri.Host != origin.Host || uri.Port != origin.Port || uri.Query.Length != 0 || request.Method != \"POST\"\n                || request.PostData is not { Length: > 0 and <= 4096 } body)\n            { unexpected = true; return; }\n            try\n            {\n                using var json = JsonDocument.Parse(body);\n                var value = json.RootElement;\n                var phase = Array.IndexOf(queries, value.GetProperty(\"q\").GetString());\n                if (value.EnumerateObject().Count() != 4 || phase < 0 || value.GetProperty(\"language\").GetString() != culture\n                    || value.GetProperty(\"queryType\").GetString() != \"name\" || value.GetProperty(\"limit\").GetInt32() != 20)\n                { unexpected = true; return; }\n                counts[phase]++;\n            }\n            catch (Exception exception) when (exception is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)\n            { unexpected = true; }\n        }\n    }\n    internal object Receipt()\n    {\n        Dispose(); // Close admission, join admitted callbacks and unsubscribe before accepting a final snapshot.\n        lock (gate)\n        {\n            Assert.False(unexpected, \"Unexpected company lookup request metadata; private body suppressed.\");\n            Assert.All(counts, count => Assert.Equal(1, count));\n            return queries.Select((query, index) => new { query, language = culture, count = counts[index] }).ToArray();\n        }\n    }\n    public void Dispose()\n    {\n        // Waits for any admitted synchronous callback, closes admission, then removes the listener. No background work remains.\n        lock (gate) closed = true;\n        page.Request -= Observe;\n    }\n}\n",
+        "oldLineCount": 57,
+        "startLine": 378
+      }
+    ],
+    "acceptance/MemberCompanyCatalogPersistence/retain.py": [
+      {
+        "after": "import sys\nimport current_consumer as current\n",
+        "before": "",
+        "oldLineCount": 0,
+        "startLine": 9
+      },
+      {
+        "after": "    current.authenticate_sources()\n    helper_digest = current.current_helper_source(Path('Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'))\n    build_evidence, build_evidence_sha = current.load_build_evidence()\n    observation_controls = current.verify_observation_controls()\n",
+        "before": "    helper_digest = helper_source(Path('Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'))\n",
+        "oldLineCount": 1,
+        "startLine": 139
+      },
+      {
+        "after": "        case = current.current_receipt(current.parse((source/(culture+'.json')).read_bytes()), culture, candidate, build_evidence, build_evidence_sha, sys.modules[__name__])\n",
+        "before": "        case = receipt(json.loads((source/(culture+'.json')).read_text()), culture, candidate)\n",
+        "oldLineCount": 1,
+        "startLine": 147
+      },
+      {
+        "after": "        released = current.current_cleanup(current.parse(raw_cleanup), sys.modules[__name__])\n",
+        "before": "        released = cleanup(json.loads(raw_cleanup))\n",
+        "oldLineCount": 1,
+        "startLine": 150
+      },
+      {
+        "after": "    (output/'source-provenance.json').write_text(json.dumps({'candidateHead':candidate,'sourceSha256':sources,'lifetimeHelperRevision':'a25cf00409b9df2c7164c24f0a399b0752242e2d','historicalLifetimeHelperRevision':HELPER_REVISION,'currentProfileSha256':build_evidence['profileSha256'],'buildEvidenceSha256':build_evidence_sha,'observationControls':observation_controls,'webRuntimeSourceRevisions':build_evidence['sourceRevisions'],'rawCleanupSha256':raw_cleanup_hashes,'publicServiceGitRevisions':service_git_revisions,'sharedAuthorityLifecycleQualified':False,'wholeAppHostQualified':False,'genuineIamEnrollmentQualified':False,'liveProviderQualified':False},indent=2)+'\\n')\n",
+        "before": "    (output/'source-provenance.json').write_text(json.dumps({'candidateHead':candidate,'sourceSha256':sources,'lifetimeHelperRevision':HELPER_REVISION,'rawCleanupSha256':raw_cleanup_hashes,'publicServiceGitRevisions':service_git_revisions,'sharedAuthorityLifecycleQualified':False,'wholeAppHostQualified':False,'genuineIamEnrollmentQualified':False,'liveProviderQualified':False},indent=2)+'\\n')\n",
+        "oldLineCount": 1,
+        "startLine": 183
+      }
+    ]
+  },
+  "predecessorArchives": {
+    ".github/workflows/member-company-catalog-persistence.yml": {
+      "identity": {
+        "bytes": 18505,
+        "gitBlob": "f3a653f8c6653a476433d8a7cb4956d55ee58b21",
+        "sha256": "eb3390ae61f09116253210c7e337c2d366ebc97011d8d83dd260a98b10157516"
+      },
+      "path": "acceptance/MemberCompanyCatalogPersistence/predecessors/before-current-0.bin"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/README.md": {
+      "identity": {
+        "bytes": 8679,
+        "gitBlob": "475d88327eb3caf0784c71b604796c2473a3dbc9",
+        "sha256": "80705a486116ddff2f571526aaefbbb3bc14f5e0d26339faae7e4620f1306638"
+      },
+      "path": "acceptance/MemberCompanyCatalogPersistence/predecessors/before-current-4.bin"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistence.Tests.csproj": {
+      "identity": {
+        "bytes": 698,
+        "gitBlob": "4a16afea49d08f32d019a23e0766580024d40343",
+        "sha256": "365b519a6b46d806a91f62d9c92314d5c053cec30b67c1a46289da1140d9b0a7"
+      },
+      "path": "acceptance/MemberCompanyCatalogPersistence/predecessors/before-current-1.bin"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistenceTests.cs": {
+      "identity": {
+        "bytes": 32564,
+        "gitBlob": "e4b813901dbe30f48a5625dd69fa90aa0a33222b",
+        "sha256": "64ab3ce503697cdb04aa5c5d8e50504d67bb1d17b010295b833267647f521fa7"
+      },
+      "path": "acceptance/MemberCompanyCatalogPersistence/predecessors/before-current-2.bin"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/retain.py": {
+      "identity": {
+        "bytes": 19796,
+        "gitBlob": "2e4c024e1562706ad43374cbdec5222c62b7c8f9",
+        "sha256": "f06dbcebf9cb462764db40c5462c70e6fafb3be2b794017b9d43a1c4c7040d6c"
+      },
+      "path": "acceptance/MemberCompanyCatalogPersistence/predecessors/before-current-3.bin"
+    },
+    "historical-pr527-helper": {
+      "identity": {
+        "bytes": 46531,
+        "gitBlob": "f350d0fdd6224d6ca4d8745b272de85a41c7f45a",
+        "sha256": "096be55636a60184c452ab0c85a562d0b4b0926e310e95c0a6cf841f00bfccd4"
+      },
+      "path": "acceptance/MemberCompanyCatalogPersistence/predecessors/helper-pr527.cs.bin"
+    }
+  },
+  "executionGranted": false,
+  "sdkGranted": false,
+  "runtimeQualified": false,
+  "financialPhaseGranted": false
+}
