@@ -3,13 +3,23 @@ name: Member shipping persistence
 on:
   pull_request:
     paths:
+      - 'Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj'
       - 'Legacy.Maliev.Web.Tests/ThaiLookupShippingPersistenceTests.cs'
+      - 'Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'
+      - 'Legacy.Maliev.Web.Tests/BillingProofLifetimeTests.cs'
+      - 'scripts/verify-focused-web-trx.py'
+      - 'tests/FocusedWebTrxGate.Tests.py'
       - 'scripts/verify-shipping-persistence-proof.py'
       - '.github/workflows/shipping-persistence.yml'
   push:
     branches: [main]
     paths:
+      - 'Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj'
       - 'Legacy.Maliev.Web.Tests/ThaiLookupShippingPersistenceTests.cs'
+      - 'Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'
+      - 'Legacy.Maliev.Web.Tests/BillingProofLifetimeTests.cs'
+      - 'scripts/verify-focused-web-trx.py'
+      - 'tests/FocusedWebTrxGate.Tests.py'
       - 'scripts/verify-shipping-persistence-proof.py'
       - '.github/workflows/shipping-persistence.yml'
 
@@ -174,61 +184,12 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~BillingProofLifetimeTests"
           --logger trx --results-directory ./billing-lifetime-test-results
-      - name: Require all thirty-one exact unique passed lifecycle control rows
+      - name: Require exact unique passed lifecycle control identities
         run: |
-          python3 -B - <<'PY'
-          from pathlib import Path
-          import xml.etree.ElementTree as ET
-          ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
-          expected = {
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAdmittedSynchronousBodyBeforeDependencyRelease',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: False)',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.Expiry_JoinsAllocationReservationAndReleasesLateResourceExactlyOnce(dependency: True)',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ProvenNoLiveChild_ClosesOriginalWrapperWithoutLiveExecutableLookup(state: "exited")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ProvenNoLiveChild_ClosesOriginalWrapperWithoutLiveExecutableLookup(state: "refused")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ActualIdleExpiry_ClosesOriginalChildBeforeDependency_AndReleasesOwner',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ActualExpiry_DelayedFrontendShutdownRetainsBackendAndCaseWorkUntilSettled',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup(stage: "start")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup(stage: "identity")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.AcquisitionFault_AfterAllocationRetainsOriginalChildForCleanup(stage: "readers")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: "kill")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: "reap")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: "readers")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: "reader-close")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedCleanup_RetainsOwnershipAndDependencies_ThenExactRetryCanRelease(stage: "handle-close")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.FailedHostDisposal_IsStickyAndCannotBecomeNoOpClearance',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.InterruptedHostStartup_RefusesHostDisposalAndDependencyRelease',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.SettledChildReaders_BeforeHandleAndDependencyRelease_AllHostsAttemptedFirst',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.SynchronousBlockedHostRelease_IsBoundedRetainedAndReusesOriginalAttempt',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.SettledReaderFault_ReleasesResourcesButRepeatDisposalStillRejectsProof',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "daemon")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "id")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "created")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "owner")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "envelope")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "init")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendGenerationChange_RefusesMutationAndAbsenceReceipt(stage: "signature")',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendExactOriginalRemoval_IsReobservedAfterSdkDisposal',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkCreationIdUnavailable_RefusesNameBasedAdoptionAndCleanup',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkIdentityLostBeforeDisposal_RefusesMutation',
-              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendUnsettledRemoval_RefusesAbsenceAndSdkRelease',
-          }
-          files = list(Path('billing-lifetime-test-results').glob('*.trx'))
-          if len(files) != 1:
-              raise SystemExit('Exactly one lifecycle TRX required')
-          root = ET.parse(files[0]).getroot()
-          rows = root.findall('.//t:UnitTestResult', ns)
-          names = [row.get('testName') for row in rows]
-          if len(rows) != 31 or len(set(names)) != 31 or set(names) != expected or any(row.get('outcome') != 'Passed' for row in rows):
-              raise SystemExit('Missing, duplicate, foreign or unsuccessful lifecycle control row')
-          counters = root.find('.//t:Counters', ns)
-          required = {'total': '31', 'executed': '31', 'passed': '31', 'failed': '0', 'error': '0', 'timeout': '0',
-              'aborted': '0', 'inconclusive': '0', 'passedButRunAborted': '0', 'notRunnable': '0', 'notExecuted': '0',
-              'disconnected': '0', 'warning': '0', 'completed': '0', 'inProgress': '0', 'pending': '0'}
-          if counters is None or any(counters.get(key) != value for key, value in required.items()):
-              raise SystemExit('Lifecycle TRX counters do not match thirty-one completed Passed rows')
-          print('Verified thirty-one exact unique Passed lifecycle controls; no skipped or unsuccessful rows')
-          PY
+          python3 -B tests/FocusedWebTrxGate.Tests.py
+          python3 -B scripts/verify-focused-web-trx.py \
+            --directory billing-lifetime-test-results --suite billing-lifetime \
+            --assembly Legacy.Maliev.Web.Tests/bin/Release/net10.0/Legacy.Maliev.Web.Tests.dll
       - name: Exercise shipping receipt verifier causal negative controls
         run: python3 -B scripts/verify-shipping-persistence-proof.py --self-test
       - name: Verify exact shipping rows receipts and candidate relation
