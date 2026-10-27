@@ -1,7 +1,7 @@
 namespace Legacy.Maliev.Web.Components.Pages;
 
 /// <summary>
-/// Carries bounded error-page presentation and support correlation metadata without exception details.
+/// Carries bounded error-page presentation and support correlation metadata without sensitive diagnostic details.
 /// </summary>
 /// <param name="IsNotFound">Whether the page represents a missing resource.</param>
 /// <param name="IncidentId">The support incident identifier, or null when no incident was recorded.</param>
