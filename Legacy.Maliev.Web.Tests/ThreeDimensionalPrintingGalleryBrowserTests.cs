@@ -267,7 +267,8 @@ public sealed class ThreeDimensionalPrintingGalleryBrowserTests(PublicContactBro
         await using var routeFactory = sourceFactory.WithWebHostBuilder(builder =>
             builder.UseSetting("BlazorRouting:Services", servicesEnabled ? "true" : "false"));
         var origin = new Uri($"http://127.0.0.1:{BrowserTestServerPort.Reserve()}");
-        routeFactory.UseKestrel(origin.Port);
+        // The derived factory delegates CreateHost to its parent, which does not hold its port setting.
+        routeFactory.UseKestrel(options => options.Listen(System.Net.IPAddress.Loopback, origin.Port));
         using var client = routeFactory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false,

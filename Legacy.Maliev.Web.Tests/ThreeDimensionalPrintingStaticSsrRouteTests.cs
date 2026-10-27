@@ -370,8 +370,9 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         Assert.Equal(new Uri(client.BaseAddress!, "/InstantQuotation/3D-Printing"), new Uri(client.BaseAddress!, pricingLink.Groups["href"].Value));
         Assert.Equal(culture == "th" ? "ประเมินราคาพิมพ์ 3D ทันที" : "Get instant 3D pricing", pricingLink.Groups["copy"].Value);
 
+        // The colour matcher is a nested section before the standards image.
         var standards = Assert.Single(Regex.Matches(main.Groups["body"].Value,
-            "<section\\b(?=[^>]*id=\"finishing-standards\")[^>]*>(?<body>[\\s\\S]*?)</section>",
+            "<section\\b(?=[^>]*id=\"finishing-standards\")[^>]*>(?<body>(?:(?<nested><section\\b[^>]*>)|(?<-nested></section>)|(?!</?section\\b)[\\s\\S])*)(?(nested)(?!))</section>",
             RegexOptions.CultureInvariant).Cast<Match>());
         foreach (var section in new[] { hero, standards })
         {
