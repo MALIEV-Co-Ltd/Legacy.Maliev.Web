@@ -280,6 +280,77 @@ public sealed class QuotationStaticSsrRouteTests : IClassFixture<TestingWebAppli
         }
     }
 
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "en")]
+    [InlineData(false, "th")]
+    public async Task QuotationRoutes_PreserveSourceServiceMetadata(bool useBlazorRoute, string culture)
+    {
+        await using var metadataFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:Quotation", useBlazorRoute.ToString());
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<ICountryClient>();
+                services.AddSingleton<ICountryClient, StubCountryClient>();
+            });
+        });
+        using var client = metadataFactory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        var examples = new List<(string Item, string Title, string Description)>
+        {
+            ("3d-design",
+                culture == "th" ? "ขอราคางานออกแบบ 3D | MALIEV" : "3D Design Quote Request | MALIEV",
+                culture == "th" ? "ส่งแบบ ภาพร่าง หรือไฟล์ CAD เพื่อขอประเมินงานออกแบบ 3D และแนวทางเตรียมชิ้นงานสำหรับผลิตจาก MALIEV" : "Send a drawing, sketch, or CAD file for a 3D design review and a practical path toward manufacturing with MALIEV."),
+            ("3d-printing",
+                culture == "th" ? "ขอราคางานพิมพ์ 3D | MALIEV" : "3D Printing Quote Request | MALIEV",
+                culture == "th" ? "ส่งไฟล์ 3D พร้อมวัสดุ จำนวน และการใช้งาน เพื่อขอใบเสนอราคางานพิมพ์ 3D จาก MALIEV" : "Send your 3D file, material, quantity, and use case for a reviewed 3D printing quotation from MALIEV."),
+            ("3d-scanning",
+                culture == "th" ? "ขอราคางานสแกน 3D | MALIEV" : "3D Scanning Quote Request | MALIEV",
+                culture == "th" ? "ส่งรายละเอียดชิ้นงานจริง ขนาด และผลลัพธ์ที่ต้องการ เพื่อขอใบเสนอราคางานสแกน 3D จาก MALIEV" : "Share the physical-part details and desired output for a 3D scanning quotation from MALIEV."),
+            ("cnc-machining",
+                culture == "th" ? "ขอราคา CNC ตามแบบ | MALIEV" : "CNC Machining Quote Request | MALIEV",
+                culture == "th" ? "ส่งแบบ วัสดุ จำนวน และค่าความคลาดเคลื่อน เพื่อขอใบเสนอราคางาน CNC ตามแบบจาก MALIEV" : "Send the drawing, material, quantity, and tolerance requirements for a CNC machining quotation from MALIEV."),
+            ("custom-manufacturing",
+                culture == "th" ? "ขอราคาผลิตชิ้นงานตามแบบ | MALIEV" : "Custom Manufacturing Quote | MALIEV",
+                culture == "th" ? "ส่งไฟล์ แบบ วัสดุ จำนวน และการใช้งาน เพื่อให้ MALIEV ช่วยเลือกกระบวนการผลิตที่เหมาะสม" : "Send files, material, quantity, and intended use so MALIEV can recommend a suitable manufacturing route."),
+            ("low-volume-injection-molding",
+                culture == "th" ? "ขอราคาฉีดพลาสติกจำนวนน้อย | MALIEV" : "Low-Volume Injection Quote | MALIEV",
+                culture == "th" ? "ส่งรายละเอียดชิ้นงาน แม่พิมพ์ วัสดุ และจำนวน เพื่อขอประเมินงานฉีดพลาสติกจำนวนน้อย" : "Send part, mold, material, and quantity details for a low-volume injection molding review."),
+            ("silicone-casting",
+                culture == "th" ? "ขอราคางานหล่อซิลิโคน | MALIEV" : "Silicone Casting Quote | MALIEV",
+                culture == "th" ? "ส่งรูปทรง วัสดุ จำนวน และการใช้งาน เพื่อขอประเมินงานหล่อซิลิโคนจาก MALIEV" : "Send geometry, material behavior, quantity, and use case for a silicone casting quotation from MALIEV."),
+        };
+        var fallbackTitle = culture == "th" ? "ขอใบเสนอราคางานผลิต | MALIEV" : "Manufacturing Quote Request | MALIEV";
+        var fallbackDescription = culture == "th" ? "ส่งไฟล์ แบบ หรือรายละเอียดงาน เพื่อขอใบเสนอราคา CNC พิมพ์ 3D สแกน 3D และงานผลิตตามแบบจาก MALIEV" : "Send your files, drawings, and requirements for a reviewed CNC, 3D printing, 3D scanning, or custom manufacturing quote from MALIEV.";
+        examples.Add(("  3D-PrInTiNg  ", examples[1].Title, examples[1].Description));
+        examples.Add(("unknown-<script>-service", fallbackTitle, fallbackDescription));
+        examples.Add((string.Empty, fallbackTitle, fallbackDescription));
+        var keywords = culture == "th"
+            ? "ขอใบเสนอราคา, ราคางาน CNC, ราคางานพิมพ์ 3 มิติ, ราคางานสแกน 3 มิติ"
+            : "manufacturing quotation, CNC machining quote, 3D printing quote, 3D scanning quote";
+        foreach (var example in examples)
+        {
+            using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            using var response = await client.GetAsync(
+                $"/quotation?culture={culture}&item={Uri.EscapeDataString(example.Item)}", deadline.Token);
+            var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(deadline.Token));
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Contains($"<title>{example.Title}</title>", source, StringComparison.Ordinal);
+            Assert.Contains($"<meta name=\"description\" content=\"{example.Description}\"", source, StringComparison.Ordinal);
+            Assert.Contains($"<meta name=\"keywords\" content=\"{keywords}\"", source, StringComparison.Ordinal);
+            Assert.Contains("<meta name=\"robots\" content=\"noindex,follow\"", source, StringComparison.Ordinal);
+            Assert.Equal(useBlazorRoute, source.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+            var form = Regex.Match(source, "<form\\b[^>]*\\bid=\"quotation-form\"[^>]*>", RegexOptions.CultureInvariant);
+            Assert.True(form.Success);
+            Assert.Contains("method=\"post\"", form.Value, StringComparison.Ordinal);
+            Assert.Contains("enctype=\"multipart/form-data\"", form.Value, StringComparison.Ordinal);
+            Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
+            Assert.Contains("id=\"Country\"", source, StringComparison.Ordinal);
+        }
+    }
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

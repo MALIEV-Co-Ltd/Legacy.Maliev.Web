@@ -742,4 +742,13 @@
   <data name="This choice applies only to new GLB/GLTF files. Existing parts and other formats keep their units." xml:space="preserve">
     <value>ตัวเลือกนี้ใช้กับไฟล์ GLB/GLTF ใหม่เท่านั้น ชิ้นงานที่มีอยู่และไฟล์รูปแบบอื่นจะใช้หน่วยเดิม</value>
   </data>
+  <data name="Instant 3D Printing Quote | MALIEV" xml:space="preserve">
+    <value>ประเมินราคาพิมพ์ 3D ออนไลน์ | MALIEV</value>
+  </data>
+  <data name="Upload a 3D model, choose material and quantity, and receive an online estimate for printing cost and lead time." xml:space="preserve">
+    <value>อัปโหลดไฟล์ 3D เลือกวัสดุและจำนวน เพื่อรับราคาประเมินงานพิมพ์ 3D และระยะเวลาผลิตออนไลน์</value>
+  </data>
+  <data name="3d print, 3d printing company, 3d printing model, 3d printing online, 3d printing service, 3d printing services, 3d printing website, 3d printing, online 3d printing, instant pricing, instant quotation" xml:space="preserve">
+    <value>พิมพ์ 3d, พิมพ์ 3 มิติ, พิมพ์ 3 มิติ, พิมพ์ 3d, รับพิมพ์ 3 มิติ, รับพิมพ์ 3d, ประเมินราคาทันที, instant pricing</value>
+  </data>
 </root>

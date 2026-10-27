@@ -7,6 +7,14 @@
     ViewData["Title"] = QuotationLocalizer["Request a manufacturing quotation"];
     ViewData["Description"] = QuotationLocalizer["Request a CNC machining, 3D printing, 3D scanning, or custom manufacturing quotation from MALIEV."];
     ViewData["Keywords"] = QuotationLocalizer["manufacturing quotation, CNC quote, 3D printing quote, 3D scanning quote"];
+    if (Model.HttpContext.Request.Method.Equals("GET", StringComparison.OrdinalIgnoreCase))
+    {
+        var metadata = QuotationDocumentMetadata.Create(
+            Model.RequestedItem, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th");
+        ViewData["Title"] = metadata.Title;
+        ViewData["Description"] = metadata.Description;
+        ViewData["Keywords"] = metadata.Keywords;
+    }
     ViewData["Robots"] = "noindex,follow";
 }
 
