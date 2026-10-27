@@ -1,0 +1,65 @@
+@inject IStringLocalizer<CncMachiningProcessesContent> Localizer
+
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+<h1>@Localizer["3-axis, 5-axis, EDM and grinding"]</h1>
+<p class="docs-lead">@Localizer["Choose a process because it solves a specific access, material or surface requirement. Review combinations of operations and confirm the route for the actual part."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/multi-axis.webp" srcset="/src/images/knowledge/photos/multi-axis-small.webp 768w, /src/images/knowledge/photos/multi-axis.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["A turbine impeller is held on a tilted rotary table in a five-axis machining setup."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Additional axes can improve access; the actual route still depends on geometry and verification needs. Illustrative image."]</figcaption>
+</figure>
+<nav class="docs-toc" aria-label="@Localizer["On this page"]">
+<strong>@Localizer["On this page"]</strong>
+<ul><li><a href="#axes">@Localizer["3-axis, indexed 3+2 or simultaneous 5-axis?"]</a></li>
+<li><a href="#edm">@Localizer["Wire EDM and sinker EDM: different access problems"]</a></li>
+<li><a href="#grinding">@Localizer["Grinding: specify the surface that needs it"]</a></li></ul></nav>
+<aside class="docs-note">@Localizer["Examples explain design principles; confirm the material, drawing revision and proposed process for the actual project."]</aside>
+<section class="docs-section" id="axes">
+        <h2>@Localizer["3-axis, indexed 3+2 or simultaneous 5-axis?"]</h2>
+        <p>@Localizer["Select a machining approach around feature access and the relationships between surfaces. A three-axis operation moves along the linear axes with a fixed approach orientation for that setup. Additional setups can expose other faces. Indexed 3+2 machining uses rotary axes to establish an orientation, then machines with that orientation fixed. It can suit angled holes and features on several faces without continuous rotary cutting."]</p>
+        <p>@Localizer["Simultaneous five-axis machining changes tool orientation during the cut. This can help with complex continuous surfaces or access that fixed orientations cannot provide efficiently. It also adds motion, programming and collision-verification demands. More axes do not automatically make every part more accurate or economical. Ask which features drive the choice, whether a simpler route is possible and how critical relationships will be retained across setups. Process availability must be confirmed for the project."]</p>
+        <aside class="docs-example">@Localizer["Illustrative example: holes sharing a fixed 20° approach may be candidates for an indexed orientation. A curved surface requiring continuously changing tool angles may justify simultaneous motion. Neither example establishes the final route: stock, fixture, holder clearance and machine motion limits still govern access."]</aside>
+        <p class="docs-source"><a href="https://help.autodesk.com/cloudhelp/2020/ENU/INVCAM/files/GUID-1D228659-FDD0-4C72-BBD6-58A875ACC742.htm">@Localizer["Autodesk: positional 3+2 machining"]</a></p>
+        <p class="docs-source"><a href="https://www.autodesk.com/solutions/5-axis-machining">@Localizer["Autodesk: indexed and simultaneous five-axis machining"]</a></p>
+        <div class="docs-table-wrap" tabindex="0" role="region" aria-label="@Localizer["Machining approach comparison"]">
+            <table>
+                <thead><tr>
+                    <th scope="col">@Localizer["Approach"]</th>
+                    <th scope="col">@Localizer["Tool orientation during cutting"]</th>
+                    <th scope="col">@Localizer["Decision to review"]</th>
+                </tr></thead>
+                <tbody>
+                    <tr><td>@Localizer["3-axis"]</td><td>@Localizer["Fixed for the setup; linear motion creates the surface."]</td><td>@Localizer["Can each required surface be reached with suitable tool support?"]</td></tr>
+                    <tr><td>@Localizer["Indexed 3+2"]</td><td>@Localizer["Rotary axes establish the angle, then orientation stays fixed during the cut."]</td><td>@Localizer["Can a small set of fixed orientations reach the angled features?"]</td></tr>
+                    <tr><td>@Localizer["Simultaneous 5-axis"]</td><td>@Localizer["Orientation changes along the cutting path."]</td><td>@Localizer["Does continuous orientation solve a specific access or surface requirement?"]</td></tr>
+                </tbody>
+            </table>
+        </div>
+    <figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["A fixed vertical tool approach beside an angled tool orientation to the same part."]">
+        <img src="/src/images/knowledge/visual-machining-access.svg" alt="@Localizer["A fixed vertical tool approach beside an angled tool orientation to the same part."]" width="960" height="480" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>@Localizer["1: three-axis cutting uses linear X, Y and Z motion with a fixed approach orientation for that setup. 2: rotary positioning can expose angled features; indexed 3+2 holds the selected orientation during cutting, while simultaneous five-axis changes it during the cut. The sketch illustrates access only, not greater accuracy or confirmed machine availability."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-machining-access.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
+</section>
+<section class="docs-section" id="edm">
+        <h2>@Localizer["Wire EDM and sinker EDM: different access problems"]</h2>
+        <p>@Localizer["Electrical discharge machining removes electrically conductive material through spark erosion. It can be considered for hard materials and details that are difficult to produce with rotating cutters. Wire EDM transports a wire electrode between guides; offsetting the guides can create tapered cuts. Sinker EDM uses a shaped electrode that advances into the workpiece. These tool arrangements create different geometry and access requirements."]</p>
+        <p>@Localizer["As a geometric consequence, a through-profile with a usable wire path is a natural candidate for wire EDM, while a blind cavity can require evaluation of sinker EDM. Review threading access, retained support, flushing and finish requirements. Neither process means perfectly sharp internal corners or freedom from distortion. Ask whether milling plus a specialist finishing operation is more appropriate than routing the entire part through EDM; confirm availability and responsibility in the quotation."]</p>
+        <aside class="docs-example">@Localizer["Illustrative example: a closed rectangular opening through a conductive plate needs a wire-entry plan and a permitted corner radius. A similar outline stopping inside the plate is a blind cavity, so it presents a different electrode and access problem. These are process-selection examples, not service commitments."]</aside>
+        <p class="docs-source"><a href="https://www.makino.com/en-us/machine-technology/machining-process/edm">@Localizer["Makino: spark erosion and shaped sinker electrodes"]</a></p>
+        <p class="docs-source"><a href="https://www.makino.com/resources/content-library/article/archive/edm-wire-tutorial/198">@Localizer["Makino: wire guides, taper and machining considerations"]</a></p>
+    </section>
+<section class="docs-section" id="grinding">
+        <h2>@Localizer["Grinding: specify the surface that needs it"]</h2>
+        <p>@Localizer["Grinding can be considered when selected surfaces need demanding geometric control or surface texture. Distinguish surface roughness from flatness, parallelism, roundness or size: a low roughness value alone does not define those properties. Name the functional surface and its requirements rather than requesting precision grinding everywhere. The route must account for material condition, access, stock allowance and the sequence of any heat treatment."]</p>
+        <p>@Localizer["Norton identifies wheel dressing, grit, coolant, operating parameters and machine condition as contributors to finish. Parameter changes can also introduce thermal damage, so finer appearance should not be treated as proof of an improved process. Ask whether machining alone meets the requirement, which faces need a later operation and how those faces will be inspected. Availability of grinding and any specialist inspection should be confirmed, not inferred from the design guide."]</p>
+        <aside class="docs-example">@Localizer["Illustrative example: a sliding face might require Ra 0.8 µm together with a separate flatness requirement, while a non-mating outside face has a different finish. These are drawing choices to validate against the application, not guaranteed results for a particular material or process."]</aside>
+        <p class="docs-source"><a href="https://www.nortonabrasives.com/en-us/resources/expertise/5-grinding-considerations-improving-surface-finish">@Localizer["Norton Abrasives: grinding finish and thermal tradeoffs"]</a></p>
+    </section>
+<p><a href="/knowledges">@Localizer["Back to the knowledge library"]</a></p>
+</article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}

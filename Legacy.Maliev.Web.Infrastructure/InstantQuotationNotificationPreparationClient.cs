@@ -34,6 +34,8 @@ internal sealed class InstantQuotationNotificationPreparationClient(
                 var itemQuote = matchingQuotes[0];
                 if (file.Sha256 != part.Geometry.Sha256 || itemQuote.Quantity != part.Configuration.Quantity
                     || itemQuote.MaterialKey != part.Configuration.MaterialKey) return new(null, true, true);
+                if (itemQuote.PhysicalReceipt?.GeometryReconstruction is { } reconstruction && !reconstruction.IsValid())
+                    return new(null, true, true);
                 var link = await ReadLinkAsync(file, deadline.Token);
                 if (!link.Available || !link.Authorized || link.Url is null) return new(null, link.Available, link.Authorized);
                 if (link.ExpiresAt < expiresAt) expiresAt = link.ExpiresAt;
@@ -41,7 +43,7 @@ internal sealed class InstantQuotationNotificationPreparationClient(
                 if (material is null) return new(null, true, true);
                 items.Add(new(part.DisplayFileName, material.DisplayName, itemQuote.Color,
                     FormattableString.Invariant($"{part.Geometry.DimensionXmm:0.###} x {part.Geometry.DimensionYmm:0.###} x {part.Geometry.DimensionZmm:0.###}"),
-                    GeometryWarnings(part.Geometry),
+                    GeometryWarnings(part.Geometry, itemQuote.PhysicalReceipt),
                     itemQuote.Quantity, Convert.ToDecimal(itemQuote.UnitPrice), Convert.ToDecimal(itemQuote.Subtotal),
                     itemQuote.Process, itemQuote.BuildPreference, link.Url, Convert.ToDecimal(itemQuote.PrintTimeMinutesPerUnit),
                     Convert.ToDecimal(itemQuote.PrintTimeMinutesPerUnit * itemQuote.Quantity)));
@@ -117,9 +119,12 @@ internal sealed class InstantQuotationNotificationPreparationClient(
         catch (Exception) { }
     }
 
-    private static string? GeometryWarnings(AuthoritativeInstantQuotationGeometry geometry)
+    private static string? GeometryWarnings(
+        AuthoritativeInstantQuotationGeometry geometry, InstantQuotationPhysicalAnalysisReceipt? receipt)
     {
         var warnings = new List<string>();
+        if (receipt?.GeometryReconstruction is { } reconstruction)
+            warnings.Add(FormattableString.Invariant($"Voxel-based pricing estimate ({reconstruction.VoxelSizeMm:0.0} mm). Original geometry requires engineering review before manufacture."));
         if (!geometry.TopologyChecked) warnings.Add("Detailed topology not checked");
         if (geometry.NonWatertight) warnings.Add("Non-watertight mesh");
         if (geometry.NonManifold) warnings.Add("Non-manifold edges");

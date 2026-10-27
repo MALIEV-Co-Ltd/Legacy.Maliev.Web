@@ -22,7 +22,7 @@ public sealed record CareerDetailContentModel(
     string? Prerequisites,
     string? WhatWeOffer,
     string? Location,
-    string LevelName,
+    string? LevelName,
     bool? IsFilled)
 {
     /// <summary>
@@ -30,7 +30,8 @@ public sealed record CareerDetailContentModel(
     /// </summary>
     /// <param name="offer">The published offer whose rich-text fields are converted to safe display text.</param>
     /// <returns>The display content and advertised hiring status.</returns>
-    public static CareerDetailContentModel Create(CareerOffer offer) =>
+    /// <param name="levels">The available career levels used to resolve the offer level.</param>
+    public static CareerDetailContentModel Create(CareerOffer offer, IReadOnlyList<CareerLevel> levels) =>
         new(
             offer.Id,
             offer.Title,
@@ -39,6 +40,12 @@ public sealed record CareerDetailContentModel(
             CareerOfferPresentation.ToSafeText(offer.Prerequisites),
             CareerOfferPresentation.ToSafeText(offer.WhatWeOffer),
             offer.Location,
-            offer.Level?.Name ?? "not specified",
+            ResolveLevelName(offer.LevelId, levels),
             offer.IsFilled);
+
+    private static string? ResolveLevelName(int levelId, IReadOnlyList<CareerLevel> levels)
+    {
+        var level = levels.SingleOrDefault(item => item.Id == levelId);
+        return level is null ? "not specified" : level.Name;
+    }
 }

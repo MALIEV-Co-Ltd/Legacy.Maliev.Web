@@ -6,6 +6,12 @@ namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 /// <summary>Defines best-effort, privacy-bounded observations for the additive quotation workflow.</summary>
 public interface IInstantQuotationAnalyticsTracker
 {
+    /// <summary>Records the start of a quotation workflow without requiring delivery.</summary>
+    /// <param name="workflowId">The workflow identity used to bound duplicate starts.</param>
+    /// <param name="cancellationToken">Token to cancel delivery.</param>
+    /// <returns>A value task representing the observation attempt.</returns>
+    ValueTask RecordQuoteStartedAsync(string workflowId, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+
     /// <summary>Records a bounded stage outcome; the default implementation performs no delivery.</summary>
     /// <param name="stage">The quotation stage being observed.</param>
     /// <param name="result">Whether the stage succeeded or failed.</param>
@@ -131,6 +137,14 @@ public abstract class InstantQuotationAnalyticsPayload
     public string Service => "3d_printing";
 }
 
+/// <summary>Carries the bounded quotation-started analytics event.</summary>
+public sealed class InstantQuotationQuoteStartedPayload : InstantQuotationAnalyticsPayload
+{
+    internal InstantQuotationQuoteStartedPayload() : base("quote_started")
+    {
+    }
+}
+
 /// <summary>Carries a bounded upload failure category and affected file count, without the upload identifier.</summary>
 public sealed class InstantQuotationUploadFailurePayload : InstantQuotationAnalyticsPayload
 {
@@ -228,6 +242,9 @@ public sealed class NoOpInstantQuotationAnalyticsTracker : IInstantQuotationAnal
     public static NoOpInstantQuotationAnalyticsTracker Instance { get; } = new();
 
     /// <inheritdoc />
+    public ValueTask RecordQuoteStartedAsync(string workflowId, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+
+    /// <inheritdoc />
     public ValueTask RecordStageResultAsync(
         InstantQuotationStage stage,
         InstantQuotationStageResult result,
@@ -264,6 +281,7 @@ public sealed class InstantQuotationAnalyticsTracker : IInstantQuotationAnalytic
 {
     private readonly IInstantQuotationAnalyticsSink sink;
     private readonly Lock synchronization = new();
+    private readonly HashSet<string> startedWorkflows = new(StringComparer.Ordinal);
     private readonly HashSet<string> uploadBatches = new(StringComparer.Ordinal);
     private readonly HashSet<string> uploadFailureOperations = new(StringComparer.Ordinal);
     private readonly HashSet<long> estimateRevisions = [];
@@ -275,6 +293,17 @@ public sealed class InstantQuotationAnalyticsTracker : IInstantQuotationAnalytic
     public InstantQuotationAnalyticsTracker(IInstantQuotationAnalyticsSink sink)
     {
         this.sink = sink ?? throw new ArgumentNullException(nameof(sink));
+    }
+
+    /// <inheritdoc />
+    public ValueTask RecordQuoteStartedAsync(string workflowId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(workflowId) || !TryReserve(startedWorkflows, workflowId))
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        return EmitWithoutBreakingFlowAsync(new InstantQuotationQuoteStartedPayload(), cancellationToken);
     }
 
     /// <inheritdoc />

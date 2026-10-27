@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Routing;
 
 namespace Legacy.Maliev.Web.Middleware;
 
@@ -38,8 +39,9 @@ public sealed class ErrorResponseContractMiddleware(RequestDelegate next)
             return Task.CompletedTask;
         }
 
-        var responseStatusCode = statusCodeReExecute?.OriginalStatusCode
-            ?? (!hasExceptionContext && hasValidPreviewStatus ? statusCode : (int?)null);
+        var responseStatusCode = hasExceptionContext
+            ? StatusCodes.Status500InternalServerError
+            : statusCodeReExecute?.OriginalStatusCode ?? (hasValidPreviewStatus ? statusCode : (int?)null);
         if (responseStatusCode is not null)
         {
             context.Response.OnStarting(
@@ -52,6 +54,31 @@ public sealed class ErrorResponseContractMiddleware(RequestDelegate next)
                 (context.Response, responseStatusCode.Value));
         }
 
-        return next(context);
+        return hasExceptionContext && !HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method)
+            ? RenderExceptionAsync(context)
+            : next(context);
+    }
+
+    private async Task RenderExceptionAsync(HttpContext context)
+    {
+        var originalMethod = context.Request.Method;
+        var originalEndpoint = context.GetEndpoint();
+        var originalRouteValues = context.Request.RouteValues;
+        try
+        {
+            // Exception reexecution renders a read-only error document, not another form submission.
+            context.Request.Method = HttpMethods.Get;
+            // WebApplication reroutes before this middleware. Discard its method-specific
+            // selection so the downstream UseRouting can select the error document again.
+            context.SetEndpoint(null);
+            context.Request.RouteValues = new RouteValueDictionary();
+            await next(context);
+        }
+        finally
+        {
+            context.Request.Method = originalMethod;
+            context.SetEndpoint(originalEndpoint);
+            context.Request.RouteValues = originalRouteValues;
+        }
     }
 }

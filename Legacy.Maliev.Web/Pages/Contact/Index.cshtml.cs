@@ -51,7 +51,7 @@ public sealed class Index(
     /// <summary>The customer's email address used by this account or request workflow.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Email address is required")]
-    [EmailAddress]
+    [EmailAddress(ErrorMessage = "Please enter a valid email address")]
     [StringLength(50)]
     public string Email { get; set; } = string.Empty;
 
@@ -184,12 +184,20 @@ public sealed class Index(
         if (!LeadAnalyticsEventQueue.TryQueueContactMessage(TempData, referenceNumber, out var analyticsFailure))
         {
             logger.LogWarning(
-                analyticsFailure,
                 "Analytics queue failed after contact message {MessageId} was persisted.",
                 referenceNumber);
         }
 
-        var notificationsSent = await SendNotificationsAsync(referenceNumber, cancellationToken);
+        var notificationsSent = false;
+        try
+        {
+            notificationsSent = await SendNotificationsAsync(referenceNumber, cancellationToken);
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Each concurrent notification failure is observed at its own send boundary.
+        }
+
         Notification = notificationsSent
             ? localizer["Thank you for contacting us. Your reference number is #{0}.", referenceNumber].Value
             : localizer["Contact request #{0} was received, but confirmation delivery is unavailable. Do not submit it again; contact info@maliev.com with this reference.", referenceNumber].Value;
@@ -200,29 +208,50 @@ public sealed class Index(
         int referenceNumber,
         CancellationToken cancellationToken)
     {
-        var customer = notificationClient.SendAsync(
-            NotificationChannel.Info,
-            new EmailNotification(
-                Email.Trim(),
-                localizer["Contact request #{0}", referenceNumber].Value,
-                "<p>" + Encode(localizer["Thank you for contacting MALIEV. Your reference number is #{0}.", referenceNumber].Value)
-                    + "</p><p>" + Encode(localizer["We will reply as soon as possible."].Value) + "</p>",
-                null,
-                null,
-                null),
-            cancellationToken);
-        var internalNotification = notificationClient.SendAsync(
-            NotificationChannel.Info,
-            new EmailNotification(
-                "info@maliev.com",
-                $"Contact request #{referenceNumber}",
-                BuildInternalMessage(referenceNumber),
-                Email.Trim(),
-                null,
-                null),
-            cancellationToken);
+        var customer = SendCustomerAsync();
+        var internalNotification = SendInternalAsync();
         var results = await Task.WhenAll(customer, internalNotification);
         return results.All(result => result.Sent);
+
+        async Task<NotificationResult> SendCustomerAsync() =>
+            await SendAsync(
+                "customer_notification",
+                () => new EmailNotification(
+                    Email.Trim(),
+                    localizer["Contact request #{0}", referenceNumber].Value,
+                    "<p>" + Encode(localizer["Thank you for contacting MALIEV. Your reference number is #{0}.", referenceNumber].Value)
+                        + "</p><p>" + Encode(localizer["We will reply as soon as possible."].Value) + "</p>",
+                    null,
+                    null,
+                    null));
+
+        async Task<NotificationResult> SendInternalAsync() =>
+            await SendAsync(
+                "internal_notification",
+                () => new EmailNotification(
+                    "info@maliev.com",
+                    $"Contact request #{referenceNumber}",
+                    BuildInternalMessage(referenceNumber),
+                    Email.Trim(),
+                    null,
+                    null));
+
+        async Task<NotificationResult> SendAsync(string stage, Func<EmailNotification> createNotification)
+        {
+            try
+            {
+                return await notificationClient.SendAsync(NotificationChannel.Info, createNotification(), cancellationToken);
+            }
+            catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                logger.LogError(
+                    "Confirmation delivery failed after contact message {MessageId} was persisted. Stage={Stage} ExceptionType={ExceptionType}",
+                    referenceNumber,
+                    stage,
+                    exception.GetType().Name);
+                throw;
+            }
+        }
     }
 
     private string BuildInternalMessage(int referenceNumber) =>

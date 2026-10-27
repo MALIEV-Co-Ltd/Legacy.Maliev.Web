@@ -47,30 +47,37 @@ public static class MemberOverviewLoader
         var recentOrders = orders.Page?.Items ?? [];
         var recentQuotations = quotations.Page?.Items ?? [];
         var notices = new List<string>();
+        var noticeDetails = new List<MemberOverviewNotice>();
+        void AddNotice(string content, MemberOverviewNoticeSeverity severity = MemberOverviewNoticeSeverity.Information)
+        {
+            notices.Add(content);
+            noticeDetails.Add(new MemberOverviewNotice(content, severity));
+        }
+
         if (profile.Profile is null)
         {
-            notices.Add(profile.ServiceAvailable
+            AddNotice(profile.ServiceAvailable
                 ? "Your customer profile could not be loaded."
                 : "Customer service is temporarily unavailable.");
         }
         else
         {
-            if (profile.Profile.BillingAddress is null) notices.Add("Add a billing address to complete your account.");
-            if (profile.Profile.ShippingAddress is null) notices.Add("Add a shipping address before an order is dispatched.");
+            if (profile.Profile.BillingAddress is null) AddNotice("Add a billing address to complete your account.", MemberOverviewNoticeSeverity.Error);
+            if (profile.Profile.ShippingAddress is null) AddNotice("Add a shipping address before an order is dispatched.", MemberOverviewNoticeSeverity.Warning);
         }
 
         if (orders.Page is null)
         {
-            notices.Add(orders.ServiceAvailable ? "Recent orders could not be loaded." : "Order service is temporarily unavailable.");
+            AddNotice(orders.ServiceAvailable ? "Recent orders could not be loaded." : "Order service is temporarily unavailable.");
         }
 
         if (quotations.Page is null)
         {
-            notices.Add(quotations.ServiceAvailable ? "Recent quotations could not be loaded." : "Quotation service is temporarily unavailable.");
+            AddNotice(quotations.ServiceAvailable ? "Recent quotations could not be loaded." : "Quotation service is temporarily unavailable.");
         }
         else if (recentQuotations.Any(value => value.Accepted is null))
         {
-            notices.Add("You have an open quotation to review.");
+            AddNotice("You have an open quotation to review.", MemberOverviewNoticeSeverity.Warning);
         }
 
         var displayModel = new MemberOverviewDisplayModel(
@@ -87,7 +94,10 @@ public static class MemberOverviewLoader
                 quotation.Period,
                 quotation.Total,
                 quotation.Accepted,
-                quotation.ExpirationDate.ToString("O"))).ToArray());
+                quotation.ExpirationDate.ToString("O"))).ToArray())
+        {
+            NoticeDetails = noticeDetails.ToArray(),
+        };
         return new MemberOverviewLoadResult(profile.Profile, recentOrders, recentQuotations, notices, displayModel);
     }
 

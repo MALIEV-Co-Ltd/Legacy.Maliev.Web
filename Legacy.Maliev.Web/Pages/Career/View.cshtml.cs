@@ -13,8 +13,11 @@ public sealed class View(ICareerClient careerClient, IConfiguration configuratio
     /// <summary>The loaded career offer displayed after identifier and visibility checks.</summary>
     public CareerOffer JobOffer { get; private set; } = null!;
 
+    /// <summary>The available career levels used to display the offer.</summary>
+    public IReadOnlyList<CareerLevel> CareerLevels { get; private set; } = [];
+
     /// <summary>The public career-offer content projected from the loaded offer.</summary>
-    public CareerDetailContentModel DisplayModel => CareerDetailContentModel.Create(JobOffer);
+    public CareerDetailContentModel DisplayModel => CareerDetailContentModel.Create(JobOffer, CareerLevels);
 
     /// <summary>Loads a career offer after validating its identifier and configured public visibility.</summary>
     /// <param name="id">The identifier of the public career offer to display.</param>
@@ -27,7 +30,11 @@ public sealed class View(ICareerClient careerClient, IConfiguration configuratio
             return BadRequest();
         }
 
-        var response = await careerClient.GetOfferAsync(id, cancellationToken);
+        var offerTask = careerClient.GetOfferAsync(id, cancellationToken);
+        var levelsTask = careerClient.GetLevelsAsync(cancellationToken);
+        await Task.WhenAll(offerTask, levelsTask);
+        var response = await offerTask;
+        CareerLevels = (await levelsTask).Value ?? [];
         if (!response.ServiceAvailable)
         {
             return StatusCode(StatusCodes.Status503ServiceUnavailable);

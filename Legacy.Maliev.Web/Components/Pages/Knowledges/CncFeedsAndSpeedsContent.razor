@@ -1,0 +1,85 @@
+@inject IStringLocalizer<CncFeedsAndSpeedsContent> Localizer
+
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+<h1>@Localizer["CNC feeds and speeds: calculate, then verify"]</h1>
+<p class="docs-lead">@Localizer["Connect cutting speed, spindle speed and feed with the actual tool, material, engagement and machine limits. Worked metric examples show how to keep units and assumptions consistent."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/feeds-speeds.webp" srcset="/src/images/knowledge/photos/feeds-speeds-small.webp 768w, /src/images/knowledge/photos/feeds-speeds.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["A short-overhang end mill cuts the side of an aluminium plate."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Speed and feed calculations belong to a specific cutter, engagement and setup. Illustrative image."]</figcaption>
+</figure>
+<nav class="docs-toc" aria-label="@Localizer["On this page"]"><h2>@Localizer["In this guide"]</h2><ul><li><a href="#starting-data">@Localizer["Start with the exact tool and operation"]</a></li><li><a href="#units">@Localizer["Define the quantities before calculating"]</a></li><li><a href="#milling">@Localizer["Milling: feed per tooth and an RPM cap"]</a></li><li><a href="#engagement">@Localizer["Engagement changes the cutting load"]</a></li><li><a href="#drilling">@Localizer["Drilling: feed per revolution"]</a></li><li><a href="#turning">@Localizer["Turning: workpiece diameter and constant surface speed"]</a></li><li><a href="#trial">@Localizer["Verify the complete setup and record the result"]</a></li></ul></nav>
+<section class="docs-section" id="starting-data"><h2>@Localizer["Start with the exact tool and operation"]</h2>
+<p>@Localizer["A useful cutting plan starts with the material grade and condition, tool part number, substrate, coating and operation. Obtain the tool manufacturer’s starting data for that combination. A value for side milling cannot automatically become a slotting or drilling value. Check whether the recommendation assumes flood coolant, internal coolant, air or dry cutting, and whether it specifies a particular engagement."]</p>
+<aside class="docs-note">@Localizer["The numbers in this guide are arithmetic examples, not recommended settings for any material, machine or MALIEV service. Confirm tool suitability, workholding and the machine manual before a controlled trial. There is no universal cutting-data table that safely replaces the actual tool data."]</aside>
+<p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/tools/drilling-tools/exchangeable-tip-drills/corodrill-de10">@Localizer["Sandvik Coromant: product-specific cutting data and tool selection"]</a></p>
+</section>
+<section class="docs-section" id="units"><h2>@Localizer["Define the quantities before calculating"]</h2>
+<div class="docs-table-wrap" role="region" tabindex="0" aria-label="@Localizer["Metric cutting quantities"]"><table><caption>@Localizer["Metric cutting quantities"]</caption><thead><tr>
+<th scope="col">@Localizer["Quantity"]</th>
+<th scope="col">@Localizer["Meaning and unit"]</th>
+</tr></thead><tbody>
+<tr>
+<th scope="row">@Localizer["Vc"]</th>
+<td>@Localizer["Cutting speed at the cutting diameter, m/min"]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["D"]</th>
+<td>@Localizer["Effective cutting diameter, mm; for turning use workpiece diameter at the cut"]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["n"]</th>
+<td>@Localizer["Spindle speed, rpm (revolutions per minute)"]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["fz / fn"]</th>
+<td>@Localizer["Feed per tooth, mm/tooth / feed per revolution, mm/rev"]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["vf / zc"]</th>
+<td>@Localizer["Linear feed, mm/min / effective cutting teeth per revolution"]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["ap / ae"]</th>
+<td>@Localizer["Axial depth / radial width of cut in milling, mm"]</td>
+</tr>
+</tbody></table></div>
+<p>@Localizer["Keep millimetres and metres separate: the factor 1000 converts the cutting-speed units. The spindle relationship is n = 1000 × Vc / (π × D); reversing it gives Vc = π × D × n / 1000. Use the effective diameter at the cutting depth, rather than blindly using the tool’s largest catalog diameter."]</p>
+<p class="docs-source"><a href="https://www.sandvik.coromant.com/en-gb/knowledge/machining-formulas-definitions/milling-formulas-definitions?newsarchivetagfilter=Turning">@Localizer["Sandvik Coromant: milling quantities and effective cutting diameter"]</a></p>
+</section>
+<section class="docs-section" id="milling"><h2>@Localizer["Milling: feed per tooth and an RPM cap"]</h2>
+<p>@Localizer["For milling, vf = fz × n × zc. Use the manufacturer’s effective tooth count for the cutter configuration; do not substitute the number of teeth simultaneously touching the part. For an ordinary four-flute end mill with four effective edges, zc is four. Special staggered or multi-row cutters need the supplier’s definition. Feed per tooth and maximum chip thickness are related, but are not always equal."]</p>
+<aside class="docs-example">@Localizer["Example assumptions: D = 10 mm, Vc = 120 m/min, fz = 0.04 mm/tooth and zc = 4. Calculate n = 120000 / (π × 10) = 3819.7 rpm and vf = 0.04 × 3819.7 × 4 = 611.2 mm/min. If the permitted spindle speed is only 3000 rpm, recalculate vf = 480 mm/min. Actual Vc then becomes 94.2 m/min."]</aside>
+<p>@Localizer["Keeping 611.2 mm/min after that speed reduction would raise fz to about 0.0509 mm/tooth. A feed override can therefore change chip loading as well as cycle time. Round the programmed values sensibly, then calculate back from the values actually entered. An RPM cap is a limit, not proof that the resulting lower cutting speed suits the tool."]</p>
+<p class="docs-source"><a href="https://cdn.sandvik.coromant.com/files/sitecollectiondocuments/services/metal-cutting-e-learning/formulas-and-definitions/formulas-and-deinitions-for-milling-metric-enu.pdf">@Localizer["Sandvik Coromant: metric milling formula sheet"]</a></p>
+<figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["Cutter rotation n and travel vf, with a milling example recalculated at a lower RPM."]">
+        <img src="/src/images/knowledge/visual-feeds-speeds.svg" alt="@Localizer["Cutter rotation n and travel vf, with a milling example recalculated at a lower RPM."]" width="960" height="480" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>@Localizer["1: rotation and linear travel are different quantities. 2: assumed inputs D = 10 mm, Vc = 120 m/min, fz = 0.04 mm/tooth and zc = 4 give 3819.7 rpm and 611.2 mm/min. At 3000 rpm, maintaining the same feed per tooth requires 480 mm/min. These are arithmetic examples, not recommended cutting settings."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-feeds-speeds.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
+</section>
+<section class="docs-section" id="engagement"><h2>@Localizer["Engagement changes the cutting load"]</h2>
+<p>@Localizer["Record ap and ae alongside speed and feed. A full-width slot and a light side cut can share RPM and programmed fz while imposing very different loads and chip-clearance demands. At low radial engagement, radial chip thinning can make the maximum chip thinner than the programmed feed per tooth. Entering angle and rounded cutting edges can also change the relationship."]</p>
+<p>@Localizer["Use the tool maker’s engagement correction or a verified CAM model. Do not apply a generic chip-thinning multiplier twice if the supplier or CAM system already compensates. Review corners, entry moves and narrow passages where engagement increases. A feed calculated for a straight light side cut does not automatically remain suitable when the tool encounters a corner."]</p>
+<p class="docs-source"><a href="https://www.harveyperformance.com/in-the-loupe/in-the-loupe-tv-diving-into-chip-thinning/">@Localizer["Harvey Performance: understanding chip thinning"]</a></p>
+</section>
+<section class="docs-section" id="drilling"><h2>@Localizer["Drilling: feed per revolution"]</h2>
+<p>@Localizer["Drilling data commonly specifies fn in mm/rev. Calculate vf = fn × n; do not multiply the stated feed per revolution by the drill’s flute count. Confirm that the control or CAM output expects mm/min or mm/rev. Hole depth, entry angle, coolant delivery and chip evacuation still determine whether a proposed drilling cycle is suitable."]</p>
+<aside class="docs-example">@Localizer["Assume an 8 mm drill, Vc = 60 m/min and fn = 0.12 mm/rev. Then n = 2387.3 rpm and vf = 286.5 mm/min. At a 2000 rpm limit, maintaining fn gives vf = 240 mm/min and actual Vc = 50.3 m/min. These assumed inputs illustrate units; obtain real values from the drill supplier."]</aside>
+<p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/machining-formulas-definitions/drilling-formulas-definitions">@Localizer["Sandvik Coromant: drilling formulas and feed definitions"]</a></p>
+</section>
+<section class="docs-section" id="turning"><h2>@Localizer["Turning: workpiece diameter and constant surface speed"]</h2>
+<p>@Localizer["For turning, D is the workpiece diameter at the cutting location, not the insert nose radius. At Vc = 150 m/min and D = 50 mm, n is 954.9 rpm. At D = 20 mm, the same target requires 2387.3 rpm. A 2000 rpm clamp limits actual cutting speed at 20 mm to 125.7 m/min."]</p>
+<p>@Localizer["Constant surface speed increases RPM as the cutting diameter shrinks. Set a verified maximum speed that respects the machine, chuck, jaws, workpiece balance and holding arrangement. Haas documents G96 for constant surface speed and G50 for its speed limit; other controls must be checked against their own manuals. Confirm feed mode independently: a distance per revolution is not a distance per minute."]</p>
+<p class="docs-source"><a href="https://www.haascnc.com/content/dam/haascnc/en/service/manual/operator/english---lathe-ngc---operator%27s-manual---2024.pdf">@Localizer["Haas lathe manual: G96, speed limits and feed modes"]</a></p>
+</section>
+<section class="docs-section" id="trial"><h2>@Localizer["Verify the complete setup and record the result"]</h2>
+<p>@Localizer["Check the available torque and power at the selected RPM, feed-axis capability, tool and holder speed ratings, overhang, runout, clearance and fixture support. Observe a controlled first cut for chip evacuation, vibration, spindle load and dimensional drift. Stop for an unstable condition. Change one variable at a time and retain the tool code, material condition, ap, ae, coolant method and wear observations so the next trial has a useful baseline."]</p>
+<p class="docs-source"><a href="https://www.sandvik.coromant.com/en-gb/milling-appl-guide">@Localizer["Sandvik Coromant: machine and setup considerations for milling"]</a></p>
+</section>
+</article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}

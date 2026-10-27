@@ -28,6 +28,7 @@ public sealed partial class SiliconeCastingParityTests : IClassFixture<TestingWe
         Assert.Contains("Choose the trade-off that fits the project", source, StringComparison.Ordinal);
         Assert.Contains("Silicone performance depends on the application", source, StringComparison.Ordinal);
         Assert.Equal(6, FaqDetailsRegex().Matches(source).Count);
+        Assert.Equal(6, FaqSchemaQuestionRegex().Matches(source).Count);
         Assert.Equal(2, ServiceCardMediaRegex().Matches(source).Count);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }
@@ -44,7 +45,16 @@ public sealed partial class SiliconeCastingParityTests : IClassFixture<TestingWe
             "Services",
             "SiliconeCastingContent.razor"));
 
-        Assert.Contains("service-page-toc", component, StringComparison.Ordinal);
+        Assert.Contains("<ServicePageToc />", component, StringComparison.Ordinal);
+        Assert.Contains("silicone-mold-prep.webp", component, StringComparison.Ordinal);
+        Assert.Contains("silicone-pour-cure.webp", component, StringComparison.Ordinal);
+        Assert.Contains("one-litre", component, StringComparison.Ordinal);
+        Assert.Contains("6–8 hours", component, StringComparison.Ordinal);
+        Assert.Contains("around 7 days", component, StringComparison.Ordinal);
+        Assert.Contains("fewer molds", component, StringComparison.Ordinal);
+        Assert.Contains("แม่พิมพ์และต้นแบบ", component, StringComparison.Ordinal);
+        var page = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Services", "SiliconeCastingPage.razor"));
+        Assert.Contains("3D printed mold", page, StringComparison.Ordinal);
         Assert.Contains("silicone-pricing", component, StringComparison.Ordinal);
         Assert.Contains("aria-labelledby=\"silicone-faq-title\"", component, StringComparison.Ordinal);
         Assert.Contains("decoding=\"async\"", component, StringComparison.Ordinal);
@@ -78,4 +88,7 @@ public sealed partial class SiliconeCastingParityTests : IClassFixture<TestingWe
 
     [GeneratedRegex("<details>", RegexOptions.CultureInvariant)]
     private static partial Regex FaqDetailsRegex();
+
+    [GeneratedRegex("\\\"@type\\\":\\\"Question\\\"", RegexOptions.CultureInvariant)]
+    private static partial Regex FaqSchemaQuestionRegex();
 }

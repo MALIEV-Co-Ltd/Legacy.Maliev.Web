@@ -15,6 +15,7 @@ public sealed record PublicBusinessStructuredDataDisplayModel(
 {
     private static readonly string[] SocialLinks =
     [
+        SocialNetworks.Facebook,
         SocialNetworks.Instagram,
         SocialNetworks.Line,
         SocialNetworks.YouTube,
@@ -69,7 +70,7 @@ public sealed record PublicBusinessStructuredDataDisplayModel(
         ["contactPoint"] = new[]
         {
             CreateContactPoint("+66898950690", "customer service", "info@maliev.com", includeEmail: true),
-            CreateContactPoint("+66898950690", "sales", "manufacturing@maliev.com", includeEmail: true)
+            CreateContactPoint("+66818030404", "sales", "manufacturing@maliev.com", includeEmail: true)
         },
         ["sameAs"] = SocialLinks,
         ["taxID"] = "0125561001573"
