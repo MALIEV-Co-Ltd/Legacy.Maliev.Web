@@ -56,6 +56,23 @@ public sealed class BrowserFailureEvidenceTests
         Assert.DoesNotContain("private", json, StringComparison.Ordinal);
         Assert.Equal(json, original.Data[BrowserFailureEvidence.DataKey]);
         Assert.Equal("primary", original.Message);
+        evidence.Stage("Review");
+        var reviewOutput = new List<string>();
+        await evidence.AttachAsync(original, () => Task.FromResult("{\"workflow\":\"unavailable\",\"expectedThumbnails\":2,\"reviewParts\":2,\"actualThumbnails\":2,\"webpReadyThumbnails\":1,\"reviewCountsCapped\":false}"), reviewOutput.Add);
+        using var reviewDocument = JsonDocument.Parse(Assert.Single(reviewOutput));
+        var observation = reviewDocument.RootElement.GetProperty("Observation");
+        Assert.Equal("unavailable", observation.GetProperty("workflow").GetString());
+        Assert.Equal(2, observation.GetProperty("expectedThumbnails").GetInt32());
+        Assert.Equal(2, observation.GetProperty("reviewParts").GetInt32());
+        Assert.Equal(2, observation.GetProperty("actualThumbnails").GetInt32());
+        Assert.Equal(1, observation.GetProperty("webpReadyThumbnails").GetInt32());
+        Assert.False(observation.GetProperty("reviewCountsCapped").GetBoolean());
+        foreach (var field in new[] { "expectedThumbnails", "reviewParts", "actualThumbnails", "webpReadyThumbnails" })
+        {
+            Assert.Throws<FormatException>(() => BrowserFailureEvidence.ParseObservation("{\"workflow\":\"review\",\"" + field + "\":33}"));
+            Assert.Throws<FormatException>(() => BrowserFailureEvidence.ParseObservation("{\"workflow\":\"review\",\"" + field + "\":-1}"));
+            Assert.Throws<FormatException>(() => BrowserFailureEvidence.ParseObservation("{\"workflow\":\"review\",\"" + field + "\":\"private\"}"));
+        }
     }
 
     [Fact]
@@ -507,6 +524,91 @@ public sealed class BrowserFailureEvidenceTests
         Assert.True(document.RootElement.GetProperty("AwaitTruncated").GetBoolean());
         Assert.Equal(32, document.RootElement.GetProperty("Events").GetArrayLength());
         Assert.True(document.RootElement.GetProperty("Truncated").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData("reviewParts")]
+    [InlineData("reviewImages")]
+    [InlineData("reviewWebpImages")]
+    [InlineData("reviewPlaceholderImages")]
+    [InlineData("reviewOtherImages")]
+    public void ReviewThumbnailCountsRejectUnboundedOrPrivateValues(string field)
+    {
+        foreach (var value in new object[] { -1, 33, "private filename.stl" })
+        {
+            var json = JsonSerializer.Serialize(new Dictionary<string, object>
+            {
+                ["workflow"] = "review",
+                [field] = value,
+            });
+            Assert.Throws<FormatException>(() => BrowserFailureEvidence.ParseObservation(json));
+        }
+    }
+
+    [Fact]
+    public async Task ReviewThumbnailFailureEmitsOnlyBoundedCountsAndActiveReviewBoundary()
+    {
+        var page = DispatchProxy.Create<IPage, EventProxy>();
+        var proxy = (EventProxy)(object)page;
+        using var evidence = new BrowserFailureEvidence(page);
+        evidence.Stage("Review");
+        evidence.AwaitBoundary("review", false);
+        proxy.Raise("PageError", "private filename.stl /customer Connection disconnected");
+        var original = new TimeoutException("primary");
+        var output = new List<string>();
+        await evidence.AttachAsync(original, () => Task.FromResult(
+            "{\"workflow\":\"review\",\"reviewParts\":2,\"reviewImages\":2,\"reviewWebpImages\":0,\"reviewPlaceholderImages\":2,\"reviewOtherImages\":0,\"errorVisible\":false}"), output.Add);
+        var json = Assert.Single(output);
+        using var document = JsonDocument.Parse(json);
+        var observation = document.RootElement.GetProperty("Observation");
+        Assert.Equal("review", observation.GetProperty("workflow").GetString());
+        Assert.Equal(2, observation.GetProperty("reviewParts").GetInt32());
+        Assert.Equal(2, observation.GetProperty("reviewImages").GetInt32());
+        Assert.Equal(0, observation.GetProperty("reviewWebpImages").GetInt32());
+        Assert.Equal(2, observation.GetProperty("reviewPlaceholderImages").GetInt32());
+        Assert.Equal(0, observation.GetProperty("reviewOtherImages").GetInt32());
+        Assert.False(observation.GetProperty("errorVisible").GetBoolean());
+        var entry = Assert.Single(document.RootElement.GetProperty("Events").EnumerateArray());
+        Assert.Equal("Review", entry.GetProperty("Stage").GetString());
+        Assert.Equal("review", entry.GetProperty("ActiveAwait").GetString());
+        var boundary = Assert.Single(document.RootElement.GetProperty("AwaitEvents").EnumerateArray());
+        Assert.Equal("review", boundary.GetProperty("Operation").GetString());
+        Assert.False(boundary.GetProperty("Completed").GetBoolean());
+        Assert.DoesNotContain("private", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("/customer", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("filename", json, StringComparison.Ordinal);
+        Assert.Equal(json, original.Data[BrowserFailureEvidence.DataKey]);
+    }
+
+    [Fact]
+    public async Task ReviewObservationAndSinkFaultsRetainPrimaryThroughFiniteCleanup()
+    {
+        var page = DispatchProxy.Create<IPage, EventProxy>();
+        var proxy = (EventProxy)(object)page;
+        proxy.ThrowRemove = "Console";
+        proxy.RemoveFailures = 1;
+        var evidence = new BrowserFailureEvidence(page, _ => throw new InvalidOperationException("private cleanup sink"));
+        var original = new TimeoutException("primary review");
+        var actual = await Record.ExceptionAsync(async () =>
+        {
+            await using (evidence)
+            {
+                evidence.Stage("Review");
+                evidence.AwaitBoundary("review", false);
+                try { throw original; }
+                catch (Exception failure)
+                {
+                    await evidence.AttachAsync(failure,
+                        () => Task.FromException<string>(new InvalidOperationException("private observer")),
+                        _ => throw new InvalidOperationException("private evidence sink"));
+                    throw;
+                }
+            }
+        });
+        Assert.Same(original, actual);
+        Assert.Contains("unavailable", Assert.IsType<string>(original.Data[BrowserFailureEvidence.DataKey]), StringComparison.Ordinal);
+        Assert.Empty(proxy.Handlers);
+        Assert.Equal(1, proxy.CloseCalls);
     }
 
     // No browser or SDK process is created: only interface event accessors are emulated.

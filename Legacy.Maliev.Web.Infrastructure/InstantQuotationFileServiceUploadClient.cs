@@ -58,6 +58,7 @@ internal sealed class InstantQuotationFileServiceUploadClient : IInstantQuotatio
             || contentLength <= 0
             || geometryClaim is null
             || !geometryClaim.IsValid()
+            || geometryClaim.GltfUnitPolicy?.IsValidForFile(fileName, newUpload: true) is not true
             || !IsValidOperationId(operationId))
         {
             return ValidationUpload(operationId);
@@ -91,6 +92,15 @@ internal sealed class InstantQuotationFileServiceUploadClient : IInstantQuotatio
                 return ValidationUpload(operationId);
             }
 
+            if (geometryClaim.GltfUnitPolicy.Version == 1)
+            {
+                if (contentLength > Legacy.Maliev.Web.Application.Pricing.Simulation.AdmittedGltfMeshReader.MaximumBytes)
+                    return ValidationUpload(operationId);
+                var bytes = await File.ReadAllBytesAsync(temporaryPath, cancellationToken);
+                if (!Legacy.Maliev.Web.Application.Pricing.Simulation.AdmittedGltfMeshReader.MatchesClaimScale(
+                    bytes, geometryClaim, cancellationToken)) return ValidationUpload(operationId);
+            }
+
             var upload = new InstantQuotationFileServiceUpload(
                 fileName,
                 contentType,
@@ -112,7 +122,8 @@ internal sealed class InstantQuotationFileServiceUploadClient : IInstantQuotatio
                 return UnexpectedUpload(operationId);
             }
 
-            if (!string.Equals(result.File.Sha256, geometryClaim.Sha256, StringComparison.Ordinal))
+            if (!string.Equals(result.File.Sha256, geometryClaim.Sha256, StringComparison.Ordinal)
+                || !geometryClaim.GltfUnitPolicy.IsValidForFile(result.File.FileName, newUpload: true))
             {
                 await transport.RemoveAsync(capability, result.File.FileId, cancellationToken);
                 return ValidationUpload(operationId);
@@ -128,7 +139,10 @@ internal sealed class InstantQuotationFileServiceUploadClient : IInstantQuotatio
                     result.File.ContentType,
                     result.File.SizeBytes,
                     result.File.Sha256,
-                    result.File.Status));
+                    result.File.Status)
+                {
+                    GltfUnitPolicy = geometryClaim.GltfUnitPolicy,
+                });
         }
         catch (Exception exception) when (IsNonCancellationFailure(exception, cancellationToken))
         {

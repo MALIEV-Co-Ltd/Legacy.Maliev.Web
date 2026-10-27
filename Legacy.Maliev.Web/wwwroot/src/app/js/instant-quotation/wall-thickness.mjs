@@ -1,4 +1,5 @@
 import './wall-thickness-presentation.js';
+import { renderedVertexReader } from './geometry-analysis.mjs';
 
 const presentation = globalThis.MalievWallThicknessPresentation;
 const maximumTriangles = 400_000;
@@ -19,6 +20,7 @@ export function thicknessMeshes(object) {
   let vertices = 0;
   object?.updateWorldMatrix?.(true, true);
   object?.traverse?.(child => {
+    if (child?.isInstancedMesh) throw new TypeError('Unsupported glTF node geometry cannot be analyzed.');
     const position = child?.geometry?.getAttribute?.('position');
     if (!child?.isMesh || !position) return;
     const index = child.geometry.getIndex?.();
@@ -34,11 +36,13 @@ export function thicknessMeshes(object) {
   if (triangles > maximumTriangles || vertices > maximumTriangles * 3) return null;
   return sources.map(({ child, position, index }) => {
     // Accessors honor interleaved stride, offset, and normalized input attributes.
+    const readRenderedVertex = renderedVertexReader(child);
     const coordinates = new Float32Array(position.count * 3);
     for (let vertex = 0; vertex < position.count; vertex += 1) {
-      coordinates[vertex * 3] = position.getX(vertex);
-      coordinates[vertex * 3 + 1] = position.getY(vertex);
-      coordinates[vertex * 3 + 2] = position.getZ(vertex);
+      const rendered = readRenderedVertex?.(vertex);
+      coordinates[vertex * 3] = rendered ? rendered.x : position.getX(vertex);
+      coordinates[vertex * 3 + 1] = rendered ? rendered.y : position.getY(vertex);
+      coordinates[vertex * 3 + 2] = rendered ? rendered.z : position.getZ(vertex);
     }
     const indices = index ? new Uint32Array(index.count) : null;
     for (let vertex = 0; vertex < (index?.count ?? 0); vertex += 1) {
@@ -54,7 +58,7 @@ export function thicknessMeshes(object) {
 
 // One disposable worker at a time bounds browser CPU and memory for multi-file uploads.
 export function createWallThicknessAnalyzer({
-  workerFactory = () => new Worker('/src/app/js/instant-quotation/wall-thickness-runner.worker.js?v=2'),
+  workerFactory = () => new Worker('/src/app/js/instant-quotation/wall-thickness-runner.worker.js?v=3'),
   timeoutMs = analysisTimeoutMs,
 } = {}) {
   const pending = [];

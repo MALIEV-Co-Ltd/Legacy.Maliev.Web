@@ -240,7 +240,13 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
 
         await page.EvaluateAsync("""
             () => {
-              const workflow = document.querySelector('.instant-quote__workflow');
+              const host = document.createElement('main');
+              host.id = 'compact-summary-test-host';
+              host.className = 'instant-quote';
+              const workflow = document.createElement('div');
+              workflow.className = 'instant-quote__workflow';
+              host.append(workflow);
+              document.body.append(host);
               workflow.dataset.workflowState = 'configuration';
               workflow.innerHTML = `<section data-workflow-configuration>
                 <div style="height: 1100px">Part configuration</div>
@@ -258,12 +264,13 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
             }
             """);
 
-        var dock = page.Locator("[data-workflow-summary-dock]");
+        var host = page.Locator("#compact-summary-test-host");
+        var dock = host.Locator("[data-workflow-summary-dock]");
         var summary = dock.Locator("summary");
-        var review = page.Locator(".instant-quote__configuration-actions button");
+        var review = host.Locator(".instant-quote__configuration-actions button");
         Assert.False(await dock.EvaluateAsync<bool>("element => element.open"));
         Assert.True(await summary.IsVisibleAsync());
-        Assert.True(await page.Locator("[data-workflow-lead-time]").IsVisibleAsync());
+        Assert.True(await host.Locator("[data-workflow-lead-time]").IsVisibleAsync());
         Assert.True(await review.IsVisibleAsync());
         Assert.True(await summary.EvaluateAsync<bool>("element => element.getBoundingClientRect().height >= 44"));
         Assert.True(await summary.EvaluateAsync<bool>("element => getComputedStyle(element).display === 'grid'"));
@@ -272,7 +279,7 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
         await summary.ClickAsync();
         Assert.True(await dock.EvaluateAsync<bool>("element => element.open"));
         Assert.True(await dock.Locator("[data-workflow-order-summary]").IsVisibleAsync());
-        Assert.True(await page.Locator("[data-workflow-lead-time]").IsVisibleAsync());
+        Assert.True(await host.Locator("[data-workflow-lead-time]").IsVisibleAsync());
         Assert.True(await review.IsVisibleAsync());
         Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
     }

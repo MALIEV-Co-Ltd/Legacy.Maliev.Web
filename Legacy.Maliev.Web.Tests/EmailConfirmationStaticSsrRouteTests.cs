@@ -1,8 +1,10 @@
+using Legacy.Maliev.Web.Infrastructure;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using System.Net;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -36,14 +38,39 @@ public sealed class EmailConfirmationStaticSsrRouteTests : IClassFixture<Testing
     [Fact]
     public async Task DisabledEmailConfirmationRoute_UsesTheRetainedRazorFallback()
     {
-        await using var fallbackFactory = factory.WithWebHostBuilder(builder => builder.UseSetting("BlazorRouting:EmailConfirmation", "false"));
+        using var authRequests = new ForbiddenAuthRequests();
+        await using var fallbackFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:EmailConfirmation", "false");
+            builder.UseSetting("ServiceAuthentication:ClientSecret", string.Empty);
+            builder.ConfigureServices(services => services.AddHttpClient("auth")
+                .ConfigurePrimaryHttpMessageHandler(() => authRequests));
+        });
+        Assert.Equal(string.Empty, fallbackFactory.Services
+            .GetRequiredService<IOptions<ServiceAuthenticationOptions>>().Value.ClientSecret);
         using var client = fallbackFactory.CreateClient(
             new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
         var source = await client.GetStringAsync(
             "/account/emailconfirmation?email=user%40example.com&token=invalid-token&culture=en");
 
+        Assert.Equal(0, authRequests.Calls);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+    }
+
+    private sealed class ForbiddenAuthRequests : HttpMessageHandler
+    {
+        private int calls;
+
+        internal int Calls => Volatile.Read(ref calls);
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref calls);
+            throw new InvalidOperationException("This fallback renderer fixture must not contact authentication services.");
+        }
     }
 
     [Theory]
@@ -104,13 +131,58 @@ public sealed class EmailConfirmationStaticSsrRouteTests : IClassFixture<Testing
         Assert.Equal(0, authentication.Calls);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ValidLink_PassesOpaqueTokenExactlyOnceAndRedirectsWithoutIt(bool useBlazor)
+    {
+        const string email = "customer+opaque@example.test";
+        const string token = "opaque+slash/equals=percent%end";
+        var authentication = new RejectUnexpectedAuthenticationClient { AllowCompletion = true };
+        await using var routeFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:EmailConfirmation", useBlazor.ToString());
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<ICustomerAuthenticationClient>();
+                services.AddSingleton<ICustomerAuthenticationClient>(authentication);
+            });
+        });
+        using var client = routeFactory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        using var response = await client.GetAsync(
+            $"/account/emailconfirmation?email={Uri.EscapeDataString(email)}&token={Uri.EscapeDataString(token)}");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.True(response.Headers.CacheControl?.NoStore);
+        Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
+        Assert.Equal(1, authentication.Calls);
+        Assert.Equal(email, authentication.Email);
+        Assert.Equal(token, authentication.Token);
+        var location = new Uri(client.BaseAddress!, Assert.IsType<Uri>(response.Headers.Location));
+        Assert.Equal("/Account/Login", location.AbsolutePath, ignoreCase: true);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(location.Query);
+        Assert.Single(query);
+        Assert.Equal(email, query["email"].ToString());
+        Assert.DoesNotContain(token, Uri.UnescapeDataString(location.OriginalString), StringComparison.Ordinal);
+    }
+
     private sealed class RejectUnexpectedAuthenticationClient : ICustomerAuthenticationClient
     {
         public int Calls { get; private set; }
+        public bool AllowCompletion { get; init; }
+        public string? Email { get; private set; }
+        public string? Token { get; private set; }
 
         public Task<bool> CompleteEmailConfirmationAsync(string email, string token, CancellationToken cancellationToken)
         {
             Calls++;
+            if (AllowCompletion)
+            {
+                Email = email;
+                Token = token;
+                return Task.FromResult(true);
+            }
             throw new InvalidOperationException("Incomplete input must not reach authentication.");
         }
 
