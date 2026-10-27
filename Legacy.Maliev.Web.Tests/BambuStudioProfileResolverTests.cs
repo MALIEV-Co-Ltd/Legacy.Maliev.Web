@@ -38,7 +38,12 @@ public sealed class BambuStudioProfileResolverTests
         Assert.Equal("G28", result.Settings["machine_start_gcode"]!.GetValue<string>());
         Assert.Equal("30", result.Settings["speed"]![0]!.GetValue<string>());
         Assert.False(result.Settings.ContainsKey("include"));
+        Assert.Matches("^[A-F0-9]{64}$", result.SourceSha256);
         Assert.Matches("^[A-F0-9]{64}$", result.Sha256);
+        Assert.NotEqual(result.SourceSha256, result.Sha256);
+        Assert.Equal(
+            Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(leafPath))),
+            result.SourceSha256);
     }
 
     /// <summary>
