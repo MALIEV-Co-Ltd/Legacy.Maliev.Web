@@ -75,7 +75,7 @@ public sealed class InstantQuotationCompactControlReachabilityBrowserTests(CncNa
         var finalTier = pricing.Locator("[data-workflow-price-tier]").Last;
         Assert.True(await pricing.IsVisibleAsync());
         Assert.True(await pricing.EvaluateAsync<bool>("element => { const rows = [...element.querySelectorAll('[data-workflow-price-tier]')]; return getComputedStyle(element).display === 'block' && rows.every((row, index) => index === 0 || row.getBoundingClientRect().top >= rows[index - 1].getBoundingClientRect().bottom - 1); }"));
-        Assert.True(await pricing.EvaluateAsync<bool>("element => innerWidth < 992 ? getComputedStyle(element).overflowY === 'visible' : getComputedStyle(element).overflowY === 'auto'"));
+        Assert.True(await pricing.EvaluateAsync<bool>("element => innerWidth < 1024 ? getComputedStyle(element).overflowY === 'visible' : getComputedStyle(element).overflowY === 'auto'"));
         if (height >= 1000)
         {
             var tallGeometry = await pricing.EvaluateAsync<string>("element => JSON.stringify({ height: element.getBoundingClientRect().height, maxHeight: getComputedStyle(element).maxHeight, scrollHeight: element.scrollHeight, viewportHeight: innerHeight })");

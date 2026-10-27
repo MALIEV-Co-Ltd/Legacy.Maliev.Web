@@ -1,0 +1,7 @@
+@page
+@inject IStringLocalizer<FinishingHeatTreatmentContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["Planning heat treatment for manufactured parts | MALIEV"];
+    ViewData["Description"] = MetadataLocalizer["Specify material condition, hardness, case depth, distortion allowances, machining sequence, and acceptance evidence for heat-treated parts."];
+}
+<component type="typeof(FinishingHeatTreatmentContent)" render-mode="Static" />

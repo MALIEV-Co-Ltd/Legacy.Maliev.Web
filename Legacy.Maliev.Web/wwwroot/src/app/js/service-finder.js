@@ -29,6 +29,7 @@
         var materialGuidance = root.querySelector('[data-finder-material-guidance]');
         var materialGuidanceNote = root.querySelector('[data-finder-material-guidance-note]');
         var materialList = root.querySelector('[data-finder-material-list]');
+        var finderSessionId = createFinderSessionId();
         var state = {
             currentStep: 0,
             answers: {},
@@ -126,8 +127,16 @@
             return allSteps.filter(shouldIncludeOptionalStep);
         }
 
+        function createFinderSessionId() {
+            if (!window.crypto || typeof window.crypto.randomUUID !== 'function') return '';
+
+            return window.crypto.randomUUID();
+        }
+
         function pushFinderEvent(eventName, fields) {
             var event = { event: eventName };
+
+            if (finderSessionId) event.finder_session_id = finderSessionId;
 
             Object.keys(fields || {}).forEach(function (key) {
                 event[key] = fields[key];

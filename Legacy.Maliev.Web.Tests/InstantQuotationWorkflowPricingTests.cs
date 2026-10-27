@@ -336,6 +336,58 @@ public sealed class InstantQuotationWorkflowPricingTests
             typeof(IInstantQuotationPricingService).GetMethod(nameof(IInstantQuotationPricingService.Quote))!.ReturnType);
     }
 
+    [Theory]
+    [InlineData("PLA", "Any", 1)]
+    [InlineData("PLA", "Any", 2)]
+    [InlineData("M68", "Any", 2)]
+    [InlineData("K", "Any", 2)]
+    [InlineData("G217", "Any", 2)]
+    [InlineData("M68", "Gray", 2)]
+    [InlineData("PLA", "#123ABC", 2)]
+    public void Quote_ColorContextAllowsMultipartResinAnyWithoutNarrowingValidNamedContracts(
+        string material, string color, int bodies)
+    {
+        var claim = Claim() with { BodyCount = bodies };
+        var upload = InstantQuotationUploadResult.Succeeded(
+            "multipart-color",
+            new InstantQuotationUploadReference("opaque-color"),
+            claim.Sha256);
+        var part = Part(material, color, 2) with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(upload, claim)!,
+        };
+
+        var quote = SyntheticPhysicalPricingTestData.Quote(State(part));
+
+        var line = Assert.Single(quote.Parts);
+        Assert.Equal(color, line.Color);
+        Assert.Equal(2, line.Quantity);
+        Assert.True(quote.FinalOrderPrice > 0);
+        Assert.Equal(quote.FinalOrderPrice, quote.AllocatedLineTotals!.Sum(), 2);
+    }
+
+    [Theory]
+    [InlineData("M68", "Any", 1)]
+    [InlineData("PLA", "#12345", 2)]
+    [InlineData("PLA", "#GGGGGG", 2)]
+    [InlineData("M68", "#123ABC", 2)]
+    [InlineData("PLA", "__custom__", 2)]
+    public void Quote_ColorContextStillRejectsSingleResinAnyAndMalformedOrIneligibleHex(
+        string material, string color, int bodies)
+    {
+        var claim = Claim() with { BodyCount = bodies };
+        var upload = InstantQuotationUploadResult.Succeeded(
+            "multipart-color",
+            new InstantQuotationUploadReference("opaque-color"),
+            claim.Sha256);
+        var part = Part(material, color, 1) with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(upload, claim)!,
+        };
+
+        Assert.Throws<ArgumentException>(() => SyntheticPhysicalPricingTestData.Quote(State(part)));
+    }
+
     private static InstantQuotationOrderState State(params InstantQuotationPart[] parts) => new(parts);
 
     private static InstantQuotationPart Part(
