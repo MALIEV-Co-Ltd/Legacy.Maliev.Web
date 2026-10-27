@@ -261,6 +261,9 @@ public sealed class AdditiveBenchmarkTests
 
             Assert.Equal("invalid", result.Status);
             Assert.Contains(result.Report.InvalidIssues, issue => issue.Code == "reference_pose_mismatch");
+            Assert.Contains(result.Report.InvalidIssues,
+                issue => issue.Code == "reference_pose_mismatch"
+                    && issue.Path == "$.cases[0].referenceTransform4x4");
         }
         finally
         {
@@ -374,4 +377,78 @@ public sealed class AdditiveBenchmarkTests
             File.Delete(temporary);
         }
     }
+    /// <summary>Only the documented search policy bypasses fixed-pose comparison.</summary>
+    [Theory]
+    [InlineData("search")]
+    [InlineData("SEARCH")]
+    [InlineData("SeArCh")]
+    public void ReferenceComparability_SearchPolicy_IsComparable(string policy)
+    {
+        double[] requested = Enumerable.Repeat(0d, 16).ToArray();
+        double[] observed = Enumerable.Repeat(1d, 16).ToArray();
+
+        BenchmarkComparisonResult result = BenchmarkReferenceValidator.Validate(requested, observed, policy);
+
+        Assert.True(result.IsComparable);
+        Assert.Null(result.ReasonCode);
+    }
+
+    /// <summary>Fixed-pose comparison remains case-insensitive and rejects mismatches.</summary>
+    [Theory]
+    [InlineData("fixed")]
+    [InlineData("FIXED")]
+    public void ReferenceComparability_FixedPolicy_RejectsMismatchRegardlessOfCase(string policy)
+    {
+        double[] requested = Enumerable.Repeat(0d, 16).ToArray();
+        double[] observed = Enumerable.Repeat(1d, 16).ToArray();
+
+        BenchmarkComparisonResult result = BenchmarkReferenceValidator.Validate(requested, observed, policy);
+
+        Assert.False(result.IsComparable);
+        Assert.Equal("reference_pose_mismatch", result.ReasonCode);
+    }
+
+    /// <summary>Unknown and missing policies cannot certify reference inputs.</summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("unknown")]
+    [InlineData("searching")]
+    public void ReferenceComparability_InvalidPolicy_IsNotComparable(string? policy)
+    {
+        double[] transform = Enumerable.Repeat(0d, 16).ToArray();
+
+        BenchmarkComparisonResult result = BenchmarkReferenceValidator.Validate(transform, transform, policy!);
+
+        Assert.False(result.IsComparable);
+        Assert.Equal("reference_orientation_policy_invalid", result.ReasonCode);
+    }
+
+    /// <summary>Invalid policy reports identify the policy, not a false pose mismatch.</summary>
+    [Fact]
+    public void Run_VersionTwoUnknownOrientationPolicy_IsInvalid()
+    {
+        BenchmarkRunResult result = RunMatchedFixture(first => first["orientationPolicy"] = "unknown");
+
+        Assert.Equal("invalid", result.Status);
+        Assert.Contains(result.Report.InvalidIssues, issue => issue.Code == "case.orientation_policy");
+        Assert.Contains(result.Report.InvalidIssues,
+            issue => issue.Code == "reference_orientation_policy_invalid"
+                && issue.Path == "$.cases[0].orientationPolicy"
+                && issue.Message == "Orientation policy must be fixed or search.");
+    }
+
+    /// <summary>Manifest policy values remain case-sensitive even though the helper accepts case variants.</summary>
+    [Fact]
+    public void Run_VersionTwoUppercaseOrientationPolicy_IsInvalid()
+    {
+        BenchmarkRunResult result = RunMatchedFixture(first => first["orientationPolicy"] = "SEARCH");
+
+        Assert.Equal("invalid", result.Status);
+        Assert.Contains(result.Report.InvalidIssues,
+            issue => issue.Code == "case.orientation_policy" && issue.Path == "$.cases[0].orientationPolicy");
+        Assert.DoesNotContain(result.Report.InvalidIssues, issue => issue.Code == "reference_orientation_policy_invalid");
+    }
+
 }

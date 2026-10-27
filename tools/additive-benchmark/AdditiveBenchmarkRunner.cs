@@ -465,9 +465,13 @@ public static partial class AdditiveBenchmarkRunner
         {
             invalid.Add(new BenchmarkIssue(
                 comparison.ReasonCode ?? "reference_not_comparable",
-                $"{path}.referenceTransform4x4",
+                comparison.ReasonCode == "reference_orientation_policy_invalid"
+                    ? $"{path}.orientationPolicy"
+                    : $"{path}.referenceTransform4x4",
                 caseId,
-                "Reference transform does not match the requested fixed pose."));
+                comparison.ReasonCode == "reference_orientation_policy_invalid"
+                    ? "Orientation policy must be fixed or search."
+                    : "Reference transform does not match the requested fixed pose."));
         }
     }
 

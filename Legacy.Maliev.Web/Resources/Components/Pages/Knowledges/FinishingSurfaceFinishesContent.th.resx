@@ -1,0 +1,148 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root xmlns:ns1="urn:schemas-microsoft-com:xms-msdata" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:schema id="root">
+    <xs:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xs:element name="root" ns1:IsDataSet="true">
+      <xs:complexType>
+        <xs:choice maxOccurs="unbounded">
+          <xs:element name="metadata">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" />
+              </xs:sequence>
+              <xs:attribute name="name" use="required" type="xsd:string" />
+              <xs:attribute name="type" type="xsd:string" />
+              <xs:attribute name="mimetype" type="xsd:string" />
+              <xs:attribute ref="xml:space" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="assembly">
+            <xs:complexType>
+              <xs:attribute name="alias" type="xsd:string" />
+              <xs:attribute name="name" type="xsd:string" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="data">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" ns1:Ordinal="1" />
+                <xs:element name="comment" type="xsd:string" minOccurs="0" ns1:Ordinal="2" />
+              </xs:sequence>
+              <xs:attribute name="name" type="xsd:string" use="required" ns1:Ordinal="1" />
+              <xs:attribute name="type" type="xsd:string" ns1:Ordinal="3" />
+              <xs:attribute name="mimetype" type="xsd:string" ns1:Ordinal="4" />
+              <xs:attribute ref="xml:space" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="resheader">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" ns1:Ordinal="1" />
+              </xs:sequence>
+              <xs:attribute name="name" type="xsd:string" use="required" />
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:complexType>
+    </xs:element>
+  </xs:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Surface finishes and coatings | MALIEV" xml:space="preserve">
+    <value>ผิวงานและการเคลือบ | MALIEV</value>
+  </data>
+  <data name="Plan the supplied surface and final dimensions before machining. Coating, preparation, masking and cosmetic acceptance belong in the same project discussion." xml:space="preserve">
+    <value>วางแผนผิวงานที่จะส่งมอบและขนาดสุดท้ายก่อนผลิต ควรตกลงเรื่องชั้นเคลือบ การเตรียมผิว การปิดผิว และเกณฑ์ความสวยงามร่วมกันตั้งแต่ต้น</value>
+  </data>
+  <data name="Surface finishes and coatings" xml:space="preserve">
+    <value>ผิวงานและการเคลือบ</value>
+  </data>
+  <data name="On this page" xml:space="preserve">
+    <value>ในบทความนี้</value>
+  </data>
+  <data name="Finishing and anodizing: design the final condition" xml:space="preserve">
+    <value>การเก็บผิวและอโนไดซ์: ออกแบบตามสภาพสำเร็จ</value>
+  </data>
+  <data name="Examples explain design principles; confirm the material, drawing revision and proposed process for the actual project." xml:space="preserve">
+    <value>ตัวอย่างใช้เพื่ออธิบายหลักการออกแบบ ควรยืนยันวัสดุ รุ่นแบบงาน และกระบวนการที่เสนอสำหรับโครงการจริง</value>
+  </data>
+  <data name="Specify the coating type, thickness, colour, pretreatment and acceptance condition. Mark cosmetic faces, masking, electrical contacts, threads and mating fits. Brushing or polishing can change edges and dimensions, while an anodized result depends on alloy and prior surface preparation. Agree the required appearance with a sample or reference where it matters, rather than assuming that a colour name defines a complete finish." xml:space="preserve">
+    <value>ระบุชนิดสารเคลือบ ความหนา สี การเตรียมผิว และสภาพตรวจรับ พร้อมทำเครื่องหมายผิวที่เน้นความสวยงาม พื้นที่ปิดบัง จุดสัมผัสไฟฟ้า เกลียว และพิกัดสวม การปัดหรือขัดเงาอาจเปลี่ยนขอบและขนาด ส่วนผลอโนไดซ์ขึ้นกับโลหะผสมและการเตรียมผิวก่อนหน้า หากรูปลักษณ์สำคัญ ควรตกลงด้วยตัวอย่างหรือชิ้นอ้างอิง แทนการใช้ชื่อสีเพียงอย่างเดียวเป็นข้อกำหนดทั้งหมด</value>
+  </data>
+  <data name="Anodic coating thickness includes both converted base material and outward growth. The Aluminum Anodizers Council gives approximately half penetration and half buildup as generally accepted hardcoat guidance; actual pretreatment and coating behaviour need confirmation with the finisher. Do not simply add the full coating thickness to every dimension. Agree whether fits will be masked, compensated before coating or finished afterward, including the consequences for exposed material and protection." xml:space="preserve">
+    <value>ความหนาชั้นอโนไดซ์รวมทั้งเนื้อวัสดุที่เปลี่ยนเป็นออกไซด์และส่วนที่โตออกจากผิวเดิม Aluminum Anodizers Council ให้แนวทางทั่วไปของฮาร์ดโค้ตว่าแทรกเข้าเนื้อประมาณครึ่งหนึ่งและโตออกประมาณครึ่งหนึ่ง แต่ต้องยืนยันผลการเตรียมผิวและการเคลือบจริงกับผู้ทำผิว ไม่ควรบวกความหนาเต็มกับทุกมิติโดยตรง ต้องตกลงว่าจะปิดบังผิวสวม ชดเชยขนาดก่อนเคลือบ หรือเก็บขนาดภายหลัง รวมถึงผลต่อเนื้อโลหะที่เปิดออกและการป้องกันผิว</value>
+  </data>
+  <data name="Compare the purpose of the finish" xml:space="preserve">
+    <value>เปรียบเทียบหน้าที่ของการตกแต่งผิว</value>
+  </data>
+  <data name="Surface finish selection considerations" xml:space="preserve">
+    <value>ประเด็นพิจารณาเลือกการตกแต่งผิว</value>
+  </data>
+  <data name="Discuss the appropriate route and its availability for the actual project." xml:space="preserve">
+    <value>พิจารณากระบวนการที่เหมาะสมและยืนยันการให้บริการสำหรับงานจริง</value>
+  </data>
+  <data name="Finish" xml:space="preserve">
+    <value>การตกแต่ง</value>
+  </data>
+  <data name="Purpose and information to agree" xml:space="preserve">
+    <value>หน้าที่และข้อมูลที่ควรตกลง</value>
+  </data>
+  <data name="As-machined and deburred" xml:space="preserve">
+    <value>ผิวหลังตัดเฉือนและลบคม</value>
+  </data>
+  <data name="Retain an appropriate machined surface where appearance is secondary. Define edge breaks and functional surface texture; tool marks and a scratch-free cosmetic finish are different requirements." xml:space="preserve">
+    <value>ใช้ผิวหลังตัดเฉือนเมื่อรูปลักษณ์ไม่ใช่ข้อกำหนดหลัก ระบุการลบคมและความหยาบผิวที่มีผลต่อการใช้งาน รอยเครื่องมือตัดกับผิวเพื่อความสวยงามที่ไม่มีรอยเป็นข้อกำหนดคนละแบบ</value>
+  </data>
+  <data name="Bead blasting" xml:space="preserve">
+    <value>พ่นเม็ดบีด</value>
+  </data>
+  <data name="Create a uniform matte texture. Identify cosmetic faces and surfaces to protect, and agree whether blasting precedes another treatment. A uniform appearance does not define dimensional accuracy." xml:space="preserve">
+    <value>สร้างผิวด้านที่สม่ำเสมอ ระบุผิวที่ต้องควบคุมรูปลักษณ์และผิวที่ต้องป้องกัน พร้อมตกลงว่าพ่นก่อนกระบวนการใด ผิวที่ดูสม่ำเสมอไม่ได้กำหนดความแม่นยำของขนาด</value>
+  </data>
+  <data name="Anodizing for aluminum" xml:space="preserve">
+    <value>อโนไดซ์สำหรับอะลูมิเนียม</value>
+  </data>
+  <data name="Specify alloy, coating type and thickness, color, rack-contact locations, and masked fits. Decide whether dimensions are accepted before or after treatment." xml:space="preserve">
+    <value>ระบุเกรดอะลูมิเนียม ประเภทและความหนาเคลือบ สี จุดจับแขวน และผิวสวมที่ต้องปิดบัง ตกลงว่าตรวจรับขนาดก่อนหรือหลังทำผิว</value>
+  </data>
+  <data name="Powder coating or painting" xml:space="preserve">
+    <value>พ่นสีฝุ่นหรือทำสี</value>
+  </data>
+  <data name="Define appearance, service exposure, coating thickness, and coverage. Identify threads, fits, grounding contacts, and other areas that require masking or a different treatment." xml:space="preserve">
+    <value>กำหนดรูปลักษณ์ สภาพใช้งาน ความหนา และบริเวณที่ทำสี ระบุเกลียว ผิวสวม จุดสัมผัสทางไฟฟ้า และบริเวณที่ต้องปิดบังหรือใช้วิธีอื่น</value>
+  </data>
+  <data name="Protolabs: examples of CNC post-processing methods" xml:space="preserve">
+    <value>Protolabs: ตัวอย่างวิธีตกแต่งหลังงาน CNC</value>
+  </data>
+  <data name="Uncoated and coated sections illustrating assumed hardcoat penetration and outward growth." xml:space="preserve">
+    <value>หน้าตัดก่อนและหลังเคลือบ แสดงสมมติฐานการแทรกเข้าเนื้อและการเพิ่มขนาดภายนอกของฮาร์ดอโนไดซ์</value>
+  </data>
+  <data name="Schematic, not to scale: t is total coating thickness and g is outward growth per surface. The 20 micrometre hardcoat example assumes g = 10 micrometres and excludes pretreatment removal." xml:space="preserve">
+    <value>ภาพแผนผังไม่ตามสัดส่วน: t คือความหนาเคลือบรวม และ g คือส่วนที่เพิ่มออกจากผิวแต่ละด้าน ตัวอย่างฮาร์ดอโนไดซ์ 20 ไมโครเมตรนี้สมมติให้ g = 10 ไมโครเมตร และไม่รวมเนื้อที่หายไปจากการเตรียมผิว</value>
+  </data>
+  <data name="Illustrative simplified hardcoat calculation: with a 20 µm total coating and assumed 10 µm outward growth per surface, an outside diameter grows about 20 µm and a coated bore shrinks about 20 µm. This ignores pretreatment removal and process variation; use the agreed finishing allowance for the real part." xml:space="preserve">
+    <value>ตัวอย่างคำนวณฮาร์ดโค้ตแบบย่อ: ชั้นเคลือบรวม 20 µm และสมมติว่าโตออกผิวละ 10 µm จะทำให้เส้นผ่านศูนย์กลางภายนอกเพิ่มประมาณ 20 µm และรูที่เคลือบภายในเล็กลงประมาณ 20 µm ตัวอย่างนี้ยังไม่รวมเนื้อที่ถูกกัดออกขณะเตรียมผิวและความแปรปรวน ต้องใช้ค่าเผื่อที่ตกลงสำหรับชิ้นงานจริง</value>
+  </data>
+  <data name="Aluminum Anodizers Council: coating growth and alloy effects" xml:space="preserve">
+    <value>Aluminum Anodizers Council: การโตของชั้นเคลือบและผลของโลหะผสม</value>
+  </data>
+  <data name="Aluminum Anodizers Council: finishing quotation information" xml:space="preserve">
+    <value>Aluminum Anodizers Council: ข้อมูลสำหรับขอราคางานผิว</value>
+  </data>
+  <data name="Back to the knowledge library" xml:space="preserve">
+    <value>กลับสู่คลังความรู้</value>
+  </data>
+  <data name="Industrial components with coloured anodized, blasted, brushed and polished surfaces." xml:space="preserve"><value>ชิ้นส่วนที่มีผิวอโนไดซ์สี พ่นเม็ดแก้ว ขัดลาย และขัดเงา</value></data>
+  <data name="Specify the finish, cosmetic faces and dimension-sensitive interfaces together. Illustrative image." xml:space="preserve"><value>ระบุกระบวนการผิว ผิวที่ต้องการความสวยงาม และจุดประกอบที่ไวต่อขนาดร่วมกัน ภาพประกอบ</value></data>
+  <data name="Open full-size diagram" xml:space="preserve"><value>เปิดแผนภาพขนาดเต็ม</value></data>
+</root>

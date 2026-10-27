@@ -15,9 +15,14 @@ public static class BenchmarkReferenceValidator
     {
         ArgumentNullException.ThrowIfNull(requestedTransform);
         ArgumentNullException.ThrowIfNull(referenceTransform);
-        if (!string.Equals(orientationPolicy, "fixed", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(orientationPolicy, "search", StringComparison.OrdinalIgnoreCase))
         {
             return new BenchmarkComparisonResult(true, null);
+        }
+
+        if (!string.Equals(orientationPolicy, "fixed", StringComparison.OrdinalIgnoreCase))
+        {
+            return new BenchmarkComparisonResult(false, "reference_orientation_policy_invalid");
         }
 
         if (requestedTransform.Count != 16 || referenceTransform.Count != 16)
