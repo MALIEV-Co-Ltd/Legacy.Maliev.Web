@@ -22,9 +22,14 @@ using Testcontainers.Redis;
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Real pinned Auth login, durable sessions, normal encrypted Web cookies and both member renderers.</summary>
-public sealed class AuthenticatedMemberCrawlPolicyHttpTests(MemberAuthorityFixture authority)
-    : IClassFixture<MemberAuthorityFixture>
+public sealed class AuthenticatedMemberCrawlPolicyHttpTests : IAsyncLifetime
 {
+    private readonly MemberAuthorityFixture authority = new();
+
+    public Task InitializeAsync() => authority.InitializeAsync();
+
+    public Task DisposeAsync() => authority.DisposeAsync();
+
     [Theory]
     [InlineData("en", false)]
     [InlineData("th", false)]
@@ -145,6 +150,142 @@ public sealed class AuthenticatedMemberCrawlPolicyHttpTests(MemberAuthorityFixtu
     public async Task ChildEnvironment_HostileAmbientSettingsCannotReachExecutableOrEnableDeployment() =>
         await authority.AssertChildEnvironmentGuard();
 
+    [Theory]
+    [InlineData(false, "EN", "/member?tracking=excluded", "en", "/member?culture=en")]
+    [InlineData(true, "EN", "/member?tracking=excluded", "en", "/member?culture=en")]
+    [InlineData(false, "not-a-culture", "/member?culture=en", "th", "/member")]
+    [InlineData(true, "not-a-culture", "/member?culture=en", "th", "/member")]
+    [InlineData(false, null, "/member", "th", "/member")]
+    [InlineData(true, null, "/member", "th", "/member")]
+    [InlineData(false, "en", "https://attacker.example/path", "en", "~/?culture=en")]
+    [InlineData(true, "en", "https://attacker.example/path", "en", "~/?culture=en")]
+    public async Task NormalLogin_MemberLanguagePostPreservesCultureCookieAndLocalRedirect(
+        bool active, string? culture, string returnUrl, string expectedCulture, string expectedReturn)
+    {
+        await using var parent = authority.Web(false);
+        await using var host = parent.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:MemberOverview", active.ToString()));
+        using var client = Client(host);
+        client.Timeout = TimeSpan.FromSeconds(30);
+        var lineage = await Login(host, client);
+        var form = await Form(client, "/Account/Logout?culture=en");
+        if (culture is not null) form["culture"] = culture;
+        form["returnUrl"] = returnUrl;
+
+        using var response = await client.PostAsync("/Member?handler=SetLanguage", new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        var expectedLocation = expectedReturn.StartsWith("~/", StringComparison.Ordinal)
+            ? expectedReturn[1..] : expectedReturn;
+        Assert.Equal(expectedLocation, response.Headers.Location?.OriginalString);
+        var cookies = response.Headers.GetValues("Set-Cookie").Where(value =>
+            value.StartsWith(".AspNetCore.Culture=", StringComparison.Ordinal)).ToArray();
+        var cookie = Assert.Single(cookies);
+        Assert.Contains($"c%3D{expectedCulture}%7Cuic%3D{expectedCulture}", cookie, StringComparison.Ordinal);
+        Assert.Contains("secure", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("httponly", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("samesite=lax", cookie, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(await host.Services.GetRequiredService<IAccountSessionStore>()
+            .GetAsync(lineage.WebSessionId, default));
+        await authority.AssertActive(lineage.Session.RefreshToken);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NormalLogin_MemberLanguagePostWithoutAntiforgeryIsRejected(bool active)
+    {
+        await using var parent = authority.Web(false);
+        await using var host = parent.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:MemberOverview", active.ToString()));
+        using var client = Client(host);
+        client.Timeout = TimeSpan.FromSeconds(30);
+        await Login(host, client);
+
+        using var response = await client.PostAsync("/Member?handler=SetLanguage",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["culture"] = "en",
+                ["returnUrl"] = "/member",
+            }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.False(response.Headers.TryGetValues("Set-Cookie", out var cookies)
+            && cookies.Any(value => value.StartsWith(".AspNetCore.Culture=", StringComparison.Ordinal)));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AnonymousMemberLanguagePostRequiresAuthorization(bool active)
+    {
+        await using var parent = authority.Web(false);
+        await using var host = parent.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:MemberOverview", active.ToString()));
+        using var client = Client(host);
+        client.Timeout = TimeSpan.FromSeconds(30);
+        var form = await Form(client, "/Account/Login");
+        form["culture"] = "en";
+        form["returnUrl"] = "/member";
+
+        using var response = await client.PostAsync("/Member?handler=SetLanguage", new FormUrlEncodedContent(form));
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Account/Login", response.Headers.Location?.AbsolutePath);
+        Assert.False(response.Headers.TryGetValues("Set-Cookie", out var cookies)
+            && cookies.Any(value => value.StartsWith(".AspNetCore.Culture=", StringComparison.Ordinal)));
+    }
+
+    /// <summary>Checks genuine Development serves the rendered owned stylesheet and both Font Awesome WOFF2 faces with their exact bytes.</summary>
+    /// <returns>A task completing after real Development page, CSS and font HTTP assertions.</returns>
+    [Fact]
+    public async Task DevelopmentPrintingPage_ServesOwnedFontAwesomeCssAndBothWoff2Faces()
+    {
+        await using var host = authority.Web(false);
+        using var client = Client(host);
+        Assert.Equal("Development", host.Services.GetRequiredService<IWebHostEnvironment>().EnvironmentName);
+        using var page = await client.GetAsync("/services/3d-printing?culture=en");
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        var html = await page.Content.ReadAsStringAsync();
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", html, StringComparison.Ordinal);
+        var stylesheet = Assert.Single(Regex.Matches(html,
+            @"href=""(?<href>/dist/site\.min\.css\?v=[^""]+)""", RegexOptions.CultureInvariant));
+        var stylesheetUri = new Uri(client.BaseAddress!, WebUtility.HtmlDecode(stylesheet.Groups["href"].Value));
+        Assert.Equal(client.BaseAddress!.Authority, stylesheetUri.Authority);
+        Assert.Equal(client.BaseAddress.Scheme, stylesheetUri.Scheme);
+        Assert.Equal("/dist/site.min.css", stylesheetUri.AbsolutePath);
+        Assert.StartsWith("?v=", stylesheetUri.Query, StringComparison.Ordinal);
+        using var stylesheetResponse = await client.GetAsync(stylesheetUri.PathAndQuery);
+        Assert.Equal(HttpStatusCode.OK, stylesheetResponse.StatusCode);
+        Assert.Equal("text/css", stylesheetResponse.Content.Headers.ContentType?.MediaType);
+        var stylesheetBytes = await stylesheetResponse.Content.ReadAsByteArrayAsync();
+        var expectedStylesheet = await File.ReadAllBytesAsync(Path.Combine(Root(), "Legacy.Maliev.Web", "wwwroot", "dist", "site.min.css"));
+        Assert.True(expectedStylesheet.AsSpan().SequenceEqual(stylesheetBytes), "Development must serve the owned stylesheet bytes.");
+        var css = System.Text.Encoding.UTF8.GetString(stylesheetBytes);
+        var fonts = Regex.Matches(css,
+                @"url\(""(?<path>\./assets/fa-(?:regular-400|solid-900)-[A-Z0-9]+\.woff2)""\)", RegexOptions.CultureInvariant)
+            .Select(match => match.Groups["path"].Value)
+            .Distinct(StringComparer.Ordinal).ToArray();
+        Assert.Equal(2, fonts.Length);
+        Assert.Single(fonts, path => Path.GetFileName(path).StartsWith("fa-regular-400-", StringComparison.Ordinal));
+        Assert.Single(fonts, path => Path.GetFileName(path).StartsWith("fa-solid-900-", StringComparison.Ordinal));
+        foreach (var font in fonts)
+        {
+            var fontUri = new Uri(stylesheetUri, font);
+            Assert.Equal(stylesheetUri.Authority, fontUri.Authority);
+            Assert.Equal(stylesheetUri.Scheme, fontUri.Scheme);
+            Assert.Equal("/dist/assets/" + Path.GetFileName(fontUri.AbsolutePath), fontUri.AbsolutePath);
+            using var fontResponse = await client.GetAsync(fontUri.PathAndQuery);
+            Assert.Equal(HttpStatusCode.OK, fontResponse.StatusCode);
+            Assert.Equal("font/woff2", fontResponse.Content.Headers.ContentType?.MediaType);
+            var fontBytes = await fontResponse.Content.ReadAsByteArrayAsync();
+            Assert.True(fontBytes.Length >= 4, "The owned WOFF2 response must contain its signature.");
+            Assert.True(fontBytes.AsSpan(0, 4).SequenceEqual("wOF2"u8), "The font response must be a WOFF2 payload.");
+            var expectedFont = await File.ReadAllBytesAsync(Path.Combine(Root(), "Legacy.Maliev.Web", "wwwroot", "dist", "assets", Path.GetFileName(fontUri.AbsolutePath)));
+            Assert.True(expectedFont.AsSpan().SequenceEqual(fontBytes), "Development must serve the owned Font Awesome bytes.");
+        }
+    }
+
     private async Task<Lineage> Login(WebApplicationFactory<Program> host, HttpClient client)
     {
         var form = await Form(client, "/Account/Login");
@@ -228,7 +369,7 @@ public sealed class MemberAuthorityFixture : IAsyncLifetime
     private readonly RedisContainer redis = new RedisBuilder("redis:8.4-alpine").Build();
     private readonly RSA rsa = RSA.Create(2048);
     private readonly string certificatePassword = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
-    private readonly List<Process> children = [];
+    private readonly List<MemberAuthorityChild> children = [];
     private readonly Dictionary<string, string> connections = [];
     private string certificate = "";
     private Uri origin = null!;
@@ -238,9 +379,9 @@ public sealed class MemberAuthorityFixture : IAsyncLifetime
     {
         var authDll = Environment.GetEnvironmentVariable("MALIEV_MEMBER_AUTH_DLL");
         var seedDll = Environment.GetEnvironmentVariable("MALIEV_MEMBER_AUTH_SEED_DLL");
-        Assert.True(File.Exists(authDll) && File.Exists(seedDll), "Run the mandatory private member proof preparation script before building/testing this lane.");
         try
         {
+            Assert.True(File.Exists(authDll) && File.Exists(seedDll), "Run the mandatory private member proof preparation script before building/testing this lane.");
             await postgres.StartAsync();
             await redis.StartAsync();
             var containerConnection = new NpgsqlConnectionStringBuilder(postgres.GetConnectionString()) { Pooling = false };
@@ -307,7 +448,11 @@ public sealed class MemberAuthorityFixture : IAsyncLifetime
                 await Task.Delay(100);
             }
         }
-        catch { await DisposeAsync(); throw; }
+        catch (Exception primary)
+        {
+            await MemberAuthorityCleanup.CompleteAsync(primary, [DisposeAsync]);
+            throw;
+        }
     }
 
     public WebApplicationFactory<Program> Web(bool retained) => new MemberWebFactory(origin, redis.GetConnectionString(), certificate, certificatePassword, retained);
@@ -414,7 +559,10 @@ public sealed class MemberAuthorityFixture : IAsyncLifetime
 
     private Process Child(string dll, Dictionary<string, string> environment, Dictionary<string, string>? hostileAmbient = null)
     {
-        var process = new Process { StartInfo = new ProcessStartInfo("dotnet") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true } };
+        var child = new MemberAuthorityChild();
+        children.Add(child); // Register creation custody before any start or identity observation can fail.
+        var process = child.Process;
+        process.StartInfo = new ProcessStartInfo("dotnet") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
         process.StartInfo.ArgumentList.Add(dll);
         if (hostileAmbient is not null)
             foreach (var item in hostileAmbient) process.StartInfo.Environment[item.Key] = item.Value;
@@ -428,26 +576,19 @@ public sealed class MemberAuthorityFixture : IAsyncLifetime
         foreach (var item in inheritedEssentials) process.StartInfo.Environment[item.Key] = item.Value;
         foreach (var item in environment) process.StartInfo.Environment[item.Key] = item.Value;
         process.StartInfo.Environment["LEGACY_DEPLOY_ENABLED"] = "false";
-        process.OutputDataReceived += (_, _) => { };
-        process.ErrorDataReceived += (_, _) => { };
-        Assert.True(process.Start());
-        children.Add(process);
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
+        child.Start(process.StartInfo);
         return process;
     }
 
     public async Task DisposeAsync()
     {
-        foreach (var process in children)
-        {
-            try { if (!process.HasExited) process.Kill(entireProcessTree: true); await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10)); }
-            finally { process.Dispose(); }
-        }
+        var actions = children.AsEnumerable().Reverse()
+            .Select<MemberAuthorityChild, Func<Task>>(child => () => child.DisposeAsync().AsTask()).ToList();
+        actions.Add(() => redis.DisposeAsync().AsTask());
+        actions.Add(() => postgres.DisposeAsync().AsTask());
+        actions.Add(() => { rsa.Dispose(); return Task.CompletedTask; });
+        await MemberAuthorityCleanup.CompleteAsync(null, actions);
         children.Clear();
-        await redis.DisposeAsync();
-        await postgres.DisposeAsync();
-        rsa.Dispose();
     }
 
     private sealed class MemberWebFactory(Uri auth, string redis, string certificate, string password, bool retained) : WebApplicationFactory<Program>

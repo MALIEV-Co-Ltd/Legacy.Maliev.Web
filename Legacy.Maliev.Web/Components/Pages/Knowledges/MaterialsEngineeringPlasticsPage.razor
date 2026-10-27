@@ -1,0 +1,22 @@
+@page "/knowledges/materials/engineering-plastics"
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IStringLocalizer<MaterialsEngineeringPlasticsContent> ContentLocalizer
+@inject IStringLocalizer<KnowledgeIndexPage> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = ContentLocalizer["Engineering plastics: selection and applications | MALIEV"].Value;
+    var description = ContentLocalizer["Understand POM, PA, PEEK, PTFE, PC, and ABS through moisture, heat, creep, wear, manufacturing route, and application-specific evidence."].Value;
+    var documentLinks = PublicDocumentLinksDisplayModel.Create(context);
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="documentLinks" />
+</HeadContent>
+<KnowledgeShell CurrentPage="/Materials/Engineering-Plastics" RouteOwner="blazor-static-ssr">
+    <MaterialsEngineeringPlasticsContent RouteOwner="blazor-static-ssr" />
+</KnowledgeShell>

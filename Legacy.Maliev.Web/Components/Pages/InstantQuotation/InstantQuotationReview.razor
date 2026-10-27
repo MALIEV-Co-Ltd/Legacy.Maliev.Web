@@ -34,6 +34,10 @@
                     <span data-workflow-part-number aria-label="@Localizer["Part {0}", partNumber]">@partNumber.ToString("00")</span>
                     <h4 id="instant-quote-review-part-@part.PartId">@part.DisplayFileName</h4>
                     <small>@Measurement(part.Geometry.DimensionXmm) × @Measurement(part.Geometry.DimensionYmm) × @Measurement(part.Geometry.DimensionZmm) mm</small>
+                    @if (warnings.Count > 0)
+                    {
+                        <p data-review-warning-consequence>@Localizer["Manufacturing warnings may affect the final result of this part."]</p>
+                    }
                 </div>
                 <div class="instant-quote__review-fields">
                     <div>
@@ -59,12 +63,19 @@
                     <div>
                         <label for="review-color-@part.PartId">@Localizer["Color"]</label>
                         <select id="review-color-@part.PartId" value="@part.Configuration.Color"
+                                disabled="@(part.Geometry.BodyCount > 1)"
                                 @onchange="args => OnColorChanged.InvokeAsync((part.PartId, args.Value?.ToString() ?? part.Configuration.Color))">
-                            @foreach (var color in ColorsForMaterial(part.Configuration.MaterialKey))
+                            @foreach (var color in ColorsForPart(part))
                             {
                                 <option value="@color">@Localizer[color]</option>
                             }
                         </select>
+                        @if (part.Geometry.BodyCount <= 1 && part.Configuration.MaterialKey == "PLA")
+                        {
+                            <input type="color" aria-label="@Localizer["Color"]"
+                                   value="@(part.Configuration.Color.StartsWith('#') ? part.Configuration.Color : "#000000")"
+                                   @onchange="args => OnColorChanged.InvokeAsync((part.PartId, args.Value?.ToString() ?? part.Configuration.Color))" />
+                        }
                     </div>
                     <div>
                         <label for="review-quantity-@part.PartId">@Localizer["Quantity"]</label>
@@ -99,6 +110,13 @@
                         <div><dt>@Localizer["Volume"]</dt><dd>@Measurement(part.Geometry.VolumeMm3 / 1_000) cm³</dd></div>
                         <div><dt>@Localizer["Surface area"]</dt><dd>@Measurement(part.Geometry.SurfaceAreaMm2 / 100) cm²</dd></div>
                         <div><dt>@Localizer["Min. thickness"]</dt><dd>@Measurement(part.Geometry.MinThicknessMm) mm</dd></div>
+                        @if (PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)?.Process is PrintProcess.Resin)
+                        {
+                            <div>
+                                <dt>@Localizer["Build preference"]</dt>
+                                <dd data-review-build-preference-detail>@Localizer["Smooth, highly detailed appearance for resin-suitable parts · suitability is confirmed during review"]</dd>
+                            </div>
+                        }
                     </dl>
                     @if (warnings.Count > 0)
                     {
@@ -205,6 +223,16 @@
     [Parameter]
     public EventCallback OnContinue { get; set; }
 
+    private IReadOnlyList<string> ColorsForPart(InstantQuotationWorkflowPartViewModel part)
+    {
+        if (part.Geometry.BodyCount > 1) return ["Any"];
+        var colors = ColorsForMaterial(part.Configuration.MaterialKey);
+        return PricingCatalog.IsColorSupported(part.Configuration.MaterialKey, part.Configuration.Color)
+            && !colors.Contains(part.Configuration.Color, StringComparer.Ordinal)
+                ? [.. colors, part.Configuration.Color]
+                : colors;
+    }
+
     private static string Money(double? amount) => amount is null ? "—" : $"฿{amount.Value:N2}";
 
     private static string Measurement(double amount) => amount.ToString("N2", System.Globalization.CultureInfo.CurrentCulture);
@@ -213,6 +241,16 @@
     {
         var geometry = part.Geometry;
         var warnings = new List<string>();
+        if (!IsRepricing
+            && Quote?.Parts.SingleOrDefault(line => line.PartId == part.PartId)?.PhysicalReceipt?.GeometryReconstruction is { } reconstruction
+            && reconstruction.IsValid())
+        {
+            warnings.Add(Localizer["Voxel-based estimate ({0} mm) — engineering review required",
+                reconstruction.VoxelSizeMm.ToString("0.0", System.Globalization.CultureInfo.CurrentCulture)]);
+            warnings.Add(Localizer["Pricing uses reconstructed geometry. Small features may change; the original file must be reviewed before manufacture."]);
+        }
+
+
         if (!geometry.TopologyChecked)
         {
             warnings.Add(Localizer["Detailed topology checks were skipped for this large mesh. Engineering review is required."]);

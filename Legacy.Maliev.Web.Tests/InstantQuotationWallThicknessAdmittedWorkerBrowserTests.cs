@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
@@ -26,10 +25,7 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
     {
         var transport = new BoundUploadTransport();
         await using var factory = new AdmittedWallFactory(transport);
-        var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
+        var port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
         factory.UseKestrel(port);
         using var http = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
@@ -101,7 +97,7 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
         }
         Assert.Equal(200, response?.Status);
         Assert.Contains("/instantquotation/3d-printing", page.Url, StringComparison.Ordinal);
-        Assert.Contains(culture == "th" ? "ประเมินราคาพิมพ์ 3 มิติทันที" : "Instant 3D Printing Estimate",
+        Assert.Contains(culture == "th" ? "ประเมินราคาพิมพ์ 3D ออนไลน์ | MALIEV" : "Instant 3D Printing Quote | MALIEV",
             await page.TitleAsync(), StringComparison.Ordinal);
         Assert.True(await page.Locator("#instant-quote-files").IsVisibleAsync());
         await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
@@ -126,9 +122,9 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
 
 
         await MaterialCardBrowserActions.SelectAsync(page, "ABS");
-        await page.Locator("[data-workflow-price-tier]").Last.WaitForAsync();
         try
         {
+            await page.Locator("[data-workflow-price-tier]").Last.WaitForAsync();
             await page.WaitForFunctionAsync("() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')");
         }
         catch (TimeoutException original)
@@ -222,6 +218,8 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
             @"\A\[\.WebGL-0x[0-9a-f]{1,16}\]GL Driver Message \(OpenGL, Performance, GL_CLOSE_PATH_NV, High\): GPU stall due to ReadPixels(?: \(this message will no longer repeat\))?\z",
             warning));
     }
+
+    private static int ReserveFreePort() => BrowserTestServerPort.Reserve();
 
     private static Task ScreenshotAsync(IPage page, string name)
     {

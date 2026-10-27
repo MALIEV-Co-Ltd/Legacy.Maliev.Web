@@ -67,7 +67,7 @@ internal sealed class MaterialCompletionObservation
 
         public string DescribeComparison()
         {
-            lock (gate) return $"petgPending={Math.Min(petgPending, 128)}; petgCompleted={Math.Min(petgCompleted, 128)}; petgUnavailable={Math.Min(petgUnavailable, 128)}; petgCallbackReturned={Math.Min(petgReturned, 128)}; returnedQuoteHasPetg={returnedQuoteHasPetg?.ToString() ?? "unknown"}";
+            lock (gate) return $"petgPending={Math.Min(petgPending, 128)}; petgCompleted={Math.Min(petgCompleted, 128)}; petgUnavailable={Math.Min(petgUnavailable, 128)}; petgCallbackReturned={Math.Min(petgReturned, 128)}; returnedQuoteHasPetg={returnedQuoteHasPetg?.ToString() ?? "unknown"}; comparisonCallbackInFlight={comparisonCallbackEntered > comparisonCallbackReturned + comparisonCallbackCanceled + comparisonCallbackFaulted}";
         }
 
         public void Enter(DateTimeOffset value)

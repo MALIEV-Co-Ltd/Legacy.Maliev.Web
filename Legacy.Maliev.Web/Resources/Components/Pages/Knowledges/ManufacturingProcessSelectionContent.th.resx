@@ -1,0 +1,157 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+  <data name="Choosing a manufacturing process | MALIEV" xml:space="preserve">
+    <value>เลือกกระบวนการผลิตชิ้นงาน | MALIEV</value>
+  </data>
+  <data name="Compare CNC machining, 3D printing, casting, injection molding, and sheet metal using geometry, material, quantity, inspection, and total project cost." xml:space="preserve">
+    <value>เปรียบเทียบ CNC การพิมพ์สามมิติ การหล่อ การฉีดพลาสติก และโลหะแผ่น โดยพิจารณารูปทรง วัสดุ จำนวน การตรวจสอบ และต้นทุนทั้งโครงการ</value>
+  </data>
+  <data name="Choose the process around the part" xml:space="preserve">
+    <value>เลือกกระบวนการให้เหมาะกับชิ้นงาน</value>
+  </data>
+  <data name="A process is a route to a functional part, not a quality ranking. Start with the job the component must do, then compare feasible routes against the same drawing, material requirement, delivery scope, and inspection plan." xml:space="preserve">
+    <value>กระบวนการผลิตเป็นวิธีทำให้ได้ชิ้นงานที่ใช้งานได้ ไม่ใช่การจัดอันดับคุณภาพ เริ่มจากหน้าที่ของชิ้นส่วน แล้วเปรียบเทียบวิธีที่เป็นไปได้ด้วยแบบ ข้อกำหนดวัสดุ ขอบเขตส่งมอบ และแผนตรวจสอบชุดเดียวกัน</value>
+  </data>
+  <data name="On this page" xml:space="preserve">
+    <value>เนื้อหาในหน้านี้</value>
+  </data>
+  <data name="Start with non-negotiable requirements" xml:space="preserve">
+    <value>เริ่มจากข้อกำหนดที่ยอมลดไม่ได้</value>
+  </data>
+  <data name="Match geometry to a feasible route" xml:space="preserve">
+    <value>จับคู่รูปทรงกับวิธีที่ผลิตได้</value>
+  </data>
+  <data name="Compare total cost and repeat orders" xml:space="preserve">
+    <value>เปรียบเทียบต้นทุนรวมและการสั่งซ้ำ</value>
+  </data>
+  <data name="Example: a product changes process" xml:space="preserve">
+    <value>ตัวอย่าง: ผลิตภัณฑ์เปลี่ยนกระบวนการ</value>
+  </data>
+  <data name="Send a comparable quotation package" xml:space="preserve">
+    <value>ส่งข้อมูลเสนอราคาที่เปรียบเทียบกันได้</value>
+  </data>
+  <data name="Write down loads, operating temperature, chemical exposure, mating components, cosmetic faces, and expected life. Separate must-have requirements from preferences. A prototype for checking hand clearance needs different evidence from a replacement shaft carrying a rotating load. Identify which tests the prototype must represent before choosing its material or manufacturing route." xml:space="preserve">
+    <value>ระบุแรงที่รับ อุณหภูมิใช้งาน สารเคมีที่สัมผัส ชิ้นส่วนประกอบ ผิวที่ต้องสวย และอายุใช้งาน แยกสิ่งจำเป็นออกจากความต้องการเสริม ต้นแบบสำหรับตรวจช่องว่างมือกับเพลาทดแทนที่รับแรงหมุนต้องใช้หลักฐานต่างกัน กำหนดก่อนว่าต้นแบบต้องเป็นตัวแทนการทดสอบใด จึงค่อยเลือกวัสดุและวิธีผลิต</value>
+  </data>
+  <data name="Specify the material grade and condition when they matter. A printed polymer with a familiar family name is not automatically equivalent to an injection-molded grade; likewise, cast and wrought alloys should not be substituted by name alone. Compare the actual material data and test the characteristics that determine acceptance." xml:space="preserve">
+    <value>ระบุเกรดและสภาพวัสดุเมื่อมีผลต่อการใช้งาน พอลิเมอร์พิมพ์สามมิติที่มีชื่อกลุ่มคุ้นเคยไม่ได้เทียบเท่าเกรดฉีดพลาสติกโดยอัตโนมัติ เช่นเดียวกับโลหะหล่อและโลหะขึ้นรูปที่ไม่ควรทดแทนกันด้วยชื่อเพียงอย่างเดียว เปรียบเทียบข้อมูลวัสดุจริงและทดสอบสมบัติที่ใช้ตัดสินรับงาน</value>
+  </data>
+  <data name="Source: Protolabs manufacturing process guide" xml:space="preserve">
+    <value>แหล่งข้อมูล: คู่มือกระบวนการผลิตของ Protolabs</value>
+  </data>
+  <data name="Manufacturing route comparison" xml:space="preserve">
+    <value>ตารางเปรียบเทียบวิธีผลิต</value>
+  </data>
+  <data name="Route" xml:space="preserve">
+    <value>วิธีผลิต</value>
+  </data>
+  <data name="Useful starting point" xml:space="preserve">
+    <value>จุดเริ่มต้นในการพิจารณา</value>
+  </data>
+  <data name="Questions before selection" xml:space="preserve">
+    <value>คำถามก่อนเลือก</value>
+  </data>
+  <data name="CNC machining" xml:space="preserve">
+    <value>การตัดเฉือน CNC</value>
+  </data>
+  <data name="Parts cut from stock; accessible precision interfaces and turned features." xml:space="preserve">
+    <value>ชิ้นงานตัดจากวัสดุตั้งต้น ผิวประกอบความเที่ยงตรงสูงที่เครื่องมือเข้าถึงได้ และรูปทรงงานกลึง</value>
+  </data>
+  <data name="Can cutters reach the features? How many setups and how much stock removal are needed?" xml:space="preserve">
+    <value>เครื่องมือตัดเข้าถึงหรือไม่ ต้องจับงานกี่ครั้ง และตัดเนื้อออกมากเพียงใด</value>
+  </data>
+  <data name="3D printing" xml:space="preserve">
+    <value>การพิมพ์สามมิติ</value>
+  </data>
+  <data name="Frequent design changes, complex shapes, and parts that benefit from additive geometry." xml:space="preserve">
+    <value>งานที่เปลี่ยนแบบบ่อย รูปทรงซับซ้อน และรูปทรงที่ได้ประโยชน์จากการสร้างแบบเติมเนื้อ</value>
+  </data>
+  <data name="Which technology, build direction, supports, finishing, and material properties are required?" xml:space="preserve">
+    <value>ต้องใช้เทคโนโลยี ทิศทางสร้าง ซัพพอร์ต การเก็บผิว และสมบัติวัสดุแบบใด</value>
+  </data>
+  <data name="Injection molding" xml:space="preserve">
+    <value>การฉีดพลาสติก</value>
+  </data>
+  <data name="Repeated polymer parts with a stable design and a justified tooling investment." xml:space="preserve">
+    <value>ชิ้นส่วนพอลิเมอร์ซ้ำแบบที่แบบนิ่งและคุ้มต่อการลงทุนแม่พิมพ์</value>
+  </data>
+  <data name="Can the part eject? Review draft, wall transitions, gates, and tooling changes." xml:space="preserve">
+    <value>ปลดชิ้นงานออกได้หรือไม่ ตรวจมุมถอด การเปลี่ยนความหนาผนัง ทางเข้าเนื้อพลาสติก และการแก้แม่พิมพ์</value>
+  </data>
+  <data name="Metal casting" xml:space="preserve">
+    <value>การหล่อโลหะ</value>
+  </data>
+  <data name="Near-net shapes where the chosen casting method and alloy suit the application." xml:space="preserve">
+    <value>รูปทรงใกล้สำเร็จเมื่อวิธีหล่อและโลหะผสมที่เลือกเหมาะกับงาน</value>
+  </data>
+  <data name="Which casting method? Where are machining allowances, parting lines, and soundness requirements?" xml:space="preserve">
+    <value>ใช้วิธีหล่อใด เผื่อเนื้อตัดเฉือนตรงไหน แนวประกบอยู่ที่ใด และกำหนดความสมบูรณ์เนื้อหล่ออย่างไร</value>
+  </data>
+  <data name="Sheet metal fabrication" xml:space="preserve">
+    <value>การผลิตโลหะแผ่น</value>
+  </data>
+  <data name="Covers, brackets, and enclosures developed from sheet." xml:space="preserve">
+    <value>ฝาครอบ ขายึด และกล่องที่พัฒนาจากแผ่น</value>
+  </data>
+  <data name="Are bends accessible? Check bend radius, springback, fasteners, and weld distortion." xml:space="preserve">
+    <value>เข้าถึงแนวพับได้หรือไม่ ตรวจรัศมีพับ การคืนตัว จุดยึด และการบิดตัวจากงานเชื่อม</value>
+  </data>
+  <data name="Source: Protolabs process selection and product examples" xml:space="preserve">
+    <value>แหล่งข้อมูล: การเลือกกระบวนการและตัวอย่างผลิตภัณฑ์ของ Protolabs</value>
+  </data>
+  <data name="Source: Xometry die casting explanation" xml:space="preserve">
+    <value>แหล่งข้อมูล: คำอธิบายการหล่อฉีดของ Xometry</value>
+  </data>
+  <data name="Source: Protolabs sheet metal fabrication overview" xml:space="preserve">
+    <value>แหล่งข้อมูล: ภาพรวมการผลิตโลหะแผ่นของ Protolabs</value>
+  </data>
+  <data name="Treat this table as a shortlist, not a purchase specification. Metal casting includes processes with different tooling, alloy, surface, and internal-quality implications. A route can also combine processes: cast a body and machine its bearing seats, or print a housing and machine selected interfaces. Ask which operations are included in the delivered price." xml:space="preserve">
+    <value>ใช้ตารางนี้เพื่อคัดทางเลือก ไม่ใช่ข้อกำหนดสั่งซื้อ การหล่อโลหะมีหลายวิธีซึ่งส่งผลต่อแม่พิมพ์ โลหะผสม ผิว และคุณภาพภายในต่างกัน อีกทั้งผสมกระบวนการได้ เช่น หล่อตัวเรือนแล้วตัดเฉือนบ่าแบริ่ง หรือพิมพ์ตัวเรือนแล้วตัดเฉือนผิวประกอบบางจุด ควรถามว่าราคาส่งมอบรวมขั้นตอนใดบ้าง</value>
+  </data>
+  <data name="Request separate figures for engineering, fixtures or molds, first articles, unit production, secondary operations, inspection, packaging, and delivery. Compare the first order and expected repeat orders. Tool ownership, storage, maintenance, repair, and modification terms belong in the comparison because they affect the next revision as well as the first shipment." xml:space="preserve">
+    <value>ขอแยกราคางานวิศวกรรม ฟิกซ์เจอร์หรือแม่พิมพ์ ชิ้นงานแรก การผลิตต่อชิ้น งานต่อเนื่อง การตรวจสอบ บรรจุภัณฑ์ และขนส่ง เปรียบเทียบทั้งคำสั่งซื้อแรกและการสั่งซ้ำที่คาดไว้ เงื่อนไขเจ้าของ การเก็บ บำรุง ซ่อม และแก้แม่พิมพ์ควรอยู่ในการเปรียบเทียบ เพราะมีผลต่อการแก้แบบรอบหน้าด้วย</value>
+  </data>
+  <data name="There is no universal quantity where one process becomes cheaper. Compare supplier quotations at realistic demand scenarios, including a lower-demand case. Keep the revision fixed, state batch sizes and delivery releases, and include rejected-part and rework responsibilities. A low unit price cannot compensate for buying inventory that becomes obsolete before assembly." xml:space="preserve">
+    <value>ไม่มีจำนวนตายตัวที่ทำให้กระบวนการหนึ่งถูกกว่าเสมอ เปรียบเทียบใบเสนอราคาที่ระดับความต้องการจริง รวมกรณียอดต่ำกว่าคาด ใช้แบบรุ่นเดียวกัน ระบุขนาดล็อตและรอบส่ง พร้อมตกลงความรับผิดชอบของเสียและงานแก้ ราคาต่อชิ้นต่ำไม่อาจชดเชยสต็อกที่ล้าสมัยก่อนประกอบได้</value>
+  </data>
+  <data name="Lead time includes more than machine time: material procurement, DFM approval, tooling, samples, qualification, finishing, and transport can control the schedule. Ask which event starts the quoted clock. For repeatability, agree the controlled characteristics and evidence needed across batches rather than assuming that automation alone proves consistency." xml:space="preserve">
+    <value>ระยะส่งมอบไม่ได้มีเพียงเวลาบนเครื่อง การจัดหาวัสดุ อนุมัติแบบเพื่อผลิต ทำแม่พิมพ์ ตัวอย่าง รับรองชิ้นงาน เก็บผิว และขนส่งอาจเป็นตัวกำหนดเวลา ถามให้ชัดว่าเริ่มนับจากเหตุการณ์ใด สำหรับความสม่ำเสมอ ให้ตกลงลักษณะที่ควบคุมและหลักฐานข้ามล็อต แทนการถือว่าระบบอัตโนมัติยืนยันได้เอง</value>
+  </data>
+  <data name="Protolabs reports that Epson used CNC machining for Moverio eyewear prototypes and later used injection molding for newer professional models. This is a documented example of process choice changing during product development; it does not establish a cost threshold, an interchangeable material, or a guaranteed schedule for another project." xml:space="preserve">
+    <value>Protolabs รายงานว่า Epson ใช้ CNC ทำต้นแบบแว่น Moverio และภายหลังใช้การฉีดพลาสติกกับรุ่นมืออาชีพที่ใหม่กว่า นี่เป็นตัวอย่างที่มีเอกสารยืนยันว่าการเลือกกระบวนการเปลี่ยนได้ระหว่างพัฒนาผลิตภัณฑ์ ไม่ได้ยืนยันจุดคุ้มทุน วัสดุทดแทนกันได้ หรือเวลาส่งมอบของโครงการอื่น</value>
+  </data>
+  <data name="Apply that lesson to your own decision record: state what the current build must prove, which assumptions remain open, and what would trigger a process review. A change in geometry, annual demand, material certification, or inspection scope can justify a new comparison even when the previous batch worked." xml:space="preserve">
+    <value>นำบทเรียนนี้มาเขียนบันทึกตัดสินใจของคุณเอง ระบุว่ารอบผลิตนี้ต้องพิสูจน์อะไร ยังมีสมมติฐานใด และเหตุใดจึงควรทบทวนกระบวนการ การเปลี่ยนรูปทรง ปริมาณต่อปี ใบรับรองวัสดุ หรือขอบเขตตรวจสอบอาจทำให้ต้องเปรียบเทียบใหม่ แม้ล็อตก่อนใช้งานได้</value>
+  </data>
+  <data name="Reference: Epson Moverio example in the Protolabs article" xml:space="preserve">
+    <value>อ้างอิง: ตัวอย่าง Epson Moverio ในบทความของ Protolabs</value>
+  </data>
+  <data name="Send matching CAD and drawing revisions, material and permitted alternatives, order quantity and forecast, critical interfaces, finish, inspection deliverables, and required delivery date. Invite suppliers to identify assumptions and exclusions. Record why the chosen route satisfies the requirements, and approve any design changes before releasing production files." xml:space="preserve">
+    <value>ส่ง CAD และแบบรุ่นตรงกัน วัสดุและตัวเลือกที่อนุญาต จำนวนสั่งและประมาณการ จุดประกอบสำคัญ ผิวสำเร็จ เอกสารตรวจสอบ และวันที่ต้องการ ขอให้ผู้เสนอราคาระบุสมมติฐานและข้อยกเว้น บันทึกเหตุผลที่วิธีเลือกตอบข้อกำหนด และอนุมัติการแก้แบบก่อนปล่อยไฟล์ผลิต</value>
+  </data>
+  <data name="Printed, machined and folded-sheet instrument housings illustrate different process routes." xml:space="preserve"><value>ตัวเรือนอุปกรณ์จากงานพิมพ์ กัด และพับแผ่นโลหะ แสดงแนวทางผลิตที่ต่างกัน</value></data>
+  <data name="A similar function can lead to different construction, tooling and material decisions. Illustrative image." xml:space="preserve"><value>หน้าที่ใช้งานที่คล้ายกันอาจนำไปสู่โครงสร้าง เครื่องมือผลิต และวัสดุที่ต่างกัน ภาพประกอบ</value></data>
+  <data name="Cross-sections show removing material from a pocket, depositing successive layers, and bending a sheet into an angle." xml:space="preserve"><value>ภาพตัดแสดงการกัดเนื้อวัสดุออกเพื่อทำโพ็กเก็ต การเติมชั้นวัสดุ และการพับแผ่นให้เป็นมุม</value></data>
+  <data name="1: subtractive machining removes material from stock. 2: additive manufacturing builds successive layers. 3: sheet forming changes the shape of a sheet. These are process principles, not interchangeable routes for every geometry or material." xml:space="preserve"><value>1: งานตัดเฉือนเอาเนื้อวัสดุออกจากชิ้นตั้งต้น 2: การผลิตแบบเติมเนื้อสร้างวัสดุทีละชั้น 3: การขึ้นรูปแผ่นเปลี่ยนรูปทรงของแผ่น เป็นหลักการของกระบวนการ ไม่ได้หมายความว่าทุกรูปทรงหรือวัสดุใช้แทนกันได้</value></data>
+  <data name="Open full-size diagram" xml:space="preserve"><value>เปิดแผนภาพขนาดเต็ม</value></data>
+  <data name="A vertical end mill cuts an aluminum pocket while a vise grips the billet." xml:space="preserve"><value>ดอกเอ็นมิลแนวตั้งกัดโพ็กเก็ตบนชิ้นอะลูมิเนียมที่จับยึดด้วยปากกา</value></data>
+  <data name="The rotating cutter removes material from a clamped billet to form a pocket. Chips are removed stock; the surrounding walls and floor remain part of the original block. A round cutter leaves radii at the internal corners." xml:space="preserve"><value>ดอกตัดที่หมุนอยู่เอาเนื้อวัสดุออกจากชิ้นตั้งต้นที่จับยึดไว้เพื่อสร้างโพ็กเก็ต เศษตัดคือเนื้อที่ถูกเอาออก ส่วนผนังและพื้นยังเป็นเนื้อเดียวกับชิ้นตั้งต้น ดอกตัดทรงกลมทำให้มุมในเหลือรัศมี</value></data>
+  <data name="An FDM nozzle deposits a blue bead onto the supported top layer of a printed tray." xml:space="preserve"><value>หัวฉีด FDM วางแนวพลาสติกสีน้ำเงินบนชั้นบนสุดของถาด โดยมีชั้นเดิมรองรับอยู่ด้านล่าง</value></data>
+  <data name="FDM material extrusion" xml:space="preserve"><value>พิมพ์ FDM แบบอัดรีดวัสดุ</value></data>
+  <data name="The heated nozzle deposits polymer onto the preceding layer. Repeated paths build the tray walls upward from the build plate. FDM is one additive process; resin and powder processes form layers differently." xml:space="preserve"><value>หัวฉีดที่ให้ความร้อนวางพอลิเมอร์ลงบนชั้นก่อนหน้า แนวพิมพ์ที่ซ้อนกันสร้างผนังถาดขึ้นจากฐานพิมพ์ FDM เป็นกระบวนการเติมเนื้อแบบหนึ่ง ส่วนงานเรซินและงานผงวัสดุสร้างแต่ละชั้นด้วยวิธีต่างกัน</value></data>
+  <data name="A press-brake punch bends a continuous blue sheet over the two shoulders of a V-die." xml:space="preserve"><value>พันช์ของเครื่องพับกดแผ่นสีน้ำเงินที่ต่อเนื่องเป็นชิ้นเดียว โดยแผ่นวางบนบ่าทั้งสองด้านของแม่พิมพ์ตัววี</value></data>
+  <data name="Press-brake air bending" xml:space="preserve"><value>พับแผ่นด้วยเครื่องพับแบบ Air bending</value></data>
+  <data name="The punch pushes the sheet between two die shoulders. The sheet contacts the punch and those shoulders while gaps remain above the die walls. This operation changes the sheet shape rather than cutting away material; punch travel helps determine the bend angle." xml:space="preserve"><value>พันช์กดแผ่นลงระหว่างบ่าทั้งสองของแม่พิมพ์ แผ่นสัมผัสพันช์และบ่าแม่พิมพ์ โดยยังมีช่องว่างระหว่างแผ่นกับผนังร่อง กระบวนการนี้เปลี่ยนรูปทรงของแผ่นแทนการตัดเนื้อวัสดุออก ระยะกดของพันช์เป็นปัจจัยหนึ่งที่กำหนดมุมพับ</value></data>
+</root>

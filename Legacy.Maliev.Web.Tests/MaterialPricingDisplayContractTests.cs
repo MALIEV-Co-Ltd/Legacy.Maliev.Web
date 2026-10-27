@@ -86,21 +86,33 @@ public sealed class MaterialPricingDisplayContractTests
         var secondRun = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 3, default);
         try
         {
-            Assert.False(second.Entered.Task.IsCompleted);
-            Assert.Same(firstDisplay, fixture.Workflow.MaterialPriceDisplay);
-            Assert.Equal(2, Assert.Single(fixture.Workflow.Parts).Configuration.Quantity);
+            await second.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await firstRun.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.True(first.ConsumerToken.IsCancellationRequested);
+            Assert.False(first.Release.Task.IsCompleted,
+                "The current configuration must not wait for the obsolete dependency to be released.");
+            var current = fixture.Workflow.MaterialPriceDisplay;
+            Assert.True(current.Generation > firstDisplay.Generation);
+            Assert.Equal(3, Assert.Single(fixture.Workflow.Parts).Configuration.Quantity);
             var accepted = (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!;
-            Assert.Equal(2, Assert.Single(accepted.Parts).Configuration.Quantity);
+            Assert.Equal(3, Assert.Single(accepted.Parts).Configuration.Quantity);
             await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
                 fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 0, default));
             Assert.Equal(accepted.UpdatedAt, (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!.UpdatedAt);
-            first.Release.TrySetResult(); await firstRun;
-            await second.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-            Assert.True(fixture.Workflow.MaterialPriceDisplay.Generation > firstDisplay.Generation);
+            await first.Observer!(Assert.Single(first.Frames,
+                frame => frame.MaterialKey == "M68" && frame.Status == InstantQuotationMaterialPricingStatus.Completed), default);
+            Assert.Same(current, fixture.Workflow.MaterialPriceDisplay);
+            Assert.Null(fixture.Workflow.OrderQuote);
+            Assert.Null((await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!.QuoteAuthorization);
+            first.Release.TrySetResult();
             Assert.Equal(3, Assert.Single(fixture.Workflow.Parts).Configuration.Quantity);
             Assert.Equal(3, Assert.Single((await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!.Parts).Configuration.Quantity);
         }
-        finally { first.Release.TrySetResult(); second.Release.TrySetResult(); await Task.WhenAll(firstRun, secondRun); }
+        finally
+        {
+            first.Release.TrySetResult(); second.Release.TrySetResult();
+            await Task.WhenAll(firstRun, secondRun).WaitAsync(TimeSpan.FromSeconds(5));
+        }
     }
 
     [Fact]
@@ -325,9 +337,11 @@ public sealed class MaterialPricingDisplayContractTests
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         Task? nested = null;
         CancellationToken token = default;
+        var invoked = 0;
         using var subscription = fixture.Workflow.SubscribeMaterialPriceDisplay((snapshot, callbackToken) =>
         {
-            if (!snapshot.Entries.Any(row => row.Status == InstantQuotationMaterialPricingStatus.Completed)) return ValueTask.CompletedTask;
+            if (!snapshot.Entries.Any(row => row.Status == InstantQuotationMaterialPricingStatus.Completed)
+                || Interlocked.Exchange(ref invoked, 1) != 0) return ValueTask.CompletedTask;
             token = callbackToken;
             nested = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 3, callbackToken);
             entered.TrySetResult();
@@ -344,6 +358,92 @@ public sealed class MaterialPricingDisplayContractTests
         var stored = (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!;
         Assert.Equal(2, Assert.Single(stored.Parts).Configuration.Quantity);
         Assert.Null(stored.QuoteAuthorization);
+    }
+
+    [Fact]
+    public async Task ReentrantMutator_RejectsObsoleteOriginBeforeLinkedCancellationPropagates()
+    {
+        var clock = new ManualClock();
+        await using var fixture = await Fixture.CreateAsync(clock: clock);
+        var pending = fixture.Pricing.Arm();
+        using var releaseCancellation = new ManualResetEventSlim();
+        using var relay = new CancellationTokenSource();
+        var blockerEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var blockerExited = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var nestedStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        CancellationTokenRegistration registration = default;
+        CancellationToken callbackToken = default;
+        Task? nested = null;
+        var invoked = 0;
+        var relayWired = 0;
+        pending.MapObserverToken = producerToken =>
+        {
+            if (Interlocked.Exchange(ref relayWired, 1) == 0)
+            {
+                registration = producerToken.Register(() =>
+                {
+                    blockerEntered.TrySetResult();
+                    try
+                    {
+                        releaseCancellation.Wait();
+                        relay.Cancel();
+                    }
+                    finally { blockerExited.TrySetResult(); }
+                });
+            }
+            return relay.Token;
+        };
+        using var subscription = fixture.Workflow.SubscribeMaterialPriceDisplay((snapshot, token) =>
+        {
+            if (!snapshot.Entries.Any(row => row.Status == InstantQuotationMaterialPricingStatus.Completed)
+                || Interlocked.Exchange(ref invoked, 1) != 0) return ValueTask.CompletedTask;
+            callbackToken = token;
+            nested = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 3, token);
+            nestedStarted.TrySetResult();
+            return new ValueTask(nested);
+        });
+        var run = fixture.Workflow.UpdateConfigurationAsync(fixture.PartId, "M68", "White", 2, default);
+        Exception? primary = null;
+        try
+        {
+            await nestedStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await blockerEntered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.True(pending.ConsumerToken.IsCancellationRequested);
+            Assert.Equal(relay.Token, callbackToken);
+            Assert.False(callbackToken.IsCancellationRequested);
+            var error = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => nested!.WaitAsync(TimeSpan.FromSeconds(5)));
+            Assert.Equal(callbackToken, error.CancellationToken);
+            Assert.False(callbackToken.IsCancellationRequested);
+            // The outer operation drains CancelAsync after releasing stateGate.
+            releaseCancellation.Set();
+            await blockerExited.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await run.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Null(fixture.Workflow.OrderQuote);
+            Assert.Empty(fixture.Workflow.MaterialPriceDisplay.Entries);
+            var stored = (await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!;
+            Assert.Equal(2, Assert.Single(stored.Parts).Configuration.Quantity);
+            Assert.Null(stored.QuoteAuthorization);
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            releaseCancellation.Set();
+            fixture.Pricing.ReleaseAll();
+            clock.Advance(TimeSpan.FromSeconds(30));
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                async () =>
+                {
+                    if (blockerEntered.Task.IsCompleted)
+                        await blockerExited.Task.WaitAsync(TimeSpan.FromSeconds(5));
+                },
+                () => registration.DisposeAsync(),
+                async () =>
+                {
+                    var drain = Task.WhenAll(nested is null ? new[] { run } : new[] { run, nested! });
+                    await drain.ContinueWith(static task => { _ = task.Exception; }, CancellationToken.None,
+                        TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default).WaitAsync(TimeSpan.FromSeconds(5));
+                });
+        }
     }
 
     [Fact]
@@ -465,6 +565,8 @@ public sealed class MaterialPricingDisplayContractTests
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public bool ObserverRoute { get; set; }
+        public CancellationToken ConsumerToken { get; set; }
+        public Func<CancellationToken, CancellationToken>? MapObserverToken { get; set; }
         public List<InstantQuotationMaterialPricingProgress> Frames { get; } = [];
         public InstantQuotationMaterialPriceDisplaySnapshot Snapshot { get; set; } = new(1);
         public Func<InstantQuotationMaterialPricingProgress, InstantQuotationMaterialPricingProgress?>? InvalidFrame { get; set; }
@@ -494,17 +596,22 @@ public sealed class MaterialPricingDisplayContractTests
             Func<InstantQuotationMaterialPricingProgress, CancellationToken, ValueTask> observer, CancellationToken token)
         {
             pending.TryDequeue(out var next);
-            if (next is not null) next.Observer = observer;
+            if (next is not null)
+            {
+                next.Observer = observer;
+                next.ConsumerToken = token;
+            }
             bool paused = false;
             bool injected = false;
             return inner.QuoteAsync(session, owner, includeComparisons, async (frame, callbackToken) =>
             {
+                var forwardedToken = next?.MapObserverToken?.Invoke(callbackToken) ?? callbackToken;
                 if (!injected && next?.InvalidFrame is { } invalid)
                 {
                     injected = true;
-                    await observer(invalid(frame)!, callbackToken);
+                    await observer(invalid(frame)!, forwardedToken);
                 }
-                await observer(frame, callbackToken);
+                await observer(frame, forwardedToken);
                 if (next is not null)
                 {
                     next.Frames.Add(frame);

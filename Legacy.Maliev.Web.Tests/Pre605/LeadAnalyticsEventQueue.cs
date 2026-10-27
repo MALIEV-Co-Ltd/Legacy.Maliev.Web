@@ -1,0 +1,449 @@
+// Frozen pre-605 compatibility oracle.
+// Source: Legacy.Maliev.Web at 5cd28c1d586846530cdd9cd1ba8342715442d464,
+// Legacy.Maliev.Web/Pages/Shared/LeadAnalyticsEventQueue.cs, blob ecb9c1c309c8b3e6ef2cb9bfbc2a724b284986e9.
+// Only the namespace and an import for the unchanged attribution dependency are adapted.
+// <copyright file="LeadAnalyticsEventQueue.cs" company="Maliev Company Limited">
+// Copyright (c) Maliev Company Limited. All rights reserved.
+// </copyright>
+
+namespace Legacy.Maliev.Web.Tests.Pre605
+{
+    using Legacy.Maliev.Web.Pages.Shared;
+    using Microsoft.AspNetCore.Mvc.ViewFeatures;
+    using System;
+    using System.Collections.Generic;
+    using System.Globalization;
+    using System.Text.Json;
+    using System.Text.Json.Serialization;
+
+    /// <summary>
+    /// Queues persisted public-lead events for one-time rendering after post/redirect/get.
+    /// </summary>
+    public static class LeadAnalyticsEventQueue
+    {
+        private const string TempDataKey = "Maliev.LeadAnalyticsEvent";
+
+        /// <summary>
+        /// Attempts to queue a persisted contact-message event without allowing analytics failures to escape.
+        /// </summary>
+        /// <param name="tempData">The request TempData dictionary.</param>
+        /// <param name="messageId">The persisted message identifier.</param>
+        /// <param name="failure">The validation, serialization, or TempData failure, when unsuccessful.</param>
+        /// <returns><see langword="true" /> when the event was queued.</returns>
+        internal static bool TryQueueContactMessage(ITempDataDictionary tempData, int messageId, out Exception? failure)
+        {
+            try
+            {
+                return TryQueue(
+                    tempData,
+                    "contact",
+                    "general_contact",
+                    CreateTransactionId("message", messageId),
+                    false,
+                    null,
+                    null,
+                    out failure);
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to queue a persisted manual quotation event without allowing analytics failures to escape.
+        /// </summary>
+        /// <param name="tempData">The request TempData dictionary.</param>
+        /// <param name="transactionId">The API-issued quotation-request transaction identifier.</param>
+        /// <param name="service">The controlled MALIEV service context.</param>
+        /// <param name="hasFiles">Whether the submitted request included files.</param>
+        /// <param name="fileUploadCompleted">Whether every submitted file was stored and linked.</param>
+        /// <param name="failure">The validation, serialization, or TempData failure, when unsuccessful.</param>
+        /// <returns><see langword="true" /> when the event was queued.</returns>
+        internal static bool TryQueueManualQuotation(
+            ITempDataDictionary tempData,
+            string transactionId,
+            bool hasFiles,
+            string requestedItem,
+            string journeyId,
+            out Exception? failure)
+        {
+            if (!Guid.TryParse(journeyId, out _))
+            {
+                failure = new ArgumentException("The manual-quotation journey identifier must be a GUID.", nameof(journeyId));
+                return false;
+            }
+
+            if (!IsValidRequestTransactionId(transactionId))
+            {
+                failure = new ArgumentException("The quotation transaction identifier must be an API-owned request-{id} value.", nameof(transactionId));
+                return false;
+            }
+
+            return TryQueue(
+                tempData,
+                "manual_quote",
+                ResolveManualQuotationService(requestedItem),
+                transactionId,
+                hasFiles,
+                null,
+                journeyId,
+                out failure);
+        }
+
+        /// <summary>Attempts to queue a manual quotation with validated service-finder attribution.</summary>
+        internal static bool TryQueueManualQuotationWithFinder(
+            ITempDataDictionary tempData,
+            string transactionId,
+            bool hasFiles,
+            string requestedItem,
+            string journeyId,
+            ServiceFinderAttribution attribution,
+            out Exception? failure)
+        {
+            if (attribution is null)
+            {
+                failure = new ArgumentNullException(nameof(attribution));
+                return false;
+            }
+
+            if (!Guid.TryParse(journeyId, out _))
+            {
+                failure = new ArgumentException("The manual-quotation journey identifier must be a GUID.", nameof(journeyId));
+                return false;
+            }
+
+            if (!IsValidRequestTransactionId(transactionId))
+            {
+                failure = new ArgumentException("The quotation transaction identifier must be an API-owned request-{id} value.", nameof(transactionId));
+                return false;
+            }
+
+            return TryQueue(
+                tempData,
+                "manual_quote",
+                ResolveManualQuotationService(requestedItem),
+                transactionId,
+                hasFiles,
+                attribution,
+                journeyId,
+                out failure);
+        }
+
+        private static string ResolveManualQuotationService(string requestedItem) =>
+            requestedItem?.Trim().ToLowerInvariant() switch
+            {
+                "3d-printing" or "3d_printing" => "3d_printing",
+                "3d-scanning" or "3d_scanning" => "3d_scanning",
+                "cnc-machining" or "cnc_machining" => "cnc_machining",
+                _ => "custom_manufacturing",
+            };
+
+        /// <summary>Attempts to queue the source-compatible instant quotation conversion contract.</summary>
+        internal static bool TryQueueInstantQuotation(
+            ITempDataDictionary tempData,
+            string transactionId,
+            bool hasFiles,
+            string journeyId,
+            out Exception? failure)
+        {
+            if (!Guid.TryParse(journeyId, out _))
+            {
+                failure = new ArgumentException("The instant-quotation journey identifier must be a GUID.", nameof(journeyId));
+                return false;
+            }
+
+            if (!IsValidRequestTransactionId(transactionId))
+            {
+                failure = new ArgumentException("The quotation transaction identifier must be an API-owned request-{id} value.", nameof(transactionId));
+                return false;
+            }
+
+            return TryQueue(
+                tempData,
+                "instant_3d_quote",
+                "3d_printing",
+                transactionId,
+                hasFiles,
+                null,
+                journeyId,
+                out failure);
+        }
+
+        /// <summary>Queues the persisted instant CNC lead with its API-owned request transaction.</summary>
+        internal static bool TryQueueInstantCncQuotation(
+            ITempDataDictionary tempData,
+            string transactionId,
+            bool hasFiles,
+            string journeyId,
+            out Exception? failure)
+        {
+            if (!Guid.TryParse(journeyId, out _))
+            {
+                failure = new ArgumentException("The instant-quotation journey identifier must be a GUID.", nameof(journeyId));
+                return false;
+            }
+
+            if (!IsValidRequestTransactionId(transactionId))
+            {
+                failure = new ArgumentException("The quotation transaction identifier must be an API-owned request-{id} value.", nameof(transactionId));
+                return false;
+            }
+
+            return TryQueue(
+                tempData,
+                "instant_cnc_quote",
+                "cnc_machining",
+                transactionId,
+                hasFiles,
+                null,
+                journeyId,
+                out failure);
+        }
+
+        /// <summary>
+        /// Removes and returns one valid event from TempData.
+        /// </summary>
+        /// <param name="tempData">The request TempData dictionary.</param>
+        /// <param name="leadEvent">The validated event, when present.</param>
+        /// <returns><see langword="true" /> when a valid event was consumed.</returns>
+        public static bool TryConsume(ITempDataDictionary tempData, out LeadAnalyticsEvent? leadEvent)
+        {
+            ArgumentNullException.ThrowIfNull(tempData);
+
+            leadEvent = null;
+            if (!tempData.TryGetValue(TempDataKey, out object? value))
+            {
+                return false;
+            }
+
+            tempData.Remove(TempDataKey);
+            if (value is not string serializedEvent)
+            {
+                return false;
+            }
+
+            try
+            {
+                LeadAnalyticsEvent? candidate = JsonSerializer.Deserialize<LeadAnalyticsEvent>(serializedEvent);
+                if (candidate == null || !candidate.IsAllowed())
+                {
+                    return false;
+                }
+
+                leadEvent = candidate;
+                return true;
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+        }
+
+        private static void Queue(ITempDataDictionary tempData, LeadAnalyticsEvent leadEvent)
+        {
+            ArgumentNullException.ThrowIfNull(tempData);
+            tempData[TempDataKey] = JsonSerializer.Serialize(leadEvent);
+        }
+
+        private static bool TryQueue(
+            ITempDataDictionary tempData,
+            string leadType,
+            string service,
+            string transactionId,
+            bool hasFiles,
+            ServiceFinderAttribution? attribution,
+            string? journeyId,
+            out Exception? failure)
+        {
+            try
+            {
+                Queue(
+                    tempData,
+                    new LeadAnalyticsEvent(
+                        leadType,
+                        service,
+                        transactionId,
+                        hasFiles,
+                        attribution?.Intent,
+                        attribution?.FinderPathValue,
+                        journeyId));
+                failure = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                failure = ex;
+                return false;
+            }
+        }
+
+        private static bool IsValidRequestTransactionId(string? transactionId)
+        {
+            const string Prefix = "request-";
+            return transactionId is not null
+                && transactionId.StartsWith(Prefix, StringComparison.Ordinal)
+                && int.TryParse(transactionId.AsSpan(Prefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out var requestId)
+                && requestId > 0;
+        }
+
+        private static string CreateTransactionId(string prefix, int persistedId)
+        {
+            if (persistedId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(persistedId), "A persisted lead identifier must be positive.");
+            }
+
+            return string.Create(CultureInfo.InvariantCulture, $"{prefix}-{persistedId}");
+        }
+    }
+
+    /// <summary>
+    /// Defines the complete non-PII wire shape exposed to the data layer.
+    /// </summary>
+    public sealed class LeadAnalyticsEvent
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LeadAnalyticsEvent" /> class.
+        /// </summary>
+        /// <param name="leadType">The controlled lead type.</param>
+        /// <param name="service">The controlled MALIEV service.</param>
+        /// <param name="transactionId">The persisted-record transaction identifier.</param>
+        /// <param name="hasFiles">Whether the lead included files.</param>
+        /// <param name="intent">The optional stable service-finder intent.</param>
+        /// <param name="finderPath">The optional stable service-finder path.</param>
+        /// <param name="journeyId">The optional non-PII funnel journey identifier.</param>
+        [JsonConstructor]
+        public LeadAnalyticsEvent(
+            string leadType,
+            string service,
+            string transactionId,
+            bool hasFiles,
+            string? intent,
+            string? finderPath,
+            string? journeyId)
+        {
+            this.LeadType = leadType;
+            this.Service = service;
+            this.TransactionId = transactionId;
+            this.HasFiles = hasFiles;
+            this.Intent = intent;
+            this.FinderPath = finderPath;
+            this.JourneyId = journeyId;
+        }
+
+        /// <summary>
+        /// Gets the application-owned event name.
+        /// </summary>
+        [JsonPropertyName("event")]
+        public string Event { get; } = "maliev_lead_submitted";
+
+        /// <summary>
+        /// Gets the controlled lead type.
+        /// </summary>
+        [JsonPropertyName("lead_type")]
+        public string LeadType { get; }
+
+        /// <summary>
+        /// Gets the controlled MALIEV service.
+        /// </summary>
+        [JsonPropertyName("service")]
+        public string Service { get; }
+
+        /// <summary>
+        /// Gets the persisted-record transaction identifier.
+        /// </summary>
+        [JsonPropertyName("transaction_id")]
+        public string TransactionId { get; }
+
+        /// <summary>
+        /// Gets the controlled persistence status.
+        /// </summary>
+        [JsonPropertyName("lead_status")]
+        public string LeadStatus { get; } = "persisted";
+
+        /// <summary>
+        /// Gets a value indicating whether the lead included files.
+        /// </summary>
+        [JsonPropertyName("has_files")]
+        public bool HasFiles { get; }
+
+        /// <summary>
+        /// Gets the optional stable service-finder intent.
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [JsonPropertyName("intent")]
+        public string? Intent { get; }
+
+        /// <summary>Gets the optional ordered service-finder path.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [JsonPropertyName("finder_path")]
+        public string? FinderPath { get; }
+
+        /// <summary>Gets the optional non-PII funnel journey identifier.</summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [JsonPropertyName("journey_id")]
+        public string? JourneyId { get; }
+
+        /// <summary>Builds the GA4 conversion projection from the persisted lead identity.</summary>
+        public object BuildGenerateLeadConversionEvent(string eventName = "generate_lead", string currency = "THB", decimal? value = null)
+        {
+            var payload = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["event"] = eventName,
+                ["lead_type"] = this.LeadType,
+                ["service"] = this.Service,
+                ["lead_status"] = this.LeadStatus,
+                ["transaction_id"] = this.TransactionId,
+                ["has_files"] = this.HasFiles,
+            };
+            if (!string.IsNullOrWhiteSpace(currency)) payload["currency"] = currency;
+            if (value.HasValue) payload["value"] = value.Value;
+            if (!string.IsNullOrWhiteSpace(this.Intent)) payload["intent"] = this.Intent;
+            if (!string.IsNullOrWhiteSpace(this.FinderPath)) payload["finder_path"] = this.FinderPath;
+            if (!string.IsNullOrWhiteSpace(this.JourneyId)) payload["journey_id"] = this.JourneyId;
+            return payload;
+        }
+
+        internal bool IsAllowed()
+        {
+            if (!string.Equals(this.Event, "maliev_lead_submitted", StringComparison.Ordinal)
+                || !string.Equals(this.LeadStatus, "persisted", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            return (string.Equals(this.LeadType, "contact", StringComparison.Ordinal)
+                    && string.Equals(this.Service, "general_contact", StringComparison.Ordinal)
+                    && HasPositiveId(this.TransactionId, "message"))
+                || (string.Equals(this.LeadType, "manual_quote", StringComparison.Ordinal)
+                    && IsAllowedManualQuotationService(this.Service)
+                    && HasPositiveId(this.TransactionId, "request")
+                    && ServiceFinderAttribution.IsAllowedLeadValues(this.Intent, this.FinderPath))
+                || (string.Equals(this.LeadType, "instant_3d_quote", StringComparison.Ordinal)
+                    && string.Equals(this.Service, "3d_printing", StringComparison.Ordinal)
+                    && HasPositiveId(this.TransactionId, "request")
+                    && (this.JourneyId is null || Guid.TryParse(this.JourneyId, out _)))
+                || (string.Equals(this.LeadType, "instant_cnc_quote", StringComparison.Ordinal)
+                    && string.Equals(this.Service, "cnc_machining", StringComparison.Ordinal)
+                    && HasPositiveId(this.TransactionId, "request")
+                    && (this.JourneyId is null || Guid.TryParse(this.JourneyId, out _)));
+        }
+
+        private static bool IsAllowedManualQuotationService(string service) =>
+            service is "3d_printing"
+                or "3d_scanning"
+                or "cnc_machining"
+                or "custom_manufacturing";
+
+        private static bool HasPositiveId(string transactionId, string prefix)
+        {
+            string expectedPrefix = prefix + "-";
+            return transactionId != null
+                && transactionId.StartsWith(expectedPrefix, StringComparison.Ordinal)
+                && int.TryParse(transactionId.AsSpan(expectedPrefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out int persistedId)
+                && persistedId > 0;
+        }
+    }
+}

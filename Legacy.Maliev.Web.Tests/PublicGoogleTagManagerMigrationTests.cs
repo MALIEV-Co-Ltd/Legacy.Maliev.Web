@@ -1,4 +1,5 @@
 using System.Net;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Components.Analytics;
@@ -47,6 +48,19 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
         Assert.True(File.Exists(Path.Combine(web, "Components", "Analytics", "PublicGoogleTagManagerDisplayModel.cs")));
         Assert.False(File.Exists(Path.Combine(web, "Pages", "Shared", "_GoogleTagManagerPartial.cshtml")));
         Assert.False(File.Exists(Path.Combine(web, "Pages", "Shared", "_GoogleTagManagerBodyPartial.cshtml")));
+
+        var webAssembly = typeof(Program).Assembly;
+        var queueType = webAssembly.GetType("Legacy.Maliev.Web.Pages.Shared.LeadAnalyticsEventQueue");
+        var eventType = webAssembly.GetType("Legacy.Maliev.Web.Pages.Shared.LeadAnalyticsEvent");
+
+        Assert.NotNull(queueType);
+        Assert.NotNull(eventType);
+        Assert.True(queueType.IsPublic);
+        Assert.True(eventType.IsPublic);
+        Assert.NotNull(queueType.GetMethod("TryConsume", BindingFlags.Public | BindingFlags.Static));
+        Assert.Null(queueType.GetMethod("TryQueueContactMessage", BindingFlags.Public | BindingFlags.Static));
+        Assert.Null(queueType.GetMethod("TryQueueManualQuotation", BindingFlags.Public | BindingFlags.Static));
+        Assert.Null(queueType.GetMethod("TryQueueInstantQuotation", BindingFlags.Public | BindingFlags.Static));
     }
 
     [Fact]
@@ -119,6 +133,46 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
         Assert.DoesNotContain("email", model.QueuedEventScript, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void QueuedContact_RendersOnlyTheThreeKeyDiagnostic()
+    {
+        var contact = new LeadAnalyticsEvent(
+            "contact", "general_contact", "message-42",
+            hasFiles: false, intent: null, finderPath: null, journeyId: null);
+        var provider = new PreloadedTempDataProvider(new Dictionary<string, object>
+        {
+            ["Maliev.LeadAnalyticsEvent"] = JsonSerializer.Serialize(contact)
+        });
+        var context = new DefaultHttpContext();
+        var tempDataFactory = new TempDataDictionaryFactory(provider);
+
+        var model = PublicGoogleTagManagerDisplayModel.Create(context, tempDataFactory);
+
+        Assert.Equal(
+            "window.malievAnalytics.emit({\"event\":\"maliev_contact_submitted\",\"service\":\"general_contact\",\"submission_status\":\"persisted\"});",
+            model.QueuedEventScript);
+        Assert.DoesNotContain("generate_lead", model.QueuedEventScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("maliev_lead_submitted", model.QueuedEventScript, StringComparison.Ordinal);
+        Assert.DoesNotContain("message-42", model.QueuedEventScript, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void QueuedContact_SaveFailureSuppressesDiagnosticWithoutBreakingPage()
+    {
+        var contact = new LeadAnalyticsEvent(
+            "contact", "general_contact", "message-42",
+            hasFiles: false, intent: null, finderPath: null, journeyId: null);
+        var provider = new PreloadedTempDataProvider(new Dictionary<string, object>
+        {
+            ["Maliev.LeadAnalyticsEvent"] = JsonSerializer.Serialize(contact)
+        }, throwOnSave: true);
+
+        var model = PublicGoogleTagManagerDisplayModel.Create(
+            new DefaultHttpContext(), new TempDataDictionaryFactory(provider));
+
+        Assert.Empty(model.QueuedEventScript);
+    }
+
     [Theory]
     [InlineData("accepted")]
     [InlineData("declined")]
@@ -162,6 +216,73 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
             new TempDataDictionaryFactory(provider));
 
         Assert.Empty(model.QueuedEventScript);
+    }
+
+    /// <summary>The shared model discloses only consented authenticated identity, independently of browser-supplied identifiers.</summary>
+    /// <param name="consent">Whether the server tracking feature grants consent.</param>
+    /// <param name="authenticated">Whether the server principal is authenticated.</param>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void SharedModel_IdentityRequiresServerAuthenticationAndConsent(bool consent, bool authenticated)
+    {
+        var context = new DefaultHttpContext();
+        context.Features.Set<Microsoft.AspNetCore.Http.Features.ITrackingConsentFeature>(new ConsentFeature(consent));
+        context.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+            [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "customer:1"),
+             new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Email, "private@example.test")],
+            authenticated ? "test" : null));
+        context.Request.Headers["X-Customer-Id"] = "customer:999";
+        context.Request.QueryString = new QueryString("?user_id=browser-owned&access_token=never-emitted");
+        var model = PublicGoogleTagManagerDisplayModel.Create(
+            context, new TempDataDictionaryFactory(new PreloadedTempDataProvider(new Dictionary<string, object>())));
+
+        Assert.Equal(consent, model.CanTrack);
+        Assert.Equal(consent ? "granted" : "denied", model.ConsentState);
+        if (consent && authenticated)
+        {
+            using var document = JsonDocument.Parse(model.UserIdConfigurationJson);
+            var property = Assert.Single(document.RootElement.EnumerateObject());
+            Assert.Equal("user_id", property.Name);
+            Assert.Equal("customer:1", property.Value.GetString());
+        }
+        else
+        {
+            Assert.Empty(model.UserIdConfigurationJson);
+        }
+
+        Assert.DoesNotContain("private@example.test", model.UserIdConfigurationJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("customer:999", model.UserIdConfigurationJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("browser-owned", model.UserIdConfigurationJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("never-emitted", model.UserIdConfigurationJson, StringComparison.Ordinal);
+    }
+
+    /// <summary>Missing tracking features never make authenticated identity eligible.</summary>
+    [Fact]
+    public void SharedModel_MissingConsentFeatureWithholdsAuthenticatedIdentity()
+    {
+        var context = new DefaultHttpContext
+        {
+            User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+                [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "customer:1")], "test")),
+        };
+        var model = PublicGoogleTagManagerDisplayModel.Create(
+            context, new TempDataDictionaryFactory(new PreloadedTempDataProvider(new Dictionary<string, object>())));
+
+        Assert.False(model.CanTrack);
+        Assert.Empty(model.UserIdConfigurationJson);
+    }
+
+    private sealed class ConsentFeature(bool granted) : Microsoft.AspNetCore.Http.Features.ITrackingConsentFeature
+    {
+        public bool IsConsentNeeded => true;
+        public bool HasConsent => granted;
+        public bool CanTrack => granted;
+        public void GrantConsent() { }
+        public void WithdrawConsent() { }
+        public string CreateConsentCookie() => string.Empty;
     }
 
     private HttpClient CreateClient() => factory.CreateClient(new WebApplicationFactoryClientOptions

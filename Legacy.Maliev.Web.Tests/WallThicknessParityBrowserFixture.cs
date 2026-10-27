@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Sockets;
 using System.Reflection;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Components;
@@ -22,14 +21,16 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
     private IPlaywright? playwright;
     public IBrowser Browser { get; private set; } = null!;
     public string Url { get; private set; } = "";
+    internal Uri Origin { get; private set; } = null!;
+    internal TestResponseProbeRegistry ResponseProbes => factory!.Services.GetRequiredService<TestResponseProbeRegistry>();
+
+    private static int ReserveFreePort() => BrowserTestServerPort.Reserve();
 
     public async Task InitializeAsync()
     {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
+        var port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
+        Origin = origin;
         factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
         factory.UseKestrel(port);
         client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
@@ -73,6 +74,7 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
         using var services = new ServiceCollection().AddLogging()
             .AddLocalization(options => options.ResourcesPath = "Resources")
             .AddSingleton<IComponentActivator>(activator)
+            .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager())
             .AddSingleton<IJSRuntime, NullJsRuntime>()
             .AddSingleton<IWebHostEnvironment>(new ComponentEnvironment())
             .BuildServiceProvider();
@@ -84,7 +86,14 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
             var before = output.ToHtmlString();
             var component = activator.Component!;
             var method = typeof(InstantQuotationWorkflow).GetMethod(operation, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)!;
-            var invoked = method.Invoke(component, operation == "DisposeAsync" ? [] : [localId]);
+            object?[] arguments = operation switch
+            {
+                "DisposeAsync" => [],
+                "QuarantinePreviewAsync" => [localId,
+                    ((Dictionary<Guid, string>)Field("previewKeys").GetValue(component)!)[localId], null],
+                _ => [localId],
+            };
+            var invoked = method.Invoke(component, arguments);
             if (invoked is Task task) await task;
             if (invoked is ValueTask valueTask) await valueTask;
             await component.ReportIncompletePreviewAsync("local-only-preview", 99, true);
@@ -103,6 +112,7 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
         using var services = new ServiceCollection().AddLogging()
             .AddLocalization(options => options.ResourcesPath = "Resources")
             .AddSingleton<IComponentActivator>(activator).AddSingleton<IJSRuntime, NullJsRuntime>()
+            .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager())
             .AddSingleton<IWebHostEnvironment>(new ComponentEnvironment()).BuildServiceProvider();
         await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
         return await renderer.Dispatcher.InvokeAsync(async () =>

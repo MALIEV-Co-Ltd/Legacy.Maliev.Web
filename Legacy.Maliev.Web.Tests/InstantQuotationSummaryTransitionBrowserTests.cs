@@ -1,5 +1,3 @@
-using System.Net;
-using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
@@ -139,6 +137,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
             await fixture.CaptureAsync("completed-frame");
         }
         finally { fixture.Control.ReleaseAll(); }
+        await fixture.Control.Finished.Task.WaitAsync(TimeSpan.FromSeconds(10));
         await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
         await fixture.AssertFinalAsync(4);
         await fixture.CaptureAsync("final");
@@ -384,13 +383,14 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         public ILocator PartPrice => Page.Locator("[data-workflow-part-price]");
         private Fixture() => Factory = new(Control, initialRequest);
 
+        private static int ReserveFreePort() => BrowserTestServerPort.Reserve();
+
         public static async Task<Fixture> CreateAsync(string culture, int width, ITestOutputHelper output, ReducedMotion motion = ReducedMotion.NoPreference, bool holdUnrelatedFetch = false)
         {
             var fixture = new Fixture { culture = culture };
             try
             {
-                var listener = new TcpListener(IPAddress.Loopback, 0);
-                listener.Start(); var port = ((IPEndPoint)listener.LocalEndpoint).Port; listener.Stop();
+                var port = ReserveFreePort();
                 var origin = new Uri($"http://127.0.0.1:{port}");
                 fixture.initialRequest.Observe(SummaryInitialRequestDiagnostics.Stage.HostStartInvoked);
                 fixture.Factory.UseKestrel(port);
@@ -471,6 +471,10 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
 
         private async Task ObserveNavigationAsync(string phase, Uri origin, ITestOutputHelper output, Func<Task<IResponse?>> navigate)
         {
+            using var responseProbe = Factory.Services.GetRequiredService<TestResponseProbeRegistry>()
+                .TryBeginNavigation(origin, TestResponseRequestLabel.BaseQuotation);
+            using var milestones = new MaterialInitialNavigationDiagnostics(
+                Page, origin, responseProbe?.Probe, phase, "domcontentloaded");
             var gate = new object();
             var pending = new Dictionary<IRequest, string>();
             int started = 0, finished = 0, failed = 0, omitted = 0;
@@ -502,16 +506,21 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
             Page.Response += onResponse;
             try
             {
-                if (phase == "initial") initialRequest.Observe(SummaryInitialRequestDiagnostics.Stage.NavigationInvoked);
-                var response = await navigate();
-                if (phase == "initial") initialRequest.Observe(SummaryInitialRequestDiagnostics.Stage.NavigationReturned);
-                Assert.NotNull(response);
-                Assert.Equal(200, response.Status);
-                // InputFile.init runs through JS interop after the real Interactive Server circuit renders.
-                // SSR markup alone cannot set this binding; global network quiet is not session readiness.
-                await Page.WaitForFunctionAsync(
-                    "() => typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'number'",
-                    options: new() { Timeout = Math.Max(1, 30000 - timer.ElapsedMilliseconds) });
+                await milestones.RunAsync(async () =>
+                {
+                    if (phase == "initial") initialRequest.Observe(SummaryInitialRequestDiagnostics.Stage.NavigationInvoked);
+                    var response = await navigate();
+                    if (phase == "initial") initialRequest.Observe(SummaryInitialRequestDiagnostics.Stage.NavigationReturned);
+                    Assert.NotNull(response);
+                    Assert.Equal(200, response.Status);
+                    // InputFile.init runs through JS interop after the real Interactive Server circuit renders.
+                    // SSR markup alone cannot set this binding; global network quiet is not session readiness.
+                    await Page.WaitForFunctionAsync(
+                        "() => typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'number'",
+                        options: new() { Timeout = Math.Max(1, 30000 - timer.ElapsedMilliseconds) });
+                    milestones.ObserveInputFileReady();
+                    return response;
+                }, output.WriteLine);
             }
             catch (Exception failure)
             {
