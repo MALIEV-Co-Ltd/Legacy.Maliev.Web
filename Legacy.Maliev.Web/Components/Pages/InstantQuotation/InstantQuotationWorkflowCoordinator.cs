@@ -63,6 +63,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private readonly CancellationTokenSource lifetimeCancellation = new();
     private readonly CancellationToken lifetimeToken;
     private readonly object displayGate = new();
+    private readonly AsyncLocal<(CancellationToken CallbackToken, CancellationToken ConsumerToken)?> displayCallbackOrigin = new();
     private readonly object configurationGate = new();
     private readonly Dictionary<Guid, ConfigurationRequest> configurationRequests = [];
     private readonly Dictionary<long, Func<InstantQuotationMaterialPriceDisplaySnapshot, CancellationToken, ValueTask>> displaySubscribers = [];
@@ -512,6 +513,9 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     {
         var material = ValidateConfiguration(partId, materialKey, color, quantity, buildPreference);
         ThrowIfPricingCanceled(cancellationToken);
+        CancellationToken? callbackOrigin = null;
+        if (displayCallbackOrigin.Value is { } callback && callback.CallbackToken == cancellationToken)
+            callbackOrigin = callback.ConsumerToken;
         var entry = entries.SingleOrDefault(item => item.Part?.PartId == partId)
             ?? throw new ArgumentException("The part was not found.", nameof(partId));
         var request = BeginConfigurationRequest(partId, entry);
@@ -521,6 +525,9 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             await WaitForStateGateAsync(cancellationToken);
             try
             {
+                // CancelAsync marks the origin before cancellation reaches linked callback tokens.
+                if (callbackOrigin is { } origin && origin.IsCancellationRequested)
+                    throw new OperationCanceledException(cancellationToken);
                 ThrowIfPricingCanceled(cancellationToken);
                 lock (configurationGate)
                 {
@@ -1440,7 +1447,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                     if (!IsCurrentMaterialDisplay(context, cancellationToken)
                         || !displaySubscribers.ContainsKey(subscriber.Key)) return;
                 }
-                await subscriber.Value(snapshot, cancellationToken);
+                var previousOrigin = displayCallbackOrigin.Value;
+                displayCallbackOrigin.Value = (cancellationToken, context!.CancellationToken);
+                try { await subscriber.Value(snapshot, cancellationToken); }
+                finally { displayCallbackOrigin.Value = previousOrigin; }
             }, cancellationToken);
             _ = notification.ContinueWith(static task => { _ = task.Exception; }, CancellationToken.None,
                 TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
