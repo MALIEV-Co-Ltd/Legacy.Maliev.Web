@@ -223,7 +223,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~ProtectedTicket_NonCanonicalCurrencyOrRate_IsRejected|FullyQualifiedName~IssuedTickets_CanonicalThbIdentityAndEngineerReview_RemainValid"
+          --filter "FullyQualifiedName~ProtectedTicket_NonCanonicalCurrencyOrRate_IsRejected|FullyQualifiedName~IssuedTickets_CanonicalThbIdentityAndEngineerReview_RemainValid|FullyQualifiedName~FdmRuntimeProfileCatalogTests|FullyQualifiedName~FdmSimulationModelPathsTests|FullyQualifiedName~FdmSimulationSupportTests"
           --logger trx --results-directory ./ticket-test-results
       - name: Install pinned Chromium browser
         shell: bash
