@@ -143,17 +143,17 @@ public sealed class NonDisclosureAgreementStaticSsrRouteTests : IClassFixture<Te
         {
             (Id: "what-it-covers",
                 Heading: culture == "th"
-                    ? "สัญญานี้ครอบคลุมแบบ แบบจำลอง CAD ตัวอย่างชิ้นงาน ข้อกำหนด การพูดคุยเรื่องราคา และข้อมูลโปรเจ็คที่ส่งเพื่อขอราคา หรือประเมินงานผลิต"
+                    ? "สัญญานี้ครอบคลุมแบบ แบบจำลอง CAD ตัวอย่างชิ้นงาน ข้อกำหนด การพูดคุยเรื่องราคา และข้อมูลโครงการที่ส่งเพื่อขอราคา หรือประเมินงานผลิต"
                     : "What the agreement covers",
                 Copy: culture == "th"
-                    ? "สัญญานี้ใช้กับแบบ แบบจำลอง CAD ตัวอย่างชิ้นงาน ข้อกำหนด การพูดคุยเรื่องราคา และข้อมูลโปรเจ็คที่เป็นความลับซึ่งส่งเพื่อขอราคาหรือประเมินงานผลิต"
+                    ? "สัญญานี้ใช้กับแบบ แบบจำลอง CAD ตัวอย่างชิ้นงาน ข้อกำหนด การพูดคุยเรื่องราคา และข้อมูลโครงการที่เป็นความลับซึ่งส่งเพื่อขอราคาหรือประเมินงานผลิต"
                     : "The agreement is intended for confidential drawings, CAD files, physical samples, specifications, pricing discussions, and other project information shared for quotation or manufacturing review."),
             (Id: "when-to-send",
                 Heading: culture == "th"
-                    ? "หากโปรเจ็คต้องใช้ NDA ให้กรอกและลงนามก่อนส่งไฟล์หรือตัวอย่างที่เป็นความลับ พร้อมแจ้งชื่อโปรเจ็คให้ทีมงานทราบ"
+                    ? "หากโครงการต้องใช้ NDA ให้กรอกและลงนามก่อนส่งไฟล์หรือตัวอย่างที่เป็นความลับ พร้อมแจ้งชื่อโครงการให้ทีมงานทราบ"
                     : "When to send it",
                 Copy: culture == "th"
-                    ? "หากโปรเจ็คต้องใช้ NDA ให้กรอกและลงนามในแบบฟอร์มก่อนส่งไฟล์หรือตัวอย่างที่เป็นความลับ และแจ้งชื่อโปรเจ็คให้ทีมงานทราบเพื่อดำเนินการได้ถูกต้อง"
+                    ? "หากโครงการต้องใช้ NDA ให้กรอกและลงนามในแบบฟอร์มก่อนส่งไฟล์หรือตัวอย่างที่เป็นความลับ และแจ้งชื่อโครงการให้ทีมงานทราบเพื่อดำเนินการได้ถูกต้อง"
                     : "If your project requires an NDA, complete and sign the template before sending sensitive files or samples. Tell our team which project the agreement belongs to so we can route it correctly."),
         };
         foreach (var section in sections)
