@@ -121,6 +121,57 @@ public sealed class EsdFulfillmentContractTests
         Assert.Equal(3, wire.GetProperty("processId").GetInt32());
     }
 
+    [Theory]
+    [InlineData("en-US", 0.2, "0.2")]
+    [InlineData("th-TH", 0.3, "0.3")]
+    [InlineData("fr-FR", 0.5, "0.5")]
+    [InlineData("en-US", null, null)]
+    public async Task Provision_QuotedRecoveryWarningReachesOrderCommentWithoutChangingOriginalFileOrPrice(
+        string culture, double? voxelSize, string? expectedSize)
+    {
+        var previous = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+            using var boundary = new Boundary("ABS-ESD");
+            var part = Part("ABS-ESD", BuildPreference.Standard);
+            var original = SyntheticPhysicalPricingTestData.Quote(new([part])).Parts.Single();
+            var receipt = Assert.IsType<InstantQuotationPhysicalAnalysisReceipt>(original.PhysicalReceipt) with
+            {
+                GeometryReconstruction = voxelSize is { } size ? new("voxel-majority-v1", size) : null,
+            };
+            var quote = original with { PhysicalReceipt = receipt };
+
+            var result = await boundary.Client.ProvisionOrderAsync(
+                SubmissionId, 0, CustomerId, "Keep original geometry", part, quote, 7, File, default);
+
+            Assert.True(result.Succeeded);
+            var create = Assert.Single(boundary.Requests, request => request.Method == "POST" && request.Path == "orders");
+            using var document = JsonDocument.Parse(create.Body!);
+            var wire = document.RootElement;
+            var comment = wire.GetProperty("comment").GetString()!;
+            if (expectedSize is null)
+                Assert.DoesNotContain("Voxel-based", comment, StringComparison.Ordinal);
+            else
+                Assert.Contains($"Geometry warning: Voxel-based pricing estimate ({expectedSize} mm). Original geometry requires engineering review before manufacture.",
+                    comment, StringComparison.Ordinal);
+            Assert.Contains("Review state: engineer_review_required", comment, StringComparison.Ordinal);
+            Assert.Contains("Customer notes: Keep original geometry", comment, StringComparison.Ordinal);
+            Assert.Equal(Convert.ToDecimal(original.UnitPrice), wire.GetProperty("unitPrice").GetDecimal());
+            Assert.Equal(part.Configuration.Quantity, wire.GetProperty("quantity").GetInt32());
+            Assert.False(wire.GetProperty("allowPayment").GetBoolean());
+            Assert.False(wire.GetProperty("allowCancellation").GetBoolean());
+            Assert.DoesNotContain(File.Bucket, comment, StringComparison.Ordinal);
+            Assert.DoesNotContain(File.ObjectName, comment, StringComparison.Ordinal);
+            Assert.DoesNotContain(part.Geometry.Sha256, comment, StringComparison.Ordinal);
+            Assert.Contains(boundary.Requests, request => request.Path ==
+                $"orders/{OrderId}/files?bucket=test-owned-bucket&objectName=clean%2Ffixture%20part.stl");
+            Assert.Null(original.PhysicalReceipt!.GeometryReconstruction);
+            Assert.Same(receipt, quote.PhysicalReceipt);
+        }
+        finally { System.Globalization.CultureInfo.CurrentCulture = previous; }
+    }
+
     public static IEnumerable<object[]> FailedCatalogCases()
     {
         foreach (var material in new[] { "PA612-ESD", "ABS-ESD" })

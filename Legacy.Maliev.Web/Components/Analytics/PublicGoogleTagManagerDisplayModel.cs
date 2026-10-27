@@ -10,6 +10,9 @@ public sealed record PublicGoogleTagManagerDisplayModel(
     bool CanTrack,
     string QueuedEventScript)
 {
+    /// <summary>Gets safely serialized server-owned identity only for a consented authenticated request.</summary>
+    public string UserIdConfigurationJson { get; init; } = string.Empty;
+
     public static PublicGoogleTagManagerDisplayModel Create(
         HttpContext context,
         ITempDataDictionaryFactory tempDataDictionaryFactory)
@@ -34,7 +37,11 @@ public sealed record PublicGoogleTagManagerDisplayModel(
         return new PublicGoogleTagManagerDisplayModel(
             canTrack ? "granted" : "denied",
             canTrack,
-            queuedEventScript);
+            queuedEventScript)
+        {
+            UserIdConfigurationJson = GoogleAnalyticsUserId.TryBuildConfiguration(context.User, canTrack, out var userIdJson)
+                ? userIdJson : string.Empty,
+        };
     }
 
     private static string BuildQueuedEventScript(ITempDataDictionary tempData)
@@ -42,8 +49,21 @@ public sealed record PublicGoogleTagManagerDisplayModel(
         var scripts = new List<string>();
         if (LeadAnalyticsEventQueue.TryConsume(tempData, out var leadEvent) && leadEvent is not null)
         {
-            scripts.Add($"window.malievAnalytics.emit({JsonSerializer.Serialize(leadEvent)});");
-            scripts.Add($"window.malievAnalytics.emit({JsonSerializer.Serialize(leadEvent.BuildGenerateLeadConversionEvent())});");
+            if (leadEvent.IsPersistedQuotation)
+            {
+                scripts.Add($"window.malievAnalytics.emit({JsonSerializer.Serialize(leadEvent)});");
+                scripts.Add($"window.malievAnalytics.emit({JsonSerializer.Serialize(leadEvent.BuildGenerateLeadConversionEvent())});");
+            }
+            else if (leadEvent.Event == "maliev_contact_submitted")
+            {
+                var diagnostic = new
+                {
+                    @event = "maliev_contact_submitted",
+                    service = "general_contact",
+                    submission_status = "persisted",
+                };
+                scripts.Add($"window.malievAnalytics.emit({JsonSerializer.Serialize(diagnostic)});");
+            }
         }
 
         if (CustomerJourneyAnalyticsEventQueue.TryConsume(tempData, out var journeyEvent)

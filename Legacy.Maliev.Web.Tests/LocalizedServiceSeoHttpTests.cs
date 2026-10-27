@@ -103,6 +103,10 @@ public sealed class LocalizedServiceSeoHttpTests(TestingWebApplicationFactory fa
 
         var location = Assert.Single(Elements(RemoveScripts(html), "section"), element =>
             Attribute(element.Attributes, "data-migration-component") == "service-location");
+        Assert.DoesNotContain(Elements(location.Body, "p"), element =>
+            Attribute(element.Attributes, "class").Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Contains("service-eyebrow", StringComparer.Ordinal));
+        Assert.DoesNotContain("สถานที่และช่องทางติดต่อที่ยืนยันแล้ว", Text(location.Body), StringComparison.Ordinal);
         var visibleAddress = Text(Assert.Single(Elements(location.Body, "address")).Body);
         var expectedAddress = culture == "th"
             ? "Maliev Co., Ltd. 36/1 หมู่ 3 ตำบลคลองข่อย อำเภอปากเกร็ด จังหวัดนนทบุรี 11120 ประเทศไทย"
@@ -144,6 +148,18 @@ public sealed class LocalizedServiceSeoHttpTests(TestingWebApplicationFactory fa
             }
             return;
         }
+
+        var guideId = route switch
+        {
+            "/services/3d-printing" => "printing-guides",
+            "/services/3d-scanning" => "scanning-guides",
+            _ => "cnc-guides",
+        };
+        var guideSection = Assert.Single(Elements(RemoveScripts(html), "section"), element =>
+            Attribute(element.Attributes, "id") == guideId);
+        links = Elements(guideSection.Body, "a");
+        Assert.Equal(3, links.Count(link => Attribute(link.Attributes, "href")
+            .StartsWith("https://shop.maliev.com/blogs/news/", StringComparison.Ordinal)));
 
         // These source-owned guides are on Shopify. Freeze their rendered URL and
         // localized label without contacting the external host or claiming its readiness.
