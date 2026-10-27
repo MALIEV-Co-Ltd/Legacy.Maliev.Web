@@ -3681,10 +3681,10 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         await singleColor.SelectOptionAsync("White");
         await MaterialCardBrowserActions.SelectAsync(page, "PETG");
         await page.WaitForFunctionAsync(
-            "id => document.querySelector('#color-' + id)?.value === 'White' && !document.querySelector('[data-pricing-loading-status]')",
+            "id => document.querySelector('#color-' + id)?.value === 'Any' && !document.querySelector('[data-pricing-loading-status]')",
             singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
-        Assert.Equal("White", await singleColor.InputValueAsync());
-        // A compatible named color survives; an unsupported custom color uses the source default.
+        Assert.Equal("Any", await singleColor.InputValueAsync());
+        // Material changes reset compatible named colors and unsupported custom colors to the source default.
         await MaterialCardBrowserActions.SelectAsync(page, "PLA");
         await page.Locator("[data-workflow-material-picker] input[type='color']").EvaluateAsync(
             "input => { input.value = '#123abc'; input.dispatchEvent(new Event('change', { bubbles: true })); }");
