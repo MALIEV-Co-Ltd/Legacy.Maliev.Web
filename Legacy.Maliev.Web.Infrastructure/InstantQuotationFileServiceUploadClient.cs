@@ -49,6 +49,11 @@ internal sealed class InstantQuotationFileServiceUploadClient : IInstantQuotatio
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        var resolvedContentType = UploadContentTypeResolver.Resolve(contentType);
+        // The typed FileService endpoint accepts canonical STL, not the legacy browser alias.
+        contentType = resolvedContentType.MediaType == "simplify3d_stl/stl"
+            ? "model/stl"
+            : resolvedContentType.ToString();
         if (!IsValidSessionId(sessionId)
             || !IsValidOwner(ownerIdentity)
             || content is null

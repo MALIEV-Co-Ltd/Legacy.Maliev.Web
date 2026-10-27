@@ -937,6 +937,14 @@
             {
                 <p>@Localizer["Request reference"]: <strong>@CustomerModel.RequestReference</strong></p>
             }
+            @if (CustomerModel.RequestReference is > 0
+                && CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.CompletedStatus or InstantQuotationCustomerDisplayModel.PartialStatus)
+            {
+                <form method="post" action="@($"/InstantQuotation/3D-Printing?handler=StartAnother&culture={System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName}")" data-workflow-start-another>
+                    <AntiforgeryToken />
+                    <button type="submit" class="iq-submit-btn">@Localizer["Start another quotation"]</button>
+                </form>
+            }
         </section>
     }
 </section>
