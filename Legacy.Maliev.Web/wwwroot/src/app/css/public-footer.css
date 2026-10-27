@@ -14,6 +14,10 @@
 .landing-footer-address-text { display: block; min-width: 0; }
 .landing-social { margin-top: 1rem; }
 .landing-social a { margin-right: .75rem; font-size: 1.4rem; }
+.landing-footer a.landing-preferred-source { display: inline-flex; align-items: center; gap: .6rem; max-width: 19rem; min-height: 2.75rem; margin-top: 1rem; padding: .65rem .85rem; border: 1px solid #718399; border-radius: .5rem; color: #fff; line-height: 1.5; }
+.landing-preferred-source i { flex-shrink: 0; }
+.landing-footer a.landing-preferred-source:hover { background: #17334f; border-color: #fff; }
+.landing-footer a.landing-preferred-source:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 .landing-footer-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; width: min(92vw, 86rem); margin: auto; padding-block: 1rem; border-top: 1px solid rgba(255, 255, 255, .16); color: #aebbc9; font-size: .74rem; }
 
 @media (min-width: 48rem) {

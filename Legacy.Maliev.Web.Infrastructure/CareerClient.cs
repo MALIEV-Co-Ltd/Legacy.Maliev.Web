@@ -56,7 +56,7 @@ internal sealed class CareerClient(
         }
     }
 
-    private async Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
+    public async Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
         CareerSort sort,
         string? search,
         int pageIndex,
@@ -79,8 +79,8 @@ internal sealed class CareerClient(
             }
 
             response.EnsureSuccessStatusCode();
-            var page = await response.Content.ReadFromJsonAsync<CareerOfferPage>(cancellationToken);
-            return new ServiceResponse<CareerOfferPage>(page ?? CareerOfferPage.Empty(pageIndex), true);
+            var page = await CareerOfferPageReader.ReadAsync(response.Content, cancellationToken);
+            return new ServiceResponse<CareerOfferPage>(page, true);
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
@@ -89,7 +89,7 @@ internal sealed class CareerClient(
         }
     }
 
-    private async Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(
+    public async Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(
         CancellationToken cancellationToken)
     {
         try

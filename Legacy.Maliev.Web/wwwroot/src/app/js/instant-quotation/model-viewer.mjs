@@ -310,24 +310,46 @@ function createCadFaceBoundaryGeometry(geometry) {
   return edges;
 }
 
-export function createCanvasResizeController({ renderer, camera, canvas, devicePixelRatio }) {
+export function createCanvasResizeController({
+  renderer, camera, canvas, devicePixelRatio, onAspectSettled, now = () => performance.now(),
+}) {
   let previousWidth = null;
   let previousHeight = null;
   let previousRatio = null;
+  let previousAspect = null;
+  let lastFramedAspect = null;
+  let pendingAspect = null;
+  let settleAt = 0;
   return Object.freeze({
     sync() {
       const width = Math.max(1, Math.round(canvas.clientWidth));
       const height = Math.max(1, Math.round(canvas.clientHeight));
       const ratio = Math.max(1, Math.min(Number(devicePixelRatio?.()) || 1, 2));
-      if (width === previousWidth && height === previousHeight && ratio === previousRatio) return false;
-      if (ratio !== previousRatio) renderer.setPixelRatio(ratio);
-      renderer.setSize(width, height, false);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-      previousWidth = width;
-      previousHeight = height;
-      previousRatio = ratio;
-      return true;
+      const changed = width !== previousWidth || height !== previousHeight || ratio !== previousRatio;
+      if (changed) {
+        if (ratio !== previousRatio) renderer.setPixelRatio(ratio);
+        renderer.setSize(width, height, false);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        previousWidth = width;
+        previousHeight = height;
+        previousRatio = ratio;
+      }
+      const aspect = camera.aspect;
+      if (Number.isFinite(aspect) && aspect > 0) {
+        if (lastFramedAspect === null) lastFramedAspect = aspect;
+        else if (aspect !== previousAspect) {
+          pendingAspect = Math.abs(aspect - lastFramedAspect) >= 0.02 ? aspect : null;
+          settleAt = now() + 180;
+        }
+        if (pendingAspect !== null && now() >= settleAt) {
+          lastFramedAspect = aspect;
+          pendingAspect = null;
+          onAspectSettled?.();
+        }
+        previousAspect = aspect;
+      }
+      return changed;
     },
   });
 }
@@ -406,6 +428,25 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     else adapter.fit?.(next.object);
   }
 
+  function clearSelection() {
+    assertActive();
+    if (activeId === null) return;
+    const current = requirePart(activeId);
+    current.camera = clone(adapter.getCameraState?.());
+    adapter.setThickness?.(current.object, false, { thinMm: 0.8 });
+    adapter.hide?.(current.object);
+    activeId = null;
+  }
+
+  function promotePart(localId, partId) {
+    assertActive();
+    const part = requirePart(localId);
+    if (!partId || parts.has(partId)) throw new TypeError('A unique admitted render key is required.');
+    parts.delete(localId);
+    parts.set(partId, part);
+    if (activeId === localId) activeId = partId;
+  }
+
   function remove(id) {
     assertActive();
     const part = requirePart(id);
@@ -454,7 +495,8 @@ export function createModelViewer({ adapter, eventTarget = null }) {
 
   function fit() {
     assertActive();
-    adapter.fit?.(activeId === null ? null : requirePart(activeId).object);
+    if (activeId === null) return;
+    adapter.fit?.(requirePart(activeId).object);
   }
 
   function fullscreen() {
@@ -462,13 +504,18 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     return adapter.fullscreen?.();
   }
 
-  function snapshot(id) {
+  function snapshot(id, maximumDimension = null) {
     assertActive();
+    if (maximumDimension !== null && (!Number.isSafeInteger(maximumDimension)
+        || maximumDimension < 1 || maximumDimension > 192)) throw new RangeError('Invalid thumbnail dimensions.');
     const previousId = activeId;
     select(id);
-    const image = adapter.snapshot?.() ?? null;
-    if (previousId !== null && previousId !== id) select(previousId);
-    return image;
+    try {
+      return adapter.snapshot?.(maximumDimension) ?? null;
+    } finally {
+      if (previousId === null) clearSelection();
+      else if (previousId !== id && parts.has(previousId)) select(previousId);
+    }
   }
 
   function handleKey(event) {
@@ -514,30 +561,78 @@ export function createModelViewer({ adapter, eventTarget = null }) {
     return part;
   }
 
-  return Object.freeze({ addPart, select, remove, setColor, setThicknessEvidence,
+  return Object.freeze({ addPart, select, clearSelection, promotePart, remove, setColor, setThicknessEvidence,
     setThicknessVisible, reset, fit, fullscreen, snapshot, handleKey, dispose });
+}
+
+/** Creates the source-faithful lighting shared by the live viewer and its captures. */
+export function createPreviewScene() {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf7f9fc);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xd6dfe6, 0.56));
+  const key = new THREE.DirectionalLight(0xffffff, 0.64);
+  key.position.set(1, 0.6, 1.2).multiplyScalar(50);
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xdbe6ef, 0.26);
+  fill.position.set(-1, -0.3, 0.6).multiplyScalar(50);
+  scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xb8c8d8, 0.1);
+  rim.position.set(-0.4, 1, -0.6).multiplyScalar(50);
+  scene.add(rim);
+  return scene;
+}
+
+/** Captures a white-card thumbnail without leaving the live canvas white. */
+export function capturePreviewSnapshot({ scene, camera, renderer, canvas, maximumDimension = null }) {
+  const liveBackground = scene.background;
+  let failed = false;
+  let primary;
+  try {
+    scene.background = new THREE.Color(0xffffff);
+    renderer.render(scene, camera);
+    let capture = canvas;
+    if (maximumDimension !== null) {
+      capture = canvas.ownerDocument.createElement('canvas');
+      const scale = Math.min(1, maximumDimension / canvas.width, maximumDimension / canvas.height);
+      capture.width = Math.max(1, Math.floor(canvas.width * scale));
+      capture.height = Math.max(1, Math.floor(canvas.height * scale));
+      const context = capture.getContext('2d');
+      if (!context) throw new Error('Thumbnail rendering is unavailable.');
+      context.drawImage(canvas, 0, 0, capture.width, capture.height);
+    }
+    const image = capture.toDataURL('image/webp');
+    return image.startsWith('data:image/webp;base64,') ? image : null;
+  } catch (error) {
+    failed = true;
+    primary = error;
+    throw error;
+  } finally {
+    scene.background = liveBackground;
+    try {
+      renderer.render(scene, camera);
+    } catch (error) {
+      if (failed) throw new AggregateError([primary, error], 'Preview capture and live redraw failed.');
+      throw error;
+    }
+  }
 }
 
 /** Creates the production Three.js viewer. Call only inside the quotation island. */
 export function createThreeModelViewer(canvas) {
   if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError('A canvas is required.');
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf4f7fb);
+  const scene = createPreviewScene();
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100000);
   camera.position.set(80, 80, 80);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x334155, 2));
-  const keyLight = new THREE.DirectionalLight(0xffffff, 2.5);
-  keyLight.position.set(1, 2, 3);
-  scene.add(keyLight);
   let frame = 0;
   const resize = createCanvasResizeController({
     renderer,
     camera,
     canvas,
     devicePixelRatio: () => window.devicePixelRatio,
+    onAspectSettled: () => viewer.fit(),
   });
 
   const adapter = {
@@ -563,11 +658,10 @@ export function createThreeModelViewer(canvas) {
     reset(object) { frameObject(object, camera, controls); },
     fit(object) { frameObject(object, camera, controls); },
     fullscreen() { return canvas.requestFullscreen?.(); },
-    snapshot() {
+    snapshot(maximumDimension) {
       resize.sync();
       controls.update();
-      renderer.render(scene, camera);
-      return canvas.toDataURL('image/png');
+      return capturePreviewSnapshot({ scene, camera, renderer, canvas, maximumDimension });
     },
     setColor(object, color) {
       object.traverse(child => {
@@ -604,8 +698,11 @@ export function createThreeModelViewer(canvas) {
 }
 
 /** Loads one standalone model. GLTF companion files and OBJ MTL are not claimed. */
-export async function loadStandaloneModel(file, { signal } = {}) {
+export async function loadStandaloneModel(file, { signal, gltfUnitPolicy } = {}) {
   const extension = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase();
+  if (['glb', 'gltf'].includes(extension)
+      && (gltfUnitPolicy?.version !== 1 || ![0, 1].includes(gltfUnitPolicy.unit)))
+    throw new TypeError('Choose GLB/GLTF units before importing.');
   const buffer = await file.arrayBuffer();
   if (signal?.aborted) throw new DOMException('Operation cancelled.', 'AbortError');
   let object;
@@ -619,8 +716,16 @@ export async function loadStandaloneModel(file, { signal } = {}) {
   } else if (extension === 'glb' || extension === 'gltf') {
     const input = extension === 'gltf' ? new TextDecoder().decode(buffer) : buffer;
     if (extension === 'gltf') validateStandaloneGltfDocument(input);
-    const result = await new GLTFLoader().parseAsync(input, '');
+    const loader = new GLTFLoader();
+    if (extension === 'gltf') loader.register(embeddedGltfBufferViews);
+    let sourceSkinWeights;
+    loader.register(parser => (sourceSkinWeights = preserveSourceSkinWeights(parser)));
+    let result;
+    try { result = await loader.parseAsync(input, ''); }
+    finally { sourceSkinWeights?.dispose(); }
     object = orientGltfForPrinting(result.scene);
+    // Scale the freshly loaded scene once, before preview, geometry and thickness consumers.
+    object.scale.multiplyScalar(gltfUnitPolicy.unit === 1 ? 1000 : 1);
   } else if (['stp', 'step', 'igs', 'iges'].includes(extension)) {
     object = await loadCadModel(buffer, extension, signal);
   } else {
@@ -631,13 +736,86 @@ export async function loadStandaloneModel(file, { signal } = {}) {
   return object;
 }
 
+// Three 0.129 left normalized integer skin weights intact; newer loaders normalize them again.
+function preserveSourceSkinWeights(parser) {
+  const snapshots = new Map();
+  return {
+    name: 'MALIEV_source_skin_weights',
+    async beforeRoot() {
+      for (const mesh of parser.json.meshes ?? []) {
+        if (!mesh.isSkinnedMesh) continue;
+        for (const primitive of mesh.primitives ?? []) {
+          const index = primitive.attributes?.WEIGHTS_0;
+          const definition = parser.json.accessors?.[index];
+          if (!definition?.normalized || ![5121, 5123].includes(definition.componentType) || snapshots.has(index)) continue;
+          const original = await parser.getDependency('accessor', index);
+          if (!original.normalized || original.itemSize !== 4) throw new TypeError('Invalid normalized glTF skin weights.');
+          const ArrayType = definition.componentType === 5121 ? Uint8Array : Uint16Array;
+          const retained = new THREE.BufferAttribute(new ArrayType(original.count * 4), 4, true);
+          for (let vertex = 0; vertex < original.count; vertex++)
+            retained.setXYZW(vertex, original.getX(vertex), original.getY(vertex), original.getZ(vertex), original.getW(vertex));
+          snapshots.set(index, { original, retained });
+        }
+      }
+    },
+    afterRoot(result) {
+      // Restore cached accessors too, including any ordinary geometry sharing their storage.
+      for (const { original, retained } of snapshots.values())
+        for (let vertex = 0; vertex < original.count; vertex++)
+          original.setXYZW(vertex, retained.getX(vertex), retained.getY(vertex), retained.getZ(vertex), retained.getW(vertex));
+      for (const scene of result.scenes) scene.traverse(mesh => {
+        if (!mesh.isSkinnedMesh) return;
+        const association = parser.associations.get(mesh);
+        const primitive = parser.json.meshes?.[association?.meshes]?.primitives?.[association?.primitives];
+        const snapshot = snapshots.get(primitive?.attributes?.WEIGHTS_0);
+        if (snapshot) mesh.geometry.setAttribute('skinWeight', snapshot.retained);
+      });
+    },
+    dispose() { snapshots.clear(); },
+  };
+}
+
+// Geometry is already in the selected file. Decode it locally instead of asking
+// FileLoader to fetch a data URI through the site's unchanged connect-src policy.
+function embeddedGltfBufferViews(parser) {
+  const buffers = new Map();
+  return {
+    name: 'MALIEV_embedded_buffer_views',
+    loadBufferView(index) {
+      const view = parser.json.bufferViews?.[index];
+      const definition = parser.json.buffers?.[view?.buffer];
+      if (!view || !definition) throw new TypeError('Invalid embedded glTF buffer view.');
+      let buffer = buffers.get(view.buffer);
+      if (!buffer) {
+        const match = /^data:application\/(?:octet-stream|gltf-buffer);base64,(.*)$/is.exec(definition.uri ?? '');
+        const length = definition.byteLength;
+        if (!match || !Number.isSafeInteger(length) || length <= 0)
+          throw new TypeError('Invalid embedded glTF buffer.');
+        const payload = decodeURIComponent(match[1]);
+        if (payload.length > Math.ceil(length / 3) * 4)
+          throw new TypeError('Invalid embedded glTF buffer length.');
+        const decoded = atob(payload);
+        if (decoded.length !== length) throw new TypeError('Invalid embedded glTF buffer length.');
+        buffer = Uint8Array.from(decoded, character => character.charCodeAt(0)).buffer;
+        buffers.set(view.buffer, buffer);
+      }
+      const offset = view.byteOffset ?? 0;
+      const length = view.byteLength;
+      if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(length)
+          || length <= 0 || offset > buffer.byteLength - length)
+        throw new TypeError('Invalid embedded glTF buffer view bounds.');
+      return Promise.resolve(buffer.slice(offset, offset + length));
+    },
+  };
+}
+
 async function loadCadModel(buffer, extension, signal) {
   const occt = await ensureOcct();
   if (signal?.aborted) throw new DOMException('Operation cancelled.', 'AbortError');
   const bytes = new Uint8Array(buffer);
   const result = validateCadTessellation(extension === 'igs' || extension === 'iges'
     ? occt.ReadIgesFile(bytes, null)
-    : occt.ReadStepFile(bytes, null));
+    : occt.ReadStepFile(bytes, { linearDeflection: 0.02 }));
   return buildCadModel(result);
 }
 
@@ -682,14 +860,19 @@ function ensureOcct() {
   return productionOcctLoader.load();
 }
 
-function frameObject(object, camera, controls) {
+export function frameObject(object, camera, controls) {
   if (!object) return;
   const box = new THREE.Box3().setFromObject(object);
   if (box.isEmpty()) return;
-  const center = box.getCenter(new THREE.Vector3());
-  const size = box.getSize(new THREE.Vector3()).length();
-  controls.target.copy(center);
-  camera.position.copy(center).add(new THREE.Vector3(size, size * 0.8, size));
+  const sphere = box.getBoundingSphere(new THREE.Sphere());
+  const dimensions = box.getSize(new THREE.Vector3());
+  const size = dimensions.length();
+  const verticalFov = THREE.MathUtils.degToRad(camera.fov);
+  const horizontalFov = 2 * Math.atan(Math.tan(verticalFov / 2) * camera.aspect);
+  const radius = Math.max(sphere.radius, Math.max(dimensions.x, dimensions.y, dimensions.z, 1) * 0.01, 1);
+  const distance = radius / Math.sin(Math.min(verticalFov, horizontalFov) / 2) * 1.22;
+  controls.target.copy(sphere.center);
+  camera.position.copy(sphere.center).addScaledVector(new THREE.Vector3(1, 0.8, 1).normalize(), distance);
   camera.near = Math.max(size / 1000, 0.01);
   camera.far = Math.max(size * 100, 1000);
   camera.updateProjectionMatrix();
@@ -842,3 +1025,5 @@ function quantize(value) {
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
+
+export { createEmptyScene } from './empty-scene.mjs';

@@ -107,7 +107,7 @@ public sealed class StartupDataProtectionMigrationTests(StartupDataProtectionMig
             var document = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
             Assert.Contains($"<html lang=\"{culture}\"", document, StringComparison.Ordinal);
             Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", document, StringComparison.Ordinal);
-            Assert.Contains(culture == "th" ? ">ภาพรวม<" : ">Overview<", document, StringComparison.Ordinal);
+            Assert.Contains(culture == "th" ? ">ศูนย์ความรู้</span></a>" : ">Knowledge center</span></a>", document, StringComparison.Ordinal);
         }
     }
 }
@@ -141,10 +141,11 @@ public sealed class StartupDataProtectionMigrationFixture : IAsyncLifetime
             System.Globalization.CultureInfo.InvariantCulture, out var parsedRunId)
         && parsedRunId > 0;
 
-    public WebApplicationFactory<Program> CreateFactory(string environment) =>
-        new StartupWebFactory(environment, redis.GetConnectionString(), certificatePfxBase64);
+    public WebApplicationFactory<Program> CreateFactory(string environment, Action<IWebHostBuilder>? configure = null) =>
+        new StartupWebFactory(environment, redis.GetConnectionString(), certificatePfxBase64, configure);
 
-    private sealed class StartupWebFactory(string environment, string connection, string certificate)
+    private sealed class StartupWebFactory(
+        string environment, string connection, string certificate, Action<IWebHostBuilder>? configure)
         : TestingWebApplicationFactory
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -156,6 +157,7 @@ public sealed class StartupDataProtectionMigrationFixture : IAsyncLifetime
             builder.UseSetting("DataProtection:CertificatePassword", CertificatePassword);
             builder.UseSetting("BlazorRouting:KnowledgesIndex", "true");
             builder.UseSetting("Logging:LogLevel:Default", "None");
+            configure?.Invoke(builder);
         }
     }
 }
