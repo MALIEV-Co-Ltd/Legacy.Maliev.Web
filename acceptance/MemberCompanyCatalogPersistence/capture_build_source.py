@@ -68,13 +68,26 @@ def xml_repository(raw,expected_url):
     need(row is not None and row.get('url')==expected_url and row.get('type')=='git' and re.fullmatch('[0-9a-f]{40}',row.get('commit','')),'immutable official package repository revision')
     return row.get('commit')
 
-def package_record(assets,name,version,revision):
+def package_record(assets,name,version,revision,diagnostics=None):
     key=name+'/'+version;libraries=assets['libraries'];need(key in libraries,'exact resolved package version: '+name)
     row=libraries[key];digest=row.get('sha512','').removeprefix('sha512-')
     need(re.fullmatch('[A-Za-z0-9+/]{86}==',digest),'resolved package SHA512')
     folders=list(assets['packageFolders']);need(len(folders)==1,'single actual package cache root')
     package=Path(folders[0])/row['path'];stem=name.lower()+'.'+version
     zipped=file_bytes(package/(stem+'.nupkg'),32*1024*1024)
+    if diagnostics is not None:
+        diagnostics.update(assetsContentHash=digest,archiveHash=base64.b64encode(hashlib.sha512(zipped).digest()).decode(),cacheArchiveHash=None,metadataContentHash=None,signaturePresent=None)
+        try:
+            value=file_bytes(package/(stem+'.nupkg.sha512'),1024).decode().strip()
+            if re.fullmatch('[A-Za-z0-9+/]{86}==',value):diagnostics['cacheArchiveHash']=value
+        except (ValueError,OSError,UnicodeError):pass
+        try:
+            metadata=current.parse(file_bytes(package/'.nupkg.metadata',65536));value=metadata.get('contentHash') if isinstance(metadata,dict) else None
+            if isinstance(value,str) and re.fullmatch('[A-Za-z0-9+/]{86}==',value):diagnostics['metadataContentHash']=value
+        except (ValueError,OSError,UnicodeError):pass
+        try:
+            with zipfile.ZipFile(__import__('io').BytesIO(zipped)) as archive:diagnostics['signaturePresent']=archive.namelist().count('.signature.p7s')==1
+        except (ValueError,OSError,zipfile.BadZipFile):pass
     need(base64.b64encode(hashlib.sha512(zipped).digest()).decode()==digest,'actual nupkg hash joins resolved assets')
     marker=file_bytes(package/(stem+'.nupkg.sha512'),1024).decode().strip();need(marker==digest,'actual package-cache hash')
     repository_url={'Microsoft.Extensions.Http.Resilience':'https://github.com/dotnet/extensions','Microsoft.Extensions.Http':'https://github.com/dotnet/dotnet','Polly.Core':'https://github.com/App-vNext/Polly'}[name]
@@ -108,8 +121,9 @@ def capture():
             selected=sorted(k for k in loaded[1]['libraries'] if k.lower().startswith(name.lower()+'/'))
             progress['observedPackages'][name]=selected;need(len(selected)==1,'single actually resolved package')
             actual_version=selected[0].split('/',1)[1]
-            record,digest=package_record(loaded[1],name,actual_version,revision);packages.append(record);package_hashes[name]=digest
-            other,_=package_record(loaded[0],name,actual_version,revision);need(current.same(record,other),'both projects resolve identical runtime package/source')
+            records=progress.setdefault('packageDiagnostics',{}).setdefault(name,{})
+            record,digest=package_record(loaded[1],name,actual_version,revision,records.setdefault('companyTests',{}));packages.append(record);package_hashes[name]=digest
+            other,_=package_record(loaded[0],name,actual_version,revision,records.setdefault('webTests',{}));need(current.same(record,other),'both projects resolve identical runtime package/source')
         generated='.dependencies/Legacy.Maliev.ServiceDefaults/src/Legacy.Maliev.ServiceDefaults/obj/Release/net10.0/Legacy.Maliev.ServiceDefaults.AssemblyInfo.cs'
         raw=current.read(ROOT,generated);matches=re.findall(rb'AssemblyInformationalVersionAttribute\("[^"\r\n]+\+([0-9a-f]{40})"\)',raw)
         need(matches==[current.DEFAULTS.encode()],'actual generated Defaults source revision; never stamp a replacement')

@@ -112,6 +112,19 @@ class CurrentConsumerControls(unittest.TestCase):
         d=self.consumer()
         for raw in [b'{"x":1,"x":2}',b'{"x":NaN}']:
             with self.assertRaises(ValueError):d.parse(raw)
+    def test_package_hash_refusal_records_distinct_hash_domains_without_bypassing_guard(self):
+        import base64,hashlib,io,json,tempfile,zipfile
+        spec=importlib.util.spec_from_file_location('current_build_hash_diagnostic',HERE/'capture_build_source.py');capture=importlib.util.module_from_spec(spec);spec.loader.exec_module(capture)
+        with tempfile.TemporaryDirectory(prefix='company-hash-control-',dir=HERE) as temp:
+            package=Path(temp)/'sample/1.0.0';package.mkdir(parents=True)
+            stream=io.BytesIO()
+            with zipfile.ZipFile(stream,'w') as archive:archive.writestr('.signature.p7s',b'synthetic only')
+            raw=stream.getvalue();archive_hash=base64.b64encode(hashlib.sha512(raw).digest()).decode();content_hash=base64.b64encode(b'x'*64).decode()
+            (package/'sample.1.0.0.nupkg').write_bytes(raw);(package/'sample.1.0.0.nupkg.sha512').write_text(archive_hash)
+            (package/'.nupkg.metadata').write_text(json.dumps({'version':2,'contentHash':content_hash,'source':'https://api.nuget.org/v3/index.json'}))
+            assets={'libraries':{'Sample/1.0.0':{'sha512':'sha512-'+content_hash,'path':'sample/1.0.0'}},'packageFolders':{temp:{}}};diagnostics={}
+            with self.assertRaisesRegex(ValueError,'actual nupkg hash joins resolved assets'):capture.package_record(assets,'Sample','1.0.0','a'*40,diagnostics)
+            self.assertEqual(content_hash,diagnostics['assetsContentHash']);self.assertEqual(archive_hash,diagnostics['archiveHash']);self.assertEqual(archive_hash,diagnostics['cacheArchiveHash']);self.assertEqual(content_hash,diagnostics['metadataContentHash']);self.assertTrue(diagnostics['signaturePresent'])
     def test_build_capture_rejects_non_cli_binary_without_execution(self):
         path=HERE/'capture_build_source.py'
         if not path.exists():self.fail('Static current build/source evidence capture is missing')

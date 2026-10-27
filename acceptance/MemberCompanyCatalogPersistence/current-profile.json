@@ -120,9 +120,9 @@
       "sha256": "e3105d409f45cf58718c3e31f1a208495086f31fa7eaed067320c9f5f33c1b91"
     },
     "acceptance/MemberCompanyCatalogPersistence/capture_build_source.py": {
-      "bytes": 12153,
-      "gitBlob": "2c3fad05e63b1ec1c1be2552dee211d04f1b103b",
-      "sha256": "0e40c1d4dcadcc82a07ea5a71b100b951673b9d8c5c28f5b1f1e0606a2fb63f4"
+      "bytes": 13370,
+      "gitBlob": "3708cbb04b792c5a6747a492192722863befb561",
+      "sha256": "95e4f510debdd2092210547d7fd398fe92edf8eaa2d20646a640a74f3161bbaf"
     },
     "acceptance/MemberCompanyCatalogPersistence/historical_controls.py": {
       "bytes": 3943,
@@ -170,9 +170,9 @@
       "sha256": "db6def19fadfc7b71b9096257c3c37739e72935201775ba2ecbd336bacf9e3ac"
     },
     "acceptance/MemberCompanyCatalogPersistence/test_current_consumer.py": {
-      "bytes": 16131,
-      "gitBlob": "d4eb84ceec462be60c9c21e3b01a58d323f80008",
-      "sha256": "ec1949bd9354de918193b13eb3efe8d1ffaf9bad5b0f7ce07ee7fc92390d566b"
+      "bytes": 17829,
+      "gitBlob": "982fb2cdf550020490bfc8c3a1f32efd1ebb1eed",
+      "sha256": "5d1ef7c264cffeb06ff4e568c67660b71c387051fd2d7070b844f806dc788cf0"
     },
     "acceptance/MemberCompanyCatalogPersistence/test_retain.py": {
       "bytes": 22334,
@@ -258,8 +258,8 @@
   "verifier": {
     "path": "acceptance/MemberCompanyCatalogPersistence/current_consumer.py",
     "bytes": 414628,
-    "sha256": "b70d5a3a43b3cf450dbae2e9ba6a0799125e3960126892a4a923a75de71d8f02",
-    "gitBlob": "adadaf01a61c001c8de525d39033344e50a5433a"
+    "sha256": "d3379ec16ebe5d13d195dfef28fa5ccd74554d06664b56d43ac87e8f6475d907",
+    "gitBlob": "565ea0ed80bf81c746a0981c1c5e2fad42cd0d1b"
   },
   "fixedTransforms": {
     ".github/workflows/member-company-catalog-persistence.yml": [
