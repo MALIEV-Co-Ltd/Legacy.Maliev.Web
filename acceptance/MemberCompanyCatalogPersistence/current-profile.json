@@ -120,9 +120,9 @@
       "sha256": "e3105d409f45cf58718c3e31f1a208495086f31fa7eaed067320c9f5f33c1b91"
     },
     "acceptance/MemberCompanyCatalogPersistence/capture_build_source.py": {
-      "bytes": 13370,
-      "gitBlob": "3708cbb04b792c5a6747a492192722863befb561",
-      "sha256": "95e4f510debdd2092210547d7fd398fe92edf8eaa2d20646a640a74f3161bbaf"
+      "bytes": 15108,
+      "gitBlob": "68bc83564e00c201cb8a82d756a3febbfa4d7adf",
+      "sha256": "f138ecd9d3147d8c046c6c45bd039d0aac7144cda11ff4b8f93e155e7d91d797"
     },
     "acceptance/MemberCompanyCatalogPersistence/historical_controls.py": {
       "bytes": 3943,
@@ -133,6 +133,11 @@
       "bytes": 15844,
       "gitBlob": "97cc0016e40bd759ee929ae99bdc4e263bfa35e7",
       "sha256": "8e9561190c803eebdb89bddbe529e1f75b306ca3d6916620053a79d7bdd88988"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/nuget_signed_verification.py": {
+      "bytes": 5731,
+      "gitBlob": "8a0a98cb3409f39e83725b62904a7bdfcc422b14",
+      "sha256": "8d183f689073f3a2454b77144a5e6c2fa982d4fb6020e683afa9bed9f1b32410"
     },
     "acceptance/MemberCompanyCatalogPersistence/predecessors/before-current-0.bin": {
       "bytes": 18505,
@@ -170,9 +175,9 @@
       "sha256": "db6def19fadfc7b71b9096257c3c37739e72935201775ba2ecbd336bacf9e3ac"
     },
     "acceptance/MemberCompanyCatalogPersistence/test_current_consumer.py": {
-      "bytes": 17829,
-      "gitBlob": "982fb2cdf550020490bfc8c3a1f32efd1ebb1eed",
-      "sha256": "5d1ef7c264cffeb06ff4e568c67660b71c387051fd2d7070b844f806dc788cf0"
+      "bytes": 28989,
+      "gitBlob": "55a9a983196b8f2e79699820bcee37a51c9b98dd",
+      "sha256": "b928edd8e2409c3f531ff002359e73e42e598a362df18fb955cc30da5621667e"
     },
     "acceptance/MemberCompanyCatalogPersistence/test_retain.py": {
       "bytes": 22334,
@@ -257,9 +262,9 @@
   },
   "verifier": {
     "path": "acceptance/MemberCompanyCatalogPersistence/current_consumer.py",
-    "bytes": 414628,
-    "sha256": "d3379ec16ebe5d13d195dfef28fa5ccd74554d06664b56d43ac87e8f6475d907",
-    "gitBlob": "565ea0ed80bf81c746a0981c1c5e2fad42cd0d1b"
+    "bytes": 417710,
+    "sha256": "eedab8279b1efa42f89bf3373e4ffdead2ff876ca7d3b9d029f27edb5bda6bde",
+    "gitBlob": "ac777156f9eeba2c33bf66c7898fea3c3ccb528a"
   },
   "fixedTransforms": {
     ".github/workflows/member-company-catalog-persistence.yml": [

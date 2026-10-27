@@ -92,15 +92,18 @@ EXPECTED_FILES={'.github/workflows/_build-and-test.yml': {'bytes': 56086,
  'acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistenceTests.cs': {'bytes': 33043,
                                                                                               'gitBlob': 'ed4f04607af425f7aef016bc769eca4449436c99',
                                                                                               'sha256': 'e3105d409f45cf58718c3e31f1a208495086f31fa7eaed067320c9f5f33c1b91'},
- 'acceptance/MemberCompanyCatalogPersistence/capture_build_source.py': {'bytes': 13370,
-                                                                        'gitBlob': '3708cbb04b792c5a6747a492192722863befb561',
-                                                                        'sha256': '95e4f510debdd2092210547d7fd398fe92edf8eaa2d20646a640a74f3161bbaf'},
+ 'acceptance/MemberCompanyCatalogPersistence/capture_build_source.py': {'bytes': 15108,
+                                                                        'gitBlob': '68bc83564e00c201cb8a82d756a3febbfa4d7adf',
+                                                                        'sha256': 'f138ecd9d3147d8c046c6c45bd039d0aac7144cda11ff4b8f93e155e7d91d797'},
  'acceptance/MemberCompanyCatalogPersistence/historical_controls.py': {'bytes': 3943,
                                                                        'gitBlob': 'c0d537b2ce03a9bf9830f959cd193f14f2cb24f0',
                                                                        'sha256': '30d6d022f73537483ef2eddd07796732d89f42b92c3108f3e2c9fd9715e91ada'},
  'acceptance/MemberCompanyCatalogPersistence/lifecycle-rosters.json': {'bytes': 15844,
                                                                        'gitBlob': '97cc0016e40bd759ee929ae99bdc4e263bfa35e7',
                                                                        'sha256': '8e9561190c803eebdb89bddbe529e1f75b306ca3d6916620053a79d7bdd88988'},
+ 'acceptance/MemberCompanyCatalogPersistence/nuget_signed_verification.py': {'bytes': 5731,
+                                                                             'gitBlob': '8a0a98cb3409f39e83725b62904a7bdfcc422b14',
+                                                                             'sha256': '8d183f689073f3a2454b77144a5e6c2fa982d4fb6020e683afa9bed9f1b32410'},
  'acceptance/MemberCompanyCatalogPersistence/predecessors/before-current-0.bin': {'bytes': 18505,
                                                                                   'gitBlob': 'f3a653f8c6653a476433d8a7cb4956d55ee58b21',
                                                                                   'sha256': 'eb3390ae61f09116253210c7e337c2d366ebc97011d8d83dd260a98b10157516'},
@@ -122,9 +125,9 @@ EXPECTED_FILES={'.github/workflows/_build-and-test.yml': {'bytes': 56086,
  'acceptance/MemberCompanyCatalogPersistence/retain.py': {'bytes': 20429,
                                                           'gitBlob': '62e3978d390f57291d35fd56484cc96f2d4a342d',
                                                           'sha256': 'db6def19fadfc7b71b9096257c3c37739e72935201775ba2ecbd336bacf9e3ac'},
- 'acceptance/MemberCompanyCatalogPersistence/test_current_consumer.py': {'bytes': 17829,
-                                                                         'gitBlob': '982fb2cdf550020490bfc8c3a1f32efd1ebb1eed',
-                                                                         'sha256': '5d1ef7c264cffeb06ff4e568c67660b71c387051fd2d7070b844f806dc788cf0'},
+ 'acceptance/MemberCompanyCatalogPersistence/test_current_consumer.py': {'bytes': 28989,
+                                                                         'gitBlob': '55a9a983196b8f2e79699820bcee37a51c9b98dd',
+                                                                         'sha256': 'b928edd8e2409c3f531ff002359e73e42e598a362df18fb955cc30da5621667e'},
  'acceptance/MemberCompanyCatalogPersistence/test_retain.py': {'bytes': 22334,
                                                                'gitBlob': '008b5ed1a5d3d3ef2675fe98989e64eeaff1e78f',
                                                                'sha256': '8827cd060a130a8f8c4b5fac24493f4f62d7c0b5aa99b6430155cdb8df0a4e3a'},
@@ -3311,8 +3314,8 @@ def current_cleanup(value,legacy):
     return result
 
 def validate_build_evidence(value,candidate):
-    keys={'schemaVersion','candidateHead','profileSha256','sourceChecked','sourceRevisions','assemblies','packageSources','assets','buildLogs','generatedDefaultsMetadata'}
-    need(type(value) is dict and set(value)==keys and type(value['schemaVersion']) is int and value['schemaVersion']==1,'exact build evidence schema')
+    keys={'schemaVersion','candidateHead','profileSha256','sourceChecked','sourceRevisions','assemblies','packageSources','assets','buildLogs','generatedDefaultsMetadata','packageVerifications'}
+    need(type(value) is dict and set(value)==keys and type(value['schemaVersion']) is int and value['schemaVersion']==2,'exact build evidence schema')
     need(re.fullmatch('[0-9a-f]{40}',candidate) and value['candidateHead']==candidate and value['sourceChecked'] is True,'actual executed candidate/source evidence')
     need(type(value['profileSha256']) is str and re.fullmatch('[0-9a-f]{64}',value['profileSha256']),'source profile hash')
     need(same(value['sourceRevisions'],dict(defaults=DEFAULTS,contracts=CONTRACTS)),'exact checked-out dependency revisions')
@@ -3326,6 +3329,19 @@ def validate_build_evidence(value,candidate):
     for row,(name,version,revision) in zip(value['packageSources'],PACKAGES):
         need(type(row) is dict and set(row)=={'id','version','revision','sha512'} and (row['id'],row['version'],row['revision'])==(name,version,revision),'unreviewed resolved package revision; retain evidence and review source')
         need(type(row['sha512']) is str and re.fullmatch('[A-Za-z0-9+/]{86}==',row['sha512']),'actual selected package SHA512')
+    need(type(value['packageVerifications']) is list and len(value['packageVerifications'])==6,'six actual package verifier receipts')
+    seen=set()
+    for row,(package,project) in zip(value['packageVerifications'],[(p,q) for p in value['packageSources'] for q in ('companyTests','webTests')]):
+        fields={'id','project','assetsContentHash','archiveHash','cacheArchiveHash','metadataContentHash','signaturePresent','verification'}
+        need(type(row) is dict and set(row)==fields and row['id']==package['id'] and row['project']==project,'exact package/project verifier binding')
+        need(row['signaturePresent'] is True and row['assetsContentHash']==row['metadataContentHash']==package['sha512'],'actual signed content hashes join')
+        need(type(row['archiveHash']) is str and re.fullmatch('[A-Za-z0-9+/]{86}==',row['archiveHash']) and row['archiveHash']==row['cacheArchiveHash'],'actual archive hashes join')
+        receipt=row['verification'];rkeys={'identity','pid','startTicks','bootId','executable','timeoutSeconds','outputLimitBytes','terminalVerified','pipeEof','pidfdAcquired','verified','exitCode','outputSha256','outputBytes','contentHash','elapsedMilliseconds'}
+        need(type(receipt) is dict and set(receipt)==rkeys and receipt['identity']==package['id']+'.'+package['version'],'exact owned verifier receipt')
+        need(all(receipt[k] is True for k in ('terminalVerified','pipeEof','pidfdAcquired','verified')) and type(receipt['exitCode']) is int and receipt['exitCode']==0 and receipt['contentHash']==package['sha512'],'positive settled signature verification')
+        need(type(receipt['pid']) is int and receipt['pid']>0 and type(receipt['startTicks']) is str and receipt['startTicks'].isdigit() and int(receipt['startTicks'])>0 and type(receipt['bootId']) is str and re.fullmatch('[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}',receipt['bootId']) and type(receipt['executable']) is str and receipt['executable'].startswith('/') and receipt['executable'].endswith('/dotnet'),'actual verifier process identity')
+        need(type(receipt['timeoutSeconds']) is int and receipt['timeoutSeconds']==30 and type(receipt['outputLimitBytes']) is int and receipt['outputLimitBytes']==65536 and type(receipt['outputBytes']) is int and 0<receipt['outputBytes']<=65536 and type(receipt['elapsedMilliseconds']) is int and 0<=receipt['elapsedMilliseconds']<=35000 and type(receipt['outputSha256']) is str and re.fullmatch('[0-9a-f]{64}',receipt['outputSha256']),'bounded verifier output and lifetime')
+        marker=(receipt['bootId'],receipt['pid'],receipt['startTicks']);need(marker not in seen,'unique verifier process identity');seen.add(marker)
     for key,fields in [('assets',{'project','sha256'}),('buildLogs',{'project','sha256','warnings','errors'})]:
         need(type(value[key]) is list and len(value[key])==2,'two build project records')
         for row,name in zip(value[key],['web-tests','company-tests']):

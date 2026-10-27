@@ -16,10 +16,15 @@ def assembly(role,name,revision):
     return dict(role=role,assemblyName=name,revision=revision,version='1.0.0.0',mvid='11111111-1111-1111-1111-111111111111',sha256='a'*64)
 
 def evidence(candidate='b'*40):
-    return dict(schemaVersion=1,candidateHead=candidate,profileSha256='c'*64,sourceChecked=True,
+    packages=[dict(id=name,version=version,revision=revision,sha512='A'*86+'==') for name,version,revision in [('Microsoft.Extensions.Http.Resilience','10.11.0','25f07afa51034e37b334210642d7dc5f191c142d'),('Microsoft.Extensions.Http','10.0.13','4099f83977f4d29604a9aeb971fb0a7bc1d5f699'),('Polly.Core','8.4.2','077cf388fc5a85a7f6cd0fdcb2b68d17a898019e')]]
+    verifications=[]
+    for index,(package,project) in enumerate((p,q) for p in packages for q in ('companyTests','webTests')):
+        receipt=dict(identity=package['id']+'.'+package['version'],pid=100+index,startTicks=str(1000+index),bootId='11111111-1111-1111-1111-111111111111',executable='/usr/share/dotnet/dotnet',timeoutSeconds=30,outputLimitBytes=65536,terminalVerified=True,pipeEof=True,pidfdAcquired=True,verified=True,exitCode=0,outputSha256='a'*64,outputBytes=128,contentHash=package['sha512'],elapsedMilliseconds=10)
+        verifications.append(dict(id=package['id'],project=project,assetsContentHash=package['sha512'],archiveHash='B'*86+'==',cacheArchiveHash='B'*86+'==',metadataContentHash=package['sha512'],signaturePresent=True,verification=receipt))
+    return dict(schemaVersion=2,candidateHead=candidate,profileSha256='c'*64,sourceChecked=True,
         sourceRevisions=dict(defaults='4ffba0639620e7e923d331317f3f28501526b573',contracts='78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7'),
         assemblies=[assembly('defaults','Legacy.Maliev.ServiceDefaults','4ffba0639620e7e923d331317f3f28501526b573'),assembly('resilience','Microsoft.Extensions.Http.Resilience','25f07afa51034e37b334210642d7dc5f191c142d'),assembly('http','Microsoft.Extensions.Http','4099f83977f4d29604a9aeb971fb0a7bc1d5f699'),assembly('polly','Polly.Core','077cf388fc5a85a7f6cd0fdcb2b68d17a898019e')],
-        packageSources=[dict(id=name,version=version,revision=revision,sha512='A'*86+'==') for name,version,revision in [('Microsoft.Extensions.Http.Resilience','10.11.0','25f07afa51034e37b334210642d7dc5f191c142d'),('Microsoft.Extensions.Http','10.0.13','4099f83977f4d29604a9aeb971fb0a7bc1d5f699'),('Polly.Core','8.4.2','077cf388fc5a85a7f6cd0fdcb2b68d17a898019e')]],
+        packageSources=packages,packageVerifications=verifications,
         assets=[dict(project=name,sha256='d'*64) for name in ['web-tests','company-tests']],
         buildLogs=[dict(project=name,sha256='e'*64,warnings=0,errors=0) for name in ['web-tests','company-tests']],
         generatedDefaultsMetadata=dict(sha256='f'*64,revision='4ffba0639620e7e923d331317f3f28501526b573'))
@@ -108,23 +113,118 @@ class CurrentConsumerControls(unittest.TestCase):
         with self.assertRaises(ValueError):d.validate_build_evidence(value,'b'*40)
         value=evidence();value['buildLogs'][0]['warnings']=1
         with self.assertRaises(ValueError):d.validate_build_evidence(value,'b'*40)
+    def test_package_verifier_receipts_refuse_missing_or_forged_proof(self):
+        d=self.consumer();d.validate_build_evidence(evidence(),'b'*40)
+        for field,bad in [('verified',False),('terminalVerified',False),('pipeEof',False),('pidfdAcquired',False),('exitCode',1),('contentHash','B'*86+'=='),('startTicks','0'),('outputBytes',65537),('timeoutSeconds',31),('identity','Other.1.0')]:
+            value=evidence();value['packageVerifications'][0]['verification'][field]=bad
+            with self.assertRaises(ValueError):d.validate_build_evidence(value,'b'*40)
+        for field,bad in [('signaturePresent',False),('metadataContentHash','B'*86+'=='),('cacheArchiveHash','C'*86+'=='),('project','webTests')]:
+            value=evidence();value['packageVerifications'][0][field]=bad
+            with self.assertRaises(ValueError):d.validate_build_evidence(value,'b'*40)
+        value=evidence();value['packageVerifications'][1]['verification'].update(pid=100,startTicks='1000')
+        with self.assertRaises(ValueError):d.validate_build_evidence(value,'b'*40)
     def test_duplicate_json_and_nonfinite_values_refused(self):
         d=self.consumer()
         for raw in [b'{"x":1,"x":2}',b'{"x":NaN}']:
             with self.assertRaises(ValueError):d.parse(raw)
-    def test_package_hash_refusal_records_distinct_hash_domains_without_bypassing_guard(self):
+    def test_signed_package_requires_verified_content_and_matching_archive_domains(self):
         import base64,hashlib,io,json,tempfile,zipfile
+        from unittest.mock import patch
         spec=importlib.util.spec_from_file_location('current_build_hash_diagnostic',HERE/'capture_build_source.py');capture=importlib.util.module_from_spec(spec);spec.loader.exec_module(capture)
         with tempfile.TemporaryDirectory(prefix='company-hash-control-',dir=HERE) as temp:
-            package=Path(temp)/'sample/1.0.0';package.mkdir(parents=True)
-            stream=io.BytesIO()
-            with zipfile.ZipFile(stream,'w') as archive:archive.writestr('.signature.p7s',b'synthetic only')
-            raw=stream.getvalue();archive_hash=base64.b64encode(hashlib.sha512(raw).digest()).decode();content_hash=base64.b64encode(b'x'*64).decode()
-            (package/'sample.1.0.0.nupkg').write_bytes(raw);(package/'sample.1.0.0.nupkg.sha512').write_text(archive_hash)
+            name='Microsoft.Extensions.Http.Resilience';version='10.11.0';key=name+'/'+version;revision='25f07afa51034e37b334210642d7dc5f191c142d';member='lib/net10.0/'+name+'.dll';package=Path(temp)/name.lower()/version;(package/'lib/net10.0').mkdir(parents=True)
+            nuspec=('<package><metadata><repository type="git" url="https://github.com/dotnet/extensions" commit="'+revision+'" /></metadata></package>').encode();payload=b'synthetic dll';stream=io.BytesIO()
+            with zipfile.ZipFile(stream,'w') as archive:archive.writestr('.signature.p7s',b'synthetic only');archive.writestr(member,payload);archive.writestr(name+'.nuspec',nuspec)
+            raw=stream.getvalue();archive_hash=base64.b64encode(hashlib.sha512(raw).digest()).decode();content_hash=base64.b64encode(b'x'*64).decode();stem=name.lower()+'.'+version
+            (package/(stem+'.nupkg')).write_bytes(raw);(package/(stem+'.nupkg.sha512')).write_text(archive_hash);(package/member).write_bytes(payload);(package/(name.lower()+'.nuspec')).write_bytes(nuspec)
             (package/'.nupkg.metadata').write_text(json.dumps({'version':2,'contentHash':content_hash,'source':'https://api.nuget.org/v3/index.json'}))
-            assets={'libraries':{'Sample/1.0.0':{'sha512':'sha512-'+content_hash,'path':'sample/1.0.0'}},'packageFolders':{temp:{}}};diagnostics={}
-            with self.assertRaisesRegex(ValueError,'actual nupkg hash joins resolved assets'):capture.package_record(assets,'Sample','1.0.0','a'*40,diagnostics)
-            self.assertEqual(content_hash,diagnostics['assetsContentHash']);self.assertEqual(archive_hash,diagnostics['archiveHash']);self.assertEqual(archive_hash,diagnostics['cacheArchiveHash']);self.assertEqual(content_hash,diagnostics['metadataContentHash']);self.assertTrue(diagnostics['signaturePresent'])
+            assets={'libraries':{key:{'sha512':'sha512-'+content_hash,'path':name.lower()+'/'+version}},'packageFolders':{temp:{}},'targets':{'net10.0':{key:{'runtime':{member:{}}}}}}
+            def verified(path,identity,receipt):receipt.update(verified=True,terminalVerified=True,pipeEof=True,pidfdAcquired=True,exitCode=0,contentHash=content_hash);return content_hash
+            with patch.object(capture,'verify_signed_package',side_effect=verified):
+                diagnostics={};record,dllhash=capture.package_record(assets,name,version,revision,diagnostics)
+                self.assertEqual(content_hash,record['sha512']);self.assertEqual(hashlib.sha256(payload).hexdigest(),dllhash);self.assertNotEqual(diagnostics['archiveHash'],diagnostics['assetsContentHash'])
+                duplicate=io.BytesIO()
+                with zipfile.ZipFile(duplicate,'w') as archive:archive.writestr('.signature.p7s',b'synthetic only');archive.writestr(member,payload);archive.writestr(name+'.nuspec',nuspec);archive.writestr(name.lower()+'.nuspec',nuspec)
+                bad=duplicate.getvalue();(package/(stem+'.nupkg')).write_bytes(bad);(package/(stem+'.nupkg.sha512')).write_text(base64.b64encode(hashlib.sha512(bad).digest()).decode())
+                with self.assertRaises(ValueError):capture.package_record(assets,name,version,revision,{})
+                (package/(stem+'.nupkg')).write_bytes(raw);(package/(stem+'.nupkg.sha512')).write_text(archive_hash)
+                (package/(stem+'.nupkg.sha512')).write_text(content_hash)
+                with self.assertRaises(ValueError):capture.package_record(assets,name,version,revision,{})
+                (package/(stem+'.nupkg.sha512')).write_text(archive_hash);(package/'.nupkg.metadata').write_text(json.dumps({'contentHash':archive_hash}))
+                with self.assertRaises(ValueError):capture.package_record(assets,name,version,revision,{})
+                (package/'.nupkg.metadata').write_text(json.dumps({'contentHash':content_hash}));(package/(name.lower()+'.nuspec')).write_bytes(nuspec+b' ')
+                with self.assertRaises(ValueError):capture.package_record(assets,name,version,revision,{})
+                (package/(name.lower()+'.nuspec')).write_bytes(nuspec)
+                def unverified(path,identity,receipt):receipt.update(verified=False,terminalVerified=True,pipeEof=True,pidfdAcquired=True,exitCode=0,contentHash=content_hash);return content_hash
+                with patch.object(capture,'verify_signed_package',side_effect=unverified):
+                    with self.assertRaises(ValueError):capture.package_record(assets,name,version,revision,{})
+                def wronghash(path,identity,receipt):receipt.update(verified=True,terminalVerified=True,pipeEof=True,pidfdAcquired=True,exitCode=0,contentHash=archive_hash);return archive_hash
+                with patch.object(capture,'verify_signed_package',side_effect=wronghash):
+                    with self.assertRaises(ValueError):capture.package_record(assets,name,version,revision,{})
+    def test_nuget_verifier_output_requires_unique_positive_identity(self):
+        import base64
+        import nuget_signed_verification as verifier
+        identity='Microsoft.Extensions.Http.Resilience.10.11.0';digest=base64.b64encode(b'x'*64).decode();good=(f"Content hash: {digest}\nSuccessfully verified package '{identity}'.\n").encode()
+        self.assertEqual(digest,verifier.parse_output(good,0,identity))
+        for raw,code in [(f'Content hash: {digest}\n'.encode(),0),(good,1),(good+b'Package signature validation failed.\n',0),(good+b'error NU3008: invalid\n',0),(good+b'warning NU3018: untrusted\n',0),(good+good,0),(good+b"Successfully verified package 'Other.1.0'.\n",0),(good.replace(identity.encode(),b'Other.1.0'),0),(b'x'*65537,0)]:
+            with self.assertRaises(ValueError):verifier.parse_output(raw,code,identity)
+    def test_nuget_verifier_owned_process_is_bounded_and_terminated_by_pidfd(self):
+        import base64,os,signal,tempfile
+        from unittest.mock import patch
+        import nuget_signed_verification as verifier
+        identity='Microsoft.Extensions.Http.Resilience.10.11.0';digest=base64.b64encode(b'x'*64).decode();good=(f"Content hash: {digest}\nSuccessfully verified package '{identity}'.\n").encode()
+        class Stream:
+            def fileno(self):return 42
+            def close(self):pass
+        class Process:
+            pid=32123
+            def __init__(self,alive):self.stdout=Stream();self.returncode=None if alive else 0
+            def poll(self):return self.returncode
+            def wait(self,timeout):self.returncode=-15;return self.returncode
+        class Selector:
+            def register(self,*args):pass
+            def unregister(self,*args):pass
+            def close(self):pass
+            def select(self,*args):return [(type('Key',(),{'fd':42,'fileobj':object()})(),None)]
+        with tempfile.TemporaryDirectory(prefix='verifier-control-',dir=HERE) as root:
+            exe=str((Path(root)/'dotnet').resolve());ident=dict(pid=32123,startTicks='1000',bootId='11111111-1111-1111-1111-111111111111',executable=exe)
+            for overflow in (False,True):
+                proc=Process(overflow);reads=[b'x'*65537] if overflow else [good,b''];receipt={};signals=[]
+                with patch.object(verifier.sys,'platform','linux'),patch.dict(os.environ,{'DOTNET_ROOT':root}),patch.object(verifier.os,'pidfd_open',side_effect=[91,92],create=True),patch.object(verifier.os,'close'),patch.object(verifier.os,'set_blocking'),patch.object(verifier.os,'read',side_effect=reads),patch.object(verifier.signal,'pidfd_send_signal',side_effect=lambda fd,sig:signals.append((fd,sig)),create=True),patch.object(verifier.selectors,'DefaultSelector',return_value=Selector()),patch.object(verifier.subprocess,'Popen',return_value=proc) as spawn,patch.object(verifier,'proc_identity',return_value=ident):
+                    if overflow:
+                        with self.assertRaises(ValueError):verifier.verify_signed_package(Path(root)/'p.nupkg',identity,receipt)
+                        self.assertEqual([(92,signal.SIGTERM)],signals);self.assertTrue(receipt['terminalVerified']);self.assertFalse(receipt['verified'])
+                    else:
+                        self.assertEqual(digest,verifier.verify_signed_package(Path(root)/'p.nupkg',identity,receipt));self.assertTrue(receipt['verified']);self.assertTrue(receipt['terminalVerified']);self.assertTrue(receipt['pipeEof']);self.assertEqual([],signals)
+                    self.assertEqual(['nuget','verify'],spawn.call_args.args[0][1:3]);self.assertEqual(['--all','--verbosity','normal'],spawn.call_args.args[0][-3:])
+    def test_verifier_preflight_and_deadline_fail_closed(self):
+        import os,signal,subprocess,tempfile
+        from unittest.mock import patch
+        import nuget_signed_verification as verifier
+        class Stream:
+            def fileno(self):return 42
+            def close(self):self.closed=True
+        class Process:
+            pid=32123
+            def __init__(self):self.stdout=Stream();self.returncode=None;self.waits=0
+            def poll(self):return self.returncode
+            def wait(self,timeout):
+                self.waits+=1
+                if self.waits==1:raise subprocess.TimeoutExpired('dotnet',timeout)
+                self.returncode=-9;return self.returncode
+        class Selector:
+            def close(self):pass
+            def register(self,*args):pass
+            def select(self,*args):return []
+        with tempfile.TemporaryDirectory(prefix='verifier-deadline-',dir=HERE) as root:
+            exe=str((Path(root)/'dotnet').resolve());ident=dict(pid=32123,startTicks='1000',bootId='11111111-1111-1111-1111-111111111111',executable=exe)
+            with patch.object(verifier.sys,'platform','linux'),patch.dict(os.environ,{'DOTNET_ROOT':root}),patch.object(verifier.os,'pidfd_open',side_effect=OSError('denied'),create=True),patch.object(verifier.signal,'pidfd_send_signal',create=True),patch.object(verifier.subprocess,'Popen') as spawn:
+                with self.assertRaises(OSError):verifier.verify_signed_package(Path(root)/'p.nupkg','x.1',{})
+                spawn.assert_not_called()
+            proc=Process();receipt={};signals=[]
+            with patch.object(verifier.sys,'platform','linux'),patch.dict(os.environ,{'DOTNET_ROOT':root}),patch.object(verifier.os,'pidfd_open',side_effect=[91,92],create=True),patch.object(verifier.os,'close'),patch.object(verifier.os,'set_blocking'),patch.object(verifier.signal,'SIGKILL',9,create=True),patch.object(verifier.signal,'pidfd_send_signal',side_effect=lambda fd,sig:signals.append((fd,sig)),create=True),patch.object(verifier.selectors,'DefaultSelector',return_value=Selector()),patch.object(verifier.subprocess,'Popen',return_value=proc),patch.object(verifier,'proc_identity',return_value=ident),patch.object(verifier.time,'monotonic',side_effect=[0,31,32]):
+                with self.assertRaisesRegex(ValueError,'deadline'):verifier.verify_signed_package(Path(root)/'p.nupkg','x.1',receipt)
+            self.assertEqual([(92,signal.SIGTERM),(92,9)],signals);self.assertTrue(receipt['terminalVerified']);self.assertFalse(receipt['verified']);self.assertFalse(receipt['pipeEof']);self.assertTrue(proc.stdout.closed)
     def test_build_capture_rejects_non_cli_binary_without_execution(self):
         path=HERE/'capture_build_source.py'
         if not path.exists():self.fail('Static current build/source evidence capture is missing')

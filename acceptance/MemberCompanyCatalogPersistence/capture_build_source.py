@@ -11,6 +11,7 @@ import uuid
 import xml.etree.ElementTree as ET
 import zipfile
 import current_consumer as current
+from nuget_signed_verification import verify_signed_package
 
 ROOT=current.ROOT
 need=current.need
@@ -88,14 +89,26 @@ def package_record(assets,name,version,revision,diagnostics=None):
         try:
             with zipfile.ZipFile(__import__('io').BytesIO(zipped)) as archive:diagnostics['signaturePresent']=archive.namelist().count('.signature.p7s')==1
         except (ValueError,OSError,zipfile.BadZipFile):pass
-    need(base64.b64encode(hashlib.sha512(zipped).digest()).decode()==digest,'actual nupkg hash joins resolved assets')
-    marker=file_bytes(package/(stem+'.nupkg.sha512'),1024).decode().strip();need(marker==digest,'actual package-cache hash')
+    archive_hash=base64.b64encode(hashlib.sha512(zipped).digest()).decode()
+    marker=file_bytes(package/(stem+'.nupkg.sha512'),1024).decode().strip();need(marker==archive_hash,'actual archive joins package-cache hash')
+    metadata=current.parse(file_bytes(package/'.nupkg.metadata',65536));need(type(metadata) is dict and metadata.get('contentHash')==digest,'actual assets join NuGet content metadata')
+    with zipfile.ZipFile(__import__('io').BytesIO(zipped)) as archive:need(archive.namelist().count('.signature.p7s')==1,'one signed package entry required')
+    verification={}
+    if diagnostics is not None:diagnostics['verification']=verification
+    verified_hash=verify_signed_package(package/(stem+'.nupkg'),name+'.'+version,verification)
+    need(verification.get('verified') is True and verification.get('terminalVerified') is True and verification.get('pipeEof') is True and verification.get('pidfdAcquired') is True and verification.get('exitCode')==0,'actual signature verifier settled successfully')
+    need(verified_hash==digest and verification.get('contentHash')==digest,'verified package content joins assets and metadata')
+    need(file_bytes(package/(stem+'.nupkg'),32*1024*1024)==zipped,'verified archive unchanged during verification')
     repository_url={'Microsoft.Extensions.Http.Resilience':'https://github.com/dotnet/extensions','Microsoft.Extensions.Http':'https://github.com/dotnet/dotnet','Polly.Core':'https://github.com/App-vNext/Polly'}[name]
     repository=xml_repository(file_bytes(package/(name.lower()+'.nuspec'),65536),repository_url)
     target=next((value for key,value in assets['targets'].items() if key=='net10.0'),None);need(target is not None and key in target,'exact net10 package target')
     runtime=target[key].get('runtime',{});dll=name+'.dll';members=[path for path in runtime if path.endswith('/'+dll)]
     need(len(members)==1,'single selected package runtime DLL')
     with zipfile.ZipFile(__import__('io').BytesIO(zipped)) as archive:
+        nuspecs=[entry for entry in archive.namelist() if entry.lower()==name.lower()+'.nuspec']
+        need(archive.namelist().count(members[0])==1 and len(nuspecs)==1,'unique archive assembly and nuspec')
+        need(0<archive.getinfo(nuspecs[0]).file_size<=65536,'bounded package nuspec')
+        need(archive.read(nuspecs[0])==file_bytes(package/(name.lower()+'.nuspec'),65536),'actual cache nuspec joins verified archive')
         info=archive.getinfo(members[0]);need(0<info.file_size<=16*1024*1024,'bounded package assembly');original=archive.read(info)
     cached=file_bytes(package/members[0]);need(cached==original,'actual cache DLL joins original package')
     return dict(id=name,version=version,revision=repository,sha512=digest),hashlib.sha256(cached).hexdigest()
@@ -144,9 +157,10 @@ def capture():
             warnings=re.findall(rb'^\s*(\d+) Warning\(s\)\s*$',raw,re.M);errors=re.findall(rb'^\s*(\d+) Error\(s\)\s*$',raw,re.M)
             need(warnings==[b'0'] and errors==[b'0'],'actual build zero warnings/errors summary')
             logs.append(dict(project=role,sha256=hashlib.sha256(raw).hexdigest(),warnings=0,errors=0))
-        evidence=dict(schemaVersion=1,candidateHead=candidate,profileSha256=current.identity(current.read(ROOT,current.PROFILE))['sha256'],sourceChecked=True,
+        package_verifications=[dict(id=name,project=project,**progress['packageDiagnostics'][name][project]) for name,_,_ in current.PACKAGES for project in ('companyTests','webTests')]
+        evidence=dict(schemaVersion=2,candidateHead=candidate,profileSha256=current.identity(current.read(ROOT,current.PROFILE))['sha256'],sourceChecked=True,
             sourceRevisions=revisions,assemblies=assemblies,packageSources=packages,assets=asset_records,buildLogs=logs,
-            generatedDefaultsMetadata=dict(sha256=hashlib.sha256(current.read(ROOT,generated)).hexdigest(),revision=current.DEFAULTS))
+            generatedDefaultsMetadata=dict(sha256=hashlib.sha256(current.read(ROOT,generated)).hexdigest(),revision=current.DEFAULTS),packageVerifications=package_verifications)
         progress['unqualifiedEvidence']=evidence
         current.validate_build_evidence(evidence,candidate)
         destination=output/'build-source-evidence.json';need(not destination.exists(),'fresh build evidence required');destination.write_text(json.dumps(evidence,indent=2)+'\n')
