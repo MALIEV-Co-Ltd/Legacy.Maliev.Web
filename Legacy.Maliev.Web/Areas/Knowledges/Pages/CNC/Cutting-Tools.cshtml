@@ -1,0 +1,7 @@
+@page
+@inject IStringLocalizer<CncCuttingToolsContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["CNC cutting tools: select the whole cutting system"];
+    ViewData["Description"] = MetadataLocalizer["Match tool material, geometry, coating and holding to the workpiece and operation. A useful selection balances edge strength, chip space, access and a stable cutting process."];
+}
+<component type="typeof(CncCuttingToolsContent)" render-mode="Static" />

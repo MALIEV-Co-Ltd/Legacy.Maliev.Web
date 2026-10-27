@@ -1,0 +1,116 @@
+@inject IStringLocalizer<ManufacturingProcessSelectionContent> Localizer
+
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+<h1>@Localizer["Choose the process around the part"]</h1>
+<p class="docs-lead">@Localizer["A process is a route to a functional part, not a quality ranking. Start with the job the component must do, then compare feasible routes against the same drawing, material requirement, delivery scope, and inspection plan."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/process-selection.webp" srcset="/src/images/knowledge/photos/process-selection-small.webp 768w, /src/images/knowledge/photos/process-selection.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["Printed, machined and folded-sheet instrument housings illustrate different process routes."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["A similar function can lead to different construction, tooling and material decisions. Illustrative image."]</figcaption>
+</figure>
+<nav class="docs-toc" aria-label="@Localizer["On this page"]"><strong>@Localizer["On this page"]</strong><ul>
+<li><a href="#requirements">@Localizer["Start with non-negotiable requirements"]</a></li>
+<li><a href="#routes">@Localizer["Match geometry to a feasible route"]</a></li>
+<li><a href="#economics">@Localizer["Compare total cost and repeat orders"]</a></li>
+<li><a href="#example">@Localizer["Example: a product changes process"]</a></li>
+<li><a href="#handoff">@Localizer["Send a comparable quotation package"]</a></li>
+</ul></nav>
+<section id="requirements" class="docs-section">
+<h2>@Localizer["Start with non-negotiable requirements"]</h2>
+<p>@Localizer["Write down loads, operating temperature, chemical exposure, mating components, cosmetic faces, and expected life. Separate must-have requirements from preferences. A prototype for checking hand clearance needs different evidence from a replacement shaft carrying a rotating load. Identify which tests the prototype must represent before choosing its material or manufacturing route."]</p>
+<p>@Localizer["Specify the material grade and condition when they matter. A printed polymer with a familiar family name is not automatically equivalent to an injection-molded grade; likewise, cast and wrought alloys should not be substituted by name alone. Compare the actual material data and test the characteristics that determine acceptance."]</p>
+<p class="docs-source"><a href="https://www.protolabs.com/media/1022699/pl_digital_mfg_guide_2021.pdf">@Localizer["Source: Protolabs manufacturing process guide"]</a></p>
+</section>
+<section id="routes" class="docs-section">
+<h2>@Localizer["Match geometry to a feasible route"]</h2>
+<div class="docs-table-wrap" tabindex="0" role="region" aria-label="@Localizer["Manufacturing route comparison"]"><table><thead><tr>
+<th scope="col">@Localizer["Route"]</th>
+<th scope="col">@Localizer["Useful starting point"]</th>
+<th scope="col">@Localizer["Questions before selection"]</th>
+</tr></thead><tbody>
+<tr>
+<th scope="row">@Localizer["CNC machining"]</th>
+<td>@Localizer["Parts cut from stock; accessible precision interfaces and turned features."]</td>
+<td>@Localizer["Can cutters reach the features? How many setups and how much stock removal are needed?"]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["3D printing"]</th>
+<td>@Localizer["Frequent design changes, complex shapes, and parts that benefit from additive geometry."]</td>
+<td>@Localizer["Which technology, build direction, supports, finishing, and material properties are required?"]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["Injection molding"]</th>
+<td>@Localizer["Repeated polymer parts with a stable design and a justified tooling investment."]</td>
+<td>@Localizer["Can the part eject? Review draft, wall transitions, gates, and tooling changes."]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["Metal casting"]</th>
+<td>@Localizer["Near-net shapes where the chosen casting method and alloy suit the application."]</td>
+<td>@Localizer["Which casting method? Where are machining allowances, parting lines, and soundness requirements?"]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["Sheet metal fabrication"]</th>
+<td>@Localizer["Covers, brackets, and enclosures developed from sheet."]</td>
+<td>@Localizer["Are bends accessible? Check bend radius, springback, fasteners, and weld distortion."]</td>
+</tr>
+</tbody></table></div>
+<p class="docs-source"><a href="https://www.protolabs.com/en-gb/resources/blog/how-to-select-the-best-manufacturing-process-for-your-part/">@Localizer["Source: Protolabs process selection and product examples"]</a></p>
+<p class="docs-source"><a href="https://www.xometry.com/resources/casting/die-casting/">@Localizer["Source: Xometry die casting explanation"]</a></p>
+<p class="docs-source"><a href="https://www.protolabs.com/services/sheet-metal-fabrication/">@Localizer["Source: Protolabs sheet metal fabrication overview"]</a></p>
+<p>@Localizer["Treat this table as a shortlist, not a purchase specification. Metal casting includes processes with different tooling, alloy, surface, and internal-quality implications. A route can also combine processes: cast a body and machine its bearing seats, or print a housing and machine selected interfaces. Ask which operations are included in the delivered price."]</p>
+
+<figure class="docs-figure knowledge-diagram knowledge-process-illustration">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["A vertical end mill cuts an aluminum pocket while a vise grips the billet."]">
+        <img src="/src/images/knowledge/diagrams/process-milling-v3.webp" srcset="/src/images/knowledge/diagrams/process-milling-v3-small.webp 768w, /src/images/knowledge/diagrams/process-milling-v3.webp 1536w" sizes="(min-width: 48rem) 48rem, calc(100vw - 4rem)" alt="@Localizer["A vertical end mill cuts an aluminum pocket while a vise grips the billet."]" width="1536" height="1024" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>
+        <strong>@Localizer["CNC machining"]</strong>
+        <p>@Localizer["The rotating cutter removes material from a clamped billet to form a pocket. Chips are removed stock; the surrounding walls and floor remain part of the original block. A round cutter leaves radii at the internal corners."]</p>
+        <a class="knowledge-diagram-link" href="/src/images/knowledge/diagrams/process-milling-v3.webp" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a>
+        <p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/milling/milling-holes-cavities-pockets">Sandvik Coromant</a></p>
+    </figcaption>
+</figure>
+<figure class="docs-figure knowledge-diagram knowledge-process-illustration">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["An FDM nozzle deposits a blue bead onto the supported top layer of a printed tray."]">
+        <img src="/src/images/knowledge/diagrams/process-fdm-v3.webp" srcset="/src/images/knowledge/diagrams/process-fdm-v3-small.webp 768w, /src/images/knowledge/diagrams/process-fdm-v3.webp 1536w" sizes="(min-width: 48rem) 48rem, calc(100vw - 4rem)" alt="@Localizer["An FDM nozzle deposits a blue bead onto the supported top layer of a printed tray."]" width="1536" height="1024" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>
+        <strong>@Localizer["FDM material extrusion"]</strong>
+        <p>@Localizer["The heated nozzle deposits polymer onto the preceding layer. Repeated paths build the tray walls upward from the build plate. FDM is one additive process; resin and powder processes form layers differently."]</p>
+        <a class="knowledge-diagram-link" href="/src/images/knowledge/diagrams/process-fdm-v3.webp" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a>
+        <p class="docs-source"><a href="https://www.prusa3d.com/p/3d-printing/3d-printing-101/">Prusa Research</a></p>
+    </figcaption>
+</figure>
+<figure class="docs-figure knowledge-diagram knowledge-process-illustration">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["A press-brake punch bends a continuous blue sheet over the two shoulders of a V-die."]">
+        <img src="/src/images/knowledge/diagrams/process-air-bending-v3.webp" srcset="/src/images/knowledge/diagrams/process-air-bending-v3-small.webp 768w, /src/images/knowledge/diagrams/process-air-bending-v3.webp 1536w" sizes="(min-width: 48rem) 48rem, calc(100vw - 4rem)" alt="@Localizer["A press-brake punch bends a continuous blue sheet over the two shoulders of a V-die."]" width="1536" height="1024" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>
+        <strong>@Localizer["Press-brake air bending"]</strong>
+        <p>@Localizer["The punch pushes the sheet between two die shoulders. The sheet contacts the punch and those shoulders while gaps remain above the die walls. This operation changes the sheet shape rather than cutting away material; punch travel helps determine the bend angle."]</p>
+        <a class="knowledge-diagram-link" href="/src/images/knowledge/diagrams/process-air-bending-v3.webp" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a>
+        <p class="docs-source"><a href="https://www.trumpf.com/en_INT/solutions/applications/bending/">TRUMPF</a></p>
+    </figcaption>
+</figure>
+</section>
+<section id="economics" class="docs-section">
+<h2>@Localizer["Compare total cost and repeat orders"]</h2>
+<p>@Localizer["Request separate figures for engineering, fixtures or molds, first articles, unit production, secondary operations, inspection, packaging, and delivery. Compare the first order and expected repeat orders. Tool ownership, storage, maintenance, repair, and modification terms belong in the comparison because they affect the next revision as well as the first shipment."]</p>
+<p>@Localizer["There is no universal quantity where one process becomes cheaper. Compare supplier quotations at realistic demand scenarios, including a lower-demand case. Keep the revision fixed, state batch sizes and delivery releases, and include rejected-part and rework responsibilities. A low unit price cannot compensate for buying inventory that becomes obsolete before assembly."]</p>
+<p>@Localizer["Lead time includes more than machine time: material procurement, DFM approval, tooling, samples, qualification, finishing, and transport can control the schedule. Ask which event starts the quoted clock. For repeatability, agree the controlled characteristics and evidence needed across batches rather than assuming that automation alone proves consistency."]</p>
+</section>
+<section id="example" class="docs-section">
+<h2>@Localizer["Example: a product changes process"]</h2>
+<p>@Localizer["Protolabs reports that Epson used CNC machining for Moverio eyewear prototypes and later used injection molding for newer professional models. This is a documented example of process choice changing during product development; it does not establish a cost threshold, an interchangeable material, or a guaranteed schedule for another project."]</p>
+<p>@Localizer["Apply that lesson to your own decision record: state what the current build must prove, which assumptions remain open, and what would trigger a process review. A change in geometry, annual demand, material certification, or inspection scope can justify a new comparison even when the previous batch worked."]</p>
+<p class="docs-source"><a href="https://www.protolabs.com/en-gb/resources/blog/how-to-select-the-best-manufacturing-process-for-your-part/">@Localizer["Reference: Epson Moverio example in the Protolabs article"]</a></p>
+</section>
+<section id="handoff" class="docs-section">
+<h2>@Localizer["Send a comparable quotation package"]</h2>
+<p>@Localizer["Send matching CAD and drawing revisions, material and permitted alternatives, order quantity and forecast, critical interfaces, finish, inspection deliverables, and required delivery date. Invite suppliers to identify assumptions and exclusions. Record why the chosen route satisfies the requirements, and approve any design changes before releasing production files."]</p>
+</section>
+</article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}

@@ -1,0 +1,98 @@
+@using System.Globalization
+@using System.Linq
+@inject IStringLocalizer<KnowledgeNavigation> Localizer
+
+@{
+    var groups = new[]
+    {
+        new { Key = "start", Title = "Start here", Items = new[]
+        {
+            new { Page = "/Index", Title = "Knowledge center" },
+            new { Page = "/Guidelines", Title = "Files and quotation checklist" },
+            new { Page = "/Workflow", Title = "Review and production workflow" },
+            new { Page = "/Manufacturing/Process-Selection", Title = "Choose a manufacturing process" },
+            new { Page = "/Specifications/Index", Title = "Service preparation guides" },
+        } },
+        new { Key = "cnc", Title = "CNC machining", Items = new[]
+        {
+            new { Page = "/Specifications/CNC-Machining", Title = "CNC design overview" },
+            new { Page = "/CNC/Feeds-and-Speeds", Title = "Calculate feeds and speeds" },
+            new { Page = "/CNC/Cutting-Tools", Title = "Choose cutting tools" },
+            new { Page = "/CNC/Geometry-and-Workholding", Title = "Geometry, rigidity and workholding" },
+            new { Page = "/CNC/Holes-and-Tolerances", Title = "Holes, threads and tolerances" },
+            new { Page = "/CNC/Machining-Processes", Title = "3-axis, 5-axis, EDM and grinding" },
+        } },
+        new { Key = "materials", Title = "Materials and applications", Items = new[]
+        {
+            new { Page = "/Materials/Selection", Title = "Material selection checklist" },
+            new { Page = "/Materials/Metals", Title = "Metals and their applications" },
+            new { Page = "/Materials/Engineering-Plastics", Title = "Engineering plastics" },
+        } },
+        new { Key = "digital", Title = "3D printing and scanning", Items = new[]
+        {
+            new { Page = "/Specifications/3D-Printing", Title = "Design for 3D printing" },
+            new { Page = "/Specifications/3D-Scanning", Title = "Scanning and reverse engineering" },
+        } },
+        new { Key = "quality", Title = "Finishing and inspection", Items = new[]
+        {
+            new { Page = "/Finishing/Surface-Finishes", Title = "Surface finishes and coatings" },
+            new { Page = "/Finishing/Heat-Treatment", Title = "Heat treatment and material condition" },
+            new { Page = "/Inspection/Measuring-Parts", Title = "Measure and inspect parts" },
+        } },
+    };
+}
+<aside id="knowledge-navigation" class="workspace-sidebar workspace-sidebar--knowledge" aria-label="@Localizer["Knowledge center"]">
+    <div class="workspace-sidebar__header"><strong>@Localizer["Knowledge center"]</strong><button type="button" class="workspace-drawer-close" data-workspace-close aria-label="@Localizer["Close contents"]"><i class="fas fa-times" aria-hidden="true"></i></button></div>
+    @* Client templates must cross the resource boundary as plain strings, not formatted arguments. *@
+    <div class="knowledge-search" role="search" aria-label="@Localizer["Search the knowledge center"]" data-knowledge-search hidden
+         data-search-loading="@Localizer["Searching the guides…"]"
+         data-search-short="@Localizer["Enter at least two characters."]"
+         data-search-empty="@Localizer["No matches. Try a different term or part feature."]"
+         data-search-count="@(Localizer["Matches: {0}"].Value)"
+         data-search-limited="@(Localizer["Showing {0} of {1} matches. Narrow your search to see more."].Value)"
+         data-search-error="@Localizer["We could not search every guide. Please try again."]">
+        <label for="knowledge-search-input">@Localizer["Search the guides"]</label>
+        <div class="knowledge-search-field">
+            <input id="knowledge-search-input" type="search" data-knowledge-search-input maxlength="120" autocomplete="off" spellcheck="false"
+                   placeholder="@Localizer["e.g. 6061, tolerance, feeds"]" aria-describedby="knowledge-search-hint knowledge-search-status" />
+            <button type="button" class="knowledge-search-clear" data-knowledge-search-clear hidden aria-label="@Localizer["Clear search"]"><i class="fas fa-times" aria-hidden="true"></i></button>
+        </div>
+        <p id="knowledge-search-hint" class="knowledge-search-hint">@Localizer["Search article text and headings."]</p>
+        <p id="knowledge-search-status" class="knowledge-search-status" data-knowledge-search-status role="status" aria-live="polite" aria-atomic="true" hidden></p>
+        <button type="button" class="knowledge-search-retry" data-knowledge-search-retry hidden>@Localizer["Try again"]</button>
+        <ol class="knowledge-search-results" data-knowledge-search-results hidden></ol>
+    </div>
+    <nav data-knowledge-browse>
+        @foreach (var group in groups)
+        {
+            <details class="knowledge-nav-group" open="@group.Items.Any(item => CurrentPageMarker(item.Page) != null)">
+                <summary>@Localizer[group.Title]</summary>
+                <ul class="workspace-nav-list">
+                    @foreach (var item in group.Items)
+                    {
+                        <li>
+                            <a class="workspace-nav-link" href="@Destination(item.Page)" aria-current="@CurrentPageMarker(item.Page)" data-knowledge-search-title="@item.Title"><span>@Localizer[item.Title]</span></a>
+                            @if (CurrentPageMarker(item.Page) != null)
+                            {
+                                <ul class="knowledge-section-links" data-knowledge-current-toc aria-label="@Localizer["In this article"]"></ul>
+                            }
+                        </li>
+                    }
+                </ul>
+            </details>
+        }
+    </nav>
+</aside>
+
+@code {
+    [Parameter, EditorRequired]
+    public string CurrentPage { get; set; } = "/Index";
+
+    private string? CurrentPageMarker(string page) => string.Equals(CurrentPage, page, StringComparison.OrdinalIgnoreCase) ? "page" : null;
+
+    private static string Destination(string page)
+    {
+        var relative = page.EndsWith("/Index", StringComparison.OrdinalIgnoreCase) ? page[..^6] : page;
+        return "/knowledges" + relative.ToLowerInvariant() + "?culture=" + CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    }
+}

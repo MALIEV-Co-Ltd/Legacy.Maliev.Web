@@ -63,6 +63,20 @@ public sealed partial class ThreeDimensionalScanningParityTests : IClassFixture<
         var styles = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "css", "service-pages.css"));
         var script = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "js", "scanning-workflow.js"));
 
+        Assert.Contains("THB 2,500", component, StringComparison.Ordinal);
+        Assert.Contains("THB 4,500", component, StringComparison.Ordinal);
+        Assert.Contains("THB 1,000", component, StringComparison.Ordinal);
+        Assert.Contains("same day", component, StringComparison.Ordinal);
+        Assert.Contains("best available condition", component, StringComparison.Ordinal);
+        Assert.Contains("broken parts", component, StringComparison.Ordinal);
+        Assert.Contains("small gears", component, StringComparison.Ordinal);
+        Assert.Contains("6-metre private aircraft", component, StringComparison.Ordinal);
+        Assert.Contains("sculptures", component, StringComparison.Ordinal);
+        Assert.Contains("human", component, StringComparison.Ordinal);
+        Assert.Contains("0.02 mm + 0.06 mm/m", component, StringComparison.Ordinal);
+        Assert.Contains("direct sunlight", component, StringComparison.Ordinal);
+        Assert.Contains("LiDAR", component, StringComparison.Ordinal);
+        Assert.Contains("ความแม่นยำเชิงปริมาตร", component, StringComparison.Ordinal);
         Assert.Contains("RouteOwner", component, StringComparison.Ordinal);
         Assert.Contains("ServiceBreadcrumb", component, StringComparison.Ordinal);
         Assert.Contains("ServiceLocation", component, StringComparison.Ordinal);

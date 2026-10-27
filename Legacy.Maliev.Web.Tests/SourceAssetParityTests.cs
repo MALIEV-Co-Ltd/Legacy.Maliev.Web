@@ -28,6 +28,30 @@ public sealed class SourceAssetParityTests
         }
     }
 
+    /// <summary>Preserves the original service presentation asset floor after the reviewed WebP path conversions.</summary>
+    /// <param name="relativePath">The independently qualified path relative to the service image directory.</param>
+    [Theory]
+    [InlineData("design/design-inputs.webp")]
+    [InlineData("design/design-dfm-review.webp")]
+    [InlineData("silicone-casting/silicone-mold-prep.webp")]
+    [InlineData("silicone-casting/silicone-pour-cure.webp")]
+    [InlineData("injection-molding/pimm-50g-cover.webp")]
+    [InlineData("injection-molding/injection-service-hero.webp")]
+    [InlineData("injection-molding/injection-card-workshop.webp")]
+    public void OriginalServicePresentationAsset_PreservesStrictSizeFloor(string relativePath)
+    {
+        var path = Path.Combine(
+            FindRepositoryRoot(),
+            "Legacy.Maliev.Web",
+            "wwwroot",
+            "src",
+            "images",
+            "services",
+            relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Assert.True(File.Exists(path), $"Missing original service asset '{relativePath}'.");
+        Assert.True(new FileInfo(path).Length > 10_000, $"Original service asset '{relativePath}' must exceed 10000 bytes.");
+    }
+
     [Fact]
     public void ServiceFinderScript_IsCompleteAndMaterialDetailsAreWired()
     {

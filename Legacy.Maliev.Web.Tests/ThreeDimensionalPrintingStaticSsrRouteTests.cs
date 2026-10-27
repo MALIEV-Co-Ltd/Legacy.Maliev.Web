@@ -72,22 +72,34 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
                 "CareerDetailPage.razor",
                 "CareerIndexPage.razor",
                 "ChangeEmailConfirmationPage.razor",
+                "CncCuttingToolsPage.razor",
+                "CncFeedsAndSpeedsPage.razor",
+                "CncGeometryAndWorkholdingPage.razor",
+                "CncHolesAndTolerancesPage.razor",
                 "CncMachiningPage.razor",
+                "CncMachiningProcessesPage.razor",
                 "CncMachiningSpecificationPage.razor",
                 "ContactPage.razor",
                 "CustomManufacturingPage.razor",
                 "EmailConfirmationPage.razor",
                 "ErrorPage.razor",
                 "FinishingAndColorPage.razor",
+                "FinishingHeatTreatmentPage.razor",
+                "FinishingSurfaceFinishesPage.razor",
                 "ForgotPasswordPage.razor",
                 "GuidelinesPage.razor",
                 "HomePage.razor",
+                "InspectionMeasuringPartsPage.razor",
                 "InstantQuotationPage.razor",
                 "KnowledgeIndexPage.razor",
                 "LegalPage.razor",
                 "LineContactPage.razor",
                 "LoginPage.razor",
                 "LogoutPage.razor",
+                "ManufacturingProcessSelectionPage.razor",
+                "MaterialsEngineeringPlasticsPage.razor",
+                "MaterialsMetalsPage.razor",
+                "MaterialsSelectionPage.razor",
                 "MemberAccountIndexPage.razor",
                 "MemberAddressPage.razor",
                 "MemberChangeEmailPage.razor",
@@ -201,27 +213,41 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
 
     [Theory]
     [InlineData("en", "3D Printing Services", "How much does 3D printing cost?")]
-    [InlineData("th", "บริการรับพิมพ์ 3D", "พิมพ์ 3D ราคาเท่าไร?")]
+    [InlineData("th", "บริการรับพิมพ์ 3D", "รับพิมพ์ 3D ราคาเท่าไร และประเมินอย่างไร?")]
     public async Task Route_PreservesServiceFaqAndBreadcrumbStructuredData(
         string culture,
         string serviceName,
         string faqQuestion)
     {
-        using var client = CreateClient(factory);
-        using var response = await client.GetAsync($"/services/3d-printing?culture={culture}");
-        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
-        var documents = StructuredDataRegex().Matches(source)
-            .Select(match => JsonDocument.Parse(match.Groups["json"].Value))
-            .ToArray();
+        var expectedSchemaAnswer = culture == "th"
+            ? "ราคาเริ่มต้นและราคาสุดท้ายขึ้นกับวัสดุ ปริมาตร เวลา ซัพพอร์ต ทิศทาง ความเสี่ยง การเก็บงาน และจำนวน อัปโหลดไฟล์จริง เลือกวัสดุหรือกระบวนการ และแจ้งจำนวนในหน้า Instant Quotation เพื่อประเมินราคา หากยังไม่มีไฟล์ให้ขอวิศวกรช่วยเลือกกระบวนการ"
+            : "Cost depends on material, occupied volume, print time, support, orientation, risk, finishing, and quantity. Upload the model to MALIEV Instant Quotation for an estimate.";
+        var expectedVisibleAnswer = culture == "th"
+            ? "ราคาเริ่มต้นของงาน FDM และเรซิ่นแสดงอยู่ในส่วนราคาเริ่มต้นของหน้านี้ ราคาสุดท้ายขึ้นกับวัสดุ ปริมาตร เวลา ซัพพอร์ต ทิศทาง ความเสี่ยง การเก็บงาน และจำนวน อัปโหลดไฟล์จริง เลือกวัสดุหรือกระบวนการ และแจ้งจำนวนในหน้า Instant Quotation เพื่อประเมินราคา หากยังไม่มีไฟล์ให้ขอวิศวกรช่วยเลือกกระบวนการ"
+            : "Indicative starting prices for FDM and resin are listed in the pricing section on this page. The final price depends on material, occupied volume, print time, support, orientation, risk, finishing, and quantity. Upload the actual model to Instant Quotation for an estimate.";
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        using var service = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "Service");
-        using var faq = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "FAQPage");
-        Assert.Contains(documents, document => document.RootElement.GetProperty("@type").GetString() == "BreadcrumbList");
-        Assert.Equal(serviceName, service.RootElement.GetProperty("name").GetString());
-        Assert.Equal("3D Printing", service.RootElement.GetProperty("serviceType").GetString());
-        Assert.Equal(8, faq.RootElement.GetProperty("mainEntity").GetArrayLength());
-        Assert.Equal(faqQuestion, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("name").GetString());
+        foreach (var useBlazorRoute in new[] { true, false })
+        {
+            using var routeFactory = factory.WithWebHostBuilder(builder =>
+                builder.UseSetting("BlazorRouting:Services", useBlazorRoute.ToString()));
+            using var client = CreateClient(routeFactory);
+            using var response = await client.GetAsync($"/services/3d-printing?culture={culture}");
+            var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+            var documents = StructuredDataRegex().Matches(source)
+                .Select(match => JsonDocument.Parse(match.Groups["json"].Value))
+                .ToArray();
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            using var service = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "Service");
+            using var faq = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "FAQPage");
+            Assert.Contains(documents, document => document.RootElement.GetProperty("@type").GetString() == "BreadcrumbList");
+            Assert.Equal(serviceName, service.RootElement.GetProperty("name").GetString());
+            Assert.Equal("3D Printing", service.RootElement.GetProperty("serviceType").GetString());
+            Assert.Equal(8, faq.RootElement.GetProperty("mainEntity").GetArrayLength());
+            Assert.Equal(faqQuestion, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("name").GetString());
+            Assert.Equal(expectedSchemaAnswer, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("acceptedAnswer").GetProperty("text").GetString());
+            Assert.Matches($"<summary>\\s*{Regex.Escape(faqQuestion)}\\s*</summary>\\s*<p>\\s*{Regex.Escape(expectedVisibleAnswer)}\\s*</p>", source);
+        }
     }
 
     [Fact]
@@ -231,8 +257,8 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         var content = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "ThreeDimensionalPrintingContent.razor"));
         var pricing = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Shared", "ServicePricing.razor"));
 
-        Assert.Contains("well-designed part — not a guarantee", content, StringComparison.Ordinal);
-        Assert.Contains("งานที่ออกแบบมาเหมาะสม ไม่ใช่การรับประกัน", content, StringComparison.Ordinal);
+        Assert.Contains("Compare typical starting ranges for a well-designed part. These are not guarantees; send the drawing so we can confirm the critical dimensions before production.", content, StringComparison.Ordinal);
+        Assert.Contains("เปรียบเทียบค่าความคลาดเคลื่อนเริ่มต้นโดยทั่วไปสำหรับชิ้นงานที่ออกแบบมาเหมาะสม ค่านี้ไม่ใช่การรับประกัน กรุณาส่งแบบเพื่อให้เรายืนยันขนาดสำคัญก่อนผลิต", content, StringComparison.Ordinal);
         Assert.Contains("drawing — we can ream, tap, or machine", content, StringComparison.Ordinal);
         Assert.Contains("Indicative starting prices for FDM and resin are listed in the pricing section on this page.", content, StringComparison.Ordinal);
         Assert.Contains("ราคาเริ่มต้นของงาน FDM และเรซิ่นแสดงอยู่ในส่วนราคาเริ่มต้นของหน้านี้", content, StringComparison.Ordinal);

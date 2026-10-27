@@ -8,18 +8,21 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Configuration;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 public sealed class WebSurfaceTests : IDisposable
 {
     private readonly OwnedWebSurfaceHost ownedHost;
+    private readonly ITestOutputHelper? output;
     private WebApplicationFactory<Program> configuredFactory => ownedHost.Factory;
     internal OwnedWebSurfaceHost LifetimeOwner => ownedHost;
     private HttpClient client => ownedHost.Client;
 
-    public WebSurfaceTests()
+    public WebSurfaceTests(ITestOutputHelper? output = null)
     {
+        this.output = output;
         ownedHost = OwnedWebSurfaceHost.Create(builder =>
             {
                 builder.UseEnvironment("Testing");
@@ -153,8 +156,8 @@ public sealed class WebSurfaceTests : IDisposable
     [Theory]
     [InlineData("en", 404, "404 — Page not found | MALIEV", "Page not found", "The page may have moved, or the address may be incorrect.", "Back to the home page", "Contact support")]
     [InlineData("th", 404, "404 — ไม่พบหน้าที่ต้องการ | MALIEV", "ไม่พบหน้าที่ต้องการ", "หน้านี้อาจถูกย้าย หรือลิงก์ไม่ถูกต้อง", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
-    [InlineData("en", 500, "Error | MALIEV", "Sorry. Something did not work properly.", "Please include this incident ID when contacting support.", "Back to the home page", "Contact support")]
-    [InlineData("th", 500, "ข้อผิดพลาด | MALIEV", "ขออภัย ระบบทำงานผิดพลาด", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
+    [InlineData("en", 500, "Error | MALIEV", "Sorry. Something did not work properly.", "Error page preview", "Back to the home page", "Contact support")]
+    [InlineData("th", 500, "ข้อผิดพลาด | MALIEV", "ขออภัย ระบบทำงานผิดพลาด", "ตัวอย่างหน้าข้อผิดพลาด", "กลับหน้าหลัก", "ติดต่อฝ่ายช่วยเหลือ")]
     public async Task ErrorRoute_RendersLocalizedSafeStaticSsrForStatusCode(
         string culture,
         int statusCode,
@@ -401,6 +404,87 @@ public sealed class WebSurfaceTests : IDisposable
     }
 
     [Theory]
+    [InlineData("en", false)]
+    [InlineData("th", false)]
+    [InlineData("en", true)]
+    [InlineData("th", true)]
+    public async Task MemberNavigation_ContextualQuotesReachPublicRfqWithoutCreatingOrders(string culture, bool retained)
+    {
+        await using var host = configuredFactory.WithWebHostBuilder(
+            builder => builder.UseSetting("BlazorRouting:MemberOrdersIndex", (!retained).ToString()));
+        using var member = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
+        var loginHtml = await member.GetStringAsync("/account/login");
+        var token = Regex.Match(loginHtml, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"", RegexOptions.CultureInvariant);
+        Assert.True(token.Success);
+        using var login = await member.PostAsync("/account/login?handler=Login", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = WebUtility.HtmlDecode(token.Groups[1].Value),
+            ["Email"] = "customer@example.com",
+            ["Password"] = "correct-password",
+            ["RememberMe"] = "false",
+        }));
+        Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
+        using var response = await member.GetAsync($"/member/orders?culture={culture}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        Assert.Equal(!retained, html.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var navigation = Assert.Single(Regex.Matches(html,
+            "<aside\\b[^>]*\\bid=\"member-navigation\"[^>]*>[\\s\\S]*?</aside>", RegexOptions.CultureInvariant).Cast<Match>());
+        if (retained)
+        {
+            Assert.Contains("href=\"/quotation\"", navigation.Value, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var (item, context, english, thai) in new[]
+        {
+            ("CNC-Machining", "cnc_machining", "New CNC machining quote", "ขอใบเสนอราคางาน CNC ใหม่"),
+            ("3D-Printing", "3d_printing", "New 3D printing quote", "ขอใบเสนอราคางานพิมพ์ 3 มิติใหม่"),
+            ("3D-Scanning", "3d_scanning", "New 3D scanning quote", "ขอใบเสนอราคางานสแกน 3 มิติใหม่"),
+        })
+        {
+            var label = culture == "th" ? thai : english;
+            var link = Assert.Single(Regex.Matches(navigation.Value,
+                "<a\\b[^>]*href=\"(?<href>[^\"]+)\"[^>]*>[\\s\\S]*?</a>",
+                RegexOptions.CultureInvariant).Cast<Match>(),
+                match => match.Value.Contains($"<span>{label}</span>", StringComparison.Ordinal));
+            var destination = new Uri(member.BaseAddress!, link.Groups["href"].Value);
+            Assert.Equal(member.BaseAddress!.GetLeftPart(UriPartial.Authority), destination.GetLeftPart(UriPartial.Authority));
+            if (retained)
+            {
+                var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(destination.Query);
+                Assert.Equal("/quotation", destination.AbsolutePath, ignoreCase: true);
+                Assert.Equal(item, query["item"].ToString());
+                Assert.Equal(culture, query["culture"].ToString());
+            }
+            else
+            {
+                Assert.Equal($"/Quotation/{item}", destination.AbsolutePath);
+            }
+
+            using var linked = await member.GetAsync(destination);
+            Assert.True(linked.StatusCode is HttpStatusCode.OK or HttpStatusCode.MovedPermanently);
+            using var quotation = await member.GetAsync(linked.Headers.Location ?? destination);
+            Assert.Equal(HttpStatusCode.OK, quotation.StatusCode);
+            var quotationHtml = WebUtility.HtmlDecode(await quotation.Content.ReadAsStringAsync());
+            Assert.Contains($"name=\"ServiceContext\" value=\"{context}\"", quotationHtml, StringComparison.Ordinal);
+            var message = Assert.Single(Regex.Matches(quotationHtml,
+                "<textarea\\b[^>]*\\bid=\"Message\"[^>]*>(?<message>[\\s\\S]*?)</textarea>",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.Contains(item, message.Groups["message"].Value, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("sensitive-access-token", quotationHtml, StringComparison.Ordinal);
+            Assert.DoesNotContain("sensitive-refresh-token", quotationHtml, StringComparison.Ordinal);
+        }
+
+        Assert.Null(Assert.IsType<StubQuotationClient>(host.Services.GetRequiredService<IQuotationClient>()).LastSubmission);
+        Assert.Null(Assert.IsType<StubCustomerOrderSubmissionService>(host.Services.GetRequiredService<ICustomerOrderSubmissionService>()).LastInvocation);
+        Assert.Empty(Assert.IsType<StubNotificationClient>(host.Services.GetRequiredService<INotificationClient>()).Notifications);
+    }
+
+    [Theory]
     [InlineData("/member/orders/3d-printing", "en", "Additive Manufacturing", "/Member/Orders/3D-Printing?handler=Submit&amp;culture=en")]
     [InlineData("/member/orders/3d-printing", "th", "งานผลิตแบบเพิ่มเนื้อวัสดุ", "/Member/Orders/3D-Printing?handler=Submit&amp;culture=th")]
     [InlineData("/member/orders/3d-scanning", "en", "3D Scanning", "/Member/Orders/3D-Scanning?handler=Submit&amp;culture=en")]
@@ -420,6 +504,9 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"member-order-creation-content\"", source, StringComparison.Ordinal);
+        Assert.Equal(
+            route.EndsWith("/3d-scanning", StringComparison.Ordinal),
+            source.Contains("src=\"/src/images/box-dimensions-annotation.webp\"", StringComparison.Ordinal));
         Assert.Contains($">{heading}<", decoded, StringComparison.Ordinal);
         Assert.Contains($"action=\"{action}\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("enctype=\"multipart/form-data\"", source, StringComparison.OrdinalIgnoreCase);
@@ -579,6 +666,8 @@ public sealed class WebSurfaceTests : IDisposable
         using var displayResponse = await client.GetAsync($"{route}?culture={culture}");
         Assert.Equal(HttpStatusCode.OK, displayResponse.StatusCode);
         var displayHtml = await displayResponse.Content.ReadAsStringAsync();
+        Assert.Contains("src=\"/src/images/box-dimensions-annotation.webp\"", displayHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("box-dimensions-annotation.gif", displayHtml, StringComparison.Ordinal);
         foreach (var dimension in new[] { "width", "length", "height" })
         {
             var input = Regex.Match(displayHtml, $"<input[^>]*id=\"member-order-{dimension}\"[^>]*>", RegexOptions.IgnoreCase);
@@ -2081,26 +2170,36 @@ public sealed class WebSurfaceTests : IDisposable
     [InlineData("th", "กรุณากรอกอีเมลที่แตกต่างจากอีเมลปัจจุบัน")]
     public async Task MemberChangeEmail_RejectsCurrentEmailBeforeEitherService(string culture, string expectedMessage)
     {
-        await SignInAsync();
-        var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
-            configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
-        var accountClient = Assert.IsType<StubCustomerAccountClient>(
-            configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
-        authentication.ResetEmailChangeInvocations();
-        accountClient.ResetEmailInvocations();
-        var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
-        form["CurrentPassword"] = "current-password";
-        form["NewEmail"] = " CUSTOMER@EXAMPLE.COM ";
+        using var observation = new WebSurfaceLoginPhaseObservation(
+            configuredFactory.Services.GetService<System.Diagnostics.DiagnosticListener>(), output);
+        try
+        {
+            await SignInAsync();
+            var authentication = Assert.IsType<StubCustomerAuthenticationClient>(
+                configuredFactory.Services.GetRequiredService<ICustomerAuthenticationClient>());
+            var accountClient = Assert.IsType<StubCustomerAccountClient>(
+                configuredFactory.Services.GetRequiredService<ICustomerAccountClient>());
+            authentication.ResetEmailChangeInvocations();
+            accountClient.ResetEmailInvocations();
+            var form = await GetAntiforgeryFormAsync($"/member/account/manage/changeemail?culture={culture}");
+            form["CurrentPassword"] = "current-password";
+            form["NewEmail"] = " CUSTOMER@EXAMPLE.COM ";
 
-        using var response = await client.PostAsync(
-            $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}",
-            new FormUrlEncodedContent(form));
-        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+            using var response = await client.PostAsync(
+                $"/member/account/manage/changeemail?handler=ChangeEmail&culture={culture}",
+                new FormUrlEncodedContent(form));
+            var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
-        Assert.Null(authentication.LastEmailChangeInvocation);
-        Assert.Empty(accountClient.EmailUpdateInvocations);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            Assert.Contains($">{expectedMessage}<", source, StringComparison.Ordinal);
+            Assert.Null(authentication.LastEmailChangeInvocation);
+            Assert.Empty(accountClient.EmailUpdateInvocations);
+        }
+        catch (Exception exception)
+        {
+            observation.WriteFailure(exception);
+            throw;
+        }
     }
 
     [Theory]
@@ -2212,9 +2311,16 @@ public sealed class WebSurfaceTests : IDisposable
     [InlineData("/")]
     [InlineData("/robots.txt")]
     [InlineData("/Error?code=404")]
+    [InlineData("/definitely-not-a-maliev-route?culture=en")]
     public async Task HttpResponses_IncludeBaselineBrowserSecurityHeaders(string path)
     {
         using var response = await client.GetAsync(path);
+        if (path == "/definitely-not-a-maliev-route?culture=en")
+        {
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.Contains("data-migration-component=\"error-content\"",
+                await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        }
 
         Assert.Equal("max-age=63072000; includeSubDomains",
             Assert.Single(response.Headers.GetValues("Strict-Transport-Security")));
@@ -2227,7 +2333,9 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains("frame-ancestors 'none'", policy, StringComparison.Ordinal);
         Assert.DoesNotContain("paypal", policy, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(
-            path.StartsWith("/Error", StringComparison.Ordinal) ? "no-referrer" : "strict-origin-when-cross-origin",
+            path.StartsWith("/Error", StringComparison.Ordinal)
+                || path == "/definitely-not-a-maliev-route?culture=en"
+                ? "no-referrer" : "strict-origin-when-cross-origin",
             Assert.Single(response.Headers.GetValues("Referrer-Policy")));
     }
 
@@ -2286,8 +2394,8 @@ public sealed class WebSurfaceTests : IDisposable
     }
 
     [Theory]
-    [InlineData("en", "Precision. Speed. Reliability.", "Manufacturing Services for Prototypes and Production Parts", "Why customers work with MALIEV")]
-    [InlineData("th", "แม่นยำ รวดเร็ว เชื่อถือได้", "รับผลิตชิ้นส่วนตามแบบ ตั้งแต่ต้นแบบจนถึงการผลิตจริง", "เหตุผลที่ลูกค้าเลือกทำงานกับ MALIEV")]
+    [InlineData("en", "Custom parts.", "From CAD to assembly.", "What MALIEV helps you develop")]
+    [InlineData("th", "ชิ้นส่วนสั่งผลิต", "จาก CAD ถึงงานประกอบ", "สิ่งที่ MALIEV ช่วยพัฒนาให้คุณ")]
     public async Task HomePage_RendersLocalizedStaticBlazorBodyWithNavigationParity(
         string culture,
         string eyebrow,
@@ -2303,11 +2411,11 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains(eyebrow, decodedSource, StringComparison.Ordinal);
         Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
         Assert.Contains(valueLabel, decodedSource, StringComparison.Ordinal);
-        Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Contact\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Services/CNC-Machining\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Services/3D-Printing\"", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/Services/3D-Scanning\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/InstantQuotation/3D-Printing?culture={culture}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/Contact?culture={culture}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/Services/CNC-Machining?culture={culture}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/Services/3D-Printing?culture={culture}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/Services/3D-Scanning?culture={culture}\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
     }
@@ -2379,8 +2487,14 @@ public sealed class WebSurfaceTests : IDisposable
     [InlineData("th")]
     public async Task QuotationLocales_RenderTheSameControlledUploadEventContract(string culture)
     {
-        var source = await client.GetStringAsync(
-            $"/quotation?culture={culture}&item=cnc-machining");
+        // Capture failure phases while buffering the expected successful response.
+        using var response = await TestResponseFailureEvidence.GetAsync(
+            configuredFactory.Services, client,
+            $"/quotation?culture={culture}&item=cnc-machining",
+            TestResponseRequestLabel.BaseQuotation,
+            output is null ? Console.Error.WriteLine : output.WriteLine);
+        response.EnsureSuccessStatusCode();
+        var source = await response.Content.ReadAsStringAsync();
 
         Assert.Contains("name=\"ServiceContext\"", source, StringComparison.Ordinal);
         Assert.Contains("value=\"cnc_machining\"", source, StringComparison.Ordinal);
@@ -2636,8 +2750,8 @@ public sealed class WebSurfaceTests : IDisposable
     }
 
     [Theory]
-    [InlineData("en", "From a family workshop to connected manufacturing.", "MALIEV is founded", "Machining meets digital quoting")]
-    [InlineData("th", "จากเวิร์กช็อปของครอบครัว สู่ระบบการผลิตที่เชื่อมต่อกัน", "ก่อตั้ง MALIEV", "เชื่อมงาน CNC เข้ากับการเสนอราคาแบบดิจิทัล")]
+    [InlineData("en", "From concept to a working part.", "Established in 2018", "04 · CNC batch production")]
+    [InlineData("th", "จากไอเดีย สู่ชิ้นงานจริง", "ก่อตั้งในปี 2018", "04 · ผลิตด้วย CNC เป็นชุด")]
     public async Task AboutRoute_PreservesLocalizedStaticSsrTimelineWithoutFacebookProfileIntegration(
         string culture,
         string heading,
@@ -2653,7 +2767,8 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
         Assert.Contains(foundedMilestone, decodedSource, StringComparison.Ordinal);
         Assert.Contains(cncMilestone, decodedSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("https://www.facebook.com", source, StringComparison.OrdinalIgnoreCase);
+        // Static business-profile metadata is permitted; executable Facebook integration is not.
+        Assert.Contains(SocialNetworks.Facebook, source, StringComparison.Ordinal);
         Assert.DoesNotContain("connect.facebook.net", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fb:app_id", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fb-like", source, StringComparison.OrdinalIgnoreCase);
@@ -2749,7 +2864,7 @@ public sealed class WebSurfaceTests : IDisposable
 
     [Theory]
     [InlineData("en", "FDM, Resin & Industrial Additive", "3D Printing Service in Thailand for Prototypes and Production Parts", "How much does 3D printing cost?")]
-    [InlineData("th", "FDM เรซิ่น และงานพิมพ์อุตสาหกรรม", "รับปริ้น 3D และรับพิมพ์ 3 มิติ อัปโหลดไฟล์ประเมินราคา", "พิมพ์ 3D ราคาเท่าไร?")]
+    [InlineData("th", "FDM เรซิ่น และงานพิมพ์อุตสาหกรรม", "รับปริ้น 3D และรับพิมพ์ 3 มิติ อัปโหลดไฟล์ประเมินราคา", "รับพิมพ์ 3D ราคาเท่าไร และประเมินอย่างไร?")]
     public async Task ThreeDimensionalPrintingRoute_RendersStaticBlazorBodyWithContractParity(
         string culture,
         string eyebrow,
@@ -2814,8 +2929,8 @@ public sealed class WebSurfaceTests : IDisposable
     }
 
     [Theory]
-    [InlineData("en", "Member workspace", "Review quotations, orders, project files, and account details.", "Sign in", "Create an account", "Reset password")]
-    [InlineData("th", "พื้นที่สมาชิก", "ตรวจสอบใบเสนอราคา คำสั่งซื้อ ไฟล์โครงการ และข้อมูลบัญชี", "เข้าสู่ระบบ", "สร้างบัญชี", "รีเซ็ตรหัสผ่าน")]
+    [InlineData("en", "Member workspace", "Sign in to review quotations, orders, project files, and account details.", "Sign in", "Create an account", "Reset password")]
+    [InlineData("th", "พื้นที่สมาชิก", "เข้าสู่ระบบเพื่อตรวจใบเสนอราคา คำสั่งซื้อ ไฟล์โครงการ และข้อมูลบัญชี", "เข้าสู่ระบบ", "สร้างบัญชี", "รีเซ็ตรหัสผ่าน")]
     public async Task AccountIndex_RendersLocalizedAnonymousStaticSsrActions(
         string culture,
         string workspaceLabel,
@@ -2853,6 +2968,8 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-component=\"account-index-content\"", source, StringComparison.Ordinal);
         Assert.Contains("Signed in as", source, StringComparison.Ordinal);
+        Assert.Contains(">Review quotations, orders, project files, and account details.<", source, StringComparison.Ordinal);
+        Assert.DoesNotContain(">Sign in to review quotations, orders, project files, and account details.<", source, StringComparison.Ordinal);
         Assert.Contains("customer@example.com", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/Member/Account/Manage/Profile\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("href=\"/Member/Account/Manage/Address\"", source, StringComparison.OrdinalIgnoreCase);
@@ -3512,7 +3629,12 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains($">{eyebrow}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", decodedSource, StringComparison.Ordinal);
         Assert.Contains($">{formHeading}<", decodedSource, StringComparison.Ordinal);
-        Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
+        var firstNameLabelElement = Assert.Single(Regex.Matches(source,
+            "<label\\b[^>]*\\bfor=\"FirstName\"[^>]*>([\\s\\S]*?)</label>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("class=\"form-label\"", firstNameLabelElement.Value, StringComparison.Ordinal);
+        Assert.Equal($"<span>{firstNameLabel}</span> <span class=\"inquiry-required\" aria-hidden=\"true\">*</span>",
+            WebUtility.HtmlDecode(firstNameLabelElement.Groups[1].Value));
         Assert.Contains(submitLabel, decodedSource, StringComparison.Ordinal);
         Assert.Contains($"action=\"/Contact?handler=SubmitRequest&amp;culture={culture}\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"__RequestVerificationToken\"", source, StringComparison.Ordinal);
@@ -3550,7 +3672,7 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains("aria-describedby=\"Email-error contact-email-feedback\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
         Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
-        Assert.Contains("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
+        Assert.Contains("Please enter a valid email address", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -3591,7 +3713,12 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains("data-migration-component=\"quotation-hero-content\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"quotation-form-fields\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
-        Assert.Contains($">{firstNameLabel}<", decodedSource, StringComparison.Ordinal);
+        var firstNameLabelElement = Assert.Single(Regex.Matches(source,
+            "<label\\b[^>]*\\bfor=\"FirstName\"[^>]*>([\\s\\S]*?)</label>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("class=\"form-label\"", firstNameLabelElement.Value, StringComparison.Ordinal);
+        Assert.Equal($"<span>{firstNameLabel}</span> <span class=\"inquiry-required\" aria-hidden=\"true\">*</span>",
+            WebUtility.HtmlDecode(firstNameLabelElement.Groups[1].Value));
         Assert.Contains(
             $"action=\"/Quotation?handler=SubmitRequest&amp;culture={culture}\"",
             source,
@@ -3604,7 +3731,7 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains("name=\"Files\"", source, StringComparison.Ordinal);
         Assert.Contains("type=\"file\"", source, StringComparison.Ordinal);
         Assert.Contains("multiple", source, StringComparison.Ordinal);
-        Assert.Contains("aria-describedby=\"quotation-files-help Files-error\"", source, StringComparison.Ordinal);
+        Assert.Contains("aria-describedby=\"quotation-files-help Files-error quotation-file-too-large\"", source, StringComparison.Ordinal);
         Assert.Contains("name=\"g-recaptcha-response\"", source, StringComparison.Ordinal);
         Assert.Contains(prefill, decodedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.server.js", source, StringComparison.OrdinalIgnoreCase);
@@ -3654,7 +3781,12 @@ public sealed class WebSurfaceTests : IDisposable
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("<html lang=\"en\">", responseSource, StringComparison.Ordinal);
-        Assert.Contains(">First name<", WebUtility.HtmlDecode(responseSource), StringComparison.Ordinal);
+        var firstNameLabelElement = Assert.Single(Regex.Matches(responseSource,
+            "<label\\b[^>]*\\bfor=\"FirstName\"[^>]*>([\\s\\S]*?)</label>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("class=\"form-label\"", firstNameLabelElement.Value, StringComparison.Ordinal);
+        Assert.Equal("<span>First name</span> <span class=\"inquiry-required\" aria-hidden=\"true\">*</span>",
+            WebUtility.HtmlDecode(firstNameLabelElement.Groups[1].Value));
     }
 
     [Fact]
@@ -3749,7 +3881,7 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Contains("aria-describedby=\"Email-error quotation-email-feedback\"", source, StringComparison.Ordinal);
         Assert.Contains("aria-invalid=\"true\"", source, StringComparison.Ordinal);
         Assert.Contains("field-validation-error", source, StringComparison.Ordinal);
-        Assert.Contains("The Email field is not a valid e-mail address.", source, StringComparison.Ordinal);
+        Assert.Contains("Please enter a valid email address", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -3765,7 +3897,7 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/xml", response.Content.Headers.ContentType?.MediaType);
         Assert.Equal("utf-8", response.Content.Headers.ContentType?.CharSet);
-        Assert.Equal(27, routes.Length);
+        Assert.Equal(39, routes.Length);
         Assert.Contains(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/contact");
         Assert.DoesNotContain(routes, route => route.Element(sitemap + "loc")?.Value == "https://www.maliev.com/quotation");
         Assert.All(routes, route => Assert.Equal(3, route.Elements(xhtml + "link").Count()));
@@ -3853,6 +3985,19 @@ public sealed class WebSurfaceTests : IDisposable
 
     private sealed class StubCareerClient : ICareerClient
     {
+        public async Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(CareerSort.JobId_Ascending, null, 1, 25, cancellationToken);
+            return new ServiceResponse<IReadOnlyList<CareerLevel>>(listing.Levels, listing.ServiceAvailable);
+        }
+
+        public async Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
+            CareerSort sort, string? search, int pageIndex, int pageSize, CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(sort, search, pageIndex, pageSize, cancellationToken);
+            return new ServiceResponse<CareerOfferPage>(listing.Offers, listing.ServiceAvailable);
+        }
+
         private static readonly CareerLevel Level = new(1, "Engineer", null, null, null);
 
         private static readonly CareerOffer Offer = new(
@@ -3889,6 +4034,19 @@ public sealed class WebSurfaceTests : IDisposable
 
     private sealed class ThrowingCareerClient : ICareerClient
     {
+        public async Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(CareerSort.JobId_Ascending, null, 1, 25, cancellationToken);
+            return new ServiceResponse<IReadOnlyList<CareerLevel>>(listing.Levels, listing.ServiceAvailable);
+        }
+
+        public async Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
+            CareerSort sort, string? search, int pageIndex, int pageSize, CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(sort, search, pageIndex, pageSize, cancellationToken);
+            return new ServiceResponse<CareerOfferPage>(listing.Offers, listing.ServiceAvailable);
+        }
+
         public Task<CareerListing> GetListingAsync(
             CareerSort sort,
             string? search,
@@ -4048,10 +4206,10 @@ public sealed class WebSurfaceTests : IDisposable
     [InlineData("contact", "th", "", "กรุณากรอกอีเมล")]
     [InlineData("quotation", "en", "", "Email address is required")]
     [InlineData("quotation", "th", "", "กรุณากรอกอีเมล")]
-    [InlineData("contact", "en", "invalid", "The Email field is not a valid e-mail address.")]
-    [InlineData("contact", "th", "invalid", "กรุณาระบุอีเมลที่ถูกต้อง")]
-    [InlineData("quotation", "en", "invalid", "The Email field is not a valid e-mail address.")]
-    [InlineData("quotation", "th", "invalid", "กรุณาระบุอีเมลที่ถูกต้อง")]
+    [InlineData("contact", "en", "invalid", "Please enter a valid email address")]
+    [InlineData("contact", "th", "invalid", "กรุณากรอกอีเมลที่ถูกต้อง")]
+    [InlineData("quotation", "en", "invalid", "Please enter a valid email address")]
+    [InlineData("quotation", "th", "invalid", "กรุณากรอกอีเมลที่ถูกต้อง")]
     public async Task InquiryLocalization_ActualRenderedPostRejectsInvalidEmailBeforePersistence(
         string route, string culture, string email, string expected)
     {
@@ -4062,6 +4220,9 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains($"<html lang=\"{culture}\">", source, StringComparison.Ordinal);
         Assert.Contains(expected, source, StringComparison.Ordinal);
+        var emailError = Regex.Match(source, "<span id=\"Email-error\"[^>]*>([^<]*)</span>", RegexOptions.CultureInvariant);
+        Assert.True(emailError.Success, "The posted form must render its actual server-side email error.");
+        Assert.Equal(expected, emailError.Groups[1].Value);
         Assert.Empty(Assert.IsType<StubContactClient>(configuredFactory.Services.GetRequiredService<IContactClient>()).Submissions);
         Assert.Null(Assert.IsType<StubQuotationClient>(configuredFactory.Services.GetRequiredService<IQuotationClient>()).LastSubmission);
         Assert.Empty(Assert.IsType<StubNotificationClient>(configuredFactory.Services.GetRequiredService<INotificationClient>()).Notifications);
@@ -4174,7 +4335,7 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
         var summary = Regex.Match(source,
-            "<div class=\"text-danger validation-summary-errors\" role=\"alert\">(?<body>.*?)</div>",
+            "<div class=\"inquiry-validation-summary text-danger validation-summary-errors\" role=\"alert\">(?<body>.*?)</div>",
             RegexOptions.Singleline | RegexOptions.CultureInvariant);
         Assert.True(summary.Success, "The hidden submission error must appear in the visible form alert.");
         Assert.Contains(expected, summary.Groups["body"].Value, StringComparison.Ordinal);

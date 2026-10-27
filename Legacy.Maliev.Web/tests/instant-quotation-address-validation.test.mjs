@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
     buildingContainsAddressComponents,
     normalizeAddressForComparison,
+    navigateInstantQuotationValidationField,
     wireInstantQuotationAddressValidation,
 } from '../wwwroot/src/app/js/instant-quotation-address-validation.mjs';
 
@@ -120,6 +121,83 @@ test('locked populated building is preserved without applying new-entry address 
     assert.equal(building.validationMessage, '');
     assert.equal(submit.disabled, false);
 });
+
+
+test('validation summary stays on the exact quotation path and query and focuses its owned field', () => {
+    for (const pathname of ['/instantquotation/3d-printing', '/InstantQuotation/3D-Printing/']) {
+        const fixture = validationNavigationFixture(pathname);
+        const before = fixture.location.pathname + fixture.location.search;
+        assert.equal(navigateInstantQuotationValidationField(fixture.event, fixture.location), true);
+        assert.equal(fixture.location.pathname + fixture.location.search, before);
+        assert.equal(fixture.location.hash, '#instant-quote-taxnumber');
+        assert.equal(fixture.event.defaultPrevented, true);
+        assert.deepEqual(fixture.field.focusOptions, { preventScroll: true });
+    }
+});
+
+test('validation navigation leaves unrelated routes links targets and modified clicks untouched', () => {
+    const variants = [
+        fixture => { fixture.location.pathname = '/contact'; },
+        fixture => { fixture.location.pathname = '/instantquotation/3d-printing/extra'; },
+        fixture => { fixture.event.defaultPrevented = true; },
+        fixture => { fixture.event.button = 1; },
+        fixture => { fixture.event.ctrlKey = true; },
+        fixture => { fixture.event.metaKey = true; },
+        fixture => { fixture.event.shiftKey = true; },
+        fixture => { fixture.event.altKey = true; },
+        fixture => { fixture.link.target = '_blank'; },
+        fixture => { fixture.link.download = true; },
+        fixture => { fixture.link.href = 'https://example.invalid/#instant-quote-taxnumber'; },
+        fixture => { fixture.link.href = '/contact#instant-quote-taxnumber'; },
+        fixture => { fixture.link.href = '#'; },
+        fixture => { fixture.link.href = '#instant-quote-missing'; },
+        fixture => { fixture.link.closest = () => null; },
+        fixture => { fixture.form.contains = () => false; },
+        fixture => { fixture.field.closest = () => ({}); },
+    ];
+    for (const configure of variants) {
+        const fixture = validationNavigationFixture('/instantquotation/3d-printing');
+        configure(fixture);
+        const before = fixture.location.href;
+        const wasPrevented = fixture.event.defaultPrevented;
+        assert.equal(navigateInstantQuotationValidationField(fixture.event, fixture.location), false);
+        assert.equal(fixture.location.href, before);
+        assert.equal(fixture.event.defaultPrevented, wasPrevented);
+        assert.equal(fixture.field.focusOptions, null);
+    }
+});
+
+function validationNavigationFixture(pathname) {
+    const location = new URL('https://quote.example.invalid' + pathname + '?culture=th&navigation-probe=summary%20link');
+    const section = {
+        querySelector: selector => selector === 'form#instant-quotation-form'
+            ? form
+            : selector === '#instant-quote-taxnumber' ? field : null,
+    };
+    const field = {
+        id: 'instant-quote-taxnumber',
+        focusOptions: null,
+        focus(options) { this.focusOptions = options; },
+        closest: () => section,
+    };
+    const form = { contains: candidate => candidate === field };
+    const summary = { contains: candidate => candidate === link, closest: () => section };
+    const link = {
+        href: '#instant-quote-taxnumber',
+        target: '',
+        download: false,
+        getAttribute(name) { return name === 'href' ? this.href : null; },
+        hasAttribute(name) { return name === 'download' && this.download; },
+        closest: () => summary,
+    };
+    const event = {
+        button: 0,
+        defaultPrevented: false,
+        target: { closest: () => link },
+        preventDefault() { this.defaultPrevented = true; },
+    };
+    return { event, location, field, form, link };
+}
 
 function control(value, checked = false) {
     const listeners = new Map();
