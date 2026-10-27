@@ -113,6 +113,34 @@ public sealed class ServicePageResponsiveSourceTests
         Assert.DoesNotContain("ISO 9001", printing + scanning, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void SharedServiceCss_PreservesOriginalSvgSizingAndMobileActions()
+    {
+        var css = Read("Legacy.Maliev.Web", "wwwroot", "src", "app", "css", "service-pages.css");
+        foreach (var (selector, size) in new[]
+        {
+            (".service-hero-points i, .service-hero-points .svg-inline--fa", "1rem"),
+            (".service-button i, .service-button .svg-inline--fa", "1rem"),
+            (".service-quick i, .service-quick .svg-inline--fa", "2rem"),
+            (".service-card > i, .service-card > .svg-inline--fa", "2.6rem"),
+        })
+        {
+            var rule = Assert.Single(System.Text.RegularExpressions.Regex.Matches(
+                css,
+                @"(?m)^" + System.Text.RegularExpressions.Regex.Escape(selector) + @"\s*\{(?<body>[^}]*)\}")
+                .Cast<System.Text.RegularExpressions.Match>()).Groups["body"].Value;
+            Assert.Matches(@"(?:^|;)\s*width:\s*" + System.Text.RegularExpressions.Regex.Escape(size) + @"\s*;", rule);
+            Assert.Matches(@"(?:^|;)\s*height:\s*" + System.Text.RegularExpressions.Regex.Escape(size) + @"\s*;", rule);
+        }
+
+        var mobile = Assert.Single(System.Text.RegularExpressions.Regex.Matches(
+                css,
+                @"(?ms)^@media\s*\(max-width:\s*47\.99rem\)\s*\{(?<rules>.*?)^\}")
+            .Cast<System.Text.RegularExpressions.Match>(),
+            block => block.Groups["rules"].Value.Contains(".service-hero {", StringComparison.Ordinal));
+        Assert.Matches(@"(?m)^\s*\.service-actions\s*\{[^}]*\bjustify-content:\s*center\s*;", mobile.Groups["rules"].Value);
+    }
+
     private static string Read(params string[] parts) => File.ReadAllText(Path.Combine([Root, .. parts]));
 
     private static string FindRepositoryRoot()
