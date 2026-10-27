@@ -144,7 +144,8 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             }
             await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
             {
-                ["type"] = "touchEnd", ["touchPoints"] = Array.Empty<object>(),
+                ["type"] = "touchEnd",
+                ["touchPoints"] = Array.Empty<object>(),
             });
             touchActive = false;
             try
@@ -213,7 +214,8 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                     if (cdp is not null && touchActive)
                         await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
                         {
-                            ["type"] = "touchCancel", ["touchPoints"] = Array.Empty<object>(),
+                            ["type"] = "touchCancel",
+                            ["touchPoints"] = Array.Empty<object>(),
                         });
                 },
                 async () => { if (cdp is not null) await cdp.DetachAsync(); });
