@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "profile": "company-current-helper-dependency-source-v1",
   "predecessorMain": "e77fdd2db35cb31e4a354d76036bc51524050337",
-  "acceptedIntegrationMain": "2607949c723037240910a009c9c8ab301bda833f",
+  "acceptedIntegrationMain": "547bdac1a0bdedc5b9204ff143c11e7acc275600",
   "retainedPrHead": "722f701d696e5db885cae1b602651d07d465c1ea",
   "sourceFiles": {
     ".github/workflows/_build-and-test.yml": {
@@ -76,9 +76,9 @@
       "sha256": "3d41cc5d47a3e2aadf4082c6159d31d04a147baf92dbfa8fc088fd26426beeb7"
     },
     "Legacy.Maliev.Web.Tests/RuntimeAssemblyProbe.cs": {
-      "bytes": 5085,
-      "gitBlob": "d712d2acb3eeef49056cdcefc8ed6f4efe99c7db",
-      "sha256": "0154e07d68f9c15f58c31fd0bfbd59b53170b42501a58bdb5490c4f23adb8009"
+      "bytes": 5247,
+      "gitBlob": "349d1544b8e4659bc84176e3008de37ac0134261",
+      "sha256": "0b040cf4e7ece8d6130403137dcd81d9d0e3bf9f6f234faa41af58651c5b17a1"
     },
     "Legacy.Maliev.Web.Tests/ThaiLookupBillingPersistenceTests.cs": {
       "bytes": 25876,
@@ -106,9 +106,9 @@
       "sha256": "54d615ee241988ba2e0a9735e80354e7618c3f209426cf11081bd8d7832e1a9f"
     },
     "acceptance/MemberCompanyCatalogPersistence/Tests/CompanyRuntimeAssemblyProbe.cs": {
-      "bytes": 337,
-      "gitBlob": "c39196947b8aea3f140305374d35ba1494ddcd7e",
-      "sha256": "54f84c3c8ccecfa31ef33763e21e0159746faa8dc10c36cdf54dd008bacc1459"
+      "bytes": 340,
+      "gitBlob": "8218a016642174902ce8c03b3509f97324744fd5",
+      "sha256": "743cbc17e5ea6c9bd7452157755a2f11d95bcc17b5cb0688c3a68878165e152f"
     },
     "acceptance/MemberCompanyCatalogPersistence/Tests/CurrentCompanySourceObservation.cs": {
       "bytes": 8099,
@@ -409,8 +409,8 @@
   "verifier": {
     "path": "acceptance/MemberCompanyCatalogPersistence/current_consumer.py",
     "bytes": 430756,
-    "sha256": "0c07ae1a5700340c758081270aef617c1925c617b603971ee395317b290623e4",
-    "gitBlob": "a2a0f58f519943ebf51a4f193fb68531f6ae00cb"
+    "sha256": "5aab2f8b52c04694ee2e9a31061e36fda5db682bfaf0dcbefaec31c5e28ef5a5",
+    "gitBlob": "9ba350f48cd8d92f0f70c87f5d5069f4d6a90516"
   },
   "fixedTransforms": {
     ".github/workflows/member-company-catalog-persistence.yml": [

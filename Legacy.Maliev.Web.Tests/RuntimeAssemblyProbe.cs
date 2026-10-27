@@ -11,8 +11,12 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class RuntimeAssemblyProbe
 {
     [Fact]
-    public Task ObserveHttpAssemblyWithoutBackend() => ObserveCore(typeof(RuntimeAssemblyProbe).Assembly);
+    public Task ObserveHttpAssemblyWithoutBackend() => RuntimeAssemblyObserver.ObserveCore(typeof(RuntimeAssemblyProbe).Assembly);
+}
 
+/// <summary>Captures the shared bounded assembly identity for both test hosts.</summary>
+public static class RuntimeAssemblyObserver
+{
     /// <summary>Capture bounded identity only when an owned diagnostic path is supplied.</summary>
     public static async Task ObserveCore(Assembly testAssembly)
     {

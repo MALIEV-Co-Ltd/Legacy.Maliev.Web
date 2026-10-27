@@ -6,5 +6,5 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class CompanyRuntimeAssemblyProbe
 {
     [Fact]
-    public Task ObserveHttpAssemblyWithoutBackend() => RuntimeAssemblyProbe.ObserveCore(typeof(CompanyRuntimeAssemblyProbe).Assembly);
+    public Task ObserveHttpAssemblyWithoutBackend() => RuntimeAssemblyObserver.ObserveCore(typeof(CompanyRuntimeAssemblyProbe).Assembly);
 }
