@@ -55,6 +55,11 @@ public sealed class KnowledgeGuideBundleRouteTests
         var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains($"<html lang=\"{culture}\"", html, StringComparison.Ordinal);
+        var head = Regex.Match(html, "<head\\b[^>]*>(?<head>[\\s\\S]*?)</head>", RegexOptions.CultureInvariant);
+        Assert.True(head.Success);
+        var robots = Assert.Single(Regex.Matches(head.Groups["head"].Value,
+            "<meta\\b(?=[^>]*name=\"robots\")[^>]*>", RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("content=\"index,follow\"", robots.Value, StringComparison.Ordinal);
         Assert.Contains($">{(culture == "th" ? thaiHeading : englishHeading)}<", html, StringComparison.Ordinal);
         Assert.Single(Regex.Matches(html, "<h1\\b", RegexOptions.CultureInvariant).Cast<Match>());
         Assert.Contains("route-knowledge.js", html, StringComparison.Ordinal);
