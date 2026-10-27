@@ -1,0 +1,35 @@
+@inject IStringLocalizer<FinishingSurfaceFinishesContent> Localizer
+
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+<h1>@Localizer["Surface finishes and coatings"]</h1>
+<p class="docs-lead">@Localizer["Plan the supplied surface and final dimensions before machining. Coating, preparation, masking and cosmetic acceptance belong in the same project discussion."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/surface-finishes.webp" srcset="/src/images/knowledge/photos/surface-finishes-small.webp 768w, /src/images/knowledge/photos/surface-finishes.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["Industrial components with coloured anodized, blasted, brushed and polished surfaces."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Specify the finish, cosmetic faces and dimension-sensitive interfaces together. Illustrative image."]</figcaption>
+</figure>
+<nav class="docs-toc" aria-label="@Localizer["On this page"]">
+<strong>@Localizer["On this page"]</strong>
+<ul><li><a href="#finishing">@Localizer["Finishing and anodizing: design the final condition"]</a></li></ul></nav>
+<aside class="docs-note">@Localizer["Examples explain design principles; confirm the material, drawing revision and proposed process for the actual project."]</aside>
+<section class="docs-section" id="finishing">
+        <h2>@Localizer["Finishing and anodizing: design the final condition"]</h2>
+        <p>@Localizer["Specify the coating type, thickness, colour, pretreatment and acceptance condition. Mark cosmetic faces, masking, electrical contacts, threads and mating fits. Brushing or polishing can change edges and dimensions, while an anodized result depends on alloy and prior surface preparation. Agree the required appearance with a sample or reference where it matters, rather than assuming that a colour name defines a complete finish."]</p>
+        <p>@Localizer["Anodic coating thickness includes both converted base material and outward growth. The Aluminum Anodizers Council gives approximately half penetration and half buildup as generally accepted hardcoat guidance; actual pretreatment and coating behaviour need confirmation with the finisher. Do not simply add the full coating thickness to every dimension. Agree whether fits will be masked, compensated before coating or finished afterward, including the consequences for exposed material and protection."]</p>
+<h3>@Localizer["Compare the purpose of the finish"]</h3>
+<div class="docs-table-wrap" role="region" tabindex="0" aria-label="@Localizer["Surface finish selection considerations"]"><table><caption>@Localizer["Discuss the appropriate route and its availability for the actual project."]</caption><thead><tr><th scope="col">@Localizer["Finish"]</th><th scope="col">@Localizer["Purpose and information to agree"]</th></tr></thead><tbody><tr><th scope="row">@Localizer["As-machined and deburred"]</th><td>@Localizer["Retain an appropriate machined surface where appearance is secondary. Define edge breaks and functional surface texture; tool marks and a scratch-free cosmetic finish are different requirements."]</td></tr><tr><th scope="row">@Localizer["Bead blasting"]</th><td>@Localizer["Create a uniform matte texture. Identify cosmetic faces and surfaces to protect, and agree whether blasting precedes another treatment. A uniform appearance does not define dimensional accuracy."]</td></tr><tr><th scope="row">@Localizer["Anodizing for aluminum"]</th><td>@Localizer["Specify alloy, coating type and thickness, color, rack-contact locations, and masked fits. Decide whether dimensions are accepted before or after treatment."]</td></tr><tr><th scope="row">@Localizer["Powder coating or painting"]</th><td>@Localizer["Define appearance, service exposure, coating thickness, and coverage. Identify threads, fits, grounding contacts, and other areas that require masking or a different treatment."]</td></tr></tbody></table></div>
+<p class="docs-source"><a href="https://www.protolabs.com/services/cnc-machining/post-processing/">@Localizer["Protolabs: examples of CNC post-processing methods"]</a></p>
+        <figure class="docs-figure knowledge-diagram">
+<div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["Uncoated and coated sections illustrating assumed hardcoat penetration and outward growth."]"><img src="/src/images/knowledge/anodize-dimensional-growth.svg" width="720" height="280" loading="lazy" alt="@Localizer["Uncoated and coated sections illustrating assumed hardcoat penetration and outward growth."]" /></div>
+<figcaption>@Localizer["Schematic, not to scale: t is total coating thickness and g is outward growth per surface. The 20 micrometre hardcoat example assumes g = 10 micrometres and excludes pretreatment removal."] <a class="knowledge-diagram-link" href="/src/images/knowledge/anodize-dimensional-growth.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
+        <aside class="docs-example">@Localizer["Illustrative simplified hardcoat calculation: with a 20 µm total coating and assumed 10 µm outward growth per surface, an outside diameter grows about 20 µm and a coated bore shrinks about 20 µm. This ignores pretreatment removal and process variation; use the agreed finishing allowance for the real part."]</aside>
+        <p class="docs-source"><a href="https://www.anodizing.org/anodizing-reference-guide/">@Localizer["Aluminum Anodizers Council: coating growth and alloy effects"]</a></p>
+        <p class="docs-source"><a href="https://www.anodizing.org/ordering-quotation-guidelines/">@Localizer["Aluminum Anodizers Council: finishing quotation information"]</a></p>
+    </section>
+<p><a href="/knowledges">@Localizer["Back to the knowledge library"]</a></p>
+</article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}

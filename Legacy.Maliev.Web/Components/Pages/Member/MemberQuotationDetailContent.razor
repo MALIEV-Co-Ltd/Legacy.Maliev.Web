@@ -64,6 +64,13 @@
                 <p><strong>@Localizer["Remark"]:</strong> @Model.Comment</p>
             }
         </article>
+        @if (Model.Customer is not null && (Model.Customer.BillingAddress is null || Model.Customer.ShippingAddress is null))
+        {
+            <div class="maliev-alert maliev-alert--warning" role="status" data-member-address-warning>
+                <p>@Localizer["We don't have your billing or shipping address yet."]</p>
+                <a href="/member/account/manage/address">@Localizer["Please let us know where to bill and ship your order before continue."]</a>
+            </div>
+        }
         <section class="member-detail-grid" aria-label="@Localizer["Customer and addresses"]">
             <article class="maliev-panel">
                 <h2>@Localizer["Customer"]</h2>

@@ -1,3 +1,5 @@
+@inject IStringLocalizer<MemberWorkspaceShell> WorkspaceLocalizer
+
 <aside id="member-navigation" class="workspace-sidebar workspace-sidebar--member" aria-label="@Localizer["Member workspace"]">
     <div class="workspace-sidebar__header">
         <strong>@Localizer["Member workspace"]</strong>
@@ -19,6 +21,9 @@
             <p id="member-project-navigation" class="workspace-nav-group__label">@Localizer["Projects"]</p>
             <ul class="workspace-nav-list">
                 <li><a class="workspace-nav-link" asp-area="" asp-page="/Quotation/Index"><i class="fas fa-plus-circle" aria-hidden="true"></i><span>@Localizer["Request a quotation"]</span></a></li>
+                <li><a class="workspace-nav-link" asp-area="" asp-page="/Quotation/Index" asp-route-item="CNC-Machining" asp-route-culture="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName"><i class="fas fa-industry" aria-hidden="true"></i><span>@WorkspaceLocalizer["New CNC machining quote"]</span></a></li>
+                <li><a class="workspace-nav-link" asp-area="" asp-page="/Quotation/Index" asp-route-item="3D-Printing" asp-route-culture="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName"><i class="fas fa-cubes" aria-hidden="true"></i><span>@WorkspaceLocalizer["New 3D printing quote"]</span></a></li>
+                <li><a class="workspace-nav-link" asp-area="" asp-page="/Quotation/Index" asp-route-item="3D-Scanning" asp-route-culture="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName"><i class="fas fa-cube" aria-hidden="true"></i><span>@WorkspaceLocalizer["New 3D scanning quote"]</span></a></li>
                 <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Quotations/Index"><i class="fas fa-file-invoice" aria-hidden="true"></i><span>@Localizer["Quotations"]</span></a></li>
                 <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Orders/History"><i class="fas fa-history" aria-hidden="true"></i><span>@Localizer["Order history"]</span></a></li>
             </ul>

@@ -1,0 +1,87 @@
+@inject IStringLocalizer<InspectionMeasuringPartsContent> Localizer
+
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+<h1>@Localizer["Measure the requirement, not just the number"]</h1>
+<p class="docs-lead">@Localizer["An inspection result depends on the feature definition, instrument, setup, environment, and decision rule. Agree these before production so a supplier and customer can reproduce the same check and understand a result close to a tolerance limit."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/dimensional-inspection.webp" srcset="/src/images/knowledge/photos/dimensional-inspection-small.webp 768w, /src/images/knowledge/photos/dimensional-inspection.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["An outside micrometer has aligned anvil and spindle contacts on a stationary steel cylinder."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Choose the contacts, alignment and environment that match the measurement requirement. Illustrative image."]</figcaption>
+</figure>
+<nav class="docs-toc" aria-label="@Localizer["On this page"]"><strong>@Localizer["On this page"]</strong><ul>
+<li><a href="#tools">@Localizer["Choose an instrument for the feature"]</a></li>
+<li><a href="#uncertainty">@Localizer["Resolution is not measurement uncertainty"]</a></li>
+<li><a href="#setup">@Localizer["Control datums, contact, and restraint"]</a></li>
+<li><a href="#temperature">@Localizer["Example: temperature changes the dimension"]</a></li>
+<li><a href="#report">@Localizer["Agree a report that supports acceptance"]</a></li>
+</ul></nav>
+<section id="tools" class="docs-section">
+<h2>@Localizer["Choose an instrument for the feature"]</h2>
+<div class="docs-table-wrap" tabindex="0" role="region" aria-label="@Localizer["Dimensional inspection instrument comparison"]"><table><thead><tr>
+<th scope="col">@Localizer["Instrument"]</th>
+<th scope="col">@Localizer["Typical use"]</th>
+<th scope="col">@Localizer["Check before using"]</th>
+</tr></thead><tbody>
+<tr>
+<th scope="row">@Localizer["Caliper"]</th>
+<td>@Localizer["Accessible external, internal, step, and depth dimensions."]</td>
+<td>@Localizer["Jaw condition, alignment, contact force, and whether the method suits the tolerance."]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["Micrometer"]</th>
+<td>@Localizer["A defined size measured between appropriate contacts."]</td>
+<td>@Localizer["Range, anvil shape, consistent force, and access to the intended measurement location."]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["Coordinate measuring machine (CMM)"]</th>
+<td>@Localizer["Feature positions, geometric relationships, and profiles evaluated in a coordinate system."]</td>
+<td>@Localizer["Datum alignment, probe access, sampling strategy, software evaluation, and task uncertainty."]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["Limit or functional gauge"]</th>
+<td>@Localizer["An agreed go/no-go check of a defined acceptance condition."]</td>
+<td>@Localizer["Gauge specification, calibration, wear, operating force, and what the check does not measure."]</td>
+</tr>
+</tbody></table></div>
+<p>@Localizer["A caliper reading across a hole does not by itself establish roundness, and one micrometer reading does not describe a shaft along its full length. Define the locations and orientations needed to reveal the relevant variation. A specialized bore gauge, height instrument, thread gauge, or surface instrument may be the better tool for a particular requirement."]</p>
+<p class="docs-source"><a href="https://www.npl.co.uk/resources/gpgs/callipers-micrometers">@Localizer["Source: NPL guide to calipers and micrometers"]</a></p>
+<p class="docs-source"><a href="https://www.mitutoyo.com/webfoo/wp-content/uploads/CMM-GDT_Measurement_Planning_Hand-Out.pdf">@Localizer["Source: Mitutoyo CMM and GD&T measurement planning"]</a></p>
+</section>
+<section id="uncertainty" class="docs-section">
+<h2>@Localizer["Resolution is not measurement uncertainty"]</h2>
+<p>@Localizer["Instrument resolution describes the smallest change in the measured quantity that produces a perceptible change in the indication. Accuracy concerns closeness to the true value of that quantity; suitable reference values are used in practice to assess measurement error. Repeatability compares results over a short period using the same procedure, operators, measuring system, location and operating conditions. Measurement uncertainty is a non-negative parameter describing the dispersion of values attributed to the quantity being measured. It is not simply the span between the largest and smallest repeat readings. State whether a reported uncertainty is standard or expanded, and give the coverage factor or coverage probability as applicable. More displayed digits do not remove errors from contact, alignment, temperature or calibration."]</p>
+<p class="docs-source"><a href="https://www.npl.co.uk/resources/gpgs/callipers-micrometers">@Localizer["Reference: NPL Good Practice Guide 40, terminology and uncertainty"]</a></p>
+<p class="docs-source"><a href="https://jcgm.bipm.org/vim/en/2.13.html">@Localizer["JCGM VIM: measurement accuracy"]</a> · <a href="https://jcgm.bipm.org/vim/en/2.20.html">@Localizer["JCGM VIM: repeatability conditions"]</a> · <a href="https://jcgm.bipm.org/vim/en/2.26.html">@Localizer["JCGM VIM: measurement uncertainty"]</a></p>
+<p>@Localizer["Ask whether the complete measurement method is suitable for the tolerance, especially near an acceptance boundary. Agree how uncertainty affects the pass/fail decision and how disputed results will be rechecked. Record the instrument identity and calibration status; a calibration certificate supports traceability but does not validate every future setup or operator technique."]</p>
+<p class="docs-source"><a href="https://www.mitutoyo.com/webfoo/wp-content/uploads/Test_CMM_2016_Hand-Out.pdf?v=1.0.22">@Localizer["Reference: Mitutoyo understanding CMM specifications and calibration"]</a></p>
+</section>
+<section id="setup" class="docs-section">
+<h2>@Localizer["Control datums, contact, and restraint"]</h2>
+<p>@Localizer["Use the drawing's datum system and stated standard. Measuring a hole from an arbitrary outside edge can produce a different result from evaluating its position relative to the specified datum features. For CMM work, agree alignment and feature evaluation, along with sufficient point coverage for the feature being inspected. A convenient best fit may answer a different question."]</p>
+<p>@Localizer["Remove loose contamination and confirm whether burr removal is permitted before inspection. Burrs, roughness, coatings, and contact-tip geometry can affect the surface actually sampled. Do not silently polish a nonconforming feature into compliance. Record whether dimensions apply before or after finishing and retain the specified surface condition during acceptance checks."]</p>
+<p>@Localizer["Thin parts can change shape under clamp or probe force. Specify free-state inspection or the required restrained condition, including support locations and clamping method. A fixture should locate the part reproducibly with only the necessary holding force. If the component is accepted in its assembled condition, define that condition rather than improvising it at inspection."]</p>
+<p class="docs-source"><a href="https://www.renishaw.com/resourcecentre/download/technical-specifications-modular-metrology-fixturing--145793?userLanguage=en">@Localizer["Source: Renishaw metrology fixturing technical specification"]</a></p>
+</section>
+<section id="temperature" class="docs-section">
+<h2>@Localizer["Example: temperature changes the dimension"]</h2>
+<p>@Localizer["The standard reference temperature for dimensional measurement is 20 °C. Away from that temperature, expansion corrections and their uncertainty can matter. Allow the workpiece and equipment to stabilize; a part brought directly from machining, sunlight, or transport may not represent the inspection environment. Measuring room air alone does not establish the part's temperature."]</p>
+<aside class="docs-note"><h3>@Localizer["Illustrative calculation, not a material specification"]</h3><p>@Localizer["Assume a 100 mm length at 20 °C, a uniform 10 °C rise, and a constant expansion coefficient of 12 × 10⁻⁶ /°C. Then ΔL = αLΔT = 0.012 mm, so the predicted length is 100.012 mm. The assumed coefficient must be replaced by suitable material data in a real correction; temperature gradients and instrument expansion also need consideration."]</p></aside>
+<p class="docs-source"><a href="https://nvlpubs.nist.gov/nistpubs/jres/099/jresv99n1p31_a1b.pdf">@Localizer["Source: NIST uncertainty in dimensional measurements at nonstandard temperatures"]</a></p>
+
+<figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["An assumed 100 mm length at 20 degrees Celsius increases by 0.012 mm for a uniform ten degree rise using an assumed expansion coefficient of twelve times ten to the minus six per kelvin."]">
+        <img src="/src/images/knowledge/visual-thermal-measurement.svg" alt="@Localizer["An assumed 100 mm length at 20 degrees Celsius increases by 0.012 mm for a uniform ten degree rise using an assumed expansion coefficient of twelve times ten to the minus six per kelvin."]" width="960" height="480" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>@Localizer["1: assumed length at 20 °C. 2: predicted length at 30 °C is 100.012 mm. Expansion is greatly exaggerated in the drawing. The coefficient is an illustrative assumption, not a material specification; real corrections also consider gradients and instrument expansion."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-thermal-measurement.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
+</section>
+<section id="report" class="docs-section">
+<h2>@Localizer["Agree a report that supports acceptance"]</h2>
+<p>@Localizer["Before quotation, agree the drawing revision, numbered characteristics, nominal values and limits, sampling quantity, actual results, units, instrument or method, datum setup, environmental conditions where relevant, and acceptance rule. Identify each inspected part or lot. State whether the report covers every part, a first article, or a sample; these are different deliverables."]</p>
+<p>@Localizer["When results disagree, compare the definition and setup before adjusting the process. Recheck revision, cleanliness, temperature, contact location, restraint, and calculation method. Preserve the original readings and identify the agreed repeat measurement so the record explains the decision instead of merely replacing an inconvenient number."]</p>
+</section>
+</article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}
