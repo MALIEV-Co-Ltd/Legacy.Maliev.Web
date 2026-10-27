@@ -394,6 +394,40 @@ public sealed class DevelopmentCustomerFixtureTests(RedisRuntimeFixture redis)
         Assert.False(DevelopmentCustomerFixture.IsActive(context));
         Assert.False(await DevelopmentCustomerFixture.TrySignInAsync(context));
     }
+    /// <summary>Preserves a real principal even when its first identity is anonymous.</summary>
+    /// <returns>A task representing the fixture middleware and sign-in boundary.</returns>
+    [Fact]
+    public async Task Middleware_DoesNotActivateForLaterAuthenticatedIdentity()
+    {
+        using var application = DevelopmentFixtureEffects.CreateFactory(redis, new DevelopmentFixtureEffects());
+        using var client = DevelopmentFixtureEffects.Client(application);
+        using var signedIn = await DevelopmentFixtureEffects.SignIn(client,
+            await DevelopmentFixtureEffects.LoginToken(client));
+        var fixtureCookie = Assert.Single(signedIn.Headers.GetValues("Set-Cookie"),
+            value => value.StartsWith(DevelopmentCustomerFixture.CookieName + "=", StringComparison.Ordinal)).Split(';')[0];
+        using var scope = application.Services.CreateScope();
+        var anonymous = new ClaimsIdentity();
+        var authenticated = new ClaimsIdentity(
+            [new Claim(ClaimTypes.NameIdentifier, "customer:42")], CookieAuthenticationDefaults.AuthenticationScheme);
+        var principal = new ClaimsPrincipal([anonymous, authenticated]);
+        var context = new DefaultHttpContext { RequestServices = scope.ServiceProvider, User = principal };
+        context.Request.Scheme = "https";
+        context.Request.Headers.Cookie = fixtureCookie;
+
+        Assert.False(principal.Identity!.IsAuthenticated);
+        Assert.True(authenticated.IsAuthenticated);
+        Assert.False(DevelopmentCustomerFixture.IsAvailable(context));
+        var invoked = false;
+        await DevelopmentCustomerFixture.ObserveAsync(context, () =>
+        {
+            invoked = true;
+            return Task.CompletedTask;
+        });
+        Assert.True(invoked);
+        Assert.Same(principal, context.User);
+        Assert.False(DevelopmentCustomerFixture.IsActive(context));
+        Assert.False(await DevelopmentCustomerFixture.TrySignInAsync(context));
+    }
 }
 
 internal sealed class DevelopmentFixtureEffects : ICountryClient, IInstantQuotationProfileCompletionClient,

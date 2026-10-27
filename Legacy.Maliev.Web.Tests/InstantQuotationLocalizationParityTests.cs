@@ -14,6 +14,8 @@ public sealed partial class InstantQuotationLocalizationParityTests
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["Email"] = "อีเมล",
+            ["Privacy Policy"] = "นโยบายความเป็นส่วนตัว",
+            ["Non-Disclosure Agreement"] = "สัญญาปกปิดความลับ",
             ["Ready for manufacturing"] = "พร้อมเข้าสู่กระบวนการผลิต",
             ["We will get back to you with a quotation"] = "เราจะติดต่อกลับพร้อมใบเสนอราคา",
             ["{0}–{1} business days"] = "{0}–{1} วันทำการ",
@@ -29,6 +31,7 @@ public sealed partial class InstantQuotationLocalizationParityTests
             ["Balanced finish, durability, lead time, and price for everyday use"] = "สมดุลด้านผิวชิ้นงาน ความทนทาน ระยะเวลา และราคา สำหรับการใช้งานทั่วไป",
             ["Greater structural strength · material and load direction still require engineering review"] = "เพิ่มความแข็งแรงของโครงสร้าง · วัสดุและทิศทางรับแรงยังต้องให้วิศวกรตรวจสอบ",
             ["Preliminary price — model volume was measured; manufacturing suitability is confirmed by our engineer."] = "ราคาประเมินเบื้องต้น — วัดปริมาตรจากโมเดลแล้ว และวิศวกรจะยืนยันความเหมาะสมในการผลิต",
+            ["Manufacturing warnings may affect the final result of this part."] = "มีข้อควรระวังด้านการผลิต อาจส่งผลต่อผลลัพธ์สุดท้ายของชิ้นงาน",
             ["Compare material prices"] = "เปรียบเทียบราคาวัสดุ",
             ["per piece"] = "ต่อชิ้น",
             ["Part {0}"] = "ชิ้นงานที่ {0}",
@@ -123,6 +126,9 @@ public sealed partial class InstantQuotationLocalizationParityTests
             "Components",
             "Pages",
             "InstantQuotation");
+        var workflow = File.ReadAllText(Path.Combine(componentDirectory, "InstantQuotationWorkflow.razor"));
+        Assert.Contains("Localizer[\"Privacy Policy\"]", workflow, StringComparison.Ordinal);
+        Assert.Contains("Localizer[\"Non-Disclosure Agreement\"]", workflow, StringComparison.Ordinal);
         var usedKeys = Directory.EnumerateFiles(componentDirectory, "*.*", SearchOption.TopDirectoryOnly)
             .Where(path => Path.GetExtension(path) is ".razor" or ".cs")
             .SelectMany(path => LocalizerKey().Matches(File.ReadAllText(path)).Select(match => match.Groups[1].Value))

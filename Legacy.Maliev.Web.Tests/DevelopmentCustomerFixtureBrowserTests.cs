@@ -119,4 +119,183 @@ public sealed class DevelopmentCustomerFixtureBrowserTests(CncNativeBrowserFixtu
             typeof(InstantQuotationWorkflow).GetProperty("State", flags)!.GetValue(component));
         Assert.Same(originalCoordinator, coordinatorField.GetValue(component));
     }
+
+    [Theory]
+    [InlineData("disposed")]
+    [InlineData("initializationFailed")]
+    [InlineData("batchInProgress")]
+    [InlineData("bulkApplying")]
+    public void Preview_RefusesWhenTheExistingWorkflowIsBlocked(string blockedField)
+    {
+        var component = new InstantQuotationWorkflow();
+        ParameterView.FromDictionary(new Dictionary<string, object?>
+        {
+            [nameof(InstantQuotationWorkflow.CustomerModel)] = DevelopmentCustomerFixture.ApplyProfile(InstantQuotationCustomerDisplayModel.Empty),
+            [nameof(InstantQuotationWorkflow.InitialState)] = InstantQuotationWorkflowState.Uploaded,
+        }).SetParameterProperties(component);
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        typeof(InstantQuotationWorkflow).GetField(blockedField, flags)!.SetValue(component, true);
+
+        typeof(InstantQuotationWorkflow).GetMethod("ShowDevelopmentCustomerPreview", flags)!.Invoke(component, null);
+
+        Assert.False((bool)typeof(InstantQuotationWorkflow).GetField("developmentCustomerPreview", flags)!.GetValue(component)!);
+        var expected = blockedField == "initializationFailed"
+            ? InstantQuotationWorkflowState.Error : InstantQuotationWorkflowState.Uploaded;
+        Assert.Equal(expected, typeof(InstantQuotationWorkflow).GetProperty("State", flags)!.GetValue(component));
+    }
+
+    [Fact]
+    public void Preview_DoesNotHideAnErrorThatAppearsAfterItOpens()
+    {
+        var component = new InstantQuotationWorkflow();
+        ParameterView.FromDictionary(new Dictionary<string, object?>
+        {
+            [nameof(InstantQuotationWorkflow.CustomerModel)] = DevelopmentCustomerFixture.ApplyProfile(InstantQuotationCustomerDisplayModel.Empty),
+            [nameof(InstantQuotationWorkflow.InitialState)] = InstantQuotationWorkflowState.Uploaded,
+        }).SetParameterProperties(component);
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        typeof(InstantQuotationWorkflow).GetMethod("ShowDevelopmentCustomerPreview", flags)!.Invoke(component, null);
+        Assert.Equal(InstantQuotationWorkflowState.CustomerDetails, typeof(InstantQuotationWorkflow).GetProperty("State", flags)!.GetValue(component));
+
+        typeof(InstantQuotationWorkflow).GetField("initializationFailed", flags)!.SetValue(component, true);
+
+        Assert.Equal(InstantQuotationWorkflowState.Error, typeof(InstantQuotationWorkflow).GetProperty("State", flags)!.GetValue(component));
+    }
+
+    [Theory]
+    [InlineData(InstantQuotationWorkflowState.Error)]
+    [InlineData(InstantQuotationWorkflowState.Uploading)]
+    [InlineData(InstantQuotationWorkflowState.Submitted)]
+    public void Preview_PreservesUnderlyingErrorBusyAndSubmittedStates(InstantQuotationWorkflowState state)
+    {
+        var component = new InstantQuotationWorkflow();
+        ParameterView.FromDictionary(new Dictionary<string, object?>
+        {
+            [nameof(InstantQuotationWorkflow.CustomerModel)] = DevelopmentCustomerFixture.ApplyProfile(InstantQuotationCustomerDisplayModel.Empty),
+            [nameof(InstantQuotationWorkflow.InitialState)] = state,
+        }).SetParameterProperties(component);
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        typeof(InstantQuotationWorkflow).GetMethod("ShowDevelopmentCustomerPreview", flags)!.Invoke(component, null);
+        Assert.False((bool)typeof(InstantQuotationWorkflow).GetField("developmentCustomerPreview", flags)!.GetValue(component)!);
+        Assert.Equal(state, typeof(InstantQuotationWorkflow).GetProperty("State", flags)!.GetValue(component));
+    }
+
+    [Fact]
+    public void Preview_DoesNotBypassFailedLocalSelection()
+    {
+        var component = new InstantQuotationWorkflow();
+        ParameterView.FromDictionary(new Dictionary<string, object?>
+        {
+            [nameof(InstantQuotationWorkflow.CustomerModel)] = DevelopmentCustomerFixture.ApplyProfile(InstantQuotationCustomerDisplayModel.Empty),
+            [nameof(InstantQuotationWorkflow.InitialState)] = InstantQuotationWorkflowState.Uploaded,
+        }).SetParameterProperties(component);
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var failureType = typeof(InstantQuotationWorkflow).GetNestedType("LocalPreviewFailure", flags)!;
+        var failure = Activator.CreateInstance(failureType,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
+            binder: null, args: ["selected.stl", "validation"], culture: null)!;
+        var failures = (System.Collections.IDictionary)typeof(InstantQuotationWorkflow)
+            .GetField("failedPreviewSelections", flags)!.GetValue(component)!;
+        failures.Add("selection", failure);
+
+        typeof(InstantQuotationWorkflow).GetMethod("ShowDevelopmentCustomerPreview", flags)!.Invoke(component, null);
+
+        Assert.False((bool)typeof(InstantQuotationWorkflow).GetField("developmentCustomerPreview", flags)!.GetValue(component)!);
+        Assert.Single(failures.Keys.Cast<object>());
+        Assert.Equal(InstantQuotationWorkflowState.Uploaded, typeof(InstantQuotationWorkflow).GetProperty("State", flags)!.GetValue(component));
+    }
+
+    [Theory]
+    [InlineData("disposed")]
+    [InlineData("batchInProgress")]
+    [InlineData("bulkApplying")]
+    public void OpenPreview_YieldsWhenWorkflowBecomesUnavailable(string blockedField)
+    {
+        var component = new InstantQuotationWorkflow();
+        ParameterView.FromDictionary(new Dictionary<string, object?>
+        {
+            [nameof(InstantQuotationWorkflow.CustomerModel)] = DevelopmentCustomerFixture.ApplyProfile(InstantQuotationCustomerDisplayModel.Empty),
+            [nameof(InstantQuotationWorkflow.InitialState)] = InstantQuotationWorkflowState.Uploaded,
+        }).SetParameterProperties(component);
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        typeof(InstantQuotationWorkflow).GetMethod("ShowDevelopmentCustomerPreview", flags)!.Invoke(component, null);
+        Assert.Equal(InstantQuotationWorkflowState.CustomerDetails, typeof(InstantQuotationWorkflow).GetProperty("State", flags)!.GetValue(component));
+
+        typeof(InstantQuotationWorkflow).GetField(blockedField, flags)!.SetValue(component, true);
+
+        Assert.Equal(InstantQuotationWorkflowState.Uploaded, typeof(InstantQuotationWorkflow).GetProperty("State", flags)!.GetValue(component));
+    }
+
+    [Fact]
+    public void OpenPreview_YieldsToRepricingAndFailedLocalSelection()
+    {
+        var component = new InstantQuotationWorkflow();
+        ParameterView.FromDictionary(new Dictionary<string, object?>
+        {
+            [nameof(InstantQuotationWorkflow.CustomerModel)] = DevelopmentCustomerFixture.ApplyProfile(InstantQuotationCustomerDisplayModel.Empty),
+            [nameof(InstantQuotationWorkflow.InitialState)] = InstantQuotationWorkflowState.Uploaded,
+        }).SetParameterProperties(component);
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        typeof(InstantQuotationWorkflow).GetMethod("ShowDevelopmentCustomerPreview", flags)!.Invoke(component, null);
+        Assert.Equal(InstantQuotationWorkflowState.CustomerDetails, typeof(InstantQuotationWorkflow).GetProperty("State", flags)!.GetValue(component));
+        var repricing = typeof(InstantQuotationWorkflow).GetField("repricing", flags)!.GetValue(component)!;
+        var active = repricing.GetType().GetField("active", flags)!;
+
+        active.SetValue(repricing, 1);
+        Assert.Equal(InstantQuotationWorkflowState.Uploaded, typeof(InstantQuotationWorkflow).GetProperty("State", flags)!.GetValue(component));
+        active.SetValue(repricing, 0);
+        var failureType = typeof(InstantQuotationWorkflow).GetNestedType("LocalPreviewFailure", flags)!;
+        var failure = Activator.CreateInstance(failureType,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
+            binder: null, args: ["selected.stl", "validation"], culture: null)!;
+        var failures = (System.Collections.IDictionary)typeof(InstantQuotationWorkflow)
+            .GetField("failedPreviewSelections", flags)!.GetValue(component)!;
+        failures.Add("selection", failure);
+        Assert.Equal(InstantQuotationWorkflowState.Uploaded, typeof(InstantQuotationWorkflow).GetProperty("State", flags)!.GetValue(component));
+        Assert.Single(failures.Keys.Cast<object>());
+    }
+
+    [Theory]
+    [InlineData("pending")]
+    [InlineData("incomplete")]
+    [InlineData("failure")]
+    public void OpenPreview_YieldsToLocalFileWorkAndReturnsWhenItClears(string localState)
+    {
+        var component = new InstantQuotationWorkflow();
+        ParameterView.FromDictionary(new Dictionary<string, object?>
+        {
+            [nameof(InstantQuotationWorkflow.CustomerModel)] = DevelopmentCustomerFixture.ApplyProfile(InstantQuotationCustomerDisplayModel.Empty),
+            [nameof(InstantQuotationWorkflow.InitialState)] = InstantQuotationWorkflowState.Uploaded,
+        }).SetParameterProperties(component);
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var type = typeof(InstantQuotationWorkflow);
+        var state = type.GetProperty("State", flags)!;
+        var sections = type.GetProperty("VisibleSections", flags)!;
+        type.GetMethod("ShowDevelopmentCustomerPreview", flags)!.Invoke(component, null);
+        Assert.Equal(InstantQuotationWorkflowState.CustomerDetails, state.GetValue(component));
+        Assert.True((bool)sections.GetValue(component)!.GetType().GetProperty("CustomerDetails")!.GetValue(sections.GetValue(component))!);
+
+        var field = localState == "pending" ? "pendingPreviewSelections" : "failedPreviewSelections";
+        var items = (System.Collections.IDictionary)type.GetField(field, flags)!.GetValue(component)!;
+        if (localState == "incomplete") type.GetField("incompletePreviewKey", flags)!.SetValue(component, "selection");
+        else
+        {
+            var nested = type.GetNestedType(localState == "pending" ? "PendingLocalPreview" : "LocalPreviewFailure", flags)!;
+            var args = localState == "pending" ? new object[] { "selected.stl", 1L } : new object[] { "selected.stl", "validation" };
+            items.Add("selection", Activator.CreateInstance(nested,
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
+                binder: null, args: args, culture: null)!);
+        }
+
+        Assert.Equal(InstantQuotationWorkflowState.Uploaded, state.GetValue(component));
+        var visible = sections.GetValue(component)!;
+        Assert.False((bool)visible.GetType().GetProperty("CustomerDetails")!.GetValue(visible)!);
+        Assert.True((bool)visible.GetType().GetProperty("Viewer")!.GetValue(visible)!);
+
+        items.Clear();
+        type.GetField("incompletePreviewKey", flags)!.SetValue(component, null);
+        Assert.Equal(InstantQuotationWorkflowState.CustomerDetails, state.GetValue(component));
+        visible = sections.GetValue(component)!;
+        Assert.True((bool)visible.GetType().GetProperty("CustomerDetails")!.GetValue(visible)!);
+    }
 }

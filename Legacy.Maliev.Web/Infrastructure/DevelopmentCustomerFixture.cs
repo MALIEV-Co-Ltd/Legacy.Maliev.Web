@@ -36,7 +36,7 @@ internal static class DevelopmentCustomerFixture
 
     internal static bool IsAvailable(HttpContext context) =>
         context.RequestServices.GetService<IWebHostEnvironment>()?.IsDevelopment() is true
-        && context.User.Identity?.IsAuthenticated is not true;
+        && !context.User.Identities.Any(identity => identity.IsAuthenticated);
 
     internal static bool IsActive(HttpContext context) =>
         context.Items.TryGetValue(PrincipalKey, out var value)

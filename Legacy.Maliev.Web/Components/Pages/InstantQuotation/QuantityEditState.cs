@@ -24,6 +24,12 @@ internal sealed class QuantityEditState
         }
     }
 
+    public void RestoreAccepted(Guid partId)
+    {
+        revisions[partId] = revisions.GetValueOrDefault(partId) + 1;
+        pending.Remove(partId);
+    }
+
     public void Forget(Guid partId)
     {
         revisions.Remove(partId);

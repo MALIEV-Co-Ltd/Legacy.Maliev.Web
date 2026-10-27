@@ -1,7 +1,14 @@
+using System.Net;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -403,6 +410,565 @@ public sealed class InstantQuotationWorkflowUploadTests
         await uploading;
 
         Assert.Equal(reserved, workflow.Parts.Select(static part => part.PreviewCorrelationId));
+    }
+
+    [Theory]
+    [InlineData(InstantQuotationWorkflowUploadStatus.Pending)]
+    [InlineData(InstantQuotationWorkflowUploadStatus.Uploading)]
+    [InlineData(InstantQuotationWorkflowUploadStatus.Uploaded)]
+    public async Task PendingRemoveCaller_CleansRemovedSlotButKeepsStartedOrAuthoritativeSlot(
+        InstantQuotationWorkflowUploadStatus stage)
+    {
+        var client = new ControlledUploadClient();
+        var store = new RecordingSessionStore();
+        var pricing = new RecordingPricingService();
+        var tickets = new CallerTickets();
+        var activator = new CallerComponentActivator();
+        var javascript = new CallerJavaScript();
+        using var services = new ServiceCollection().AddLogging()
+            .AddLocalization(options => options.ResourcesPath = "Resources")
+            .AddSingleton<IComponentActivator>(activator)
+            .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager())
+            .AddSingleton<IJSRuntime>(javascript)
+            .AddSingleton<IInstantQuotationSessionStore>(store)
+            .AddSingleton<IInstantQuotationUploadClient>(client)
+            .AddSingleton<IInstantQuotationPricingService>(pricing)
+            .AddSingleton<IInstantQuotationAuthoritativePricingService>(pricing)
+            .AddSingleton<IInstantQuotationQuoteTicketService>(tickets)
+            .AddSingleton(FdmRuntimeProfileCatalog.LoadEmbedded())
+            .BuildServiceProvider();
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        var root = await renderer.Dispatcher.InvokeAsync(() =>
+            renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty));
+        var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+        // Observe the naturally initialized coordinator; all state below uses its public API.
+        var workflowField = typeof(InstantQuotationWorkflow).GetField(
+            "workflow", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        var workflow = Assert.IsType<InstantQuotationWorkflowCoordinator>(workflowField.GetValue(component));
+        Guid localId = default;
+        await renderer.Dispatcher.InvokeAsync(() =>
+        {
+            localId = Assert.Single(workflow.ReserveUploads([UploadFile("kept.stl")]));
+        });
+        await renderer.Dispatcher.InvokeAsync(() => component.SetParametersAsync(ParameterView.Empty));
+        var pendingHtml = await renderer.Dispatcher.InvokeAsync(root.ToHtmlString);
+        var row = Regex.Match(pendingHtml,
+            $"<article\\b[^>]*aria-labelledby=\"upload-name-{localId}\"[^>]*>.*?</article>", RegexOptions.Singleline);
+        Assert.True(row.Success);
+        Assert.Single(Regex.Matches(row.Value, "<button\\b").Cast<Match>());
+        Assert.Contains("type=\"button\"", row.Value, StringComparison.Ordinal);
+        Assert.Contains("kept.stl", WebUtility.HtmlDecode(row.Value), StringComparison.Ordinal);
+
+        var uploading = Task.CompletedTask;
+        try
+        {
+            if (stage is not InstantQuotationWorkflowUploadStatus.Pending)
+            {
+                await renderer.Dispatcher.InvokeAsync(() =>
+                {
+                    uploading = workflow.UploadReservedAsync([localId], default);
+                });
+                await client.WaitForUploadsAsync(1);
+                if (stage is InstantQuotationWorkflowUploadStatus.Uploaded)
+                {
+                    client.CompleteSuccess("kept.stl", "opaque-kept", Geometry());
+                    await uploading;
+                    Assert.NotNull(workflow.OrderQuote);
+                }
+            }
+            var quote = workflow.OrderQuote;
+            var saved = store.LastSavedState;
+            var savedSession = await store.GetAsync("protected-session", null, default);
+            var authorization = savedSession!.QuoteAuthorization;
+            var revision = workflow.AuthoritativeQuoteRevision;
+            var pricingCalls = pricing.QuoteCalls;
+            var ticketCalls = tickets.IssueCalls;
+            var estimateComplete = workflow.HasCompleteAuthoritativeEstimate;
+            var quoteComplete = workflow.HasCompleteAuthoritativeQuote;
+
+            // One fixed existing private handler invocation models the already-rendered Remove click.
+            var discard = typeof(InstantQuotationWorkflow).GetMethod(
+                "DiscardUploadAsync", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+            await renderer.Dispatcher.InvokeAsync(async () =>
+                await Assert.IsAssignableFrom<Task>(discard.Invoke(component, [localId])));
+
+            Assert.Empty(client.RemovedReferences);
+            Assert.Same(quote, workflow.OrderQuote);
+            Assert.Same(saved, store.LastSavedState);
+            Assert.Same(authorization, (await store.GetAsync("protected-session", null, default))!.QuoteAuthorization);
+            Assert.Equal(revision, workflow.AuthoritativeQuoteRevision);
+            Assert.Equal(pricingCalls, pricing.QuoteCalls);
+            Assert.Equal(ticketCalls, tickets.IssueCalls);
+            Assert.Equal(estimateComplete, workflow.HasCompleteAuthoritativeEstimate);
+            Assert.Equal(quoteComplete, workflow.HasCompleteAuthoritativeQuote);
+            Assert.Equal(0, javascript.Calls);
+            if (stage is InstantQuotationWorkflowUploadStatus.Pending)
+            {
+                Assert.Empty(workflow.Uploads);
+                Assert.Empty(workflow.Parts);
+                Assert.Empty(client.UploadOperations);
+                Assert.Empty(client.UploadCancellationTokens);
+                Assert.Equal(InstantQuotationWorkflowState.Empty, workflow.State);
+                await renderer.Dispatcher.InvokeAsync(() => component.SetParametersAsync(ParameterView.Empty));
+                Assert.DoesNotContain("upload-name-" + localId,
+                    await renderer.Dispatcher.InvokeAsync(root.ToHtmlString), StringComparison.Ordinal);
+            }
+            else
+            {
+                var kept = Assert.Single(workflow.Uploads);
+                Assert.Equal(localId, kept.LocalId);
+                Assert.Equal(stage, kept.Status);
+                Assert.False(Assert.Single(client.UploadCancellationTokens).IsCancellationRequested);
+                if (stage is InstantQuotationWorkflowUploadStatus.Uploaded)
+                {
+                    Assert.Equal(localId, Assert.Single(workflow.Parts).PreviewCorrelationId);
+                    Assert.NotNull(authorization);
+                }
+                else
+                {
+                    Assert.Empty(workflow.Parts);
+                }
+            }
+        }
+        finally
+        {
+            client.CancelPendingUploads();
+            await uploading;
+        }
+    }
+
+    [Fact]
+    public async Task DiscardPendingUpload_RemovesLocalSlotAndMakesAbsentReservationsNoOp()
+    {
+        var client = new ControlledUploadClient();
+        var store = new RecordingSessionStore();
+        var pricing = new RecordingPricingService();
+        var analytics = new RecordingAnalyticsTracker();
+        await using var workflow = CreateWorkflow(client: client, store: store, pricing: pricing, analytics: analytics);
+        await workflow.InitializeAsync(default);
+        var saved = store.LastSavedState;
+        var opened = 0;
+        var reserved = workflow.ReserveUploads([UploadFile("pending.stl") with
+        {
+            OpenReadStreamAsync = _ =>
+            {
+                opened++;
+                return Task.FromResult<Stream>(Stream.Null);
+            },
+        }]);
+        var localId = Assert.Single(reserved);
+
+        await workflow.DiscardUploadAsync(localId, default);
+        await workflow.DiscardUploadAsync(localId, default);
+        await workflow.UploadReservedAsync(reserved, default);
+        await workflow.UploadReservedAsync([Guid.NewGuid()], default);
+
+        Assert.Empty(workflow.Uploads);
+        Assert.Empty(workflow.Parts);
+        Assert.Equal(0, opened);
+        Assert.Empty(client.UploadOperations);
+        Assert.Empty(client.UploadCancellationTokens);
+        Assert.Empty(client.RemovedReferences);
+        Assert.Empty(analytics.StageResults);
+        Assert.Empty(analytics.UploadFailures);
+        Assert.Equal(0, pricing.QuoteCalls);
+        Assert.Same(saved, store.LastSavedState);
+        Assert.Null(workflow.OrderQuote);
+        Assert.Equal(InstantQuotationWorkflowState.Empty, workflow.State);
+        Assert.False(workflow.HasCompleteAuthoritativeEstimate);
+        Assert.False(workflow.HasCompleteAuthoritativeQuote);
+        Assert.Throws<InvalidOperationException>(workflow.EnterReview);
+        Assert.Throws<InvalidOperationException>(workflow.EnterCustomerDetails);
+    }
+
+    [Fact]
+    public async Task ReservedBatch_RemovalBeforeSnapshotStartsOnlyRemainingRowsInOrder()
+    {
+        var client = new ControlledUploadClient();
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+        var removedOpened = 0;
+        var reserved = workflow.ReserveUploads([
+            UploadFile("first.stl"),
+            UploadFile("removed.stl") with
+            {
+                OpenReadStreamAsync = _ =>
+                {
+                    removedOpened++;
+                    return Task.FromResult<Stream>(Stream.Null);
+                },
+            },
+            UploadFile("last.stl"),
+        ]);
+        await workflow.DiscardUploadAsync(reserved[1], default);
+
+        var uploading = workflow.UploadReservedAsync(reserved, default);
+        try
+        {
+            await client.WaitForUploadsAsync(2);
+            Assert.Equal(new[] { reserved[0], reserved[2] }, workflow.Uploads.Select(upload => upload.LocalId));
+            Assert.Equal(0, removedOpened);
+            Assert.Equal(2, client.UploadOperations.Count);
+            client.CompleteSuccess("first.stl", "opaque-first", Geometry());
+            client.CompleteSuccess("last.stl", "opaque-last", Geometry());
+            await uploading;
+            Assert.Equal(new[] { reserved[0], reserved[2] }, workflow.Parts.Select(part => part.PreviewCorrelationId));
+            Assert.Empty(client.RemovedReferences);
+        }
+        finally
+        {
+            client.CancelPendingUploads();
+            await uploading;
+        }
+    }
+
+    [Fact]
+    public async Task ReservedBatch_RemovalAfterSnapshotPreventsCapturedEntryFromStarting()
+    {
+        var client = new ControlledUploadClient();
+        var analytics = new RecordingAnalyticsTracker();
+        await using var workflow = CreateWorkflow(client: client, analytics: analytics);
+        await workflow.InitializeAsync(default);
+        var removedOpened = 0;
+        var reserved = workflow.ReserveUploads([
+            UploadFile("kept.stl"),
+            UploadFile("removed.stl") with
+            {
+                OpenReadStreamAsync = _ =>
+                {
+                    removedOpened++;
+                    return Task.FromResult<Stream>(Stream.Null);
+                },
+            },
+        ]);
+        var callbackEntered = false;
+        using var removalCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        analytics.BeforeNextStageResult = () =>
+        {
+            callbackEntered = true;
+            Assert.Equal(InstantQuotationWorkflowUploadStatus.Pending,
+                Assert.Single(workflow.Uploads, upload => upload.LocalId == reserved[1]).Status);
+            return new ValueTask(workflow.DiscardUploadAsync(reserved[1], removalCancellation.Token));
+        };
+
+        var uploading = workflow.UploadReservedAsync(reserved, default);
+        try
+        {
+            await client.WaitForUploadsAsync(1);
+            Assert.True(callbackEntered);
+            Assert.Equal(reserved[0], Assert.Single(workflow.Uploads).LocalId);
+            Assert.Equal(0, removedOpened);
+            Assert.Single(client.UploadOperations);
+            Assert.Single(client.UploadCancellationTokens);
+            client.CompleteSuccess("kept.stl", "opaque-kept", Geometry());
+            await uploading;
+            Assert.Equal(reserved[0], Assert.Single(workflow.Parts).PreviewCorrelationId);
+            Assert.Empty(client.RemovedReferences);
+        }
+        finally
+        {
+            analytics.BeforeNextStageResult = null;
+            client.CancelPendingUploads();
+            await uploading;
+        }
+    }
+
+    [Fact]
+    public async Task ReservedBatch_RejectsDuplicatesNonPendingAndCancelledAdmission()
+    {
+        var client = new ControlledUploadClient();
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+        var localId = Assert.Single(workflow.ReserveUploads([UploadFile("kept.stl")]));
+        await Assert.ThrowsAsync<ArgumentException>(() => workflow.UploadReservedAsync([localId, localId], default));
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => workflow.UploadReservedAsync([localId], cancellation.Token));
+        Assert.Equal(InstantQuotationWorkflowUploadStatus.Pending, Assert.Single(workflow.Uploads).Status);
+        Assert.Empty(client.UploadOperations);
+        Assert.Empty(client.UploadCancellationTokens);
+
+        var uploading = workflow.UploadReservedAsync([localId], default);
+        try
+        {
+            await client.WaitForUploadsAsync(1);
+            await Assert.ThrowsAsync<InvalidOperationException>(() => workflow.UploadReservedAsync([localId], default));
+            await Assert.ThrowsAsync<InstantQuotationWorkflowCoordinator.DiscardRefusedException>(() => workflow.DiscardUploadAsync(localId, default));
+            Assert.False(Assert.Single(client.UploadCancellationTokens).IsCancellationRequested);
+            client.CompleteSuccess("kept.stl", "opaque-kept", Geometry());
+            await uploading;
+            await Assert.ThrowsAsync<InvalidOperationException>(() => workflow.UploadReservedAsync([localId], default));
+            Assert.Equal(localId, Assert.Single(workflow.Parts).PreviewCorrelationId);
+        }
+        finally
+        {
+            client.CancelPendingUploads();
+            await uploading;
+        }
+    }
+
+    [Fact]
+    public async Task DiscardPendingUpload_PreservesRemainingAuthoritativeQuoteAndSavedState()
+    {
+        var client = new ControlledUploadClient();
+        var store = new RecordingSessionStore();
+        var pricing = new RecordingPricingService();
+        await using var workflow = CreateWorkflow(client: client, store: store, pricing: pricing);
+        await workflow.InitializeAsync(default);
+        var uploading = workflow.UploadAsync([UploadFile("kept.stl")], default);
+        try
+        {
+            await client.WaitForUploadsAsync(1);
+            client.CompleteSuccess("kept.stl", "opaque-kept", Geometry());
+            await uploading;
+        }
+        finally
+        {
+            client.CancelPendingUploads();
+            await uploading;
+        }
+        var part = Assert.Single(workflow.Parts);
+        var quote = workflow.OrderQuote;
+        Assert.NotNull(quote);
+        var saved = store.LastSavedState;
+        var pricingCalls = pricing.QuoteCalls;
+        var revision = workflow.AuthoritativeQuoteRevision;
+        var estimateComplete = workflow.HasCompleteAuthoritativeEstimate;
+        var quoteComplete = workflow.HasCompleteAuthoritativeQuote;
+        var pending = Assert.Single(workflow.ReserveUploads([UploadFile("pending.stl")]));
+
+        await workflow.DiscardUploadAsync(pending, default);
+
+        Assert.Equal(part.PartId, Assert.Single(workflow.Parts).PartId);
+        Assert.Equal(part.PreviewCorrelationId, Assert.Single(workflow.Uploads).LocalId);
+        Assert.Same(quote, workflow.OrderQuote);
+        Assert.Same(saved, store.LastSavedState);
+        Assert.Equal(pricingCalls, pricing.QuoteCalls);
+        Assert.Equal(revision, workflow.AuthoritativeQuoteRevision);
+        Assert.Equal(estimateComplete, workflow.HasCompleteAuthoritativeEstimate);
+        Assert.Equal(quoteComplete, workflow.HasCompleteAuthoritativeQuote);
+        Assert.Empty(client.RemovedReferences);
+    }
+
+    [Fact]
+    public async Task DiscardLastPendingUpload_PricesTheRemainingAcceptedPart()
+    {
+        var client = new ControlledUploadClient();
+        var store = new RecordingSessionStore();
+        var pricing = new RecordingPricingService();
+        await using var workflow = CreateWorkflow(client: client, store: store, pricing: pricing);
+        await workflow.InitializeAsync(default);
+        var reserved = workflow.ReserveUploads([UploadFile("kept.stl"), UploadFile("pending.stl")]);
+        var uploading = workflow.UploadReservedAsync([reserved[0]], default);
+        try
+        {
+            await client.WaitForUploadsAsync(1);
+            client.CompleteSuccess("kept.stl", "opaque-kept", Geometry());
+            await uploading;
+        }
+        finally
+        {
+            client.CancelPendingUploads();
+            await uploading;
+        }
+        var part = Assert.Single(workflow.Parts);
+        Assert.Null(workflow.OrderQuote);
+        Assert.False(workflow.HasCompleteAuthoritativeEstimate);
+        var calls = pricing.QuoteCalls;
+
+        await workflow.DiscardUploadAsync(reserved[1], default);
+
+        Assert.Equal(part.PartId, Assert.Single(workflow.Parts).PartId);
+        Assert.Equal(reserved[0], Assert.Single(workflow.Uploads).LocalId);
+        var quote = Assert.IsType<InstantQuotationOrderQuote>(workflow.OrderQuote);
+        Assert.Equal(part.PartId, Assert.Single(quote.Parts).PartId);
+        Assert.Equal(part.PartId, Assert.Single(store.LastSavedState!.Parts).PartId);
+        Assert.True(workflow.HasCompleteAuthoritativeEstimate);
+        Assert.False(workflow.HasCompleteAuthoritativeQuote);
+        Assert.Throws<InvalidOperationException>(workflow.EnterReview);
+        Assert.Equal(calls + 1, pricing.QuoteCalls);
+        Assert.Empty(client.RemovedReferences);
+        Assert.Single(client.UploadOperations);
+    }
+
+    [Fact]
+    public async Task DiscardFailedUpload_RemovesOnlyLocalSlotWithoutPersistingOrGrantingReview()
+    {
+        var client = new ControlledUploadClient();
+        var store = new RecordingSessionStore();
+        await using var workflow = CreateWorkflow(client: client, store: store);
+        await workflow.InitializeAsync(default);
+        var saved = store.LastSavedState;
+        var uploading = workflow.UploadAsync([UploadFile("broken.stl")], default);
+        await client.WaitForUploadsAsync(1);
+        client.CompleteUnavailable("broken.stl");
+        await uploading;
+        var localId = Assert.Single(workflow.Uploads).LocalId;
+
+        await workflow.DiscardUploadAsync(localId, default);
+        await workflow.DiscardUploadAsync(localId, default);
+
+        Assert.Empty(workflow.Uploads);
+        Assert.Empty(workflow.Parts);
+        Assert.Null(workflow.OrderQuote);
+        Assert.Equal(InstantQuotationWorkflowState.Empty, workflow.State);
+        Assert.False(workflow.HasCompleteAuthoritativeEstimate);
+        Assert.False(workflow.HasCompleteAuthoritativeQuote);
+        Assert.Throws<InvalidOperationException>(workflow.EnterReview);
+        Assert.Throws<InvalidOperationException>(workflow.EnterCustomerDetails);
+        Assert.Same(saved, store.LastSavedState);
+        Assert.Empty(client.RemovedReferences);
+        Assert.Single(client.UploadOperations);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DiscardCancelledUpload_LateCompletionCannotRestoreSlot(bool cancelledCompletion)
+    {
+        var client = new ControlledUploadClient(ignoreCancellation: true);
+        var store = new RecordingSessionStore();
+        var analytics = new RecordingAnalyticsTracker();
+        await using var workflow = CreateWorkflow(client: client, store: store, analytics: analytics);
+        await workflow.InitializeAsync(default);
+        var saved = store.LastSavedState;
+        var uploading = workflow.UploadAsync([UploadFile("late.stl")], default);
+        await client.WaitForUploadsAsync(1);
+        var localId = Assert.Single(workflow.Uploads).LocalId;
+        try
+        {
+            workflow.Cancel(localId);
+            await workflow.DiscardUploadAsync(localId, default);
+            Assert.True(Assert.Single(client.UploadCancellationTokens).IsCancellationRequested);
+            Assert.Empty(workflow.Uploads);
+            Assert.False(uploading.IsCompleted);
+            if (cancelledCompletion)
+                client.CompleteCancelled("late.stl");
+            else
+                client.CompleteSuccess("late.stl", "opaque-discarded", Geometry());
+            await uploading;
+
+            Assert.Empty(workflow.Uploads);
+            Assert.Empty(workflow.Parts);
+            Assert.Null(workflow.OrderQuote);
+            Assert.Equal(InstantQuotationWorkflowState.Empty, workflow.State);
+            Assert.False(workflow.HasCompleteAuthoritativeEstimate);
+            Assert.False(workflow.HasCompleteAuthoritativeQuote);
+            Assert.Same(saved, store.LastSavedState);
+            Assert.Empty(analytics.UploadFailures);
+            if (cancelledCompletion)
+                Assert.Empty(client.RemovedReferences);
+            else
+                Assert.Equal("opaque-discarded", Assert.Single(client.RemovedReferences));
+        }
+        finally
+        {
+            if (!uploading.IsCompleted)
+                client.CompleteCancelled("late.stl");
+            await uploading;
+        }
+    }
+
+    [Fact]
+    public async Task DiscardUpload_RejectsActiveAndAuthoritativeSlots()
+    {
+        var client = new ControlledUploadClient();
+        await using var workflow = CreateWorkflow(client: client);
+        await workflow.InitializeAsync(default);
+        var localId = Assert.Single(workflow.ReserveUploads([UploadFile("kept.stl")]));
+        Assert.Equal(InstantQuotationWorkflowUploadStatus.Pending, Assert.Single(workflow.Uploads).Status);
+
+        var uploading = workflow.UploadReservedAsync([localId], default);
+        await client.WaitForUploadsAsync(1);
+        try
+        {
+            await Assert.ThrowsAsync<InstantQuotationWorkflowCoordinator.DiscardRefusedException>(() => workflow.DiscardUploadAsync(localId, default));
+            Assert.Equal(InstantQuotationWorkflowUploadStatus.Uploading, Assert.Single(workflow.Uploads).Status);
+            Assert.False(Assert.Single(client.UploadCancellationTokens).IsCancellationRequested);
+        }
+        finally
+        {
+            client.CompleteSuccess("kept.stl", "opaque-kept", Geometry());
+            await uploading;
+        }
+
+        var part = Assert.Single(workflow.Parts);
+        var quote = workflow.OrderQuote;
+        await Assert.ThrowsAsync<InstantQuotationWorkflowCoordinator.DiscardRefusedException>(() => workflow.DiscardUploadAsync(localId, default));
+        Assert.Equal(localId, Assert.Single(workflow.Uploads).LocalId);
+        Assert.Equal(part.PartId, Assert.Single(workflow.Parts).PartId);
+        Assert.Same(quote, workflow.OrderQuote);
+        Assert.Equal(InstantQuotationWorkflowState.Uploaded, workflow.State);
+        Assert.Empty(client.RemovedReferences);
+    }
+
+    [Fact]
+    public async Task DiscardFailedUpload_PreservesRemainingAuthoritativeQuoteAndSavedState()
+    {
+        var client = new ControlledUploadClient();
+        var store = new RecordingSessionStore();
+        var pricing = new RecordingPricingService();
+        await using var workflow = CreateWorkflow(client: client, store: store, pricing: pricing);
+        await workflow.InitializeAsync(default);
+        var uploading = workflow.UploadAsync([UploadFile("good.stl"), UploadFile("bad.stl")], default);
+        await client.WaitForUploadsAsync(2);
+        client.CompleteSuccess("good.stl", "opaque-good", Geometry());
+        client.CompleteUnavailable("bad.stl");
+        await uploading;
+        var part = Assert.Single(workflow.Parts);
+        var quote = workflow.OrderQuote;
+        Assert.NotNull(quote);
+        var saved = store.LastSavedState;
+        var pricingCalls = pricing.QuoteCalls;
+        var revision = workflow.AuthoritativeQuoteRevision;
+        var failed = Assert.Single(workflow.Uploads, upload => upload.Status is InstantQuotationWorkflowUploadStatus.Error);
+
+        await workflow.DiscardUploadAsync(failed.LocalId, default);
+
+        Assert.Equal(part.PartId, Assert.Single(workflow.Parts).PartId);
+        Assert.Equal(part.PreviewCorrelationId, Assert.Single(workflow.Uploads).LocalId);
+        Assert.Same(quote, workflow.OrderQuote);
+        Assert.Same(saved, store.LastSavedState);
+        Assert.Equal(pricingCalls, pricing.QuoteCalls);
+        Assert.Equal(revision, workflow.AuthoritativeQuoteRevision);
+        Assert.Equal(InstantQuotationWorkflowState.Uploaded, workflow.State);
+        Assert.Empty(client.RemovedReferences);
+    }
+
+    [Fact]
+    public async Task DiscardFailedUpload_AlreadyDisposedOwnedSourceDoesNotBlockLocalRemoval()
+    {
+        var client = new ControlledUploadClient();
+        var store = new RecordingSessionStore();
+        await using var workflow = CreateWorkflow(client: client, store: store);
+        await workflow.InitializeAsync(default);
+        var saved = store.LastSavedState;
+        var uploading = workflow.UploadAsync([UploadFile("broken.stl")], default);
+        await client.WaitForUploadsAsync(1);
+        client.CompleteUnavailable("broken.stl");
+        await uploading;
+        var localId = Assert.Single(workflow.Uploads).LocalId;
+
+        // Cut only the competing retry's disposal race; slot state comes from the public upload flow.
+        var entriesField = typeof(InstantQuotationWorkflowCoordinator).GetField(
+            "entries", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!;
+        var entry = Assert.Single(Assert.IsAssignableFrom<System.Collections.IEnumerable>(
+            entriesField.GetValue(workflow)).Cast<object>());
+        var sourceProperty = entry.GetType().GetProperty("OperationCancellation")!;
+        var ownedSource = Assert.IsAssignableFrom<CancellationTokenSource>(sourceProperty.GetValue(entry));
+        ownedSource.Dispose();
+
+        await workflow.DiscardUploadAsync(localId, default);
+
+        Assert.Empty(workflow.Uploads);
+        Assert.Empty(workflow.Parts);
+        Assert.Null(workflow.OrderQuote);
+        Assert.Equal(InstantQuotationWorkflowState.Empty, workflow.State);
+        Assert.False(workflow.HasCompleteAuthoritativeEstimate);
+        Assert.False(workflow.HasCompleteAuthoritativeQuote);
+        Assert.Throws<InvalidOperationException>(workflow.EnterReview);
+        Assert.Same(saved, store.LastSavedState);
+        Assert.Empty(client.RemovedReferences);
     }
 
     [Fact]
@@ -1012,6 +1578,542 @@ public sealed class InstantQuotationWorkflowUploadTests
         Assert.True(workflow.HasCompleteAuthoritativeQuote);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UploadStart_HeldSinkCannotResumeAnObsoleteCanceledAttempt(bool retryIdentical)
+    {
+        var sink = new HeldUploadStartSink();
+        var client = new ControlledUploadClient(ignoreCancellation: true);
+        await using var workflow = CreateWorkflow(client: client, analytics: new InstantQuotationAnalyticsTracker(sink));
+        await workflow.InitializeAsync(default);
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var original = workflow.UploadAsync([UploadFile("held-start.stl")], default);
+        Task? retry = null;
+        Guid? localId = null;
+        Exception? primary = null;
+        try
+        {
+            await sink.Entered.Task.WaitAsync(lease.Token);
+            localId = Assert.Single(workflow.Uploads).LocalId;
+            Assert.Empty(client.UploadOperations);
+            workflow.Cancel(localId.Value);
+            if (retryIdentical)
+            {
+                retry = workflow.RetryAsync(localId.Value, default);
+                await client.WaitForUploadsAsync(1).WaitAsync(lease.Token);
+                Assert.Equal(InstantQuotationWorkflowUploadStatus.Uploading, Assert.Single(workflow.Uploads).Status);
+                Assert.False(Assert.Single(client.UploadCancellationTokens).IsCancellationRequested);
+            }
+            sink.Release.TrySetResult();
+            await original.WaitAsync(lease.Token);
+            if (retryIdentical)
+            {
+                Assert.Single(client.UploadOperations);
+                Assert.Equal(InstantQuotationWorkflowUploadStatus.Uploading, Assert.Single(workflow.Uploads).Status);
+                Assert.False(Assert.Single(client.UploadCancellationTokens).IsCancellationRequested);
+                Assert.Empty(workflow.Parts);
+                client.CompleteSuccess("held-start.stl", "opaque-current", Geometry());
+                await retry!.WaitAsync(lease.Token);
+                Assert.Single(workflow.Parts);
+            }
+            else
+            {
+                Assert.Empty(client.UploadOperations);
+                Assert.Equal(InstantQuotationWorkflowUploadStatus.Cancelled, Assert.Single(workflow.Uploads).Status);
+                Assert.Empty(workflow.Parts);
+            }
+            Assert.Equal(1, sink.Starts);
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                () =>
+                {
+                    sink.Release.TrySetResult();
+                    if (localId is { } id) workflow.Cancel(id);
+                    if (retry is { IsCompleted: false } && client.UploadOperations.Count > 0)
+                        client.CompleteLatestUnavailable("held-start.stl", InstantQuotationUploadRetryDisposition.None);
+                    return ValueTask.CompletedTask;
+                },
+                async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                    original, () => lease.Cancel(), () => sink.Release.TrySetResult(), lease.Token, null,
+                    receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                    expectedTerminalFailure: false, taskKind: "obsolete-upload-start"),
+                async () =>
+                {
+                    if (retry is null) return;
+                    await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        retry, () => lease.Cancel(), () => sink.Release.TrySetResult(), lease.Token, null,
+                        receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "current-upload-start");
+                });
+        }
+    }
+
+    private sealed class HeldUploadStartSink : IInstantQuotationAnalyticsSink
+    {
+        internal TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal int Starts { get; private set; }
+        public async ValueTask EmitAsync(InstantQuotationAnalyticsPayload payload, CancellationToken cancellationToken = default)
+        {
+            if (payload is not InstantQuotationUploadStartPayload) return;
+            Starts++;
+            Entered.TrySetResult();
+            await Release.Task;
+        }
+    }
+
+
+    [Theory]
+    [InlineData(9)]
+    [InlineData(10)]
+    public async Task ReservedBatch_AdmitsEveryVerifiedPartBeforeHeldFirstComparisonQuote(int count)
+    {
+        var client = new ControlledUploadClient();
+        var pricing = new HeldAdmissionPricingService();
+        var store = new RecordingSessionStore();
+        var persisted = Enumerable.Range(0, count).Select(_ => new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously)).ToArray();
+        store.OnPersist = state => { if (state.Parts.Count > 0) persisted[state.Parts.Count - 1].TrySetResult(); };
+        await using var workflow = CreateWorkflow(client, store, pricing);
+        await workflow.InitializeAsync(default);
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var files = Enumerable.Range(1, count).Select(index => UploadFile($"part-{index}.stl")).ToArray();
+        var uploading = workflow.UploadAsync(files, lease.Token);
+        try
+        {
+            await client.WaitForUploadsAsync(count);
+            for (var index = 0; index < count; index++)
+            {
+                client.CompleteSuccess(files[index].FileName, $"opaque-{index}", Geometry());
+                await persisted[index].Task.WaitAsync(lease.Token);
+                Assert.Equal(index + 1, workflow.Parts.Count);
+                Assert.Null(workflow.OrderQuote);
+                if (index + 1 < count) Assert.Empty(pricing.Requests);
+            }
+            await pricing.Entered.Task.WaitAsync(lease.Token);
+            Assert.Equal(count, Assert.Single(pricing.Requests).Parts.Count);
+            Assert.False(uploading.IsCompleted);
+            Assert.All(workflow.Uploads, upload => Assert.Equal(InstantQuotationWorkflowUploadStatus.Uploaded, upload.Status));
+            pricing.Release.TrySetResult();
+            await uploading.WaitAsync(lease.Token);
+            Assert.True(workflow.HasCompleteAuthoritativeEstimate);
+            Assert.Equal(1, workflow.AuthoritativeQuoteRevision);
+        }
+        finally
+        {
+            pricing.Release.TrySetResult();
+            await workflow.DisposeAsync();
+            await uploading.WaitAsync(TimeSpan.FromSeconds(5));
+            if (pricing.Entered.Task.IsCompletedSuccessfully)
+                await pricing.HeldCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReservedBatch_LastFailedOrCancelledAttemptFlushesAcceptedPart(bool cancelLast)
+    {
+        var client = new ControlledUploadClient();
+        var pricing = new HeldAdmissionPricingService();
+        var accepted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var store = new RecordingSessionStore { OnPersist = state => { if (state.Parts.Count == 1) accepted.TrySetResult(); } };
+        await using var workflow = CreateWorkflow(client, store, pricing);
+        await workflow.InitializeAsync(default);
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var uploading = workflow.UploadAsync([UploadFile("accepted.stl"), UploadFile("terminal.stl")], lease.Token);
+        try
+        {
+            await client.WaitForUploadsAsync(2);
+            client.CompleteSuccess("accepted.stl", "opaque-accepted", Geometry());
+            await accepted.Task.WaitAsync(lease.Token);
+            Assert.Empty(pricing.Requests);
+            if (cancelLast) workflow.Cancel(workflow.Uploads[1].LocalId);
+            else client.CompleteUnavailable("terminal.stl");
+            await pricing.Entered.Task.WaitAsync(lease.Token);
+            Assert.Equal("accepted.stl", Assert.Single(Assert.Single(pricing.Requests).Parts).DisplayFileName);
+            pricing.Release.TrySetResult();
+            await uploading.WaitAsync(lease.Token);
+            Assert.Single(workflow.Parts);
+            Assert.True(workflow.HasCompleteAuthoritativeEstimate);
+            Assert.Equal(cancelLast ? InstantQuotationWorkflowUploadStatus.Cancelled : InstantQuotationWorkflowUploadStatus.Error,
+                workflow.Uploads[1].Status);
+        }
+        finally
+        {
+            pricing.Release.TrySetResult();
+            await workflow.DisposeAsync();
+            await uploading.WaitAsync(TimeSpan.FromSeconds(5));
+            if (pricing.Entered.Task.IsCompletedSuccessfully)
+                await pricing.HeldCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    [Fact]
+    public async Task FutureUnreservedClaims_DoNotDelayFirstReadyEstimate()
+    {
+        var client = new ControlledUploadClient();
+        var pricing = new RecordingPricingService();
+        await using var workflow = CreateWorkflow(client: client, pricing: pricing);
+        await workflow.InitializeAsync(default);
+        var first = workflow.UploadAsync([UploadFile("ready.stl")], default);
+        await client.WaitForUploadsAsync(1);
+        client.CompleteSuccess("ready.stl", "opaque-ready", Geometry());
+        await first.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.True(workflow.HasCompleteAuthoritativeEstimate);
+        Assert.Single(workflow.Uploads);
+        Assert.Equal(1, pricing.QuoteCalls);
+        // The five parser callbacks have not reserved upload entries yet.
+    }
+
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReservedBatch_ConfigurationAndRemovalCannotBlockRemainingAdmission(bool removeAccepted)
+    {
+        var client = new ControlledUploadClient();
+        var pricing = new HeldAdmissionPricingService();
+        var admitted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var store = new RecordingSessionStore { OnPersist = state => { if (state.Parts.Count == 1) admitted.TrySetResult(); } };
+        var analytics = new RecordingAnalyticsTracker();
+        await using var workflow = CreateWorkflow(client, store, pricing, analytics: analytics);
+        await workflow.InitializeAsync(default);
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var uploading = workflow.UploadAsync([UploadFile("first.stl"), UploadFile("second.stl")], lease.Token);
+        try
+        {
+            await client.WaitForUploadsAsync(2);
+            client.CompleteSuccess("first.stl", "opaque-first", Geometry());
+            await admitted.Task.WaitAsync(lease.Token);
+            var part = Assert.Single(workflow.Parts);
+            if (removeAccepted) await workflow.RemoveAsync(part.PartId, lease.Token);
+            else await workflow.UpdateConfigurationAsync(part.PartId, "PLA", "Black", 7, lease.Token);
+            Assert.Empty(pricing.Requests);
+            client.CompleteSuccess("second.stl", "opaque-second", Geometry());
+            await pricing.Entered.Task.WaitAsync(lease.Token);
+            var requested = Assert.Single(pricing.Requests);
+            Assert.Equal(removeAccepted ? 1 : 2, requested.Parts.Count);
+            if (!removeAccepted) Assert.Equal(7, requested.Parts.Single(item => item.PartId == part.PartId).Configuration.Quantity);
+            else Assert.DoesNotContain(requested.Parts, item => item.PartId == part.PartId);
+            pricing.Release.TrySetResult();
+            await uploading.WaitAsync(lease.Token);
+            Assert.True(workflow.HasCompleteAuthoritativeEstimate);
+            Assert.Equal(removeAccepted ? 1 : 2, analytics.StageResults.Count(stage => stage.Stage is InstantQuotationStage.Pricing));
+            Assert.Equal(removeAccepted ? 1 : 2, analytics.StageResults.Count(stage => stage.Stage is InstantQuotationStage.OrderTotal));
+        }
+        finally
+        {
+            pricing.Release.TrySetResult();
+            await workflow.DisposeAsync();
+            await uploading.WaitAsync(TimeSpan.FromSeconds(5));
+            if (pricing.Entered.Task.IsCompletedSuccessfully)
+                await pricing.HeldCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NewReservation_RetiresHeldPriorUploadQuoteWithoutWaitingForItsDependency(bool failRetiredQuote)
+    {
+        var client = new ControlledUploadClient();
+        var pricing = new HeldAdmissionPricingService(failHeldQuote: failRetiredQuote);
+        var analytics = new RecordingAnalyticsTracker();
+        await using var workflow = CreateWorkflow(client: client, pricing: pricing, analytics: analytics);
+        await workflow.InitializeAsync(default);
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var first = workflow.UploadAsync([UploadFile("first.stl")], lease.Token);
+        Task? second = null;
+        try
+        {
+            await client.WaitForUploadsAsync(1);
+            client.CompleteSuccess("first.stl", "opaque-first", Geometry());
+            await pricing.Entered.Task.WaitAsync(lease.Token);
+            second = workflow.UploadAsync([UploadFile("second.stl")], lease.Token);
+            await client.WaitForUploadsAsync(2);
+            client.CompleteSuccess("second.stl", "opaque-second", Geometry());
+            await second.WaitAsync(lease.Token);
+            Assert.Equal(2, workflow.Parts.Count);
+            Assert.True(workflow.HasCompleteAuthoritativeEstimate);
+            Assert.Equal(2, workflow.OrderQuote!.Parts.Count);
+            Assert.Equal(1, workflow.AuthoritativeQuoteRevision);
+            pricing.Release.TrySetResult();
+            await first.WaitAsync(lease.Token);
+            Assert.Equal(2, workflow.OrderQuote.Parts.Count);
+            Assert.Equal(1, workflow.AuthoritativeQuoteRevision);
+            Assert.All(workflow.Uploads, upload => Assert.Equal(InstantQuotationWorkflowUploadStatus.Uploaded, upload.Status));
+            Assert.Empty(analytics.UploadFailures);
+        }
+        finally
+        {
+            pricing.Release.TrySetResult();
+            await workflow.DisposeAsync();
+            await first.WaitAsync(TimeSpan.FromSeconds(5));
+            if (second is not null) await second.WaitAsync(TimeSpan.FromSeconds(5));
+            if (pricing.Entered.Task.IsCompletedSuccessfully)
+                await pricing.HeldCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    [Fact]
+    public async Task Dispose_BatchWithPersistedAdmissionDoesNotFlushOrPublishAnEstimate()
+    {
+        var client = new ControlledUploadClient();
+        var pricing = new HeldAdmissionPricingService();
+        var admitted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var store = new RecordingSessionStore { OnPersist = state => { if (state.Parts.Count == 1) admitted.TrySetResult(); } };
+        await using var workflow = CreateWorkflow(client, store, pricing);
+        await workflow.InitializeAsync(default);
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var uploading = workflow.UploadAsync([UploadFile("first.stl"), UploadFile("second.stl")], lease.Token);
+        try
+        {
+            await client.WaitForUploadsAsync(2);
+            client.CompleteSuccess("first.stl", "opaque-first", Geometry());
+            await admitted.Task.WaitAsync(lease.Token);
+            await workflow.DisposeAsync();
+            await uploading.WaitAsync(lease.Token);
+            Assert.Empty(pricing.Requests);
+            Assert.Null(workflow.OrderQuote);
+            Assert.Equal(0, workflow.AuthoritativeQuoteRevision);
+        }
+        finally
+        {
+            pricing.Release.TrySetResult();
+            await workflow.DisposeAsync();
+            await uploading.WaitAsync(TimeSpan.FromSeconds(5));
+            if (pricing.Entered.Task.IsCompletedSuccessfully)
+                await pricing.HeldCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
+
+
+    [Fact]
+    public async Task NewReservation_RetiresHeldConfigurationQuoteAndKeepsItsPersistedIntent()
+    {
+        var client = new ControlledUploadClient();
+        var pricing = new HeldAdmissionPricingService(heldCall: 2);
+        await using var workflow = CreateWorkflow(client: client, pricing: pricing);
+        await workflow.InitializeAsync(default);
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var first = workflow.UploadAsync([UploadFile("first.stl")], lease.Token);
+        await client.WaitForUploadsAsync(1);
+        client.CompleteSuccess("first.stl", "opaque-first", Geometry());
+        await first.WaitAsync(lease.Token);
+        var firstPart = Assert.Single(workflow.Parts);
+        var configuring = workflow.UpdateConfigurationAsync(firstPart.PartId, "PLA", "Black", 7, lease.Token);
+        Task? second = null;
+        try
+        {
+            await pricing.Entered.Task.WaitAsync(lease.Token);
+            second = workflow.UploadAsync([UploadFile("second.stl")], lease.Token);
+            await client.WaitForUploadsAsync(2);
+            client.CompleteSuccess("second.stl", "opaque-second", Geometry());
+            await second.WaitAsync(lease.Token);
+            await configuring.WaitAsync(lease.Token);
+            Assert.Equal(2, workflow.OrderQuote!.Parts.Count);
+            Assert.Equal(7, workflow.Parts.Single(part => part.PartId == firstPart.PartId).Configuration.Quantity);
+            Assert.Equal(2, workflow.AuthoritativeQuoteRevision);
+            pricing.Release.TrySetResult();
+            await pricing.HeldCompleted.Task.WaitAsync(lease.Token);
+            Assert.Equal(2, workflow.AuthoritativeQuoteRevision);
+        }
+        finally
+        {
+            pricing.Release.TrySetResult();
+            await workflow.DisposeAsync();
+            await configuring.WaitAsync(TimeSpan.FromSeconds(5));
+            if (second is not null) await second.WaitAsync(TimeSpan.FromSeconds(5));
+            if (pricing.Entered.Task.IsCompletedSuccessfully)
+                await pricing.HeldCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    public async Task FinalBatchQuoteFailure_IsRecoverableAndNeverRecordsPricingSuccess(bool rejectFinalPut, bool cancelHeldQuote)
+    {
+        var client = new ControlledUploadClient();
+        var pricing = new HeldAdmissionPricingService(failHeldQuote: !rejectFinalPut, cancelHeldQuote: cancelHeldQuote);
+        var store = new RecordingSessionStore();
+        var analytics = new RecordingAnalyticsTracker();
+        await using var workflow = CreateWorkflow(client, store, pricing, analytics: analytics);
+        await workflow.InitializeAsync(default);
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var admitted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        store.OnPersist = state =>
+        {
+            if (state.Parts.Count != 2) return;
+            if (rejectFinalPut) store.RejectNextPut = true;
+            admitted.TrySetResult();
+        };
+        var uploading = workflow.UploadAsync([UploadFile("first.stl"), UploadFile("second.stl")], lease.Token);
+        try
+        {
+            await client.WaitForUploadsAsync(2);
+            client.CompleteSuccess("first.stl", "opaque-first", Geometry());
+            client.CompleteSuccess("second.stl", "opaque-second", Geometry());
+            await admitted.Task.WaitAsync(lease.Token);
+            if (!rejectFinalPut) await pricing.Entered.Task.WaitAsync(lease.Token);
+            pricing.Release.TrySetResult();
+            await uploading.WaitAsync(lease.Token);
+            Assert.Equal(2, workflow.Parts.Count);
+            Assert.Null(workflow.OrderQuote);
+            Assert.Equal(InstantQuotationWorkflowState.Error, workflow.State);
+            Assert.Equal(InstantQuotationProblemCategory.Unexpected, Assert.Single(analytics.UploadFailures).Category);
+            Assert.DoesNotContain(analytics.StageResults, stage => stage.Stage is InstantQuotationStage.Pricing or InstantQuotationStage.OrderTotal);
+        }
+        finally
+        {
+            pricing.Release.TrySetResult();
+            await workflow.DisposeAsync();
+            await uploading.WaitAsync(TimeSpan.FromSeconds(5));
+            if (pricing.Entered.Task.IsCompletedSuccessfully)
+                await pricing.HeldCompleted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    private sealed class HeldAdmissionPricingService(int heldCall = 1, bool failHeldQuote = false, bool cancelHeldQuote = false) : IInstantQuotationPricingService, IInstantQuotationAuthoritativePricingService
+    {
+        internal TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal TaskCompletionSource HeldCompleted { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal List<InstantQuotationOrderState> Requests { get; } = [];
+        public InstantQuotationOrderQuote Quote(InstantQuotationOrderState state) => SyntheticPhysicalPricingTestData.Quote(state);
+        public async Task<InstantQuotationOrderQuote?> QuoteAsync(InstantQuotationSessionState session,
+            string? ownerIdentity, bool includeComparisons, CancellationToken cancellationToken)
+        {
+            Requests.Add(session.RequestState);
+            Assert.True(includeComparisons);
+            if (Requests.Count != heldCall) return Quote(session.RequestState);
+            Entered.TrySetResult();
+            try
+            {
+                await Release.Task;
+                if (cancelHeldQuote) throw new OperationCanceledException("Dependency-owned timeout.");
+                if (failHeldQuote) throw new InvalidOperationException("Pricing unavailable.");
+                return Quote(session.RequestState);
+            }
+            finally { HeldCompleted.TrySetResult(); }
+        }
+    }
+
+    [Fact]
+    public async Task Upload_MultipleBodiesPersistAnyWhileSingleBodyKeepsDefaultColor()
+    {
+        var client = new ControlledUploadClient();
+        var store = new RecordingSessionStore();
+        await using var workflow = CreateWorkflow(client: client, store: store);
+        await workflow.InitializeAsync(default);
+        var multi = UploadFile("multi.stl") with { GeometryClaim = Geometry() with { BodyCount = 2 } };
+
+        var uploading = workflow.UploadAsync([multi, UploadFile("single.stl")], default);
+        await client.WaitForUploadsAsync(2);
+        client.CompleteSuccess("multi.stl", "opaque-multi", multi.GeometryClaim);
+        client.CompleteSuccess("single.stl", "opaque-single", Geometry());
+        await uploading;
+
+        Assert.Equal("Any", Assert.Single(workflow.Parts, part => part.DisplayFileName == "multi.stl").Configuration.Color);
+        Assert.Equal("Black", Assert.Single(workflow.Parts, part => part.DisplayFileName == "single.stl").Configuration.Color);
+        Assert.Equal("Any", Assert.Single(store.LastSavedState!.Parts, part => part.DisplayFileName == "multi.stl").Configuration.Color);
+        Assert.Equal("Black", Assert.Single(store.LastSavedState.Parts, part => part.DisplayFileName == "single.stl").Configuration.Color);
+        Assert.NotNull(workflow.OrderQuote);
+        Assert.Equal("Any", Assert.Single(workflow.Parts, part => part.DisplayFileName == "multi.stl").Quote!.Color);
+        Assert.Equal("Black", Assert.Single(workflow.Parts, part => part.DisplayFileName == "single.stl").Quote!.Color);
+    }
+
+    [Theory]
+    [InlineData("PLA", "White")]
+    [InlineData("PETG", "Red")]
+    [InlineData("M68", "Gray")]
+    [InlineData("G217", "Clear")]
+    public async Task Configure_MultipleBodiesKeepAnyWithoutChangingAnotherPart(string material, string color)
+    {
+        var multi = PersistedPart("multi.stl", "opaque-multi") with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(10, 1_000, 100, [10], [10], 12, 2, true),
+        };
+        var single = PersistedPart("single.stl", "opaque-single");
+        var store = new RecordingSessionStore { ExistingSession = Session("color-session", multi, single) };
+        await using var workflow = CreateWorkflow(store: store);
+        await workflow.InitializeAsync("color-session", default);
+
+        await workflow.UpdateConfigurationAsync(multi.PartId, material, color, 3, default);
+
+        var actual = Assert.Single(workflow.Parts, part => part.PartId == multi.PartId);
+        Assert.Equal(material, actual.Configuration.MaterialKey);
+        Assert.Equal("Any", actual.Configuration.Color);
+        Assert.Equal(3, actual.Configuration.Quantity);
+        Assert.Equal("Any", actual.Quote!.Color);
+        Assert.Equal("Any", Assert.Single(store.LastSavedState!.Parts, part => part.PartId == multi.PartId).Configuration.Color);
+        var untouched = Assert.Single(workflow.Parts, part => part.PartId == single.PartId);
+        Assert.Equal(single.Configuration, untouched.Configuration);
+        Assert.Equal(single.Geometry, untouched.Geometry);
+        Assert.Equal("Black", untouched.Quote!.Color);
+    }
+
+    [Theory]
+    [InlineData("#12345")]
+    [InlineData("#GGGGGG")]
+    [InlineData("__custom__")]
+    [InlineData("")]
+    public async Task Configure_MultipleBodiesRejectMalformedColorBeforeCoercion(string color)
+    {
+        var multi = PersistedPart("multi.stl", "opaque-multi") with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(10, 1_000, 100, [10], [10], 12, 2, true),
+        };
+        var store = new RecordingSessionStore { ExistingSession = Session("color-session", multi) };
+        await using var workflow = CreateWorkflow(store: store);
+        await workflow.InitializeAsync("color-session", default);
+        var saved = store.LastSavedState;
+        var configuration = Assert.Single(workflow.Parts).Configuration;
+        var quote = workflow.OrderQuote;
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            workflow.UpdateConfigurationAsync(multi.PartId, "PLA", color, 1, default));
+
+        Assert.Same(saved, store.LastSavedState);
+        Assert.Equal(configuration, Assert.Single(workflow.Parts).Configuration);
+        Assert.Same(quote, workflow.OrderQuote);
+    }
+
+    [Theory]
+    [InlineData("PLA", "White", 2, "Any")]
+    [InlineData("PLA", "#123ABC", 2, "Any")]
+    [InlineData("M68", "Gray", 2, "Any")]
+    [InlineData("PLA", "#123ABC", 1, "#123ABC")]
+    [InlineData("PETG", "#00ff7F", 1, "#00ff7F")]
+    public async Task Initialize_RestoredColorUsesActualBodyCountWithoutNarrowingSingleBodyHex(
+        string material, string color, int bodies, string expected)
+    {
+        var part = PersistedPart("restored.stl", "opaque-restored") with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(10, 1_000, 100, [10], [10], 12, bodies, true),
+            Configuration = new(material, color, 2),
+        };
+        var store = new RecordingSessionStore { ExistingSession = Session("color-session", part) };
+        await using var workflow = CreateWorkflow(store: store);
+
+        await workflow.InitializeAsync("color-session", default);
+
+        var restored = Assert.Single(workflow.Parts);
+        Assert.Equal(expected, restored.Configuration.Color);
+        Assert.Equal(expected, Assert.Single(store.LastSavedState!.Parts).Configuration.Color);
+        Assert.Equal(expected, restored.Quote!.Color);
+        Assert.Equal(material, restored.Configuration.MaterialKey);
+        Assert.Equal(2, restored.Configuration.Quantity);
+        Assert.Equal(bodies, restored.Geometry.BodyCount);
+        Assert.Equal(0, store.CreateCalls);
+    }
+
     private static InstantQuotationWorkflowCoordinator CreateWorkflow(
         ControlledUploadClient? client = null,
         RecordingSessionStore? store = null,
@@ -1107,6 +2209,8 @@ public sealed class InstantQuotationWorkflowUploadTests
 
         public string? ExistingOwnerIdentity { get; init; }
 
+        public Action<InstantQuotationOrderState>? OnPersist { get; set; }
+
         public bool RejectNextPut { get; set; }
 
         public Task<InstantQuotationSessionState> CreateAsync(string? ownerIdentity, InstantQuotationOrderState requestState, CancellationToken cancellationToken)
@@ -1142,6 +2246,7 @@ public sealed class InstantQuotationWorkflowUploadTests
             LastOwnerIdentity = ownerIdentity;
             LastSavedState = session.RequestState;
             createdSession = session;
+            OnPersist?.Invoke(session.RequestState);
             return Task.FromResult(true);
         }
 
@@ -1183,8 +2288,52 @@ public sealed class InstantQuotationWorkflowUploadTests
             Task.FromResult<InstantQuotationOrderQuote?>(Quote(session.RequestState));
     }
 
+    private sealed class CallerComponentActivator : IComponentActivator
+    {
+        public InstantQuotationWorkflow? Workflow { get; private set; }
+
+        public IComponent CreateInstance(Type componentType)
+        {
+            var component = (IComponent)Activator.CreateInstance(componentType)!;
+            if (component is InstantQuotationWorkflow workflow) Workflow = workflow;
+            return component;
+        }
+    }
+
+    private sealed class CallerJavaScript : IJSRuntime
+    {
+        public int Calls { get; private set; }
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
+            InvokeAsync<TValue>(identifier, default, args);
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+        {
+            Calls++;
+            return ValueTask.FromException<TValue>(new InvalidOperationException("Static caller fixture must not execute browser JavaScript."));
+        }
+    }
+
+    // Same synthetic-only ticket boundary as ProfileProducerBoundaryTests, not ticket-security evidence.
+    private sealed class CallerTickets : IInstantQuotationQuoteTicketService
+    {
+        public int IssueCalls { get; private set; }
+
+        public InstantQuotationQuoteAuthorization Issue(
+            InstantQuotationSessionState session, InstantQuotationOrderQuote quote, DateTimeOffset now)
+        {
+            IssueCalls++;
+            return new(["synthetic"], "synthetic");
+        }
+
+        public bool Validate(InstantQuotationSessionState session, InstantQuotationOrderQuote quote,
+            InstantQuotationQuoteAuthorization authorization, DateTimeOffset now) => true;
+    }
+
     private sealed class RecordingAnalyticsTracker : IInstantQuotationAnalyticsTracker
     {
+        public Func<ValueTask>? BeforeNextStageResult { get; set; }
+
         public List<(InstantQuotationStage Stage, InstantQuotationStageResult Result, InstantQuotationStageFailure? Failure, string? FileType)> StageResults { get; } = [];
 
         public ValueTask RecordStageResultAsync(
@@ -1195,7 +2344,9 @@ public sealed class InstantQuotationWorkflowUploadTests
             CancellationToken cancellationToken = default)
         {
             StageResults.Add((stage, result, failure, fileType));
-            return ValueTask.CompletedTask;
+            var before = BeforeNextStageResult;
+            BeforeNextStageResult = null;
+            return before?.Invoke() ?? ValueTask.CompletedTask;
         }
 
         public ValueTask RecordUploadStartAsync(
@@ -1302,6 +2453,17 @@ public sealed class InstantQuotationWorkflowUploadTests
                 InstantQuotationAuthorizationStatus.NotEvaluated,
                 InstantQuotationProblemCategory.DependencyUnavailable,
                 retryDisposition));
+        }
+
+        public void CompleteCancelled(string fileName)
+        {
+            NextPending(fileName).Completion.SetCanceled(UploadCancellationTokens.Last());
+        }
+
+        public void CancelPendingUploads()
+        {
+            foreach (var pending in completions.Values.SelectMany(queue => queue))
+                pending.Completion.TrySetCanceled();
         }
 
         public void CompleteLatestUnavailable(

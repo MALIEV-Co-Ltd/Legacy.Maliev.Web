@@ -7,17 +7,25 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>, IAsyncLifetime
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public InstantQuotationStaticSsrRouteTests(WebApplicationFactory<Program> factory)
+    public InstantQuotationStaticSsrRouteTests(TestingWebApplicationFactory factory)
     {
         this.factory = factory.WithWebHostBuilder(builder => builder
             .UseSetting("environment", "Testing")
             .UseSetting("Recaptcha:ProjectId", "test-project")
             .UseSetting("Recaptcha:SiteKey", "test-site-key"));
     }
+
+    /// <summary>Completes setup after the per-test child factory has been created.</summary>
+    /// <returns>A completed setup task.</returns>
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    /// <summary>Releases this test's child host and its tracked clients without disposing the borrowed parent.</summary>
+    /// <returns>A task that completes after the owned child factory has been disposed.</returns>
+    public async Task DisposeAsync() => await factory.DisposeAsync();
 
     [Fact]
     public async Task BlazorRoute_OwnsDocumentGet_WhileLegacyEstimateQueryReturnsExactJsonContract()
@@ -98,6 +106,56 @@ public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<WebAppli
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(3_100, json.RootElement.GetProperty("priceBeforeVat").GetDouble(), 2);
         Assert.Equal("THB", json.RootElement.GetProperty("currency").GetString());
+    }
+
+    [Theory]
+    [InlineData(true, "en",
+        "Instant 3D Printing Quote | MALIEV",
+        "Upload a 3D model, choose material and quantity, and receive an online estimate for printing cost and lead time.",
+        "3d print, 3d printing company, 3d printing model, 3d printing online, 3d printing service, 3d printing services, 3d printing website, 3d printing, online 3d printing, instant pricing, instant quotation")]
+    [InlineData(false, "en",
+        "Instant 3D Printing Quote | MALIEV",
+        "Upload a 3D model, choose material and quantity, and receive an online estimate for printing cost and lead time.",
+        "3d print, 3d printing company, 3d printing model, 3d printing online, 3d printing service, 3d printing services, 3d printing website, 3d printing, online 3d printing, instant pricing, instant quotation")]
+    [InlineData(true, "th",
+        "ประเมินราคาพิมพ์ 3D ออนไลน์ | MALIEV",
+        "อัปโหลดไฟล์ 3D เลือกวัสดุและจำนวน เพื่อรับราคาประเมินงานพิมพ์ 3D และระยะเวลาผลิตออนไลน์",
+        "พิมพ์ 3d, พิมพ์ 3 มิติ, พิมพ์ 3 มิติ, พิมพ์ 3d, รับพิมพ์ 3 มิติ, รับพิมพ์ 3d, ประเมินราคาทันที, instant pricing")]
+    [InlineData(false, "th",
+        "ประเมินราคาพิมพ์ 3D ออนไลน์ | MALIEV",
+        "อัปโหลดไฟล์ 3D เลือกวัสดุและจำนวน เพื่อรับราคาประเมินงานพิมพ์ 3D และระยะเวลาผลิตออนไลน์",
+        "พิมพ์ 3d, พิมพ์ 3 มิติ, พิมพ์ 3 มิติ, พิมพ์ 3d, รับพิมพ์ 3 มิติ, รับพิมพ์ 3d, ประเมินราคาทันที, instant pricing")]
+    public async Task InstantQuotationDocument_PreservesOriginalSourceMetadataAcrossRenderers(
+        bool useSsr, string culture, string title, string description, string keywords)
+    {
+        await using var host = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:InstantQuotation", useSsr.ToString());
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<IInstantQuotationSubmissionService>();
+                services.AddSingleton<IInstantQuotationSubmissionService, UnusedSubmissionService>();
+            });
+        });
+        using var client = CreateClient(host);
+        using var response = await client.GetAsync($"/instantquotation/3d-printing?culture={culture}");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+        Assert.Contains($"<title>{title}</title>", html, StringComparison.Ordinal);
+        Assert.Contains($"<meta name=\"description\" content=\"{description}\"", html, StringComparison.Ordinal);
+        Assert.Contains($"<meta name=\"keywords\" content=\"{keywords}\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-migration-component=\"instant-quotation-three-dimensional-printing\"", html, StringComparison.Ordinal);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", html, StringComparison.Ordinal);
+        if (useSsr)
+        {
+            Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", html, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", html, StringComparison.Ordinal);
+        }
     }
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> application) =>

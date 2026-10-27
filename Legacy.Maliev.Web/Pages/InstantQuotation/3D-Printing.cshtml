@@ -4,8 +4,9 @@
 @using Microsoft.Extensions.Localization
 @inject IStringLocalizer<ThreeDimensionalPrintingEstimateContent> MetadataLocalizer
 @{
-    ViewData["Title"] = MetadataLocalizer["Instant 3D Printing Estimate"];
-    ViewData["Description"] = MetadataLocalizer["Estimate 3D printing price and production time with MALIEV's deterministic pricing calculator."];
+    ViewData["Title"] = MetadataLocalizer["Instant 3D Printing Quote | MALIEV"];
+    ViewData["Description"] = MetadataLocalizer["Upload a 3D model, choose material and quantity, and receive an online estimate for printing cost and lead time."];
+    ViewData["Keywords"] = MetadataLocalizer["3d print, 3d printing company, 3d printing model, 3d printing online, 3d printing service, 3d printing services, 3d printing website, 3d printing, online 3d printing, instant pricing, instant quotation"];
 }
 
 <component type="typeof(ThreeDimensionalPrintingEstimateContent)" render-mode="Static" param-Model="Model.DisplayModel" param-CustomerModel="Model.CustomerModel" />

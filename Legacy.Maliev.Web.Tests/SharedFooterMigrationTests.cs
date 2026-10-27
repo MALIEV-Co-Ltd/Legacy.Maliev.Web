@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -46,6 +47,21 @@ public sealed class SharedFooterMigrationTests : IClassFixture<TestingWebApplica
         Assert.Contains("<SocialLinks />", footer, StringComparison.Ordinal);
         Assert.DoesNotContain("@rendermode", footer, StringComparison.Ordinal);
 
+        Assert.Contains("36/1 Moo 3", footer, StringComparison.Ordinal);
+        Assert.Contains("Nonthaburi 11120", footer, StringComparison.Ordinal);
+        Assert.Contains("0125561001573", footer, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Legal/PrivacyPolicy\"", footer, StringComparison.Ordinal);
+        Assert.DoesNotContain("ISO 9001", footer, StringComparison.OrdinalIgnoreCase);
+        var home = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Home", "HomeContent.razor"));
+        var landing = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "css", "landing.css"));
+        var app = File.ReadAllText(Path.Combine(web, "Components", "App.razor"));
+        var instantLayout = File.ReadAllText(Path.Combine(web, "Pages", "Shared", "_InstantQuotationLayout.cshtml"));
+        Assert.DoesNotContain("ISO 9001", home, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ISO 9001", landing, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("@if (!requiresInstantQuotationBootstrap && !isNotFoundError)\n    {\n        <PublicFooter />", app, StringComparison.Ordinal);
+        Assert.Contains("PublicNavigation", instantLayout, StringComparison.Ordinal);
+        Assert.DoesNotContain("PublicFooter", instantLayout, StringComparison.Ordinal);
+
         var styleEntry = File.ReadAllText(Path.Combine(web, "assets", "site-entry.css"));
         Assert.Contains("public-footer.css", styleEntry, StringComparison.Ordinal);
         Assert.DoesNotContain("<style>", footer, StringComparison.OrdinalIgnoreCase);
@@ -82,6 +98,10 @@ public sealed class SharedFooterMigrationTests : IClassFixture<TestingWebApplica
         Assert.Contains(businessHours, source, StringComparison.Ordinal);
         Assert.Contains(rights, source, StringComparison.Ordinal);
         Assert.Contains($"<a href=\"/Knowledges\">{knowledgeCenter}</a>", source, StringComparison.Ordinal);
+        var finishingLabel = culture == "th"
+            ? "การเก็บผิวและมาตรฐานสี"
+            : "Finishing and colour standards";
+        Assert.Contains($"<a href=\"/Services/Finishing-And-Color\">{finishingLabel}</a>", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/contact#contact-us\" data-contact-email=\"info@maliev.com\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"tel:+66818030404\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"tel:+66898950690\"", source, StringComparison.Ordinal);
@@ -91,7 +111,45 @@ public sealed class SharedFooterMigrationTests : IClassFixture<TestingWebApplica
             $"href=\"{SocialNetworks.Messenger}\" target=\"_blank\" rel=\"noopener noreferrer\"",
             source,
             StringComparison.Ordinal);
-        Assert.Contains("aria-label=\"Contact MALIEV through Messenger\"", source, StringComparison.Ordinal);
+        var social = Regex.Match(
+            source,
+            "<div data-migration-component=\"social-links\">(?<links>[\\s\\S]*?)</div>",
+            RegexOptions.CultureInvariant);
+        Assert.True(social.Success);
+        var links = social.Groups["links"].Value;
+        Assert.Equal(
+            new[]
+            {
+                "https://www.youtube.com/channel/UCCosquPSUed6UPlMcRCq0Ig",
+                "https://www.tiktok.com/@maliev.marketing",
+                "https://www.instagram.com/maliev.manufacturing/",
+                "https://www.threads.com/@maliev.manufacturing",
+                "https://line.me/ti/p/@maliev",
+                "https://m.me/maliev.manufacturing/",
+                "https://wa.me/66898950690",
+                "https://goo.gl/maps/AXqLnqUu5dM2"
+            },
+            Regex.Matches(links, "<a\\b[^>]*\\bhref=\"(?<href>[^\"]+)\"", RegexOptions.CultureInvariant)
+                .Select(match => match.Groups["href"].Value).ToArray());
+        foreach (var (destination, english, thai) in new[]
+        {
+            ("https://line.me/ti/p/@maliev", "Contact MALIEV through LINE Official Account", "ติดต่อ MALIEV ผ่าน LINE Official Account"),
+            ("https://m.me/maliev.manufacturing/", "Contact MALIEV through Messenger", "ติดต่อ MALIEV ผ่าน Messenger"),
+            ("https://wa.me/66898950690", "Contact MALIEV through WhatsApp", "ติดต่อ MALIEV ผ่าน WhatsApp")
+        })
+        {
+            var anchor = Assert.Single(Regex.Matches(
+                links,
+                $"<a\\b[^>]*\\bhref=\"{Regex.Escape(destination)}\"[^>]*>",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.Contains($"aria-label=\"{(culture == "th" ? thai : english)}\"", anchor.Value, StringComparison.Ordinal);
+            if (destination == "https://wa.me/66898950690")
+            {
+                Assert.Contains("data-maliev-contact-destination=\"whatsapp_business\"", anchor.Value, StringComparison.Ordinal);
+            }
+        }
+        Assert.Contains("var consentState = 'denied';", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-migration-component=\"public-google-tag-manager-body\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("href=\"https://www.facebook.com", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("target=\"_blank\" rel=\"noopener\"", source, StringComparison.Ordinal);
         Assert.True(
@@ -100,6 +158,19 @@ public sealed class SharedFooterMigrationTests : IClassFixture<TestingWebApplica
             "LINE must remain ahead of the secondary Messenger link.");
         Assert.Contains("<footer class=\"landing-footer\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);
+
+        var preferredSource = Assert.Single(Regex.Matches(source,
+            "<a\\b[^>]*class=\"landing-preferred-source\"[^>]*>[\\s\\S]*?</a>",
+            RegexOptions.CultureInvariant).Cast<Match>()).Value;
+        Assert.Contains("href=\"https://www.google.com/preferences/source?q=maliev.com\"", preferredSource, StringComparison.Ordinal);
+        Assert.Contains("target=\"_blank\"", preferredSource, StringComparison.Ordinal);
+        Assert.Contains("rel=\"noopener noreferrer\"", preferredSource, StringComparison.Ordinal);
+        Assert.Contains("<i class=\"far fa-star\" aria-hidden=\"true\"></i>", preferredSource, StringComparison.Ordinal);
+        Assert.Contains(culture == "th"
+            ? "เพิ่ม MALIEV เป็นแหล่งข้อมูลที่ต้องการบน Google"
+            : "Add MALIEV as a preferred source on Google", preferredSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("onclick", preferredSource, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("data-contact-", preferredSource, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string FindRepositoryRoot()

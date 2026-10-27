@@ -680,6 +680,76 @@
   <data name="Other materials" xml:space="preserve">
     <value>วัสดุอื่น ๆ</value>
   </data>
+  <data name="Up to {0} MB per file" xml:space="preserve"><value>สูงสุด {0} MB ต่อไฟล์</value></data>
+  <data name="Manufacturing warnings may affect the final result of this part." xml:space="preserve">
+    <value>มีข้อควรระวังด้านการผลิต อาจส่งผลต่อผลลัพธ์สุดท้ายของชิ้นงาน</value>
+  </data>
+  <data name="Demo" xml:space="preserve">
+    <value>สาธิต</value>
+  </data>
+  <data name="Development preview only. Advisory prices cannot be submitted." xml:space="preserve">
+    <value>ตัวอย่างสำหรับการพัฒนาเท่านั้น ราคาประเมินนี้ไม่สามารถส่งคำขอได้</value>
+  </data>
+  <data name="Advisory price and lead time" xml:space="preserve">
+    <value>ราคาและระยะเวลาโดยประมาณ</value>
+  </data>
+  <data name="Primary contact" xml:space="preserve"><value>ข้อมูลผู้ติดต่อหลัก</value></data>
+  <data name="Let us know who we should contact about this request." xml:space="preserve"><value>ระบุผู้ที่เราควรติดต่อเกี่ยวกับคำขอนี้</value></data>
+  <data name="Company &amp; billing" xml:space="preserve"><value>บริษัทและข้อมูลออกใบกำกับภาษี</value></data>
+  <data name="Your company and billing information." xml:space="preserve"><value>ข้อมูลบริษัทและรายละเอียดสำหรับการออกใบกำกับภาษี</value></data>
+  <data name="Any details that will help us prepare an accurate quotation." xml:space="preserve"><value>ข้อมูลเพิ่มเติมที่จะช่วยให้เราจัดทำใบเสนอราคาได้อย่างแม่นยำ</value></data>
+  <data name="Enter your first name" xml:space="preserve"><value>กรอกชื่อ</value></data>
+  <data name="Enter your last name" xml:space="preserve"><value>กรอกนามสกุล</value></data>
+  <data name="Enter your company name" xml:space="preserve"><value>กรอกชื่อบริษัท</value></data>
+  <data name="Review all items" xml:space="preserve">
+    <value>ตรวจสอบรายการทั้งหมด</value>
+  </data>
+  <data name="Add parts" xml:space="preserve">
+    <value>เพิ่มชิ้นงาน</value>
+  </data>
+  <data name="{0} part" xml:space="preserve">
+    <value>{0} ชิ้น</value>
+  </data>
+  <data name="{0} parts" xml:space="preserve">
+    <value>{0} ชิ้น</value>
+  </data>
   <data name="Smooth, highly detailed appearance for resin-suitable parts · suitability is confirmed during review" xml:space="preserve"><value>ผิวเรียบและรายละเอียดคมชัดสำหรับงานที่เหมาะกับเรซิน · วิศวกรจะตรวจสอบความเหมาะสม</value></data>
+  <data name="Select all" xml:space="preserve"><value>เลือกทั้งหมด</value></data>
+  <data name="{0} parts selected" xml:space="preserve"><value>เลือกแล้ว {0} ชิ้นงาน</value></data>
+  <data name="Apply material to selected parts" xml:space="preserve"><value>ใช้วัสดุกับชิ้นงานที่เลือก</value></data>
+  <data name="Select for bulk material: {0}" xml:space="preserve"><value>เลือกเพื่อใช้วัสดุร่วมกัน: {0}</value></data>
+  <data name="Invalid file. Repair the model and reupload it." xml:space="preserve"><value>ไฟล์ไม่สมบูรณ์ กรุณาแก้ไขโมเดลแล้วอัปโหลดใหม่</value></data>
+  <data name="Voxel-based estimate ({0} mm) — engineering review required" xml:space="preserve">
+    <value>ราคาประมาณจากแบบจำลองว็อกเซล ({0} มม.) — ต้องให้วิศวกรตรวจสอบ</value>
+  </data>
+  <data name="Pricing uses reconstructed geometry. Small features may change; the original file must be reviewed before manufacture." xml:space="preserve">
+    <value>ใช้แบบจำลองชั่วคราวเพื่อคำนวณราคา รายละเอียดเล็กอาจเปลี่ยนไป ต้องตรวจสอบไฟล์ต้นฉบับก่อนผลิต</value>
+  </data>
+  <data name="Apply {0} to selected parts" xml:space="preserve"><value>ใช้ {0} กับชิ้นงานที่เลือก</value></data>
+  <data name="3D file processing is unavailable. Try again or contact our engineers for a quotation." xml:space="preserve"><value>ไม่สามารถประมวลผลไฟล์ 3 มิติได้ โปรดลองอีกครั้งหรือติดต่อวิศวกรเพื่อขอใบเสนอราคา</value></data>
+  <data name="Units for the next GLB/GLTF upload" xml:space="preserve">
+    <value>หน่วยสำหรับไฟล์ GLB/GLTF ที่จะอัปโหลดถัดไป</value>
+  </data>
+  <data name="Choose units before importing GLB/GLTF" xml:space="preserve">
+    <value>เลือกหน่วยก่อนนำเข้าไฟล์ GLB/GLTF</value>
+  </data>
+  <data name="Metres (standard glTF)" xml:space="preserve">
+    <value>เมตร (มาตรฐาน glTF)</value>
+  </data>
+  <data name="Millimetres (printing compatibility)" xml:space="preserve">
+    <value>มิลลิเมตร (รองรับไฟล์สำหรับการพิมพ์เดิม)</value>
+  </data>
+  <data name="This choice applies only to new GLB/GLTF files. Existing parts and other formats keep their units." xml:space="preserve">
+    <value>ตัวเลือกนี้ใช้กับไฟล์ GLB/GLTF ใหม่เท่านั้น ชิ้นงานที่มีอยู่และไฟล์รูปแบบอื่นจะใช้หน่วยเดิม</value>
+  </data>
+  <data name="Instant 3D Printing Quote | MALIEV" xml:space="preserve">
+    <value>ประเมินราคาพิมพ์ 3D ออนไลน์ | MALIEV</value>
+  </data>
+  <data name="Upload a 3D model, choose material and quantity, and receive an online estimate for printing cost and lead time." xml:space="preserve">
+    <value>อัปโหลดไฟล์ 3D เลือกวัสดุและจำนวน เพื่อรับราคาประเมินงานพิมพ์ 3D และระยะเวลาผลิตออนไลน์</value>
+  </data>
+  <data name="3d print, 3d printing company, 3d printing model, 3d printing online, 3d printing service, 3d printing services, 3d printing website, 3d printing, online 3d printing, instant pricing, instant quotation" xml:space="preserve">
+    <value>พิมพ์ 3d, พิมพ์ 3 มิติ, พิมพ์ 3 มิติ, พิมพ์ 3d, รับพิมพ์ 3 มิติ, รับพิมพ์ 3d, ประเมินราคาทันที, instant pricing</value>
+  </data>
   <data name="Preview customer details" xml:space="preserve"><value>ดูตัวอย่างข้อมูลลูกค้า</value></data>
 </root>

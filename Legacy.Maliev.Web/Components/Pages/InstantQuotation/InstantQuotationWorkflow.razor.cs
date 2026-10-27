@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Hosting;
 using Microsoft.JSInterop;
 
 namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
@@ -23,6 +24,24 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     [Parameter]
     public InstantQuotationCustomerDisplayModel CustomerModel { get; set; } = InstantQuotationCustomerDisplayModel.Empty;
 
+    // Untrusted Development presentation only: never inserted into workflow.Parts or its session.
+    private readonly Dictionary<Guid, DevelopmentPreviewPart> developmentPreviews = [];
+    private readonly Dictionary<Guid, InstantQuotationGeometryClaim> developmentClaims = [];
+    private readonly HashSet<Guid> developmentRetries = [];
+    private long developmentPreviewGeneration;
+    private long developmentSelectionGeneration;
+    private ElementReference developmentPreviewCanvas;
+    private DevelopmentPreviewStep developmentStep;
+    private OrderQuote? developmentTotal;
+    private AdditiveLeadTimeRange? developmentLeadTime;
+    private bool DevelopmentPreviewEnabled =>
+        Services.GetService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>()?.IsDevelopment() == true;
+    private bool HasDevelopmentPreview => developmentPreviews.Count > 0 && DevelopmentPreviewEnabled;
+    private bool DevelopmentPriceAvailable => developmentPreviews.Count > 0
+        && developmentPreviews.Values.All(part => part.Price is not null)
+        && developmentTotal is not null && developmentLeadTime is not null;
+
+    private readonly string analyticsWorkflowId = Guid.NewGuid().ToString("N");
     private InstantQuotationWorkflowCoordinator? workflow;
     private bool initializationFailed;
     private InputFile? fileInput;
@@ -40,7 +59,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private long minimumDisplayGeneration;
     private MaterialDisplayRenderProjection? materialDisplayRender;
     private readonly Dictionary<Guid, InstantQuotationPartConfiguration> displayIntents = [];
-    private readonly Dictionary<Guid, (long Revision, string Raw)> quantityDrafts = [];
+    private readonly Dictionary<Guid, (long Revision, string Raw, bool Committing)> quantityDrafts = [];
     private long quantityDraftRevision;
     private ElementReference configurationSection;
     private ElementReference reviewSection;
@@ -48,6 +67,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private IJSObjectReference? previewModule;
     private IJSObjectReference? previewInterop;
     private DotNetObjectReference<InstantQuotationWorkflow>? previewStatusReporter;
+    private Task? previewInitialization;
     private readonly Dictionary<Guid, string> previewKeys = [];
     private readonly Dictionary<Guid, ThicknessStatus> thicknessStatuses = [];
     private readonly Dictionary<Guid, long> thicknessToggleRevisions = [];
@@ -62,27 +82,134 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool previewUnavailable;
     private string? uploadSelectionError;
     private bool batchInProgress;
+    private readonly Dictionary<string, PendingLocalPreview> pendingPreviewSelections = [];
+    private sealed record PendingLocalPreview(string Name, long Generation);
+    private readonly Dictionary<string, PendingLocalConfiguration> pendingConfigurations = [];
+    private string? selectedPendingPreviewKey;
+    private sealed class PendingLocalConfiguration(string name, long generation)
+    {
+        public string Name { get; } = name;
+        public long Generation { get; } = generation;
+        public InstantQuotationPartConfiguration Configuration { get; set; } = new("PLA", "Black", 1);
+        public string Quantity { get; set; } = "1";
+        public long Revision { get; set; }
+        public bool Modified { get; set; }
+        public bool Applying { get; set; }
+        public Guid? LocalId { get; set; }
+        public Guid? PartId { get; set; }
+    }
+    private PendingLocalConfiguration? SelectedPendingConfiguration =>
+        selectedPendingPreviewKey is { } key ? pendingConfigurations.GetValueOrDefault(key) : null;
     private readonly RepricingActivity repricing = new();
     private Guid? selectedPreviewPartId;
+    private Guid? selectedPreviewUploadId;
+    private string? selectedFailedPreviewKey;
+    private readonly Dictionary<string, string> localPreviewThumbnails = [];
+    private Guid? autoPreviewLocalId;
+    private Guid? revealPreviewPartId;
+    private long previewSelectionGeneration;
+    private sealed record LocalPreviewFailure(string Name, string Category);
+    private readonly Dictionary<string, LocalPreviewFailure> failedPreviewSelections = [];
+    private readonly HashSet<Guid> selectedBulkParts = [];
+    private ElementReference bulkSelectAll;
+    private bool bulkApplying;
     private PendingWorkflowFocus pendingFocus;
+    private long reviewNavigationRevision;
 
-    private ThicknessStatus? SelectedThickness => selectedPreviewPartId is { } id
+    private ThicknessStatus? SelectedThickness => !HasLocalPreviewSelection && selectedPreviewPartId is { } id
         && thicknessStatuses.TryGetValue(id, out var status) ? status : null;
 
     private bool ThicknessNeedsAttention => thicknessStatuses.Values.Any(
         status => status.Warning || status.Incomplete);
 
-    private InstantQuotationWorkflowState State => developmentCustomerPreview && CustomerModel.IsDevelopmentCustomerFixture
-        ? InstantQuotationWorkflowState.CustomerDetails
-        : initializationFailed
+    private InstantQuotationWorkflowState UnderlyingState => initializationFailed
         ? InstantQuotationWorkflowState.Error
         : workflow?.State ?? InitialState;
 
-    private WorkflowSectionVisibility VisibleSections =>
-        (State is InstantQuotationWorkflowState.Error && Parts.Count > 0)
-            || (State is InstantQuotationWorkflowState.Empty && HasMaterialDisplay && Parts.Count > 0)
-            ? new(Upload: true, Error: State is InstantQuotationWorkflowState.Error, Viewer: true, Parts: true, Configuration: true)
-            : GetVisibleSections(State);
+    private bool CanShowDevelopmentCustomerPreview => CustomerModel.IsDevelopmentCustomerFixture
+        && !disposed && !initializationFailed && !batchInProgress && !bulkApplying && developmentRetries.Count == 0
+        && !IsRepricing && pendingConfigurations.Count == 0 && failedPreviewSelections.Count == 0
+        && !(HasDevelopmentPreview && Parts.Count == 0)
+        && pendingPreviewSelections.Count == 0 && !HasLocalFileFailures && incompletePreviewKey is null
+        && UnderlyingState is not (InstantQuotationWorkflowState.Error or InstantQuotationWorkflowState.Uploading or InstantQuotationWorkflowState.Submitted);
+
+    private InstantQuotationWorkflowState State => developmentCustomerPreview && CanShowDevelopmentCustomerPreview
+        ? InstantQuotationWorkflowState.CustomerDetails
+        : UnderlyingState;
+
+    private bool HasLocalFileFailures => failedPreviewSelections.Count > 0
+        || Uploads.Any(upload => upload.Status is InstantQuotationWorkflowUploadStatus.Error
+            && Parts.All(part => part.PreviewCorrelationId != upload.LocalId));
+
+    private bool HasLocalPreviewSelection => selectedPendingPreviewKey is not null || selectedPreviewUploadId is not null || selectedFailedPreviewKey is not null;
+
+    private string? SelectedLocalPreviewKey => selectedPendingPreviewKey ?? selectedFailedPreviewKey
+        ?? (selectedPreviewUploadId is { } localId && previewKeys.TryGetValue(localId, out var key) ? key : null);
+
+    private (string Name, string Message)? SelectedFileError
+    {
+        get
+        {
+            if (disposed) return null;
+            if (selectedFailedPreviewKey is { } key && failedPreviewSelections.TryGetValue(key, out var failure))
+                return (failure.Name, LocalPreviewFailureMessage(failure));
+            var upload = selectedPreviewUploadId is { } id ? Uploads.FirstOrDefault(item => item.LocalId == id) : null;
+            return upload?.Status is InstantQuotationWorkflowUploadStatus.Error
+                && Parts.All(part => part.PreviewCorrelationId != upload.LocalId)
+                ? (upload.DisplayFileName, Localizer[upload.ProblemCategory is InstantQuotationProblemCategory.Validation
+                    ? "Invalid file. Repair the model and reupload it."
+                    : "The file could not be uploaded. Try again."])
+                : null;
+        }
+    }
+
+    private string LocalPreviewFailureMessage(LocalPreviewFailure failure) => Localizer[failure.Category switch
+    {
+        "unit_required" => "Choose units before importing GLB/GLTF",
+        "unreadable" => "Invalid file. Repair the model and reupload it.",
+        "complexity" => "This file exceeds the analysis limits. Simplify the mesh or contact our engineers for a quotation.",
+        _ => "3D file processing is unavailable. Try again or contact our engineers for a quotation.",
+    }].Value;
+
+    private async Task<string> ReadPreviewFailureCategoryAsync(string key)
+    {
+        var interop = previewInterop;
+        if (disposed || interop is null) return "unavailable";
+        try
+        {
+            var category = await interop.InvokeAsync<string?>("getFailureCategory", key);
+            return category is "unreadable" or "complexity" or "unit_required" ? category : "unavailable";
+        }
+        catch (JSException) { return "unavailable"; }
+    }
+
+    private string? LocalThumbnail(string? key) => key is not null ? localPreviewThumbnails.GetValueOrDefault(key) : null;
+
+    private InstantQuotationPartConfiguration? LocalSummaryConfiguration(string? key) =>
+        key is not null && pendingConfigurations.TryGetValue(key, out var pending) ? pending.Configuration : null;
+
+    private static string MaterialSummary(InstantQuotationPartConfiguration? configuration) =>
+        configuration is not null && !string.IsNullOrWhiteSpace(configuration.MaterialKey)
+            ? $"{configuration.MaterialKey.Trim()} {configuration.Quantity}×"
+            : "—";
+
+    private WorkflowSectionVisibility VisibleSections
+    {
+        get
+        {
+            if (HasDevelopmentPreview && Parts.Count == 0)
+                return new(Upload: true, Error: State is InstantQuotationWorkflowState.Error, Parts: true);
+            if (pendingPreviewSelections.Count > 0 || HasLocalFileFailures || incompletePreviewKey is not null)
+                return new(Upload: true, Error: false, Viewer: true, Parts: true, Configuration: Parts.Count > 0 || SelectedPendingConfiguration is not null);
+            if (Parts.Count == 0 && Uploads.Count > 0
+                && State is (InstantQuotationWorkflowState.Error or InstantQuotationWorkflowState.Empty))
+                return new(Upload: true, Error: State is InstantQuotationWorkflowState.Error, Parts: true);
+            return (State is InstantQuotationWorkflowState.Error && Parts.Count > 0)
+                || (State is InstantQuotationWorkflowState.Empty && HasMaterialDisplay && Parts.Count > 0)
+                ? new(Upload: true, Error: State is InstantQuotationWorkflowState.Error, Viewer: true, Parts: true, Configuration: true)
+                : GetVisibleSections(State);
+        }
+    }
 
     private bool IsBusy => State is InstantQuotationWorkflowState.Uploading;
 
@@ -151,13 +278,115 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             && Parts.SequenceEqual(other.Parts) && Rows.SequenceEqual(other.Rows);
     }
 
-    private bool InputDisabled => IsBusy || batchInProgress;
+    private bool InputDisabled => IsBusy || batchInProgress || bulkApplying || developmentRetries.Count > 0;
+
+    private bool IsBulkEligible(InstantQuotationWorkflowPartViewModel part) =>
+        Uploads.Any(upload => upload.LocalId == part.PreviewCorrelationId
+            && upload.Status is InstantQuotationWorkflowUploadStatus.Uploaded)
+        && ((part.Geometry.TopologyChecked && !part.Geometry.NonWatertight && !part.Geometry.NonManifold)
+            || HasCurrentRecoveryQuote(part))
+        && (!physicalAnalyses.TryGetValue(part.PartId, out var physical) || physical.IsReady);
+
+    private bool HasCurrentRecoveryQuote(InstantQuotationWorkflowPartViewModel part)
+    {
+        if (disposed || (IsRepricing && !bulkApplying) || workflow is null
+            || Services.GetService<FdmRuntimeProfileCatalog>() is not { } catalog
+            || OrderQuote?.Parts.SingleOrDefault(line => line.PartId == part.PartId) is not { } quote
+            || quote.Process != PrintProcess.Fdm
+            || quote.MaterialKey != part.Configuration.MaterialKey || quote.Color != part.Configuration.Color
+            || quote.Quantity != part.Configuration.Quantity || quote.BuildPreference != part.Configuration.BuildPreference
+            || !double.IsFinite(quote.UnitPrice) || quote.UnitPrice <= 0
+            || quote.PhysicalReceipt is not { GeometryReconstruction: { } reconstruction } receipt
+            || !reconstruction.IsValid()
+            || !catalog.TryResolveTrustedProfile(part.Configuration.MaterialKey, part.Configuration.BuildPreference, out var profile)
+            || profile is null
+            || workflow.CurrentPhysicalAnalysisBinding(part.PartId, catalog.ProfileVersion) is not { } binding)
+        {
+            return false;
+        }
+
+        // Only the current server quotation may relax topology eligibility; the original geometry and warnings remain intact.
+        return receipt.SessionId == binding.SessionId && receipt.OwnerIdentity == binding.OwnerIdentity
+            && receipt.GltfUnitPolicy == binding.GltfUnitPolicy
+            && receipt.PartId == binding.PartId && receipt.FileId == binding.FileId
+            && string.Equals(receipt.UploadSha256, binding.UploadSha256, StringComparison.OrdinalIgnoreCase)
+            && receipt.ConfiguredMaterialKey == part.Configuration.MaterialKey && receipt.MaterialKey == binding.MaterialKey
+            && receipt.Quantity == binding.Quantity && receipt.BuildPreference == binding.BuildPreference
+            && receipt.ProfileVersion == binding.ProfileVersion && receipt.ProfileSha256 == profile.ResolvedProfileSha256
+            && receipt.AnalysisVersion == Legacy.Maliev.Web.Application.Pricing.Simulation.FdmSimulationEngine.AnalysisVersion
+            && double.IsFinite(receipt.DepositedMm3) && receipt.DepositedMm3 > 0
+            && double.IsFinite(receipt.SupportMm3) && receipt.SupportMm3 >= 0
+            && double.IsFinite(receipt.MotionSeconds) && receipt.MotionSeconds > 0
+            && double.IsFinite(receipt.BoundingCm3PerUnit) && receipt.BoundingCm3PerUnit > 0;
+    }
+
+    private IReadOnlyList<InstantQuotationWorkflowPartViewModel> BulkParts => Parts.Where(IsBulkEligible).ToArray();
+
+    private int SelectedBulkCount => BulkParts.Count(part => selectedBulkParts.Contains(part.PartId));
+
+    private bool AllBulkPartsSelected => BulkParts.Count > 0 && SelectedBulkCount == BulkParts.Count;
+
+    private bool BulkSelectionMixed => SelectedBulkCount > 0 && !AllBulkPartsSelected;
+
+    private bool CanApplyBulkMaterial => !disposed && !InputDisabled && !IsRepricing && VisibleSections.Configuration
+        && SelectedBulkCount > 0 && !Parts.Any(part => quantityEdits.IsPending(part.PartId))
+        && ConfigurationParts.SingleOrDefault() is { } active && IsBulkEligible(active);
+
+    private void SetPartSelected(Guid partId, ChangeEventArgs args)
+    {
+        if (disposed || InputDisabled || IsRepricing || !BulkParts.Any(part => part.PartId == partId)) return;
+        if (args.Value is true) selectedBulkParts.Add(partId);
+        else selectedBulkParts.Remove(partId);
+        StateHasChanged();
+    }
+
+    private void SelectAllParts(ChangeEventArgs args)
+    {
+        if (disposed || InputDisabled || IsRepricing) return;
+        selectedBulkParts.Clear();
+        if (args.Value is true) selectedBulkParts.UnionWith(BulkParts.Select(part => part.PartId));
+        StateHasChanged();
+    }
+
+    private async Task ApplyMaterialToSelectedAsync()
+    {
+        if (!CanApplyBulkMaterial) return;
+        var active = ConfigurationParts.SingleOrDefault();
+        if (active is null || !IsBulkEligible(active)) return;
+        var material = active.Configuration.MaterialKey;
+        var ids = BulkParts.Where(part => selectedBulkParts.Contains(part.PartId))
+            .Select(part => part.PartId).ToArray();
+        bulkApplying = true;
+        try
+        {
+            await RepriceAsync(async () =>
+            {
+                foreach (var id in ids)
+                {
+                    if (disposed) return;
+                    var part = Parts.SingleOrDefault(candidate => candidate.PartId == id);
+                    if (part is null || !IsBulkEligible(part) || part.Configuration.MaterialKey == material) continue;
+                    InvalidatePhysicalAnalysis(id);
+                    var color = GetColors(material).First();
+                    await workflow!.UpdateConfigurationAsync(id, material, color, part.Configuration.Quantity, default);
+                    await InvokePreviewAsync("setThicknessMaterial", ViewerPartKey(id), material);
+                    await UpdatePartAppearanceAsync(id);
+                }
+            });
+        }
+        finally
+        {
+            bulkApplying = false;
+            if (!disposed) await InvokeAsync(StateHasChanged);
+        }
+    }
 
     private bool CanEnterReview
     {
         get
         {
-            if (disposed || IsRepricing || workflow?.State is not InstantQuotationWorkflowState.Configured
+            if (disposed || InputDisabled || IsRepricing || pendingConfigurations.Count > 0 || failedPreviewSelections.Count > 0
+                || workflow?.State is not InstantQuotationWorkflowState.Configured
                 || workflow.OrderQuote is null) return false;
             var parts = Parts;
             return !parts.Any(part => quantityEdits.IsPending(part.PartId))
@@ -174,6 +403,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     {
         get
         {
+            if (SelectedPendingConfiguration is not null) return [];
             var selected = selectedPreviewPartId is { } selectedId
                 ? Parts.FirstOrDefault(part => part.PartId == selectedId)
                 : null;
@@ -184,7 +414,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private IReadOnlyList<InstantQuotationWorkflowMaterialOption> Materials => workflow?.Materials ?? [];
 
     private bool HasUnacceptedConfiguration(InstantQuotationWorkflowPartViewModel part) =>
-        quantityEdits.IsPending(part.PartId)
+        pendingConfigurations.Values.Any(intent => intent.LocalId == part.PreviewCorrelationId && intent.Modified)
+        || quantityEdits.IsPending(part.PartId)
         || displayIntents.TryGetValue(part.PartId, out var intended) && intended != part.Configuration;
 
     private InstantQuotationPartQuote? DisplayQuote(InstantQuotationWorkflowPartViewModel part) =>
@@ -247,12 +478,50 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Input binding can yield while a retry changes state before its new canvas renders.
+        var renderedDevelopmentGeneration = developmentPreviewGeneration;
+        var renderedDevelopmentCanvas = developmentPreviewCanvas;
         if (firstRender)
         {
             await EnsurePreviewInteropAsync();
         }
 
+        if (disposed) return;
         await EnsurePreviewInputBoundAsync();
+        if (disposed) return;
+        selectedBulkParts.IntersectWith(BulkParts.Select(part => part.PartId));
+        if (VisibleSections.Parts && previewInterop is not null)
+        {
+            await InvokePreviewAsync("setBulkSelectionState", bulkSelectAll, BulkSelectionMixed);
+        }
+
+        if (HasDevelopmentPreview && previewInterop is not null)
+        {
+            foreach (var part in developmentPreviews.Values.Where(part => !part.Attached).ToArray())
+            {
+                try
+                {
+                    var generation = renderedDevelopmentGeneration;
+                    var canvas = renderedDevelopmentCanvas;
+                    if (disposed || generation != developmentPreviewGeneration || !canvas.Equals(developmentPreviewCanvas))
+                        break;
+                    var attached = await previewInterop.InvokeAsync<bool>(
+                        "retainDevelopmentPreview", part.Key, canvas, generation);
+                    if (!disposed && developmentPreviews.TryGetValue(part.LocalId, out var current)
+                        && ReferenceEquals(part, current))
+                    {
+                        if (generation == developmentPreviewGeneration && canvas.Equals(developmentPreviewCanvas))
+                            part.Attached = attached;
+                        else
+                            await InvokeAsync(StateHasChanged);
+                    }
+                }
+                catch (JSException)
+                {
+                    await ReportPreviewUnavailableAsync();
+                }
+            }
+        }
 
         if (incompletePreviewKey is { } incompleteKey && !incompletePreviewAttached && previewInterop is not null)
         {
@@ -268,6 +537,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                         if (eligible)
                         {
                             incompletePreviewAttached = true;
+                            if (SelectedLocalPreviewKey == incompleteKey)
+                                await InvokePreviewAsync("selectLocalPreview", incompleteKey);
                         }
                         else
                         {
@@ -291,6 +562,36 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                     }
                 }
             }
+        }
+
+        if (incompletePreviewKey is { } thumbnailKey && incompletePreviewAttached
+            && !localPreviewThumbnails.ContainsKey(thumbnailKey) && previewInterop is not null)
+        {
+            try
+            {
+                var source = await previewInterop.InvokeAsync<string?>("getLocalThumbnail", thumbnailKey);
+                if (!disposed && incompletePreviewKey == thumbnailKey
+                    && source is { Length: <= 262144 } && source.StartsWith("data:image/webp;base64,", StringComparison.Ordinal))
+                {
+                    localPreviewThumbnails[thumbnailKey] = source;
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+            catch (JSException) { /* The local error remains actionable without a thumbnail. */ }
+        }
+
+        if (!VisibleSections.Viewer && Parts.Count == 0 && previewAttached && previewInterop is not null)
+        {
+            try
+            {
+                var detached = await previewInterop.InvokeAsync<bool>("detachEmptyViewer");
+                if (!disposed && detached)
+                {
+                    previewAttached = false;
+                    if (VisibleSections.Viewer) await InvokeAsync(StateHasChanged);
+                }
+            }
+            catch (JSException) { await ReportPreviewUnavailableAsync(); }
         }
 
         if (VisibleSections.Viewer && !previewAttached && previewInterop is not null)
@@ -326,7 +627,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             }
         }
 
-        if ((VisibleSections.Review || VisibleSections.CustomerDetails) && previewInterop is not null)
+        if ((VisibleSections.Parts || VisibleSections.Review || VisibleSections.CustomerDetails) && previewInterop is not null)
         {
             try
             {
@@ -335,6 +636,15 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             catch (JSException)
             {
                 await ReportPreviewUnavailableAsync();
+            }
+        }
+
+        if (revealPreviewPartId is { } revealId && previewInterop is not null)
+        {
+            revealPreviewPartId = null;
+            if (!disposed && selectedPreviewPartId == revealId && Parts.Any(part => part.PartId == revealId))
+            {
+                await InvokePreviewAsync("revealPart", workflowSection, revealId.ToString("D"));
             }
         }
 
@@ -414,6 +724,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task UploadFilesAsync(InputFileChangeEventArgs args)
     {
+        if (bulkApplying || disposed) return;
         if (workflow is null)
         {
             return;
@@ -426,12 +737,16 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
 
         batchInProgress = true;
+        var selectionGeneration = InvalidatePreviewSelectionIntent();
+        Exception? primary = null;
         try
         {
             uploadSelectionError = null;
             // A new accepted selection replaces the one local exceptional preview,
             // not previously admitted parts. Rejected/normal replacements also release it.
             await RemoveIncompletePreviewAsync();
+            if (disposed) return;
+            await ClearDevelopmentPreviewAsync();
             var selectedFiles = args.GetMultipleFiles(100).ToArray();
             var browserFiles = selectedFiles
                 .Where(file => file.Size <= InstantQuotationWorkflowCoordinator.MaximumFileSize)
@@ -449,8 +764,15 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             }
 
             var keys = await BeginPreviewSelectionAsync();
+            if (disposed) return;
             if (keys.Length != browserFiles.Length)
             {
+                for (var index = 0; index < browserFiles.Length; index++)
+                {
+                    var localKey = $"local-selection-{selectionGeneration}-{index}";
+                    failedPreviewSelections[localKey] = new(browserFiles[index].Name, "unavailable");
+                    if (Parts.Count == 0 && selectionGeneration == previewSelectionGeneration) selectedFailedPreviewKey ??= localKey;
+                }
                 foreach (var key in keys)
                 {
                     await InvokePreviewAsync("release", key);
@@ -460,84 +782,441 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 return;
             }
 
-            var analyzed = new List<(IBrowserFile File, string PreviewKey, InstantQuotationGeometryClaim Claim)>();
             for (var index = 0; index < browserFiles.Length; index++)
             {
-                try
-                {
-                    var claim = await previewInterop!.InvokeAsync<InstantQuotationGeometryClaim>(
-                        "getGeometryClaim",
-                        keys[index]);
-                    if (await previewInterop!.InvokeAsync<bool>("isIncompletePreview", keys[index]))
-                    {
-                        await RemoveIncompletePreviewAsync();
-                        incompletePreviewKey = keys[index];
-                        incompletePreviewMeasured = false;
-                        incompletePreviewRevision = 0;
-                        await InvokeAsync(StateHasChanged);
-                    }
-                    analyzed.Add((browserFiles[index], keys[index], claim));
-                }
-                catch (JSException)
-                {
-                    await InvokePreviewAsync("quarantine", keys[index]);
-                    await ReportPreviewUnavailableAsync();
-                }
+                pendingPreviewSelections[keys[index]] = new(browserFiles[index].Name, selectionGeneration);
+                pendingConfigurations[keys[index]] = new(browserFiles[index].Name, selectionGeneration);
             }
+            if (Parts.Count == 0 && selectionGeneration == previewSelectionGeneration) selectedPendingPreviewKey = keys.Last();
 
-            if (analyzed.Count == 0)
-            {
-                return;
-            }
-
-            await analytics.RecordUploadStartAsync(
-                $"batch-{Guid.NewGuid():N}",
-                analyzed.Count);
-
-            var files = analyzed
-                .Select(item => new InstantQuotationWorkflowUploadFile(
-                    item.File.Name,
-                    item.File.ContentType,
-                    item.File.Size,
-                    item.Claim,
-                    cancellationToken => Task.FromResult<Stream>(item.File.OpenReadStream(
-                        InstantQuotationWorkflowCoordinator.MaximumFileSize,
-                        cancellationToken))))
-                .ToArray();
-            var reservedIds = workflow.ReserveUploads(files);
-
-            for (var index = 0; index < reservedIds.Count; index++)
-            {
-                previewKeys[reservedIds[index]] = analyzed[index].PreviewKey;
-            }
-
-            var uploadTask = workflow.UploadReservedAsync(reservedIds, default);
-            await InvokeAsync(StateHasChanged);
+            // beginSelection already starts the parsers; these consumers only observe their existing completion.
+            var claims = keys.Select(ReadGeometryClaimAsync).ToArray();
+            var uploads = new List<Task>();
+            var reservations = new Guid?[browserFiles.Length];
+            Exception? processingFailure = null;
             try
             {
-                await uploadTask;
+                if (selectionGeneration == previewSelectionGeneration && selectedPendingPreviewKey == keys.Last())
+                    await InvokePreviewAsync("selectLocalPreview", selectedPendingPreviewKey);
+                if (disposed) return;
+                await InvokeAsync(StateHasChanged);
+                var remaining = Enumerable.Range(0, browserFiles.Length).ToList();
+                while (remaining.Count > 0)
+                {
+                    var index = remaining.FirstOrDefault(candidate => claims[candidate].IsCompleted, -1);
+                    if (index < 0)
+                    {
+                        await Task.WhenAny(remaining.Select(candidate => claims[candidate]));
+                        continue;
+                    }
+                    remaining.Remove(index);
+                    if (!IsPendingPreview(keys[index], selectionGeneration)) continue;
+                    try
+                    {
+                        var claim = await claims[index];
+                        if (disposed) return;
+                        if (!IsPendingPreview(keys[index], selectionGeneration)) continue;
+                        var incomplete = await previewInterop!.InvokeAsync<bool>("isIncompletePreview", keys[index]);
+                        if (disposed) return;
+                        if (!IsPendingPreview(keys[index], selectionGeneration)) continue;
+                        if (incomplete)
+                        {
+                            await RemoveIncompletePreviewAsync();
+                            if (disposed) return;
+                            if (!IsPendingPreview(keys[index], selectionGeneration)) continue;
+                            incompletePreviewKey = keys[index];
+                            incompletePreviewMeasured = false;
+                            incompletePreviewRevision = 0;
+                            await InvokeAsync(StateHasChanged);
+                            if (disposed) return;
+                        }
+                        if (!IsPendingPreview(keys[index], selectionGeneration)) continue;
+                        pendingPreviewSelections.Remove(keys[index]);
+                        var file = browserFiles[index];
+                        var reserved = workflow.ReserveUploads([new InstantQuotationWorkflowUploadFile(
+                            file.Name, file.ContentType, file.Size, claim,
+                            token => Task.FromResult<Stream>(file.OpenReadStream(
+                                InstantQuotationWorkflowCoordinator.MaximumFileSize, token)))],
+                            reservations.Skip(index + 1).FirstOrDefault(candidate => candidate is { } id
+                                && Uploads.Any(upload => upload.LocalId == id)));
+                        var localId = reserved.Single();
+                        reservations[index] = localId;
+                        if (selectionGeneration == previewSelectionGeneration && selectedPendingPreviewKey is null)
+                            autoPreviewLocalId = reservations.LastOrDefault(candidate => candidate is not null);
+                        previewKeys[localId] = keys[index];
+                        if (DevelopmentPreviewEnabled) developmentClaims[localId] = claim;
+                        if (pendingConfigurations.TryGetValue(keys[index], out var intent)) intent.LocalId = localId;
+                        uploads.Add(UploadReadySelectionAsync(keys[index], localId, selectionGeneration));
+                        await InvokeAsync(StateHasChanged);
+                    }
+                    catch (JSException)
+                    {
+                        if (disposed) return;
+                        if (!IsPendingPreview(keys[index], selectionGeneration)) continue;
+                        var category = await ReadPreviewFailureCategoryAsync(keys[index]);
+                        if (disposed) return;
+                        if (!IsPendingPreview(keys[index], selectionGeneration)) continue;
+                        pendingPreviewSelections.Remove(keys[index]);
+                        pendingConfigurations.Remove(keys[index]);
+                        if (selectedPendingPreviewKey == keys[index])
+                        {
+                            selectedPendingPreviewKey = null;
+                            selectedFailedPreviewKey = keys[index];
+                        }
+                        failedPreviewSelections[keys[index]] = new(browserFiles[index].Name, category);
+                        if (Parts.Count == 0 && selectionGeneration == previewSelectionGeneration) selectedFailedPreviewKey ??= keys[index];
+                        await InvokePreviewAsync("release", keys[index]);
+                        await ReportPreviewUnavailableAsync();
+                    }
+                }
+
+                await Task.WhenAll(uploads);
+                if (!disposed && selectionGeneration == previewSelectionGeneration && autoPreviewLocalId is not null)
+                {
+                    autoPreviewLocalId = reservations.Reverse().FirstOrDefault(candidate =>
+                        candidate is { } id && Uploads.Any(upload => upload.LocalId == id
+                            && upload.Status is InstantQuotationWorkflowUploadStatus.Uploaded));
+                    await ReconcilePreviewsAsync();
+                }
+            }
+            catch (Exception exception) { processingFailure = exception; throw; }
+            finally
+            {
+                Exception? drainFailure = null;
+                if (processingFailure is not null || disposed)
+                {
+                    foreach (var key in keys.Where(key => IsPendingPreview(key, selectionGeneration)).ToArray())
+                    {
+                        pendingPreviewSelections.Remove(key);
+                        pendingConfigurations.Remove(key);
+                        try { await InvokePreviewAsync("release", key); }
+                        catch (Exception exception) { drainFailure ??= exception; }
+                    }
+                }
+                try { await Task.WhenAll(claims); }
+                catch (JSException) when (claims.All(task => task.IsCompleted)) { }
+                catch (ObjectDisposedException) when (disposed && claims.All(task => task.IsCompleted)) { }
+                catch (Exception exception) { drainFailure ??= exception; }
+                try { await Task.WhenAll(uploads); }
+                catch (Exception exception) { drainFailure ??= exception; }
+                if (processingFailure is null && drainFailure is not null)
+                    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(drainFailure).Throw();
+            }
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            Exception? cleanupFailure = null;
+            try
+            {
+                foreach (var pending in pendingPreviewSelections.Where(pair =>
+                    pair.Value.Generation == selectionGeneration).Select(pair => pair.Key).ToArray())
+                {
+                    pendingPreviewSelections.Remove(pending);
+                    pendingConfigurations.Remove(pending);
+                    if (selectedPendingPreviewKey == pending) selectedPendingPreviewKey = null;
+                    try { await InvokePreviewAsync("release", pending); }
+                    catch (Exception exception) { cleanupFailure ??= exception; }
+                }
             }
             finally
             {
-                await ReconcilePreviewsAsync();
+                batchInProgress = false;
+                if (disposed) uploadBatchGate.Dispose();
+                else
+                {
+                    uploadBatchGate.Release();
+                    try { await InvokeAsync(() => { if (!disposed) StateHasChanged(); }); }
+                    catch (Exception exception) { cleanupFailure ??= exception; }
+                }
+            }
+            if (primary is null && cleanupFailure is not null)
+                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(cleanupFailure).Throw();
+        }
+    }
+
+
+    private async Task<InstantQuotationGeometryClaim> ReadGeometryClaimAsync(string key) =>
+        await previewInterop!.InvokeAsync<InstantQuotationGeometryClaim>("getGeometryClaim", key);
+
+    private string? BrowserPreviewKey(Guid localId) => previewKeys.GetValueOrDefault(localId);
+
+    private async Task UploadReadySelectionAsync(string key, Guid localId, long generation)
+    {
+        Exception? primary = null;
+        try
+        {
+            await workflow!.UploadReservedAsync([localId], default);
+            if (disposed) return;
+            var part = Parts.SingleOrDefault(item => item.PreviewCorrelationId == localId);
+            if (part is not null && pendingConfigurations.TryGetValue(key, out var intent)
+                && intent.Generation == generation && intent.LocalId == localId
+                && previewKeys.GetValueOrDefault(localId) == key)
+            {
+                intent.PartId = part.PartId;
+                await ApplyPendingConfigurationAsync(key, intent);
+            }
+            else
+            {
+                pendingConfigurations.Remove(key);
+                if (selectedPendingPreviewKey == key)
+                {
+                    selectedPendingPreviewKey = null;
+                    selectedPreviewUploadId = localId;
+                }
             }
         }
+        catch (Exception exception) { primary = exception; throw; }
         finally
         {
-            batchInProgress = false;
-            uploadBatchGate.Release();
+            try { if (!disposed) await ReconcilePreviewsAsync(); }
+            catch (Exception exception) when (primary is not null)
+            {
+                primary.Data["PendingPreviewCleanupFailure"] = exception;
+            }
         }
+    }
+
+    private async Task SelectPendingPreviewAsync(string key)
+    {
+        if (bulkApplying || disposed) return;
+        if (!pendingConfigurations.ContainsKey(key))
+        {
+            var existingPart = Parts.SingleOrDefault(item => BrowserPreviewKey(item.PreviewCorrelationId) == key);
+            if (existingPart is not null) await SelectPreviewAsync(existingPart.PartId);
+            return;
+        }
+        InvalidatePreviewSelectionIntent();
+        selectedPendingPreviewKey = key;
+        selectedPreviewUploadId = null;
+        selectedFailedPreviewKey = null;
+        var generation = previewSelectionGeneration;
+        var intent = pendingConfigurations[key];
+        var part = intent.LocalId is { } localId
+            ? Parts.SingleOrDefault(item => item.PreviewCorrelationId == localId) : null;
+        var selected = part is not null && previewInterop is not null
+            && await previewInterop.InvokeAsync<bool>("select", ViewerPartKey(part.PartId));
+        if (disposed || selectedPendingPreviewKey != key || previewSelectionGeneration != generation) return;
+        if (!selected) await InvokePreviewAsync("selectLocalPreview", key);
+    }
+
+    private async Task ChangePendingMaterialAsync(string key, string materialKey)
+    {
+        if (bulkApplying || disposed) return;
+        if (!pendingConfigurations.TryGetValue(key, out var intent))
+        {
+            var part = Parts.SingleOrDefault(item => BrowserPreviewKey(item.PreviewCorrelationId) == key);
+            if (part is not null) await ChangeMaterialAsync(part.PartId, new ChangeEventArgs { Value = materialKey });
+            return;
+        }
+        var material = PricingCatalog.ResolveMaterial(materialKey)
+            ?? throw new ArgumentException("The selected material is not supported.", nameof(materialKey));
+        var colors = GetColors(material.Key);
+        var color = colors.Contains(intent.Configuration.Color) ? intent.Configuration.Color : colors.First();
+        intent.Configuration = intent.Configuration with
+        {
+            MaterialKey = material.Key,
+            Color = color,
+            BuildPreference = material.Process is PrintProcess.Resin ? BuildPreference.Standard : intent.Configuration.BuildPreference,
+        };
+        intent.Modified = true;
+        intent.Revision++;
+        await ApplyPendingConfigurationAsync(key, intent);
+    }
+
+    private async Task ChangePendingQuantityAsync(string key, ChangeEventArgs args)
+    {
+        if (bulkApplying || disposed) return;
+        if (!pendingConfigurations.TryGetValue(key, out var intent))
+        {
+            var part = Parts.SingleOrDefault(item => BrowserPreviewKey(item.PreviewCorrelationId) == key);
+            if (part is not null) await ChangeQuantityAsync(part.PartId, args);
+            return;
+        }
+        intent.Quantity = args.Value?.ToString() ?? string.Empty;
+        intent.Modified = true;
+        intent.Revision++;
+        if (int.TryParse(intent.Quantity, out var quantity) && quantity is >= 1 and <= PricingCatalog.MaximumAdditiveQuantity)
+            intent.Configuration = intent.Configuration with { Quantity = quantity };
+        await ApplyPendingConfigurationAsync(key, intent);
+    }
+
+
+    private async Task ChangePendingColorAsync(string key, ChangeEventArgs args)
+    {
+        if (bulkApplying || disposed) return;
+        if (!pendingConfigurations.TryGetValue(key, out var intent))
+        {
+            var part = Parts.SingleOrDefault(item => BrowserPreviewKey(item.PreviewCorrelationId) == key);
+            if (part is not null) await ChangeColorAsync(part.PartId, args);
+            return;
+        }
+        var color = args.Value?.ToString() ?? string.Empty;
+        if (!PricingCatalog.IsColorSupported(intent.Configuration.MaterialKey, color))
+            throw new ArgumentException("The selected color is not supported.", nameof(args));
+        intent.Configuration = intent.Configuration with { Color = color };
+        intent.Modified = true;
+        intent.Revision++;
+        await ApplyPendingConfigurationAsync(key, intent);
+    }
+
+    private async Task ChangePendingBuildPreferenceAsync(string key, BuildPreference preference)
+    {
+        if (bulkApplying || disposed) return;
+        if (!pendingConfigurations.TryGetValue(key, out var intent))
+        {
+            var part = Parts.SingleOrDefault(item => BrowserPreviewKey(item.PreviewCorrelationId) == key);
+            if (part is not null) await ChangeBuildPreferenceAsync(part.PartId, preference);
+            return;
+        }
+        if (!Enum.IsDefined(preference)) throw new ArgumentOutOfRangeException(nameof(preference));
+        intent.Configuration = intent.Configuration with
+        {
+            BuildPreference = PricingCatalog.ResolveMaterial(intent.Configuration.MaterialKey)?.Process is PrintProcess.Resin
+                ? BuildPreference.Standard : preference,
+        };
+        intent.Modified = true;
+        intent.Revision++;
+        await ApplyPendingConfigurationAsync(key, intent);
+    }
+
+    private async Task ApplyPendingConfigurationAsync(string key, PendingLocalConfiguration intent)
+    {
+        if (intent.Applying || intent.PartId is not { } partId || disposed) return;
+        intent.Applying = true;
+        try
+        {
+            while (!disposed && pendingConfigurations.GetValueOrDefault(key) == intent
+                && intent.LocalId is { } localId && previewKeys.GetValueOrDefault(localId) == key
+                && Parts.Any(part => part.PartId == partId && part.PreviewCorrelationId == localId))
+            {
+                if (!int.TryParse(intent.Quantity, out var quantity) || quantity is < 1 or > PricingCatalog.MaximumAdditiveQuantity) return;
+                var revision = intent.Revision;
+                var configuration = intent.Configuration with { Quantity = quantity };
+                if (intent.Modified)
+                {
+                    var coordinator = workflow ?? throw new InvalidOperationException("The quotation workflow is unavailable.");
+                    coordinator.ValidateConfiguration(partId, configuration.MaterialKey, configuration.Color,
+                        quantity, configuration.BuildPreference);
+                    await RepriceAsync(() => coordinator.UpdateConfigurationAsync(partId, configuration.MaterialKey,
+                        configuration.Color, quantity, configuration.BuildPreference, default), owner: partId);
+                }
+                if (disposed || pendingConfigurations.GetValueOrDefault(key) != intent) return;
+                if (revision != intent.Revision) continue;
+                pendingConfigurations.Remove(key);
+                if (selectedPendingPreviewKey == key)
+                {
+                    selectedPendingPreviewKey = null;
+                    await SelectPreviewAsync(partId);
+                }
+                return;
+            }
+        }
+        finally { intent.Applying = false; }
+    }
+
+    private bool IsPendingPreview(string key, long generation) =>
+        pendingPreviewSelections.TryGetValue(key, out var pending) && pending.Generation == generation;
+
+    private async Task RemovePendingPreviewAsync(string key)
+    {
+        if (disposed || bulkApplying || !pendingPreviewSelections.Remove(key)) return;
+        pendingConfigurations.Remove(key);
+        var selected = selectedPendingPreviewKey == key;
+        var generation = previewSelectionGeneration;
+        if (selected) selectedPendingPreviewKey = null;
+        // Release only this local selection; late parser completion cannot admit a removed key.
+        if (incompletePreviewKey == key) await RemoveIncompletePreviewAsync();
+        else await InvokePreviewAsync("release", key);
+        if (!disposed && selected && previewSelectionGeneration == generation && !HasLocalPreviewSelection
+            && selectedPreviewPartId is { } current && Parts.Any(part => part.PartId == current))
+            await InvokePreviewAsync("select", ViewerPartKey(current));
+        if (!disposed) await InvokeAsync(StateHasChanged);
+    }
+
+    private long InvalidatePreviewSelectionIntent()
+    {
+        autoPreviewLocalId = null;
+        revealPreviewPartId = null;
+        return checked(++previewSelectionGeneration);
+    }
+
+    private async Task RemoveFailedPreviewAsync(string key)
+    {
+        if (disposed || InputDisabled || IsRepricing || !failedPreviewSelections.Remove(key)) return;
+        InvalidatePreviewSelectionIntent();
+        localPreviewThumbnails.Remove(key);
+        if (selectedFailedPreviewKey == key) selectedFailedPreviewKey = null;
+        await InvokePreviewAsync("release", key);
+        if (!disposed && !HasLocalPreviewSelection && selectedPreviewPartId is { } selectedId
+            && Parts.Any(part => part.PartId == selectedId))
+            await InvokePreviewAsync("select", ViewerPartKey(selectedId));
+        if (!disposed) await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SelectFailedPreviewAsync(string key)
+    {
+        if (bulkApplying || disposed || !failedPreviewSelections.ContainsKey(key)) return;
+        InvalidatePreviewSelectionIntent();
+        selectedPendingPreviewKey = null;
+        selectedFailedPreviewKey = key;
+        selectedPreviewUploadId = null;
+        await InvokePreviewAsync("selectLocalPreview", key);
+    }
+
+    private async Task SelectUploadPreviewAsync(Guid localId)
+    {
+        if (bulkApplying || disposed || Parts.Any(part => part.PreviewCorrelationId == localId)
+            || !Uploads.Any(upload => upload.LocalId == localId
+                && upload.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)) return;
+        InvalidatePreviewSelectionIntent();
+        selectedPendingPreviewKey = null;
+        selectedPreviewUploadId = localId;
+        selectedFailedPreviewKey = null;
+        await InvokePreviewAsync("selectLocalPreview", previewKeys.GetValueOrDefault(localId));
+    }
+
+    private async Task RemoveFailedUploadAsync(Guid localId)
+    {
+        if (disposed || InputDisabled || IsRepricing || workflow?.DismissFailedUpload(localId) != true) return;
+        developmentPreviews.Remove(localId);
+        developmentClaims.Remove(localId);
+        developmentRetries.Remove(localId);
+        RepriceDevelopmentPreview();
+        InvalidatePreviewSelectionIntent();
+        if (selectedPreviewUploadId == localId) selectedPreviewUploadId = null;
+        if (previewKeys.TryGetValue(localId, out var key)) localPreviewThumbnails.Remove(key);
+        await ReleasePreviewAsync(localId);
+        if (!disposed && !HasLocalPreviewSelection && selectedPreviewPartId is { } selectedId
+            && Parts.Any(part => part.PartId == selectedId))
+            await InvokePreviewAsync("select", ViewerPartKey(selectedId));
+        if (!disposed) await InvokeAsync(StateHasChanged);
     }
 
     private async Task CancelUpload(Guid localId)
     {
+        if (bulkApplying || disposed) return;
         workflow?.Cancel(localId);
-        await QuarantinePreviewAsync(localId);
+        developmentPreviews.Remove(localId);
+        developmentClaims.Remove(localId);
+        RepriceDevelopmentPreview();
+        if (previewKeys.TryGetValue(localId, out var key))
+            await QuarantinePreviewAsync(localId, key);
     }
 
     private async Task RetryUploadAsync(Guid localId)
     {
-        if (workflow is not null)
+        if (bulkApplying || disposed || InputDisabled || IsRepricing) return;
+        if (workflow is null) return;
+        var development = DevelopmentPreviewEnabled;
+        var selection = developmentSelectionGeneration;
+        if (development && !developmentRetries.Add(localId)) return;
+        developmentPreviews.Remove(localId, out var previousDevelopment);
+        developmentTotal = null;
+        developmentLeadTime = null;
+        developmentStep = DevelopmentPreviewStep.Configuration;
+        RepriceDevelopmentPreview();
+        try
         {
             var hasAuthoritativePart = Parts.Any(item => item.PreviewCorrelationId == localId);
             if (!hasAuthoritativePart
@@ -546,38 +1225,87 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             {
                 try
                 {
-                    previewKeys[localId] = await previewInterop.InvokeAsync<string>("retry", previousKey);
+                    var retryKey = await previewInterop.InvokeAsync<string>("retry", previousKey);
+                    if (disposed || previewKeys.GetValueOrDefault(localId) != previousKey
+                        || !Uploads.Any(upload => upload.LocalId == localId)
+                        || Parts.Any(part => part.PreviewCorrelationId == localId))
+                    {
+                        await InvokePreviewAsync("release", retryKey);
+                        return;
+                    }
+                    previewKeys[localId] = retryKey;
+                    if (localPreviewThumbnails.Remove(previousKey, out var thumbnail))
+                        localPreviewThumbnails[retryKey] = thumbnail;
+                    if (development)
+                    {
+                        var claim = await previewInterop.InvokeAsync<InstantQuotationGeometryClaim>("getGeometryClaim", retryKey);
+                        if (!disposed && selection == developmentSelectionGeneration)
+                            developmentClaims[localId] = claim;
+                    }
                 }
                 catch (JSException)
                 {
+                    developmentClaims.Remove(localId);
                     await ReportPreviewUnavailableAsync();
                 }
             }
 
             await workflow.RetryAsync(localId, default);
-            await ReconcilePreviewsAsync();
+            developmentRetries.Remove(localId);
+            await ReconcilePreviewsAsync(selection == developmentSelectionGeneration ? previousDevelopment : null);
         }
+        finally
+        {
+            developmentRetries.Remove(localId);
+        }
+    }
+
+    private async Task DiscardUploadAsync(Guid localId)
+    {
+        if (workflow is null) return;
+        try
+        {
+            await workflow.DiscardUploadAsync(localId, default);
+        }
+        catch (InstantQuotationWorkflowCoordinator.DiscardRefusedException)
+        {
+            return;
+        }
+        developmentPreviews.Remove(localId);
+        developmentClaims.Remove(localId);
+        developmentRetries.Remove(localId);
+        RepriceDevelopmentPreview();
+        await ReleasePreviewAsync(localId);
     }
 
     private async Task RemovePartAsync(Guid partId)
     {
+        if (bulkApplying || disposed) return;
+        InvalidatePreviewSelectionIntent();
         InvalidatePhysicalAnalysis(partId);
         if (workflow is not null)
         {
             var part = Parts.SingleOrDefault(item => item.PartId == partId);
-            await workflow.RemoveAsync(partId, default);
+            await workflow.RemoveAsync(partId, () => repricing.Forget(partId), default);
             if (part is not null && Parts.All(item => item.PartId != partId))
             {
+                if (BrowserPreviewKey(part.PreviewCorrelationId) is { } key)
+                {
+                    pendingConfigurations.Remove(key);
+                    if (selectedPendingPreviewKey == key) selectedPendingPreviewKey = null;
+                }
                 thicknessStatuses.Remove(partId);
                 thicknessToggleRevisions.Remove(partId);
                 quantityEdits.Forget(partId);
+                selectedBulkParts.Remove(partId);
+                repricing.Forget(partId);
                 quantityDrafts.Remove(partId);
                 displayIntents.Remove(partId);
                 await ReleasePreviewAsync(part.PreviewCorrelationId);
                 if (selectedPreviewPartId == partId)
                 {
                     selectedPreviewPartId = Parts.FirstOrDefault()?.PartId;
-                    if (selectedPreviewPartId is { } nextPartId)
+                    if (!HasLocalPreviewSelection && selectedPreviewPartId is { } nextPartId)
                     {
                         await InvokePreviewAsync("select", ViewerPartKey(nextPartId));
                     }
@@ -586,10 +1314,14 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
+    [JSInvokable]
+    public ValueTask ReportQuoteStartedAsync() =>
+        disposed ? ValueTask.CompletedTask : analytics.RecordQuoteStartedAsync(analyticsWorkflowId);
+
     private async Task<string[]> BeginPreviewSelectionAsync()
     {
         await EnsurePreviewInteropAsync();
-        if (previewInterop is null || fileInput is null)
+        if (disposed || previewInterop is null || fileInput is null)
         {
             return [];
         }
@@ -608,24 +1340,60 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task EnsurePreviewInteropAsync()
     {
-        if (previewInterop is not null || previewUnavailable)
+        if (disposed || previewInterop is not null || previewUnavailable)
         {
             return;
         }
 
+        var initialization = previewInitialization ??= InitializePreviewInteropAsync();
         try
         {
-            previewModule = await JS.InvokeAsync<IJSObjectReference>(
+            await initialization;
+        }
+        catch
+        {
+            if (ReferenceEquals(previewInitialization, initialization)) previewInitialization = null;
+            throw;
+        }
+    }
+
+    private async Task InitializePreviewInteropAsync()
+    {
+        IJSObjectReference? module = null;
+        IJSObjectReference? interop = null;
+        DotNetObjectReference<InstantQuotationWorkflow>? reporter = null;
+        bool published = false;
+        try
+        {
+            module = await JS.InvokeAsync<IJSObjectReference>(
                 "import",
                 "/dist/instant-quotation-workflow.mjs");
-            previewStatusReporter = DotNetObjectReference.Create(this);
-            previewInterop = await previewModule.InvokeAsync<IJSObjectReference>(
+            if (disposed) return;
+            reporter = DotNetObjectReference.Create(this);
+            interop = await module.InvokeAsync<IJSObjectReference>(
                 "createInstantQuotationWorkflowInterop",
-                previewStatusReporter);
+                reporter);
+            if (disposed) return;
+            previewModule = module;
+            previewStatusReporter = reporter;
+            previewInterop = interop;
+            published = true;
         }
         catch (JSException)
         {
             await ReportPreviewUnavailableAsync();
+        }
+        finally
+        {
+            if (!published)
+            {
+                try { await DisposePreviewInteropAsync(interop); }
+                finally
+                {
+                    try { await DisposePreviewModuleAsync(module); }
+                    finally { reporter?.Dispose(); }
+                }
+            }
         }
     }
 
@@ -646,24 +1414,50 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
-    private async Task ReconcilePreviewsAsync()
+    private async Task ReconcilePreviewsAsync(DevelopmentPreviewPart? retryPresentation = null)
     {
-        if (previewInterop is null)
+        var interop = previewInterop;
+        if (disposed || interop is null)
         {
             return;
         }
 
         foreach (var (localId, key) in previewKeys.ToArray())
         {
+            // A retry owns its fresh correlation until its upload and demo reconciliation settle.
+            if (developmentRetries.Contains(localId)) continue;
             var upload = Uploads.SingleOrDefault(item => item.LocalId == localId);
             var part = Parts.SingleOrDefault(item => item.PreviewCorrelationId == localId);
             if (upload?.Status is InstantQuotationWorkflowUploadStatus.Uploaded && part is not null)
             {
+                bool IsCurrentAdmission() => !disposed
+                    && previewKeys.TryGetValue(localId, out var currentKey) && currentKey == key
+                    && Parts.Any(item => item.PartId == part.PartId && item.PreviewCorrelationId == localId)
+                    && Uploads.Any(item => item.LocalId == localId
+                        && item.Status is InstantQuotationWorkflowUploadStatus.Uploaded);
                 try
                 {
-                    await previewInterop.InvokeVoidAsync(
+                    if (!IsCurrentAdmission()) continue;
+                    await interop.InvokeVoidAsync(
                         "admit", key, ViewerPartKey(part.PartId), part.Configuration.MaterialKey);
-                    selectedPreviewPartId ??= part.PartId;
+                    developmentPreviews.Remove(localId);
+                    developmentClaims.Remove(localId);
+                    if (!IsCurrentAdmission()) continue;
+                    if (autoPreviewLocalId == localId)
+                    {
+                        autoPreviewLocalId = null;
+                        selectedPreviewUploadId = null;
+                        selectedFailedPreviewKey = null;
+                        selectedPreviewPartId = part.PartId;
+                        revealPreviewPartId = part.PartId;
+                        await InvokePreviewAsync("select", ViewerPartKey(part.PartId));
+                        if (!disposed) await InvokeAsync(StateHasChanged);
+                    }
+                    else
+                    {
+                        selectedPreviewPartId ??= part.PartId;
+                    }
+                    if (!IsCurrentAdmission()) continue;
                     await analytics.RecordStageResultAsync(
                         InstantQuotationStage.Thumbnail,
                         InstantQuotationStageResult.Success,
@@ -672,6 +1466,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 }
                 catch (JSException)
                 {
+                    if (!IsCurrentAdmission()) continue;
                     await analytics.RecordStageResultAsync(
                         InstantQuotationStage.Thumbnail,
                         InstantQuotationStageResult.Failure,
@@ -682,9 +1477,37 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             }
             else if (upload?.Status is InstantQuotationWorkflowUploadStatus.Error or InstantQuotationWorkflowUploadStatus.Cancelled)
             {
+                bool IsCurrentFailure() => !disposed && !developmentRetries.Contains(localId)
+                    && previewKeys.GetValueOrDefault(localId) == key
+                    && Uploads.Any(item => item.LocalId == localId && item.Status == upload.Status)
+                    && !Parts.Any(item => item.PreviewCorrelationId == localId);
+                if (!IsCurrentFailure()) continue;
+                if (upload.Status is InstantQuotationWorkflowUploadStatus.Error
+                    && await KeepDevelopmentPreviewAsync(upload, key, retryPresentation))
+                    continue;
+                if (!IsCurrentFailure()) continue;
+                if (Parts.Count == 0 && selectedFailedPreviewKey is null && selectedPreviewUploadId is null)
+                {
+                    selectedPreviewUploadId = localId;
+                    await InvokePreviewAsync("selectLocalPreview", key);
+                    if (!IsCurrentFailure()) continue;
+                }
+                if (upload.Status is InstantQuotationWorkflowUploadStatus.Error && key != incompletePreviewKey
+                    && previewInterop is not null && !localPreviewThumbnails.ContainsKey(key))
+                {
+                    try
+                    {
+                        var source = await interop.InvokeAsync<string?>("captureFailedThumbnail", key, previewCanvas);
+                        if (IsCurrentFailure()
+                            && source is { Length: <= 262144 } && source.StartsWith("data:image/webp;base64,", StringComparison.Ordinal))
+                            localPreviewThumbnails[key] = source;
+                    }
+                    catch (JSException) { /* Preserve the controlled upload failure if rendering is unavailable. */ }
+                    if (!IsCurrentFailure()) continue;
+                }
                 if (key != incompletePreviewKey || upload.Status is InstantQuotationWorkflowUploadStatus.Cancelled)
                 {
-                    await QuarantinePreviewAsync(localId);
+                    if (IsCurrentFailure()) await QuarantinePreviewAsync(localId, key, IsCurrentFailure);
                 }
             }
             else if (upload is null)
@@ -694,20 +1517,21 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
-    private async Task QuarantinePreviewAsync(Guid localId)
+    private async Task QuarantinePreviewAsync(Guid localId, string key, Func<bool>? isCurrent = null)
     {
-        if (previewKeys.TryGetValue(localId, out var key))
+        if (disposed || previewKeys.GetValueOrDefault(localId) != key || isCurrent?.Invoke() == false) return;
+        if (autoPreviewLocalId == localId) InvalidatePreviewSelectionIntent();
+        if (key == incompletePreviewKey)
         {
-            if (key == incompletePreviewKey)
-            {
-                await RemoveIncompletePreviewAsync();
-            }
-            await InvokePreviewAsync("quarantine", key);
+            await RemoveIncompletePreviewAsync();
         }
+        if (!disposed && previewKeys.GetValueOrDefault(localId) == key && isCurrent?.Invoke() != false)
+            await InvokePreviewAsync("quarantine", key);
     }
 
     private async Task ReleasePreviewAsync(Guid localId)
     {
+        if (autoPreviewLocalId == localId) InvalidatePreviewSelectionIntent();
         if (previewKeys.Remove(localId, out var key))
         {
             if (key == incompletePreviewKey)
@@ -720,11 +1544,23 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task SelectPreviewAsync(Guid partId)
     {
+        if (bulkApplying || disposed || Parts.All(part => part.PartId != partId)) return;
+        var part = Parts.Single(item => item.PartId == partId);
+        if (BrowserPreviewKey(part.PreviewCorrelationId) is { } pendingKey && pendingConfigurations.ContainsKey(pendingKey))
+        {
+            await SelectPendingPreviewAsync(pendingKey);
+            return;
+        }
+        InvalidatePreviewSelectionIntent();
+        selectedPendingPreviewKey = null;
+        selectedPreviewUploadId = null;
+        selectedFailedPreviewKey = null;
         selectedPreviewPartId = partId;
+        revealPreviewPartId = partId;
         await InvokePreviewAsync("select", ViewerPartKey(partId));
     }
 
-    private bool IsPreviewSelected(Guid partId) => selectedPreviewPartId == partId;
+    private bool IsPreviewSelected(Guid partId) => !HasLocalPreviewSelection && selectedPreviewPartId == partId;
 
     private Task ResetPreviewAsync() => InvokePreviewAsync("reset");
 
@@ -818,6 +1654,12 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             StateHasChanged();
         });
 
+    private Task RemoveIncompletePreviewSelectionAsync()
+    {
+        var localId = previewKeys.FirstOrDefault(pair => pair.Value == incompletePreviewKey).Key;
+        return localId != Guid.Empty ? RemoveFailedUploadAsync(localId) : RemoveIncompletePreviewAsync();
+    }
+
     private async Task RemoveIncompletePreviewAsync()
     {
         var key = incompletePreviewKey;
@@ -852,6 +1694,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     [JSInvokable]
     public Task ReportPreviewUnavailableAsync()
     {
+        if (disposed) return Task.CompletedTask;
         previewUnavailable = true;
         return InvokeAsync(StateHasChanged);
     }
@@ -864,22 +1707,27 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task ChangeMaterialAsync(Guid partId, ChangeEventArgs args)
     {
+        if (bulkApplying || disposed) return;
         InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
         var material = args.Value?.ToString() ?? part.Configuration.MaterialKey;
         var colors = GetColors(material);
-        var color = colors.Contains(part.Configuration.Color, StringComparer.Ordinal)
-            ? part.Configuration.Color
-            : colors.First();
-        await UpdateConfigurationAsync(part, material, color, part.Configuration.Quantity, async () =>
+        var color = part.Geometry.BodyCount > 1 ? "Any"
+            : colors.Contains(part.Configuration.Color, StringComparer.Ordinal)
+                ? part.Configuration.Color : colors.First();
+        await UpdateConfigurationAsync(part, material, color, part.Configuration.Quantity, async current =>
         {
-            await InvokePreviewAsync("setThicknessMaterial", ViewerPartKey(partId), material);
-            await UpdatePartAppearanceAsync(partId, color);
+            if (!current()) return;
+            var accepted = Parts.SingleOrDefault(item => item.PartId == partId);
+            if (accepted is null) return;
+            await InvokePreviewAsync("setThicknessMaterial", ViewerPartKey(partId), accepted.Configuration.MaterialKey);
+            if (current()) await UpdatePartAppearanceAsync(partId);
         });
     }
 
     private async Task ChangeColorAsync(Guid partId, ChangeEventArgs args)
     {
+        if (bulkApplying || disposed) return;
         InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
         var color = args.Value?.ToString() ?? part.Configuration.Color;
@@ -887,25 +1735,58 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             part,
             part.Configuration.MaterialKey,
             color,
-            part.Configuration.Quantity);
-        await UpdatePartAppearanceAsync(partId, color);
+            part.Configuration.Quantity,
+            current => current() ? UpdatePartAppearanceAsync(partId) : Task.CompletedTask);
     }
 
     private void OnQuantityInput(Guid partId, ChangeEventArgs args)
     {
-        if (Parts.All(part => part.PartId != partId)) return;
-        quantityDrafts[partId] = (checked(++quantityDraftRevision), args.Value?.ToString() ?? "");
+        if (bulkApplying || disposed) return;
+        var part = Parts.SingleOrDefault(part => part.PartId == partId);
+        if (part is null) return;
+        var raw = args.Value?.ToString() ?? "";
+        quantityDrafts[partId] = (checked(++quantityDraftRevision), raw, false);
+        if (!IsRepricing && workflow?.State is InstantQuotationWorkflowState.Configured
+            && part.Quote is { } accepted
+            && accepted.MaterialKey == part.Configuration.MaterialKey && accepted.Color == part.Configuration.Color
+            && accepted.Quantity == part.Configuration.Quantity && accepted.BuildPreference == part.Configuration.BuildPreference
+            && int.TryParse(raw, out var quantity) && quantity == part.Configuration.Quantity)
+        {
+            // Native change need not fire when an edit returns to the original input value.
+            quantityDrafts.Remove(partId);
+            quantityEdits.RestoreAccepted(partId);
+            displayIntents.Remove(partId);
+            return;
+        }
         minimumDisplayGeneration = workflow?.MaterialPriceDisplay.Generation ?? 0;
         displayIntents.Remove(partId);
         quantityEdits.Begin(partId);
     }
 
+    private Task OnQuantityBlurAsync(Guid partId)
+    {
+        if (bulkApplying || disposed || !Parts.Any(part => part.PartId == partId)
+            || !quantityDrafts.TryGetValue(partId, out var draft) || draft.Committing)
+            return Task.CompletedTask;
+        // Native change can be absent when the input returns to its original value.
+        return ChangeQuantityAsync(partId, new ChangeEventArgs { Value = draft.Raw });
+    }
+
     private async Task ChangeQuantityAsync(Guid partId, ChangeEventArgs args)
     {
+        if (bulkApplying || disposed) return;
+        var raw = args.Value?.ToString() ?? "";
+        long? revision = null;
+        if (quantityDrafts.TryGetValue(partId, out var draft) && draft.Raw == raw)
+        {
+            if (draft.Committing) return;
+            revision = draft.Revision;
+            // Claim synchronously so change and blur cannot submit the same draft twice.
+            quantityDrafts[partId] = (draft.Revision, draft.Raw, true);
+        }
         InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
-        var quantity = int.TryParse(args.Value?.ToString(), out var value) ? value : part.Configuration.Quantity;
-        var revision = quantityDrafts.GetValueOrDefault(partId).Revision;
+        var quantity = int.TryParse(raw, out var value) ? value : part.Configuration.Quantity;
         await quantityEdits.RepriceAsync(partId,
             () => UpdateConfigurationAsync(part, part.Configuration.MaterialKey, part.Configuration.Color, quantity));
         if (quantityDrafts.TryGetValue(partId, out var current) && current.Revision == revision)
@@ -914,8 +1795,11 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private Task ChangeBuildPreferenceAsync(Guid partId, BuildPreference buildPreference)
     {
+        if (bulkApplying || disposed) return Task.CompletedTask;
         InvalidatePhysicalAnalysis(partId);
         var part = Parts.Single(item => item.PartId == partId);
+        workflow?.ValidateConfiguration(partId, part.Configuration.MaterialKey, part.Configuration.Color,
+            part.Configuration.Quantity, buildPreference);
         displayIntents[partId] = part.Configuration with { BuildPreference = buildPreference };
         return RepriceAsync(() => workflow?.UpdateConfigurationAsync(
             part.PartId,
@@ -923,7 +1807,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             part.Configuration.Color,
             part.Configuration.Quantity,
             buildPreference,
-            default) ?? Task.CompletedTask);
+            default) ?? Task.CompletedTask, owner: partId);
     }
 
     private int PartNumber(Guid partId)
@@ -973,21 +1857,36 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         string material,
         string color,
         int quantity,
-        Func<Task>? afterUpdate = null)
+        Func<Func<bool>, Task>? afterUpdate = null)
     {
+        var selected = workflow?.ValidateConfiguration(part.PartId, material, color, quantity);
+        var key = selected?.Key ?? material;
         displayIntents[part.PartId] = part.Configuration with { MaterialKey = material, Color = color, Quantity = quantity };
+        bool HasCurrentBinding() => !disposed && Parts.Any(current => current.PartId == part.PartId
+            && current.Configuration.MaterialKey == key && current.Configuration.Color == color
+            && current.Configuration.Quantity == quantity);
         return RepriceAsync(() => workflow?.UpdateConfigurationAsync(part.PartId, material, color, quantity, default)
-            ?? Task.CompletedTask, afterUpdate);
+            ?? Task.CompletedTask, afterUpdate is null ? null
+                : current => afterUpdate(() => current() && HasCurrentBinding()), part.PartId);
     }
 
-    private async Task RepriceAsync(Func<Task> update, Func<Task>? afterUpdate = null)
+    private async Task RepriceAsync(Func<Task> update, Func<Func<bool>, Task>? afterUpdate = null, Guid? owner = null)
     {
+        Task NotifyAsync() => InvokeAsync(() =>
+        {
+            if (!disposed) StateHasChanged();
+        });
+
         minimumDisplayGeneration = workflow?.MaterialPriceDisplay.Generation ?? 0;
-        try { await repricing.RunAsync(update, () => InvokeAsync(StateHasChanged), afterUpdate); }
+        try
+        {
+            if (owner is { } partId) await repricing.RunAsync(partId, update, NotifyAsync, afterUpdate);
+            else await repricing.RunAsync(update, NotifyAsync, afterUpdate is null ? null : () => afterUpdate(() => !disposed));
+        }
         finally
         {
             if (!repricing.IsActive) displayIntents.Clear();
-            if (!disposed) await InvokeAsync(StateHasChanged);
+            if (!disposed) await NotifyAsync();
         }
     }
 
@@ -1057,8 +1956,19 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
-    private Task UpdatePartAppearanceAsync(Guid partId, string color) =>
-        InvokePreviewAsync("updatePartAppearance", ViewerPartKey(partId), color);
+    private async Task UpdatePartAppearanceAsync(Guid partId)
+    {
+        var accepted = Parts.SingleOrDefault(part => part.PartId == partId);
+        if (disposed || accepted is null || accepted.Geometry.BodyCount > 1) return;
+        await InvokePreviewAsync("updatePartAppearance", ViewerPartKey(partId), accepted.Configuration.Color);
+        if (disposed || HasLocalPreviewSelection) return;
+        var selected = Parts.FirstOrDefault(part => part.PartId == selectedPreviewPartId) ?? Parts.FirstOrDefault();
+        selectedPreviewPartId = selected?.PartId;
+        if (selected is not null)
+        {
+            await InvokePreviewAsync("select", ViewerPartKey(selected.PartId));
+        }
+    }
 
     private Task SelectReviewPartAsync(Guid partId) => SelectPreviewAsync(partId);
 
@@ -1088,18 +1998,27 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private async Task ChangeReviewMaterialAsync((Guid PartId, string Value) change)
     {
-        await ChangeMaterialAsync(change.PartId, new ChangeEventArgs { Value = change.Value });
-        workflow?.EnterReview();
+        if (bulkApplying || disposed) return;
+        var update = ChangeMaterialAsync(change.PartId, new ChangeEventArgs { Value = change.Value });
+        var current = repricing.CaptureOwnership(change.PartId);
+        var navigation = reviewNavigationRevision;
+        await update;
+        if (current() && navigation == reviewNavigationRevision && CanEnterReview) workflow?.EnterReview();
     }
 
     private async Task ChangeReviewColorAsync((Guid PartId, string Value) change)
     {
-        await ChangeColorAsync(change.PartId, new ChangeEventArgs { Value = change.Value });
-        workflow?.EnterReview();
+        if (bulkApplying || disposed) return;
+        var update = ChangeColorAsync(change.PartId, new ChangeEventArgs { Value = change.Value });
+        var current = repricing.CaptureOwnership(change.PartId);
+        var navigation = reviewNavigationRevision;
+        await update;
+        if (current() && navigation == reviewNavigationRevision && CanEnterReview) workflow?.EnterReview();
     }
 
     private async Task ChangeReviewQuantityAsync((Guid PartId, string Value) change)
     {
+        if (bulkApplying || disposed) return;
         if (!int.TryParse(change.Value, out var quantity)
             || quantity < 1
             || quantity > PricingCatalog.MaximumAdditiveQuantity)
@@ -1107,24 +2026,32 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             return;
         }
 
-        await ChangeQuantityAsync(change.PartId, new ChangeEventArgs { Value = quantity });
-        workflow?.EnterReview();
+        var update = ChangeQuantityAsync(change.PartId, new ChangeEventArgs { Value = quantity });
+        var current = repricing.CaptureOwnership(change.PartId);
+        var navigation = reviewNavigationRevision;
+        await update;
+        if (current() && navigation == reviewNavigationRevision && CanEnterReview) workflow?.EnterReview();
     }
 
     private async Task ChangeReviewBuildPreferenceAsync((Guid PartId, string Value) change)
     {
+        if (bulkApplying || disposed) return;
         if (!Enum.TryParse<BuildPreference>(change.Value, true, out var preference)
             || !Enum.IsDefined(preference))
         {
             return;
         }
 
-        await ChangeBuildPreferenceAsync(change.PartId, preference);
-        workflow?.EnterReview();
+        var update = ChangeBuildPreferenceAsync(change.PartId, preference);
+        var current = repricing.CaptureOwnership(change.PartId);
+        var navigation = reviewNavigationRevision;
+        await update;
+        if (current() && navigation == reviewNavigationRevision && CanEnterReview) workflow?.EnterReview();
     }
 
     private async Task EditReviewPartAsync(Guid partId)
     {
+        checked { reviewNavigationRevision++; }
         await SelectPreviewAsync(partId);
         workflow?.ReturnToConfiguration();
         pendingFocus = PendingWorkflowFocus.Configuration;
@@ -1139,20 +2066,22 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private void ShowDevelopmentCustomerPreview()
     {
-        if (!CustomerModel.IsDevelopmentCustomerFixture || IsBusy
-            || State is InstantQuotationWorkflowState.Submitted) return;
+        if (!CanShowDevelopmentCustomerPreview) return;
         developmentCustomerPreview = true;
         pendingFocus = PendingWorkflowFocus.CustomerDetails;
     }
 
     private void EnterCustomerDetails()
     {
+        if (disposed || InputDisabled || IsRepricing || failedPreviewSelections.Count > 0) return;
+        checked { reviewNavigationRevision++; }
         workflow?.EnterCustomerDetails();
         pendingFocus = PendingWorkflowFocus.CustomerDetails;
     }
 
     private void ReturnToConfiguration()
     {
+        checked { reviewNavigationRevision++; }
         workflow?.ReturnToConfiguration();
         pendingFocus = PendingWorkflowFocus.Configuration;
     }
@@ -1199,6 +2128,16 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private IReadOnlyList<string> GetColors(string material) => workflow?.GetColors(material) ?? [];
 
+    private IReadOnlyList<string> GetPartColors(InstantQuotationWorkflowPartViewModel part)
+    {
+        if (part.Geometry.BodyCount > 1) return ["Any"];
+        var colors = GetColors(part.Configuration.MaterialKey);
+        return PricingCatalog.IsColorSupported(part.Configuration.MaterialKey, part.Configuration.Color)
+            && !colors.Contains(part.Configuration.Color, StringComparer.Ordinal)
+                ? [.. colors, part.Configuration.Color]
+                : colors;
+    }
+
     private string UploadStatus(InstantQuotationWorkflowUploadStatus status) => status switch
     {
         InstantQuotationWorkflowUploadStatus.Pending => Localizer["Waiting"],
@@ -1215,46 +2154,68 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        if (disposed) return;
         disposed = true;
+        InvalidatePreviewSelectionIntent();
+        failedPreviewSelections.Clear();
+        selectedPreviewUploadId = null;
+        selectedFailedPreviewKey = null;
+        repricing.ClearOwnership();
+        pendingPreviewSelections.Clear();
+        pendingConfigurations.Clear();
+        selectedPendingPreviewKey = null;
+        localPreviewThumbnails.Clear();
         materialDisplaySubscription?.Dispose();
         materialDisplaySubscription = null;
         quantityDrafts.Clear();
         displayIntents.Clear();
         incompletePreviewKey = null;
+        developmentPreviews.Clear();
+        developmentClaims.Clear();
+        developmentRetries.Clear();
+        developmentTotal = null;
+        developmentLeadTime = null;
         physicalAnalysisCancellation?.Cancel();
         try
         {
-            await DisposePreviewInteropAsync();
+            if (previewInitialization is { } initialization) await initialization;
         }
         finally
         {
             try
             {
-                await DisposePreviewModuleAsync();
+                await DisposePreviewInteropAsync(previewInterop);
             }
             finally
             {
-                previewStatusReporter?.Dispose();
-                uploadBatchGate.Dispose();
-
-                if (workflow is not null)
+                try
                 {
-                    await workflow.DisposeAsync();
+                    await DisposePreviewModuleAsync(previewModule);
+                }
+                finally
+                {
+                    previewStatusReporter?.Dispose();
+                    if (!batchInProgress) uploadBatchGate.Dispose();
+
+                    if (workflow is not null)
+                    {
+                        await workflow.DisposeAsync();
+                    }
                 }
             }
         }
     }
 
-    private async Task DisposePreviewInteropAsync()
+    private static async Task DisposePreviewInteropAsync(IJSObjectReference? interop)
     {
-        if (previewInterop is null)
+        if (interop is null)
         {
             return;
         }
 
         try
         {
-            await previewInterop.InvokeVoidAsync("dispose");
+            await interop.InvokeVoidAsync("dispose");
         }
         catch (JSDisconnectedException)
         {
@@ -1265,7 +2226,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
         try
         {
-            await previewInterop.DisposeAsync();
+            await interop.DisposeAsync();
         }
         catch (JSDisconnectedException)
         {
@@ -1275,16 +2236,16 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
-    private async Task DisposePreviewModuleAsync()
+    private static async Task DisposePreviewModuleAsync(IJSObjectReference? module)
     {
-        if (previewModule is null)
+        if (module is null)
         {
             return;
         }
 
         try
         {
-            await previewModule.DisposeAsync();
+            await module.DisposeAsync();
         }
         catch (JSDisconnectedException)
         {
@@ -1332,6 +2293,207 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         double? MinMm,
         bool Visible,
         long Revision);
+
+    private async Task<bool> KeepDevelopmentPreviewAsync(
+        InstantQuotationWorkflowUploadViewModel upload, string key, DevelopmentPreviewPart? retryPresentation)
+    {
+        if (!DevelopmentPreviewEnabled || disposed || developmentRetries.Contains(upload.LocalId)
+            || upload.Status is not InstantQuotationWorkflowUploadStatus.Error
+            || upload.ProblemCategory is not (InstantQuotationProblemCategory.DependencyUnavailable
+                or InstantQuotationProblemCategory.Unexpected)
+            || Parts.Any(part => part.PreviewCorrelationId == upload.LocalId)
+            || !developmentClaims.TryGetValue(upload.LocalId, out var claim)
+            || !claim.IsValid()
+            || !AdditiveGeometryValidator.Validate(DevelopmentGeometry(claim), 1).IsValid)
+            return false;
+        if (!developmentPreviews.ContainsKey(upload.LocalId))
+        {
+            if (developmentPreviews.Count == 0)
+            {
+                developmentPreviewGeneration++;
+                if (Parts.Count == 0) previewAttached = false;
+            }
+            var part = new DevelopmentPreviewPart(upload.LocalId, key, upload.DisplayFileName, claim);
+            if (retryPresentation?.LocalId == upload.LocalId)
+            {
+                part.MaterialKey = retryPresentation.MaterialKey;
+                part.Color = retryPresentation.Color;
+                part.Preference = retryPresentation.Preference;
+                part.Quantity = retryPresentation.Quantity;
+            }
+            developmentPreviews[upload.LocalId] = part;
+            developmentStep = DevelopmentPreviewStep.Configuration;
+            RepriceDevelopmentPreview();
+            await InvokeAsync(StateHasChanged);
+        }
+        return true;
+    }
+
+    private static GeometryInput DevelopmentGeometry(InstantQuotationGeometryClaim claim) => new()
+    {
+        HeightMm = claim.DimensionZmm,
+        VolumeMm3 = claim.VolumeMm3,
+        FootprintMm2 = claim.DimensionXmm * claim.DimensionYmm,
+        AreaProfileMm2 = claim.AreaProfileMm2 ?? [],
+        PerimeterProfileMm = claim.PerimeterProfileMm ?? [],
+        UnsupportedAreaProfileMm2 = claim.UnsupportedAreaProfileMm2 ?? [],
+    };
+
+    private void RepriceDevelopmentPreview()
+    {
+        developmentTotal = null;
+        developmentLeadTime = null;
+        foreach (var part in developmentPreviews.Values)
+        {
+            part.Price = null;
+            var material = PricingCatalog.ResolveMaterial(part.MaterialKey);
+            var geometry = DevelopmentGeometry(part.Claim);
+            if (material is null || (part.Claim.BodyCount == 1 && !PricingCatalog.IsColorSupported(material.Key, part.Color))
+                || !AdditiveGeometryValidator.Validate(geometry, part.Quantity).IsValid)
+                continue;
+            try
+            {
+                // Existing geometry-only kernel. These values never authorize physical pricing.
+                var quote = PricingEngine.QuoteItem(geometry, material, part.Quantity, part.Preference);
+                if (new[] { quote.UnitPrice, quote.Subtotal, quote.PrintTimeMinutesPerUnit,
+                    quote.WeightGramsPerUnit, quote.BoundingCm3PerUnit }.All(double.IsFinite)
+                    && quote.UnitPrice > 0 && quote.Subtotal > 0 && quote.PrintTimeMinutesPerUnit > 0)
+                    part.Price = quote;
+            }
+            catch (ArgumentException)
+            {
+                // Invalid or unsupported advisory geometry remains visibly unavailable.
+            }
+            catch (OverflowException)
+            {
+                // Do not turn out-of-range local data into an authoritative or zero price.
+            }
+        }
+        if (developmentPreviews.Count == 0 || developmentPreviews.Values.Any(part => part.Price is null)) return;
+        var lines = developmentPreviews.Values.ToArray();
+        try
+        {
+            var shipping = ShippingCalculator.CustomerShippingThb(
+                lines.Sum(part => part.Price!.WeightGramsPerUnit * part.Quantity),
+                lines.Sum(part => part.Price!.BoundingCm3PerUnit * part.Quantity));
+            var total = PricingEngine.QuoteOrder(lines.Select(part => new OrderLine
+            {
+                Process = part.Price!.Process,
+                Subtotal = part.Price.Subtotal,
+            }), shipping);
+            var leadTime = AdditiveLeadTimeCalculator.Calculate(lines.Select(part => new AdditiveLeadTimeLine
+            {
+                MinutesPerUnit = Convert.ToDecimal(part.Price!.PrintTimeMinutesPerUnit),
+                Quantity = part.Quantity,
+            }));
+            if (double.IsFinite(total.FinalOrderPrice) && total.FinalOrderPrice > 0)
+            {
+                developmentTotal = total;
+                developmentLeadTime = leadTime;
+            }
+        }
+        catch (ArgumentException)
+        {
+        }
+        catch (OverflowException)
+        {
+        }
+    }
+
+    private async Task ChangeDevelopmentSettingAsync(Guid localId, string setting, ChangeEventArgs args)
+    {
+        if (!DevelopmentPreviewEnabled || !developmentPreviews.TryGetValue(localId, out var part)) return;
+        var value = args.Value?.ToString() ?? string.Empty;
+        switch (setting)
+        {
+            case "material" when PricingCatalog.ResolveMaterial(value) is not null:
+                part.MaterialKey = value;
+                part.Color = GetColors(value).FirstOrDefault() ?? "Any";
+                if (PricingCatalog.ResolveMaterial(value)?.Process is PrintProcess.Resin)
+                    part.Preference = BuildPreference.Standard;
+                break;
+            case "color" when part.Claim.BodyCount == 1
+                && PricingCatalog.IsColorSupported(part.MaterialKey, value):
+                part.Color = value;
+                break;
+            case "quantity" when int.TryParse(value, out var quantity)
+                && quantity >= 1 && quantity <= PricingCatalog.MaximumAdditiveQuantity:
+                part.Quantity = quantity;
+                break;
+            case "preference" when Enum.TryParse<BuildPreference>(value, true, out var preference)
+                && Enum.IsDefined(preference):
+                part.Preference = preference;
+                break;
+            default:
+                return;
+        }
+        if (part.Claim.BodyCount > 1) part.Color = "Any";
+        RepriceDevelopmentPreview();
+        await InvokePreviewAsync("updateDevelopmentPreview", part.Key, part.Color);
+    }
+
+    private string DevelopmentInputId(string field, DevelopmentPreviewPart part) =>
+        developmentPreviews.Keys.First() == part.LocalId ? "demo-" + field : "demo-" + field + "-" + part.LocalId.ToString("N");
+
+    private void ShowDevelopmentReview()
+    {
+        if (HasDevelopmentPreview)
+            developmentStep = DevelopmentPreviewStep.Review;
+    }
+
+    private void ShowDevelopmentContact()
+    {
+        if (HasDevelopmentPreview)
+            developmentStep = DevelopmentPreviewStep.Contact;
+    }
+
+    private void ShowDevelopmentConfiguration() => developmentStep = DevelopmentPreviewStep.Configuration;
+
+    private void ReturnDevelopmentReview() => developmentStep = DevelopmentPreviewStep.Review;
+
+    private async Task ClearDevelopmentPreviewAsync(bool release = true)
+    {
+        developmentSelectionGeneration++;
+        var keys = developmentPreviews.Values.Select(part => part.Key).ToArray();
+        developmentPreviews.Clear();
+        developmentClaims.Clear();
+        developmentTotal = null;
+        developmentLeadTime = null;
+        developmentStep = DevelopmentPreviewStep.Configuration;
+        if (release)
+        {
+            foreach (var key in keys)
+                await InvokePreviewAsync("release", key);
+        }
+    }
+
+    private async Task RetryDevelopmentUploadAsync(Guid localId)
+    {
+        if (!DevelopmentPreviewEnabled || !developmentPreviews.ContainsKey(localId)) return;
+        await RetryUploadAsync(localId);
+    }
+
+    private enum DevelopmentPreviewStep
+    {
+        Configuration,
+        Review,
+        Contact,
+    }
+
+    private sealed class DevelopmentPreviewPart(
+        Guid localId, string key, string name, InstantQuotationGeometryClaim claim)
+    {
+        public Guid LocalId { get; } = localId;
+        public string Key { get; } = key;
+        public string Name { get; } = name;
+        public InstantQuotationGeometryClaim Claim { get; } = claim;
+        public string MaterialKey { get; set; } = "PLA";
+        public string Color { get; set; } = "Any";
+        public BuildPreference Preference { get; set; } = BuildPreference.Standard;
+        public int Quantity { get; set; } = 1;
+        public ItemQuote? Price { get; set; }
+        public bool Attached { get; set; }
+    }
 
     private enum PendingWorkflowFocus
     {

@@ -91,6 +91,70 @@ public sealed class ServiceGalleryHistoricalBrowserTests(CncNativeBrowserFixture
         double hipsRatio = await page.Locator("#printing-part-gallery-extra .service-part-bento-tile--hips")
             .EvaluateAsync<double>("element => element.getBoundingClientRect().width / element.getBoundingClientRect().height");
         Assert.True(hipsRatio > 1.1, $"The HIPS sample should be framed as a wide Bento tile, but its ratio was {hipsRatio:F2}.");
+
+        await page.SetViewportSizeAsync(1474, 1032);
+        double[] absDimensions = await page.Locator("#printing-part-gallery-extra .service-part-bento-tile--abs img")
+            .EvaluateAsync<double[]>("""
+                async image => {
+                    image.loading = 'eager';
+                    let frame = 0;
+                    let timer;
+                    let stopped = false;
+                    const nextFrame = () => new Promise(resolve => {
+                        frame = requestAnimationFrame(resolve);
+                    });
+                    const snapshot = () => [
+                        image.currentSrc,
+                        image.getBoundingClientRect().width,
+                        image.getBoundingClientRect().height
+                    ];
+                    try {
+                        return await Promise.race([
+                            (async () => {
+                                let previous;
+                                let stableFrames = 0;
+                                while (!stopped) {
+                                    await nextFrame();
+                                    if (stopped) return [];
+                                    const current = snapshot();
+                                    stableFrames = previous && current.every((value, index) => value === previous[index])
+                                        ? stableFrames + 1 : 0;
+                                    previous = current;
+                                    if (innerWidth !== 1474 || !image.complete || image.naturalWidth <= 1
+                                        || current[1] <= 0 || current[2] <= 0 || stableFrames < 2) continue;
+                                    try {
+                                        await image.decode();
+                                    } catch (error) {
+                                        if (!(error instanceof DOMException) || error.name !== 'EncodingError'
+                                            || image.currentSrc === current[0]) throw error;
+                                        stableFrames = 0;
+                                        previous = undefined;
+                                        continue;
+                                    }
+                                    if (stopped) return [];
+                                    await nextFrame();
+                                    if (stopped) return [];
+                                    if (image.complete && snapshot().every((value, index) => value === current[index])) {
+                                        return [image.naturalWidth, image.getBoundingClientRect().width];
+                                    }
+                                    stableFrames = 0;
+                                }
+                                return [];
+                            })(),
+                            new Promise((_, reject) => {
+                                timer = setTimeout(() => reject(new Error('ABS responsive image settlement exceeded 15 seconds.')), 15000);
+                            })
+                        ]);
+                    } finally {
+                        stopped = true;
+                        clearTimeout(timer);
+                        cancelAnimationFrame(frame);
+                    }
+                }
+                """).WaitAsync(TimeSpan.FromSeconds(20));
+        Assert.Equal(2, absDimensions.Length);
+        Assert.True(absDimensions[0] >= absDimensions[1],
+            $"The ABS image intrinsic width {absDimensions[0]:F3} was smaller than its rendered width {absDimensions[1]:F3} at 1474 pixels.");
     }
 
     [Theory]
@@ -408,6 +472,51 @@ public sealed class ServiceGalleryHistoricalBrowserTests(CncNativeBrowserFixture
         double visibleFraction = double.Parse(fields[1], System.Globalization.CultureInfo.InvariantCulture);
         Assert.True(tileRatio > 1.3, $"The CNC scale tablet tile should be horizontal, but its ratio was {tileRatio:F3}.");
         Assert.True(visibleFraction >= 0.8, $"The CNC scale tablet tile preserves only {visibleFraction:F3} of its source frame.");
+    }
+
+    /// <summary>Checks the real printing-page check-circle glyph resolves through the owned Font Awesome solid face.</summary>
+    /// <returns>A task completing after the rendered glyph and loaded-font assertions.</returns>
+    [Fact]
+    public async Task PrintingPage_LoadsFontAwesomeSolidGlyphFromTheOwnedBundle()
+    {
+        await using IBrowserContext context = await fixture.Browser.NewContextAsync(
+            new BrowserNewContextOptions
+            {
+                Locale = "en-US",
+                ViewportSize = new ViewportSize { Width = 1280, Height = 800 },
+            });
+        IPage page = await context.NewPageAsync();
+        page.SetDefaultTimeout(30000);
+        string origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
+        var response = await page.GotoAsync(
+            origin + "/services/3d-printing?culture=en",
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30000 });
+        Assert.NotNull(response);
+        Assert.True(response.Ok, $"3D-printing service page returned HTTP {response.Status}.");
+        await AssertActiveRendererAsync(page);
+
+        string[] iconState = await page.Locator(".service-hero-points .fa-check-circle").First
+            .EvaluateAsync<string[]>("""
+                async element => {
+                    await document.fonts.ready;
+                    const style = getComputedStyle(element, '::before');
+                    const faces = Array.from(document.fonts).filter(face =>
+                        face.family.replaceAll('"', '').replaceAll("'", '') === 'Font Awesome 7 Free'
+                        && face.weight === '900');
+                    return [
+                        style.content,
+                        style.fontFamily,
+                        style.fontWeight,
+                        faces.some(face => face.status === 'loaded') ? 'loaded' : 'unavailable'
+                    ];
+                }
+                """).WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.Equal(4, iconState.Length);
+        Assert.Contains("\uf058", iconState[0], StringComparison.Ordinal);
+        Assert.Contains("Font Awesome 7 Free", iconState[1], StringComparison.Ordinal);
+        Assert.Equal("900", iconState[2]);
+        Assert.Equal("loaded", iconState[3]);
     }
 
     private static async Task AssertActiveRendererAsync(IPage page)

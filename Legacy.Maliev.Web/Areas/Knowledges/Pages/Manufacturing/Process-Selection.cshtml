@@ -1,0 +1,7 @@
+@page
+@inject IStringLocalizer<ManufacturingProcessSelectionContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["Choosing a manufacturing process | MALIEV"];
+    ViewData["Description"] = MetadataLocalizer["Compare CNC machining, 3D printing, casting, injection molding, and sheet metal using geometry, material, quantity, inspection, and total project cost."];
+}
+<component type="typeof(ManufacturingProcessSelectionContent)" render-mode="Static" />
