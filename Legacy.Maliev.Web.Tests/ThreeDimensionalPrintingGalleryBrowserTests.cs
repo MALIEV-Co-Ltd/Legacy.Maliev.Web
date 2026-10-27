@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Playwright;
 using Xunit.Abstractions;
 
@@ -231,6 +233,133 @@ public sealed class ThreeDimensionalPrintingGalleryBrowserTests(PublicContactBro
         {
             Timeout = 30000,
         });
+    }
+
+    [Theory]
+    [InlineData("3d-printing", true, "en")]
+    [InlineData("3d-printing", true, "th")]
+    [InlineData("3d-printing", false, "en")]
+    [InlineData("3d-printing", false, "th")]
+    [InlineData("3d-scanning", true, "en")]
+    [InlineData("3d-scanning", true, "th")]
+    [InlineData("3d-scanning", false, "en")]
+    [InlineData("3d-scanning", false, "th")]
+    [InlineData("cnc-machining", true, "en")]
+    [InlineData("cnc-machining", true, "th")]
+    [InlineData("cnc-machining", false, "en")]
+    [InlineData("cnc-machining", false, "th")]
+    [InlineData("custom-manufacturing", true, "en")]
+    [InlineData("custom-manufacturing", true, "th")]
+    [InlineData("custom-manufacturing", false, "en")]
+    [InlineData("custom-manufacturing", false, "th")]
+    [InlineData("3d-design", true, "en")]
+    [InlineData("3d-design", true, "th")]
+    [InlineData("finishing-and-color", true, "en")]
+    [InlineData("finishing-and-color", true, "th")]
+    [InlineData("low-volume-injection-molding", true, "en")]
+    [InlineData("low-volume-injection-molding", true, "th")]
+    [InlineData("silicone-casting", true, "en")]
+    [InlineData("silicone-casting", true, "th")]
+    public async Task TocCompleteSectionInventory_EverySourceSectionRemainsReachable(
+        string service, bool servicesEnabled, string culture)
+    {
+        await using var sourceFactory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
+        await using var routeFactory = sourceFactory.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:Services", servicesEnabled ? "true" : "false"));
+        var origin = new Uri($"http://127.0.0.1:{BrowserTestServerPort.Reserve()}");
+        routeFactory.UseKestrel(origin.Port);
+        using var client = routeFactory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            Locale = culture == "th" ? "th-TH" : "en-US",
+            ViewportSize = new ViewportSize { Width = 390, Height = 900 },
+            ReducedMotion = ReducedMotion.Reduce,
+        });
+        await using var page = await context.NewPageAsync();
+        var route = new Uri(origin, $"/services/{service}?culture={culture}").ToString();
+        var response = await page.GotoAsync(route,
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30000 });
+        Assert.NotNull(response);
+        Assert.True(response.Ok);
+        var main = page.Locator("main.service-page");
+        await Assertions.Expect(main).ToHaveCountAsync(1);
+        Assert.Equal(servicesEnabled,
+            await main.GetAttributeAsync("data-migration-route-owner") == "blazor-static-ssr");
+        var consent = page.Locator("#cookieConsent");
+        if (await consent.IsVisibleAsync())
+        {
+            await consent.Locator("[data-consent-action='reject']").ClickAsync();
+        }
+
+        var toc = main.Locator("nav[data-service-toc]");
+        var toggle = toc.Locator("[data-service-toc-toggle]");
+        await Assertions.Expect(toggle).ToBeVisibleAsync();
+        var expected = new List<(ILocator Destination, string Id, string Heading)>();
+        // Source 1498292f enumerates direct main sections, excluding quick/CTA wrappers and blank h2s.
+        foreach (var section in await main.Locator(":scope > section:not(.service-quick):not(.service-cta-wrap)").AllAsync())
+        {
+            var heading = section.Locator("h2").First;
+            if (await heading.CountAsync() == 0)
+            {
+                continue;
+            }
+
+            var text = (await heading.TextContentAsync())?.Trim();
+            if (string.IsNullOrEmpty(text))
+            {
+                continue;
+            }
+
+            var sectionId = await section.GetAttributeAsync("id");
+            var destination = string.IsNullOrEmpty(sectionId) ? heading : section;
+            var id = await destination.GetAttributeAsync("id");
+            Assert.False(string.IsNullOrEmpty(id));
+            expected.Add((destination, id!, text));
+        }
+
+        Assert.NotEmpty(expected);
+        Assert.Equal(expected.Count, expected.Select(item => item.Id).Distinct(StringComparer.Ordinal).Count());
+        var links = toc.Locator("[data-service-toc-list] > li > a");
+        await Assertions.Expect(links).ToHaveCountAsync(expected.Count);
+        for (var index = 0; index < expected.Count; index++)
+        {
+            var destination = expected[index];
+            var link = links.Nth(index);
+            Assert.Equal("#" + destination.Id, await link.GetAttributeAsync("href"));
+            Assert.Equal(destination.Heading, (await link.TextContentAsync())?.Trim());
+            await toggle.ClickAsync();
+            Assert.Equal("true", await toggle.GetAttributeAsync("aria-expanded"));
+            await Assertions.Expect(link).ToBeVisibleAsync();
+            await link.ScrollIntoViewIfNeededAsync();
+            await link.PressAsync("Enter");
+            await Assertions.Expect(page).ToHaveURLAsync(route + "#" + destination.Id);
+            await Assertions.Expect(destination.Destination).ToBeInViewportAsync(new LocatorAssertionsToBeInViewportOptions
+            {
+                Timeout = 30000,
+            });
+            await Assertions.Expect(destination.Destination).ToBeFocusedAsync();
+            Assert.Equal("false", await toggle.GetAttributeAsync("aria-expanded"));
+            Assert.Equal("true", await link.GetAttributeAsync("aria-current"));
+            await Assertions.Expect(toc.Locator("[data-service-toc-current]")).ToHaveTextAsync(destination.Heading);
+            await using var headingVisible = await page.WaitForFunctionAsync("""
+                id => {
+                    const main = document.querySelector('main.service-page');
+                    const target = Array.from(main?.querySelectorAll('[id]') || []).find(element => element.id === id);
+                    const heading = target?.matches('h2') ? target : target?.querySelector('h2');
+                    const toc = main?.querySelector('nav[data-service-toc]');
+                    if (!heading || !toc || toc.dataset.tocOpen === 'true') return false;
+                    const rect = heading.getBoundingClientRect();
+                    const tocBottom = Math.max(0, toc.getBoundingClientRect().bottom);
+                    return rect.width > 0 && rect.height > 0
+                        && rect.left >= -1 && rect.right <= window.innerWidth + 1
+                        && rect.top >= tocBottom - 1 && rect.bottom <= window.innerHeight + 1;
+                }
+                """, destination.Id, new PageWaitForFunctionOptions { Timeout = 30000 });
+        }
     }
 
     [Theory]
