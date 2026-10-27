@@ -16,19 +16,33 @@ public static class BambuStudioCli
         ValidateFileName(request.OutputFileName);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.BedType);
 
-        return
-        [
+        var arguments = new List<string>
+        {
             "--debug", "2",
             "--outputdir", request.OutputDirectory,
-            "--orient", "1",
-            "--arrange", "1",
             "--curr-bed-type", request.BedType,
             "--load-settings", $"{request.MachineProfilePath};{request.ProcessProfilePath}",
             "--load-filaments", request.FilamentProfilePath,
             "--slice", "0",
             "--export-3mf", request.OutputFileName,
-            request.ModelPath,
-        ];
+        };
+
+        if (request.OrientationPolicy == BambuStudioOrientationPolicy.Search)
+        {
+            arguments.Add("--orient");
+            arguments.Add("1");
+            arguments.Add("--arrange");
+            arguments.Add("1");
+        }
+        else if (!string.Equals(Path.GetExtension(request.ModelPath), ".3mf", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException(
+                "Fixed-pose references require a prepared 3MF input with a verified object transform.",
+                nameof(request));
+        }
+
+        arguments.Add(request.ModelPath);
+        return arguments;
     }
 
     private static void ValidateFileName(string outputFileName)
@@ -59,4 +73,15 @@ public sealed record BambuStudioSliceRequest(
     string FilamentProfilePath,
     string OutputDirectory,
     string OutputFileName,
-    string BedType);
+    string BedType,
+    BambuStudioOrientationPolicy OrientationPolicy = BambuStudioOrientationPolicy.Search);
+
+/// <summary>Controls whether the offline reference oracle may change the supplied object pose.</summary>
+public enum BambuStudioOrientationPolicy
+{
+    /// <summary>Use a prepared 3MF project and preserve its verified transform.</summary>
+    Fixed,
+
+    /// <summary>Allow Bambu Studio to search and arrange a pose.</summary>
+    Search,
+}
