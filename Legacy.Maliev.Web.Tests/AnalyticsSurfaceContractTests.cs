@@ -3,6 +3,30 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class AnalyticsSurfaceContractTests
 {
     [Fact]
+    public void ServiceFinderEvents_UseAnonymousSessionCorrelationWithoutLeadIdentity()
+    {
+        var finder = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "Legacy.Maliev.Web",
+            "wwwroot",
+            "src",
+            "app",
+            "js",
+            "service-finder.js"));
+
+        var sessionIdIndex = finder.IndexOf("var finderSessionId = createFinderSessionId();", StringComparison.Ordinal);
+        var eventIndex = finder.IndexOf("function pushFinderEvent(eventName, fields)", StringComparison.Ordinal);
+
+        Assert.True(sessionIdIndex >= 0, "Finder diagnostics must create an in-memory correlation key for the current page visit.");
+        Assert.True(eventIndex > sessionIdIndex, "The finder correlation key must be available before finder events are pushed.");
+        Assert.Contains("return window.crypto.randomUUID();", finder, StringComparison.Ordinal);
+        Assert.DoesNotContain("sessionStorage", finder, StringComparison.Ordinal);
+        Assert.Contains("event.finder_session_id = finderSessionId", finder, StringComparison.Ordinal);
+        Assert.DoesNotContain("event.journey_id", finder, StringComparison.Ordinal);
+        Assert.DoesNotContain("event.transaction_id", finder, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AnalyticsPartials_EmitOnlyThroughConsentGateWithCanonicalNames()
     {
         var root = FindRepositoryRoot();

@@ -36,6 +36,17 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
         Assert.DoesNotContain("IContactClient", route, StringComparison.Ordinal);
         Assert.DoesNotContain("INotificationClient", route, StringComparison.Ordinal);
         Assert.DoesNotContain("IAntiBotVerifier", route, StringComparison.Ordinal);
+        foreach (var resourcePath in new[]
+        {
+            Path.Combine(web, "Resources", "Components", "Pages", "Contact", "ContactContent.th.resx"),
+            Path.Combine(web, "Resources", "Components", "Layout", "PublicFooter.th.resx"),
+        })
+        {
+            var resource = File.ReadAllText(resourcePath);
+            Assert.Contains("จันทร์-ศุกร์: 09:00-18:00 น.", resource, StringComparison.Ordinal);
+            Assert.Contains("เสาร์-อาทิตย์: ปิด", resource, StringComparison.Ordinal);
+            Assert.DoesNotContain("10:00-19:00", resource, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -50,6 +61,17 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
                 services.AddSingleton<ICountryClient, StubCountryClient>();
             });
         });
+        await using var activeFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:Contact", "true");
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<ICountryClient>();
+                services.AddSingleton<ICountryClient, StubCountryClient>();
+            });
+        });
+        using var activeClient = activeFactory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
         using var client = fallbackFactory.CreateClient(
             new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
         foreach (var culture in new[] { "en", "th" })
@@ -97,6 +119,30 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
             }
             Assert.Contains("var consentState = 'denied';", source, StringComparison.Ordinal);
             Assert.DoesNotContain("data-migration-component=\"public-google-tag-manager-body\"", source, StringComparison.Ordinal);
+            using var activeResponse = await activeClient.GetAsync($"/contact?culture={culture}");
+            var activeSource = WebUtility.HtmlDecode(await activeResponse.Content.ReadAsStringAsync());
+            Assert.Equal(HttpStatusCode.OK, activeResponse.StatusCode);
+            Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", activeSource, StringComparison.Ordinal);
+            foreach (var rendered in new[] { source, activeSource })
+            {
+                var visit = Assert.Single(Regex.Matches(
+                    rendered,
+                    "<article\\b[^>]*class=\"contact-method-card\"[^>]*>[\\s\\S]*?</article>",
+                    RegexOptions.CultureInvariant).Cast<Match>(),
+                    match => match.Value.Contains("<address>", StringComparison.Ordinal));
+                var footer = Assert.Single(Regex.Matches(
+                    rendered,
+                    "<footer\\b[^>]*data-migration-component=\"public-footer\"[^>]*>[\\s\\S]*?</footer>",
+                    RegexOptions.CultureInvariant).Cast<Match>());
+                foreach (var surface in new[] { visit.Value, footer.Value })
+                {
+                    Assert.Contains(culture == "th" ? "จันทร์-ศุกร์: 09:00-18:00 น." : "Monday-Friday: 09:00-18:00",
+                        surface, StringComparison.Ordinal);
+                    Assert.Contains(culture == "th" ? "เสาร์-อาทิตย์: ปิด" : "Saturday-Sunday: Closed",
+                        surface, StringComparison.Ordinal);
+                    Assert.DoesNotContain("10:00-19:00", surface, StringComparison.Ordinal);
+                }
+            }
         }
     }
 
@@ -143,6 +189,7 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
         Assert.True(select.Success);
         Assert.Matches("\\sdisabled(?:\\s|=|$)", select.Groups["attributes"].Value);
         Assert.Single(Regex.Matches(select.Groups["options"].Value, "<option\\b", RegexOptions.IgnoreCase).Cast<Match>());
+        Assert.Matches("<option\\b[^>]*\\svalue(?:=\"\"|='')?(?=\\s|>)[^>]*>", select.Groups["options"].Value);
         Assert.Contains("value=\"\"", select.Groups["options"].Value, StringComparison.Ordinal);
         Assert.Contains("Select a country", select.Groups["options"].Value, StringComparison.Ordinal);
         var submit = Regex.Match(source, "<button\\b[^>]*\\bid=\"submit-button\"[^>]*>",
@@ -156,6 +203,111 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
             Assert.Equal("GET", request.Method);
             Assert.Equal("/Countries", request.Path);
         });
+    }
+
+    [Theory]
+    [InlineData("en", "Could not retrieve countries from the server.", "Select a country")]
+    [InlineData("th", "ไม่สามารถดึงรายชื่อประเทศจากเซิร์ฟเวอร์ได้", "เลือกประเทศ")]
+    public async Task RetainedRazorCountryTransportFailure_KeepsContactGetAvailableWithoutDownstreamWrites(
+        string culture, string unavailableMessage, string countryPlaceholder)
+    {
+        var requests = new ConcurrentQueue<(string Client, string Method, string Path)>();
+        await using var unavailableFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:Contact", "false");
+            builder.UseSetting("Services:Country", "https://country-outage.invalid/");
+            builder.ConfigureServices(services =>
+            {
+                foreach (var name in new[] { "countries", "contacts", "notifications", "auth" })
+                {
+                    services.AddHttpClient(name)
+                        .ConfigurePrimaryHttpMessageHandler(() => new CountryOutageTransport(name, requests));
+                }
+
+                // Match the existing SSR outage fixture's real retry/deadline policy and scheduling.
+                services.PostConfigure<HttpStandardResilienceOptions>("countries-standard", options =>
+                {
+                    options.Retry.Delay = TimeSpan.Zero;
+                    options.Retry.UseJitter = false;
+                    options.Retry.DelayGenerator = _ => ValueTask.FromResult<TimeSpan?>(TimeSpan.Zero);
+                });
+            });
+        });
+        using var client = unavailableFactory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+
+        using var response = await client.GetAsync($"/contact?culture={culture}", deadline.Token);
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(deadline.Token));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        var form = Regex.Match(source, "<form\\b[^>]*\\bid=\"contact-us\"[^>]*>");
+        Assert.True(form.Success);
+        Assert.Contains("method=\"post\"", form.Value, StringComparison.Ordinal);
+        Assert.Contains(unavailableMessage, source, StringComparison.Ordinal);
+        Assert.DoesNotContain("controlled-country-private-failure", source, StringComparison.Ordinal);
+        var select = Regex.Match(source, "<select\\b(?<attributes>[^>]*\\bid=\"Country\"[^>]*)>(?<options>.*?)</select>",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        Assert.True(select.Success);
+        Assert.Matches("\\sdisabled(?:\\s|=|$)", select.Groups["attributes"].Value);
+        Assert.Single(Regex.Matches(select.Groups["options"].Value, "<option\\b", RegexOptions.IgnoreCase).Cast<Match>());
+        Assert.Matches("<option\\b[^>]*\\svalue(?:=\"\"|='')?(?=\\s|>)[^>]*>", select.Groups["options"].Value);
+        Assert.Contains(countryPlaceholder, select.Groups["options"].Value, StringComparison.Ordinal);
+        var submit = Regex.Match(source, "<button\\b[^>]*\\bid=\"submit-button\"[^>]*>",
+            RegexOptions.IgnoreCase);
+        Assert.True(submit.Success);
+        Assert.Matches("\\sdisabled(?:\\s|=|>)", submit.Value);
+        Assert.NotEmpty(requests);
+        Assert.All(requests, request =>
+        {
+            Assert.Equal("countries", request.Client);
+            Assert.Equal("GET", request.Method);
+            Assert.Equal("/Countries", request.Path);
+        });
+    }
+
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "en")]
+    [InlineData(false, "th")]
+    public async Task ContactRequiredLabels_RetainVisibleSourceMarkers(bool useBlazorRoute, string culture)
+    {
+        await using var markerFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:Contact", useBlazorRoute ? "true" : "false");
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<ICountryClient>();
+                services.AddSingleton<ICountryClient, StubCountryClient>();
+            });
+        });
+        using var client = markerFactory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        using var response = await client.GetAsync($"/contact?culture={culture}");
+        var source = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Equal(useBlazorRoute, source.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        foreach (var field in new[] { "FirstName", "LastName", "Email", "Country", "Message" })
+        {
+            var label = Assert.Single(Regex.Matches(
+                source,
+                $"<label\\b[^>]*\\bfor=\"{field}\"[^>]*>[\\s\\S]*?</label>",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.Contains("<span class=\"inquiry-required\" aria-hidden=\"true\">*</span>", label.Value, StringComparison.Ordinal);
+        }
+        foreach (var field in new[] { "Phone", "Company" })
+        {
+            var label = Assert.Single(Regex.Matches(
+                source,
+                $"<label\\b[^>]*\\bfor=\"{field}\"[^>]*>[\\s\\S]*?</label>",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.DoesNotContain("inquiry-required", label.Value, StringComparison.Ordinal);
+        }
     }
 
     private static string FindRepositoryRoot()
