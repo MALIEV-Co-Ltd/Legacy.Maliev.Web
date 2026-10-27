@@ -299,6 +299,7 @@ public sealed class ThreeDimensionalPrintingGalleryBrowserTests(PublicContactBro
         var toc = main.Locator("nav[data-service-toc]");
         var toggle = toc.Locator("[data-service-toc-toggle]");
         await Assertions.Expect(toggle).ToBeVisibleAsync();
+        await Assertions.Expect(main.Locator("nav.service-page-toc:visible")).ToHaveCountAsync(1);
         var expected = new List<(ILocator Destination, string Id, string Heading)>();
         // Source 1498292f enumerates direct main sections, excluding quick/CTA wrappers and blank h2s.
         foreach (var section in await main.Locator(":scope > section:not(.service-quick):not(.service-cta-wrap)").AllAsync())
@@ -346,20 +347,69 @@ public sealed class ThreeDimensionalPrintingGalleryBrowserTests(PublicContactBro
             Assert.Equal("false", await toggle.GetAttributeAsync("aria-expanded"));
             Assert.Equal("true", await link.GetAttributeAsync("aria-current"));
             await Assertions.Expect(toc.Locator("[data-service-toc-current]")).ToHaveTextAsync(destination.Heading);
-            await using var headingVisible = await page.WaitForFunctionAsync("""
-                id => {
-                    const main = document.querySelector('main.service-page');
-                    const target = Array.from(main?.querySelectorAll('[id]') || []).find(element => element.id === id);
-                    const heading = target?.matches('h2') ? target : target?.querySelector('h2');
-                    const toc = main?.querySelector('nav[data-service-toc]');
-                    if (!heading || !toc || toc.dataset.tocOpen === 'true') return false;
-                    const rect = heading.getBoundingClientRect();
-                    const tocBottom = Math.max(0, toc.getBoundingClientRect().bottom);
-                    return rect.width > 0 && rect.height > 0
-                        && rect.left >= -1 && rect.right <= window.innerWidth + 1
-                        && rect.top >= tocBottom - 1 && rect.bottom <= window.innerHeight + 1;
+            try
+            {
+                await using var headingVisible = await page.WaitForFunctionAsync("""
+                    id => {
+                        const main = document.querySelector('main.service-page');
+                        const target = Array.from(main?.querySelectorAll('[id]') || []).find(element => element.id === id);
+                        const heading = target?.matches('h2') ? target : target?.querySelector('h2');
+                        const toc = main?.querySelector('nav[data-service-toc]');
+                        if (!heading || !toc || toc.dataset.tocOpen === 'true') return false;
+                        const rect = heading.getBoundingClientRect();
+                        const tocBottom = Math.max(0, toc.getBoundingClientRect().bottom);
+                        return rect.width > 0 && rect.height > 0
+                            && rect.left >= -1 && rect.right <= window.innerWidth + 1
+                            && rect.top >= tocBottom - 1 && rect.bottom <= window.innerHeight + 1;
+                    }
+                    """, destination.Id, new PageWaitForFunctionOptions { Timeout = 30000 });
+            }
+            catch (Exception failure)
+            {
+                try
+                {
+                    var geometry = await page.EvaluateAsync<string>("""
+                        id => {
+                            const main = document.querySelector('main.service-page');
+                            const target = Array.from(main?.querySelectorAll('[id]') || []).find(element => element.id === id);
+                            const heading = target?.matches('h2') ? target : target?.querySelector('h2');
+                            const toc = main?.querySelector('nav[data-service-toc]');
+                            const rect = element => {
+                                const r = element?.getBoundingClientRect();
+                                return r ? [r.left, r.top, r.right, r.bottom, r.width, r.height] : null;
+                            };
+                            const h = heading?.getBoundingClientRect();
+                            const t = toc?.getBoundingClientRect();
+                            const scrolling = document.scrollingElement;
+                            return JSON.stringify({
+                                target: rect(target), heading: rect(heading), toc: rect(toc),
+                                inner: rect(toc?.querySelector('.service-page-toc-inner')),
+                                toggle: rect(toc?.querySelector('[data-service-toc-toggle]')),
+                                panel: rect(toc?.querySelector('[data-service-toc-panel]')),
+                                viewport: [innerWidth, innerHeight], scroll: [scrollX, scrollY],
+                                maxScroll: scrolling ? scrolling.scrollHeight - scrolling.clientHeight : null,
+                                panelClosed: toc?.dataset.tocOpen !== 'true',
+                                targetFocused: document.activeElement === target,
+                                nonzero: !!h && h.width > 0 && h.height > 0,
+                                leftVisible: !!h && h.left >= -1,
+                                rightVisible: !!h && h.right <= innerWidth + 1,
+                                clearsToc: !!h && !!t && h.top >= Math.max(0, t.bottom) - 1,
+                                bottomVisible: !!h && h.bottom <= innerHeight + 1,
+                                targetScrollMargin: target ? getComputedStyle(target).scrollMarginTop : null,
+                                tocPosition: toc ? getComputedStyle(toc).position : null,
+                            });
+                        }
+                        """, destination.Id).WaitAsync(TimeSpan.FromSeconds(1));
+                    if (geometry.Length <= 4096)
+                    {
+                        failure.Data["TocInventoryGeometry"] = geometry;
+                        output.WriteLine("TOC inventory geometry ({0}, {1}, {2}, section {3}/{4}): {5}",
+                            service, servicesEnabled, culture, index, expected.Count, geometry);
+                    }
                 }
-                """, destination.Id, new PageWaitForFunctionOptions { Timeout = 30000 });
+                catch (Exception) { /* Secondary evidence must preserve the original geometry failure. */ }
+                throw;
+            }
         }
     }
 
