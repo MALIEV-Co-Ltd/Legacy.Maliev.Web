@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -30,6 +31,45 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains(absDescription, html, StringComparison.Ordinal);
         Assert.Contains("printing-material-details.json?v=3", html, StringComparison.Ordinal);
 
+        if (culture == "th")
+        {
+            foreach (var sourceThaiCopy in new[]
+            {
+                "MALIEV รับพิมพ์ 3D ด้วยระบบ FDM และเรซิ่น",
+                "FDM สำหรับชิ้นงานทนทาน เรซิ่นสำหรับรายละเอียดและผิวเรียบ",
+                "วัสดุทั่วไป วิศวกรรม คาร์บอนไฟเบอร์ ESD หน่วงไฟ ยืดหยุ่น และเรซิ่น",
+                "ควรเลือกพิมพ์ FDM หรือเรซิ่นเมื่อใด?",
+                "ต้นแบบกล่องเรซิ่นผิวเรียบกำลังทดสอบประกอบกับอุปกรณ์อิเล็กทรอนิกส์",
+                "เรซิ่น: รายละเอียดสูงและผิวเรียบ",
+                "การพิมพ์เรซิ่นทำให้โฟโตโพลิเมอร์แข็งตัวเพื่อรายละเอียดสูงและผิวเรียบ เหมาะกับโมเดล ต้นแบบขนาดเล็ก ชิ้นงานใส ชิ้นงานยืดหยุ่น และต้นแบบงานหล่อ",
+                "ตัวอย่างชิ้นงานพิมพ์ 3D แบบ FDM และเรซิ่น",
+                ">เรซิ่น</option>",
+                "เรซิ่นมาตรฐาน",
+                "เรซิ่นเหนียว",
+                "เรซิ่นใส",
+                "เรซิ่นยืดหยุ่น",
+                "เรซิ่นหล่อขี้ผึ้งหาย",
+                "ควรเลือก FDM หรือเรซิ่น DLP?",
+                "ระยะเวลางาน FDM โดยทั่วไปเริ่มต้น 1 วัน และงานเรซิ่นเริ่มต้น 7 วัน ส่วน MJF, SLS, SLM และ DMLS โดยทั่วไปประมาณ 14 วัน รูปทรง วัสดุ การเก็บผิว จำนวน การตรวจคุณภาพ และคิวผลิตอาจทำให้ระยะเวลาเพิ่มขึ้น"
+            })
+            {
+                Assert.Contains(sourceThaiCopy, html, StringComparison.Ordinal);
+            }
+
+            var faqJson = Assert.Single(Regex.Matches(
+                    html,
+                    "<script type=\"application/ld\\+json\">(?<json>.*?)</script>",
+                    RegexOptions.Singleline)
+                .Select(match => match.Groups["json"].Value),
+                json => json.Contains("\"FAQPage\"", StringComparison.Ordinal));
+            using var faq = JsonDocument.Parse(faqJson);
+            Assert.Equal("FAQPage", faq.RootElement.GetProperty("@type").GetString());
+            var leadTime = Assert.Single(faq.RootElement.GetProperty("mainEntity").EnumerateArray(),
+                question => question.GetProperty("name").GetString() == "งานพิมพ์ 3D ใช้เวลากี่วัน?");
+            Assert.Equal(
+                "ระยะเวลางาน FDM โดยทั่วไปเริ่มต้น 1 วัน และงานเรซิ่นเริ่มต้น 7 วัน ส่วน MJF, SLS, SLM และ DMLS โดยทั่วไปประมาณ 14 วัน รูปทรง วัสดุ การเก็บผิว จำนวน การตรวจคุณภาพ และคิวผลิตอาจทำให้ระยะเวลาเพิ่มขึ้น",
+                leadTime.GetProperty("acceptedAnswer").GetProperty("text").GetString());
+        }
         Assert.Contains("<strong>PC-FR</strong><small>Bambu PC FR</small>", html, StringComparison.Ordinal);
         Assert.Contains("<strong>PA12</strong><small>eSUN ePA12</small>", html, StringComparison.Ordinal);
         Assert.Contains("<strong>PETG-rCF08</strong><small>Fiberon · 8% recycled CF</small>", html, StringComparison.Ordinal);
@@ -141,6 +181,12 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("ไฟล์เมชอาจต้องซ่อม", WebUtility.HtmlDecode((await factory.CreateClient().GetStringAsync("/services/3d-printing?culture=th"))), StringComparison.Ordinal);
         Assert.Contains("class=\"service-page-toc\"", source, StringComparison.Ordinal);
         Assert.Equal(6, ServiceCardMediaRegex().Matches(source).Count);
+        Assert.Equal(3, Regex.Matches(
+            Regex.Match(source, "<section id=\"printing-processes\"[\\s\\S]*?</section>").Value,
+            "class=\"service-card service-card-visual\"").Count);
+        Assert.Equal(3, Regex.Matches(
+            Regex.Match(source, "<section id=\"printing-file-guide\"[\\s\\S]*?</section>").Value,
+            "class=\"service-card service-card-visual\"").Count);
         Assert.Equal(8, FaqDetailsRegex().Matches(source).Count);
         Assert.Contains("Shipping within Thailand starts at THB 100", source, StringComparison.Ordinal);
         Assert.Contains("Pickup is available at our Pak Kret workshop by appointment", source, StringComparison.Ordinal);
@@ -254,6 +300,11 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
             "js",
             "material-comparison.js"));
 
+        Assert.Contains("1 day", component, StringComparison.Ordinal);
+        Assert.Contains("7 days", component, StringComparison.Ordinal);
+        Assert.Contains("14 days", component, StringComparison.Ordinal);
+        Assert.Contains("tool steel", component, StringComparison.Ordinal);
+        Assert.Contains("stainless steel", component, StringComparison.Ordinal);
         Assert.Contains("id=\"material-comparison\"", component, StringComparison.Ordinal);
         Assert.Contains("id=\"material-search\"", component, StringComparison.Ordinal);
         Assert.Contains("id=\"material-process\"", component, StringComparison.Ordinal);
@@ -266,9 +317,37 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("material-comparison.js", appEntry, StringComparison.Ordinal);
         Assert.Contains("data-material-row", comparisonScript, StringComparison.Ordinal);
         Assert.Contains("data-material-empty", comparisonScript, StringComparison.Ordinal);
+        Assert.Contains("id=\"material-result-count\"", component, StringComparison.Ordinal);
+        Assert.Contains("data-material-empty", component, StringComparison.Ordinal);
+        Assert.Contains("@T(\"Material\", \"วัสดุ\")", component, StringComparison.Ordinal);
+        Assert.Contains("@T(\"Process\", \"กระบวนการ\")", component, StringComparison.Ordinal);
+        Assert.Contains("@T(\"Best for\", \"เหมาะกับ\")", component, StringComparison.Ordinal);
+        Assert.Contains("@T(\"Advantages\", \"ข้อดี\")", component, StringComparison.Ordinal);
+        Assert.Contains("@T(\"Watch-outs\", \"ข้อควรทราบ\")", component, StringComparison.Ordinal);
+        Assert.Contains("material-search", comparisonScript, StringComparison.Ordinal);
+        Assert.Contains("material-process", comparisonScript, StringComparison.Ordinal);
+        Assert.Contains("material-reset", comparisonScript, StringComparison.Ordinal);
+        Assert.Contains("material-result-count", comparisonScript, StringComparison.Ordinal);
+        Assert.Contains("search.addEventListener(\"input\", applyFilters);", comparisonScript, StringComparison.Ordinal);
+        Assert.Contains("process.addEventListener(\"change\", applyFilters);", comparisonScript, StringComparison.Ordinal);
+        var resetHandler = Regex.Match(
+            comparisonScript,
+            "reset\\.addEventListener\\(\"click\", \\(\\) => \\{(?<body>[\\s\\S]*?)\\n        \\}\\);");
+        Assert.True(resetHandler.Success);
+        Assert.Contains("search.value = \"\";", resetHandler.Groups["body"].Value, StringComparison.Ordinal);
+        Assert.Contains("process.value = \"all\";", resetHandler.Groups["body"].Value, StringComparison.Ordinal);
+        Assert.Contains("applyFilters();", resetHandler.Groups["body"].Value, StringComparison.Ordinal);
+        Assert.Contains("search.focus();", resetHandler.Groups["body"].Value, StringComparison.Ordinal);
+        var filtering = Regex.Match(comparisonScript, @"function applyFilters\(\) \{(?<body>[\s\S]*?)\n    \}");
+        Assert.True(filtering.Success);
+        Assert.Contains("row.hidden = !isVisible;", filtering.Groups["body"].Value, StringComparison.Ordinal);
+        Assert.Contains("empty.hidden = visibleCount !== 0;", filtering.Groups["body"].Value, StringComparison.Ordinal);
+        Assert.Contains("count.textContent = countTemplate.replace(\"{0}\", visibleCount.toString());", filtering.Groups["body"].Value, StringComparison.Ordinal);
         Assert.Contains("data-material-details-url", component, StringComparison.Ordinal);
         Assert.Contains("material_detail_viewed", comparisonScript, StringComparison.Ordinal);
         Assert.Contains("ไฟล์สามมิติที่รับรองสำหรับงาน 3D Printing", component, StringComparison.Ordinal);
+        Assert.DoesNotMatch(@"<i\s", Regex.Match(component, "<section id=\"printing-processes\"[\\s\\S]*?</section>").Value);
+        Assert.DoesNotMatch(@"<i\s", Regex.Match(component, "<section id=\"printing-file-guide\"[\\s\\S]*?</section>").Value);
         var quickFacts = component.IndexOf("<section class=\"service-quick\">", StringComparison.Ordinal);
         var inPageToc = component.IndexOf("<nav class=\"service-page-toc\" aria-label=", StringComparison.Ordinal);
         var quoteGuide = component.IndexOf("<section id=\"printing-quote-guide\"", StringComparison.Ordinal);
@@ -308,7 +387,111 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
             var path = Path.Combine(root, "Legacy.Maliev.Web", relativePath.Replace('/', Path.DirectorySeparatorChar));
             Assert.True(File.Exists(path), $"Expected printing asset '{path}'.");
             Assert.True(new FileInfo(path).Length > 0, $"Expected printing asset '{path}' to be non-empty.");
+            if (relativePath is
+                "wwwroot/src/images/services/printing/printing-fdm-application.webp" or
+                "wwwroot/src/images/services/printing/printing-file-manifold-check.webp" or
+                "wwwroot/src/images/services/printing/printing-file-orientation-support.webp" or
+                "wwwroot/src/images/services/printing/printing-file-wall-clearance.webp" or
+                "wwwroot/src/images/services/printing/printing-industrial-application.webp" or
+                "wwwroot/src/images/services/printing/printing-resin-application.webp")
+            {
+                Assert.True(new FileInfo(path).Length > 10000, $"Expected source process/file asset '{path}' to exceed 10000 bytes.");
+            }
         }
+    }
+
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "en")]
+    [InlineData(false, "th")]
+    public async Task ToleranceComparison_RendersFourSourceRangesAndExpandableFactors(
+        bool servicesEnabled,
+        string culture)
+    {
+        await using var routeFactory = factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:Services", servicesEnabled ? "true" : "false"));
+        using var client = routeFactory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost")
+        });
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var response = await client.GetAsync($"/services/3d-printing?culture={culture}", deadline.Token);
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(deadline.Token));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(servicesEnabled, html.Contains(
+            "data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var start = html.IndexOf("<section id=\"printing-tolerances\"", StringComparison.Ordinal);
+        Assert.True(start >= 0);
+        var end = html.IndexOf("</section>", start, StringComparison.Ordinal);
+        Assert.True(end > start);
+        var section = html[start..end];
+
+        Assert.Contains("class=\"service-tolerance-grid\"", section, StringComparison.Ordinal);
+        Assert.DoesNotContain("<table", section, StringComparison.Ordinal);
+        Assert.Contains(culture == "th"
+            ? "เปรียบเทียบค่าความคลาดเคลื่อนเริ่มต้นโดยทั่วไปสำหรับชิ้นงานที่ออกแบบมาเหมาะสม ค่านี้ไม่ใช่การรับประกัน กรุณาส่งแบบเพื่อให้เรายืนยันขนาดสำคัญก่อนผลิต"
+            : "Compare typical starting ranges for a well-designed part. These are not guarantees; send the drawing so we can confirm the critical dimensions before production.",
+            section, StringComparison.Ordinal);
+
+        (string Heading, string Value, string? Alternative, string Rule)[] expected = culture == "th"
+            ? [
+                ("FDM", "±0.3–0.5 มม.", "หรือ ±0.5%", "ฟีเจอร์ขนาดเล็ก · ใช้ค่าเปอร์เซ็นต์เมื่อขนาดเกินราว 100 มม."),
+                ("เรซิ่น SLA / DLP", "±0.05–0.15 มม.", "หรือ ±0.2–0.3%", "ฟีเจอร์ไม่เกินราว 30 มม. · ใช้ค่าเปอร์เซ็นต์สำหรับขนาดที่ใหญ่ขึ้น"),
+                ("ไนลอน MJF / SLS", "±0.3 มม. หรือ ±0.3%", null, "ใช้ค่าที่มากกว่า"),
+                ("โลหะ SLM / DMLS", "±0.1–0.2 มม.", "จากนั้นประมาณ ±0.1%", "ช่วง 25 มม. แรก · ใช้ค่าเปอร์เซ็นต์กับขนาดที่เหลือ")
+            ]
+            : [
+                ("FDM", "±0.3–0.5 mm", "or ±0.5%", "Small features · percentage basis above about 100 mm"),
+                ("Resin SLA / DLP", "±0.05–0.15 mm", "or ±0.2–0.3%", "Features up to about 30 mm · percentage basis for larger dimensions"),
+                ("MJF / SLS nylon", "±0.3 mm or ±0.3%", null, "Use whichever value is greater"),
+                ("Metal SLM / DMLS", "±0.1–0.2 mm", "then about ±0.1%", "First 25 mm · percentage basis for the remaining nominal dimension")
+            ];
+        var cards = Regex.Matches(section,
+            "<article class=\"service-tolerance-item\">(?<body>[\\s\\S]*?)</article>",
+            RegexOptions.CultureInvariant);
+        Assert.Equal(4, cards.Count);
+        for (var index = 0; index < expected.Length; index++)
+        {
+            var body = cards[index].Groups["body"].Value;
+            var item = expected[index];
+            Assert.Contains($"<h3>{item.Heading}</h3>", body, StringComparison.Ordinal);
+            Assert.Contains($"<strong>{item.Value}</strong>", body, StringComparison.Ordinal);
+            Assert.Single(Regex.Matches(body, "class=\"service-tolerance-value\"",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.Contains($"<p class=\"service-tolerance-rule\">{item.Rule}</p>", body, StringComparison.Ordinal);
+            if (item.Alternative is not null)
+            {
+                Assert.Contains($"<span>{item.Alternative}</span>", body, StringComparison.Ordinal);
+            }
+            else
+            {
+                Assert.DoesNotContain("<span>", body, StringComparison.Ordinal);
+            }
+        }
+
+        var details = Assert.Single(Regex.Matches(section,
+            "<details class=\"service-tolerance-details service-tolerance-factors\"(?<attributes>[^>]*)>(?<body>[\\s\\S]*?)</details>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.False(Regex.IsMatch(details.Groups["attributes"].Value,
+            "(?:^|\\s)open(?:\\s|=|$)", RegexOptions.CultureInvariant));
+        var explanation = details.Groups["body"].Value;
+        Assert.Contains(culture == "th"
+            ? "<summary>อะไรทำให้ค่าคลาดเคลื่อนและการประกอบเปลี่ยนไป?</summary>"
+            : "<summary>What changes these ranges and part fit?</summary>",
+            explanation, StringComparison.Ordinal);
+        Assert.Contains(culture == "th"
+            ? "การหดตัวของวัสดุ ขนาดชิ้นงาน ทิศทางการพิมพ์ ตำแหน่งซัพพอร์ต การอบหรือความเค้นจากความร้อน และการกัดแต่งหลังพิมพ์"
+            : "Material shrinkage, part size, build orientation, support placement, curing or thermal stress, and any post-machining.",
+            explanation, StringComparison.Ordinal);
+        Assert.Contains(culture == "th"
+            ? "ค่าความคลาดเคลื่อนไม่เท่ากับการประกอบได้พอดี ชิ้นงานสองชิ้นที่คุมได้ ±0.3 มม. เท่ากันก็ยังอาจประกอบติดขัดได้ ควรระบุขนาดที่สำคัญจริงลงในแบบงาน เราสามารถคว้าน ต๊าปเกลียว หรือกัดแต่งเฉพาะจุดหลังพิมพ์ได้เมื่อค่าจากการพิมพ์ไม่เพียงพอ"
+            : "Tolerance is not the same as fit. Two parts that each hold ±0.3 mm can still bind when assembled. Mark the dimensions that actually matter on your drawing — we can ream, tap, or machine those features after printing when the printed tolerance is not enough.",
+            explanation, StringComparison.Ordinal);
+        Assert.Contains("<section id=\"printing-workflow\" class=\"service-section\">",
+            html, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()
