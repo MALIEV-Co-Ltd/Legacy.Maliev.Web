@@ -41,6 +41,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         ICDPSession? cdp = null;
+        var touchActive = false;
         Exception? primary = null;
         try
         {
@@ -70,7 +71,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             var before = Assert.IsType<InstantQuotationSessionState>(await store.GetAsync(upload.SessionId, upload.OwnerIdentity, lease.Token));
             AssertCurrentReceipt(before, id, 1);
             var originalPart = Assert.Single(before.Parts);
-            await scroller.ScrollIntoViewIfNeededAsync(); // Only position the outer page; the catalogue gesture below is trusted touch.
+            await scroller.EvaluateAsync("node => node.scrollIntoView({ block: 'center', behavior: 'instant' })");
             const string geometry = """
                 node => {
                     const card = node.querySelector('[data-material-key="PETG"]');
@@ -96,6 +97,17 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             var top = Math.Max(0, box.Y);
             var bottom = Math.Min(844, box.Y + box.Height);
             Assert.True(bottom - top >= 100);
+            var x = box.X + box.Width / 2;
+            var travel = down >= up ? -distance : distance;
+            var startY = (top + bottom - travel) / 2;
+            var endY = startY + travel;
+            Assert.InRange(startY, top + 8, bottom - 8);
+            Assert.InRange(endY, top + 8, bottom - 8);
+            var hits = await scroller.EvaluateAsync<bool[]>("""
+                (node, points) => points.map(([x, y]) => node.contains(document.elementFromPoint(x, y)))
+                """, new[] { new[] { x, startY }, new[] { x, (startY + endY) / 2 }, new[] { x, endY } });
+            output.WriteLine($"Material touch input: initial={initial[0]}, outer={initial[7]}, clip=[{top},{bottom}], x={x}, y=[{startY},{endY}], hits=[{string.Join(',', hits)}]");
+            Assert.All(hits, hit => Assert.True(hit));
             await scroller.EvaluateAsync("""
                 node => {
                     window.materialTrustedTouchStarts = 0;
@@ -105,19 +117,53 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 }
                 """);
             cdp = await context.NewCDPSessionAsync(page);
-            await cdp.SendAsync("Input.synthesizeScrollGesture", new Dictionary<string, object>
+            touchActive = true;
+            await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
             {
-                ["x"] = box.X + box.Width / 2,
-                ["y"] = (top + bottom) / 2,
-                ["yDistance"] = down >= up ? -distance : distance,
-                ["gestureSourceType"] = "touch",
-                ["preventFling"] = true,
-                ["speed"] = 400,
+                ["type"] = "touchStart",
+                ["touchPoints"] = new[] { new { x, y = startY } },
             });
-            await page.WaitForFunctionAsync("""
-                start => window.materialTrustedTouchStarts > 0
-                    && Math.abs(document.querySelector('[data-material-card-scroll]').scrollTop - start) >= 8
-                """, initial[0], new() { Timeout = 3000 });
+            for (var step = 1; step <= 12; step++)
+            {
+                await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
+                {
+                    ["type"] = "touchMove",
+                    ["touchPoints"] = new[] { new { x, y = startY + travel * step / 12 } },
+                });
+                await page.EvaluateAsync("() => new Promise(requestAnimationFrame)");
+            }
+            // Hold the final contact still before release so momentum does not move the retained anchor.
+            for (var frame = 0; frame < 8; frame++)
+            {
+                await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
+                {
+                    ["type"] = "touchMove",
+                    ["touchPoints"] = new[] { new { x, y = endY } },
+                });
+                await page.EvaluateAsync("() => new Promise(requestAnimationFrame)");
+            }
+            await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
+            {
+                ["type"] = "touchEnd", ["touchPoints"] = Array.Empty<object>(),
+            });
+            touchActive = false;
+            try
+            {
+                await page.WaitForFunctionAsync("""
+                    start => window.materialTrustedTouchStarts > 0
+                        && Math.abs(document.querySelector('[data-material-card-scroll]').scrollTop - start) >= 8
+                    """, initial[0], new() { Timeout = 3000 });
+            }
+            finally
+            {
+                try
+                {
+                    var observed = await scroller.EvaluateAsync<double[]>(geometry);
+                    var trusted = await page.EvaluateAsync<int>("() => window.materialTrustedTouchStarts");
+                    output.WriteLine($"Material touch result: trusted={trusted}, initial={initial[0]}, current={observed[0]}, outerBefore={initial[7]}, outerAfter={observed[7]}");
+                }
+                catch (Exception) { /* Best-effort diagnostics must preserve the original test failure. */ }
+            }
             var touched = await scroller.EvaluateAsync<double[]>(geometry);
             Assert.InRange(Math.Abs(touched[7] - initial[7]), 0, 1);
             AssertScrollRetained(touched, touched);
@@ -162,6 +208,14 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                     catch (OperationCanceledException) when (upload.ClosedPhysicalReads.All(task => task.IsCompleted)) { }
                 },
                 () => { upload.DisposePhysicalReadLifetime(); return ValueTask.CompletedTask; },
+                async () =>
+                {
+                    if (cdp is not null && touchActive)
+                        await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
+                        {
+                            ["type"] = "touchCancel", ["touchPoints"] = Array.Empty<object>(),
+                        });
+                },
                 async () => { if (cdp is not null) await cdp.DetachAsync(); });
         }
 

@@ -120,11 +120,11 @@ public sealed class InstantQuotationStaticSsrRouteTests : IClassFixture<TestingW
     [InlineData(true, "th",
         "ประเมินราคาพิมพ์ 3D ออนไลน์ | MALIEV",
         "อัปโหลดไฟล์ 3D เลือกวัสดุและจำนวน เพื่อรับราคาประเมินงานพิมพ์ 3D และระยะเวลาผลิตออนไลน์",
-        "ปริ้น 3d, ปริ้น 3 มิติ, พิมพ์ 3 มิติ, พิมพ์ 3d, รับปริ้น 3 มิติ, รับปริ้น 3d, ประเมินราคาทันที, instant pricing")]
+        "พิมพ์ 3d, พิมพ์ 3 มิติ, พิมพ์ 3 มิติ, พิมพ์ 3d, รับพิมพ์ 3 มิติ, รับพิมพ์ 3d, ประเมินราคาทันที, instant pricing")]
     [InlineData(false, "th",
         "ประเมินราคาพิมพ์ 3D ออนไลน์ | MALIEV",
         "อัปโหลดไฟล์ 3D เลือกวัสดุและจำนวน เพื่อรับราคาประเมินงานพิมพ์ 3D และระยะเวลาผลิตออนไลน์",
-        "ปริ้น 3d, ปริ้น 3 มิติ, พิมพ์ 3 มิติ, พิมพ์ 3d, รับปริ้น 3 มิติ, รับปริ้น 3d, ประเมินราคาทันที, instant pricing")]
+        "พิมพ์ 3d, พิมพ์ 3 มิติ, พิมพ์ 3 มิติ, พิมพ์ 3d, รับพิมพ์ 3 มิติ, รับพิมพ์ 3d, ประเมินราคาทันที, instant pricing")]
     public async Task InstantQuotationDocument_PreservesOriginalSourceMetadataAcrossRenderers(
         bool useSsr, string culture, string title, string description, string keywords)
     {
