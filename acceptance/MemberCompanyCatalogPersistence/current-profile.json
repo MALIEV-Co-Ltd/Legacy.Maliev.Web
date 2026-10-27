@@ -2,6 +2,7 @@
   "schemaVersion": 1,
   "profile": "company-current-helper-dependency-source-v1",
   "predecessorMain": "e77fdd2db35cb31e4a354d76036bc51524050337",
+  "acceptedIntegrationMain": "2607949c723037240910a009c9c8ab301bda833f",
   "retainedPrHead": "722f701d696e5db885cae1b602651d07d465c1ea",
   "sourceFiles": {
     ".github/workflows/_build-and-test.yml": {
@@ -20,9 +21,9 @@
       "sha256": "998aeefe51671a6331db14baf5c6e47720be2fdb8e71eba9027ca7cbcc7279ed"
     },
     ".github/workflows/member-company-catalog-persistence.yml": {
-      "bytes": 14068,
-      "gitBlob": "e0cfaf9f5951165823c6db9ebf8dbecddd4fc00d",
-      "sha256": "6ac60aba11b1d270e2f0d5a91fe0e97cd6f7fb6df1e9c48e6a8f62d8651b260e"
+      "bytes": 14572,
+      "gitBlob": "62d1b15343353d0ad44f0055e84d257a6e46412e",
+      "sha256": "d579091b660013d7e8a36216076b7cfc4449dc8517bf94bbf84320595d27d60e"
     },
     ".github/workflows/shipping-persistence.yml": {
       "bytes": 17251,
@@ -74,6 +75,11 @@
       "gitBlob": "e4ac1003ebfa4b546281366828613db17b9e49d7",
       "sha256": "3d41cc5d47a3e2aadf4082c6159d31d04a147baf92dbfa8fc088fd26426beeb7"
     },
+    "Legacy.Maliev.Web.Tests/RuntimeAssemblyProbe.cs": {
+      "bytes": 5085,
+      "gitBlob": "d712d2acb3eeef49056cdcefc8ed6f4efe99c7db",
+      "sha256": "0154e07d68f9c15f58c31fd0bfbd59b53170b42501a58bdb5490c4f23adb8009"
+    },
     "Legacy.Maliev.Web.Tests/ThaiLookupBillingPersistenceTests.cs": {
       "bytes": 25876,
       "gitBlob": "20cf6977fcafa36bc4e2026d727e093abf81ed29",
@@ -98,6 +104,11 @@
       "bytes": 10624,
       "gitBlob": "bcba6d368601dbbd826a6a7cc7d635964beacb45",
       "sha256": "54d615ee241988ba2e0a9735e80354e7618c3f209426cf11081bd8d7832e1a9f"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/Tests/CompanyRuntimeAssemblyProbe.cs": {
+      "bytes": 337,
+      "gitBlob": "c39196947b8aea3f140305374d35ba1494ddcd7e",
+      "sha256": "54f84c3c8ccecfa31ef33763e21e0159746faa8dc10c36cdf54dd008bacc1459"
     },
     "acceptance/MemberCompanyCatalogPersistence/Tests/CurrentCompanySourceObservation.cs": {
       "bytes": 8099,
@@ -173,6 +184,141 @@
       "bytes": 20429,
       "gitBlob": "62e3978d390f57291d35fd56484cc96f2d4a342d",
       "sha256": "db6def19fadfc7b71b9096257c3c37739e72935201775ba2ecbd336bacf9e3ac"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/assembly_binding.py": {
+      "bytes": 1453,
+      "gitBlob": "233cdfda70dec523b14d754da95724cebe23b091",
+      "sha256": "64fc6a49db129ea35c0457044350eecde4be8fa9efbc53f6d37981078ee40551"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/birth_time.py": {
+      "bytes": 988,
+      "gitBlob": "c69279d90c539cd6d26717a90b2917c979704314",
+      "sha256": "63c89b4ee18f4c764d38acdf89d66f266b5e05379e7ed83370debbebf6f9ecb7"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/cgroup_controls.py": {
+      "bytes": 1416,
+      "gitBlob": "5c6f810ae77dfa543a126b20cc9c3e0ab74d5c4b",
+      "sha256": "f1497289a5a674a7f11153b53010fb9235d35c8e35ecb08eceead3a8d6c45c06"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/cgroup_lease.py": {
+      "bytes": 5959,
+      "gitBlob": "93318cb490ece4a7d918eca35b928eee6f53b490",
+      "sha256": "51f8be925298b9e781c46a34bced64d8182eb97770d28067b5a41023c42b9ce0"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/claim_testhost.py": {
+      "bytes": 1676,
+      "gitBlob": "073c1b19a4cb7102daf818032a8a41eb25fee0d9",
+      "sha256": "0e906f61204b6d498e8f09b78af344e5a328530338d0b9e3009d595c1f1c3548"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/hosted_probe.py": {
+      "bytes": 13617,
+      "gitBlob": "a7e34706fec070f67b8d6fe44d36063d408f8a70",
+      "sha256": "56a40aa9fa49fe596f6fd75d139c30c775ac46e5370d34f96392dd72b732415f"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/identity_control.py": {
+      "bytes": 3649,
+      "gitBlob": "56a70b83aa5016209f1574ead6b0a7b940a41303",
+      "sha256": "043a6dc0c0056991ede37b6572227fdddc461ca9aa6e46ed9721e87e8ab493b2"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/memory_admission.py": {
+      "bytes": 515,
+      "gitBlob": "6b2fa2002985f921361cb610e4b7b5fec11b7e57",
+      "sha256": "96b266f5d9270053e0661fef83874fc188ed02a1c91dc1d306d913b2f94204a8"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/owned_receipt_file.py": {
+      "bytes": 1497,
+      "gitBlob": "4f275540459ff764940fdadfcad82080f922d835",
+      "sha256": "2d1b403ef37fd7974630984191803051aa71c5fb7ae659c7151e4f59402ad3b2"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/process_ownership.py": {
+      "bytes": 1863,
+      "gitBlob": "60503d54895358105e4f8122f74ed27e0be4d50d",
+      "sha256": "b15d711f66efa49d06d5e5c4bea8f9437879c74566e4e259fc33855a363d9ad2"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/process_settlement.py": {
+      "bytes": 1131,
+      "gitBlob": "db587a5628ab4606f1f95e4eae6a84bfbe8cc8a3",
+      "sha256": "39c7252da9a39053384c4e9ff156ae4573d7e3f4bbcd4fed49cd9daab97f6ba3"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/run_hosted.py": {
+      "bytes": 1052,
+      "gitBlob": "34f47fb148d246497d0536433987bce649021de6",
+      "sha256": "a99f4d54f558ecf98aac01f60d0749c1aa2f888ba55adf190f824a17a36e8ac9"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_all_controls.py": {
+      "bytes": 745,
+      "gitBlob": "094674057b7f913ee18cb1a48f7f7304812978c7",
+      "sha256": "aa0a696a7900f70637bf77bdaf359cd341271774e03caa08c64b0a7b9b011388"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_assembly_binding.py": {
+      "bytes": 1658,
+      "gitBlob": "1868deb0e21a82d6ec2d5751cd453c8cab203c11",
+      "sha256": "aae9568c794a0638a7b7451a9d8e45d11b257fc95836786826fda688265d632d"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_birth_time.py": {
+      "bytes": 728,
+      "gitBlob": "dcb15fb9499fb04940db766bb2c480b4b7ae6480",
+      "sha256": "b20a75bb34f8b884dcb22eaf924c174fbd0a37a7cd11f17f9b9efc3297f72be7"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_cgroup_controls.py": {
+      "bytes": 1317,
+      "gitBlob": "115d45cbcb865664a5aad3705b50ef30a3173f63",
+      "sha256": "38ecce533bd2b2645397a85dfd9a0b3a8fcbbcbcf489471aa36f6bda2c9bba8d"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_cgroup_lease.py": {
+      "bytes": 6084,
+      "gitBlob": "54e3a6ef1b5aab6987338120a5513479e95bc3e0",
+      "sha256": "c3fbb299d42a1201075b609b040b1d98df0688e8cb64e262fc78f065137f1203"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_claim_testhost.py": {
+      "bytes": 3069,
+      "gitBlob": "0fd33099b3890027a069188a2d395288c65ad2c2",
+      "sha256": "52ef391aa22b78b9472fe04c706a26081acfce09b06d22620b6d38ceaf7de82d"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_hosted_probe.py": {
+      "bytes": 13629,
+      "gitBlob": "6f4fb75a8a04f4cd628c7cd308300bf8fa0620e1",
+      "sha256": "b26fa05d335a5ba76bc53959437c2335d16a2abbdc2d8344f2c775e39a3a1470"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_identity_control.py": {
+      "bytes": 2024,
+      "gitBlob": "b62fe5b17dfb0571750e73e463e05c059124e30b",
+      "sha256": "15fb5383a6d511aca1da5eeec4b145aaf4a02f5e59e4f1d58eef61c9f4b8b09c"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_memory_admission.py": {
+      "bytes": 611,
+      "gitBlob": "fdd9191eea043d0acd8e397a093e4ef11400694a",
+      "sha256": "87ee5254b7c4042dc1e303a1525bcfb0797c783f6be1edfcfcdceed49df50549"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_owned_receipt_file.py": {
+      "bytes": 2688,
+      "gitBlob": "eac5da161ff3e333f1031be0b76286a33bad9c52",
+      "sha256": "d930cb4ba3a8cc888419da8d68c4513a452e9c405e2048446865e5508697045d"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_process_ownership.py": {
+      "bytes": 2050,
+      "gitBlob": "fd9a221df424f9adb74537718c97f3a13bccfa53",
+      "sha256": "07a8c31762980cd83b47d96a5cf300b8c3ec020068d60c1534ef536efc2ec6ba"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_process_settlement.py": {
+      "bytes": 1737,
+      "gitBlob": "d825767b9c554d786977d641be32f41b376921a5",
+      "sha256": "bb9d614cd3ae714c61075a36e62305932cc51ffb8795784af717a15530520d7f"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_run_hosted.py": {
+      "bytes": 1560,
+      "gitBlob": "22b3a6af79d08c3688faa1904a7af6e8c636b31f",
+      "sha256": "6df66bebc7d990a4ab3de5b2bd9559bd1ef0980b092f9eb23842fb70878a3aab"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_trx_control.py": {
+      "bytes": 1826,
+      "gitBlob": "1c72adcd99925eb856fd4a919879081f5e16ba35",
+      "sha256": "bf8df57c48112e18a1f070daa839d06fa58f7faeaec0660dae31a6a89bb21d1f"
+    },
+    "acceptance/MemberCompanyCatalogPersistence/runtime_probe/trx_control.py": {
+      "bytes": 2491,
+      "gitBlob": "b44a38cb0bffa50b2b6d0c9b05c553b5316496aa",
+      "sha256": "16a0d8f10fde54a545ee30e4a306942a5e6325f8659190e66f4e9d4d432f3e16"
     },
     "acceptance/MemberCompanyCatalogPersistence/test_current_consumer.py": {
       "bytes": 30972,
@@ -262,9 +408,9 @@
   },
   "verifier": {
     "path": "acceptance/MemberCompanyCatalogPersistence/current_consumer.py",
-    "bytes": 417710,
-    "sha256": "3e9cfb1c3afb4191f6a97314843b9b6c54182188d4ad1ca95e1abcb6a528d79b",
-    "gitBlob": "110d4d9506d7c6350fc1402ba494410c292a9200"
+    "bytes": 430756,
+    "sha256": "0c07ae1a5700340c758081270aef617c1925c617b603971ee395317b290623e4",
+    "gitBlob": "a2a0f58f519943ebf51a4f193fb68531f6ae00cb"
   },
   "fixedTransforms": {
     ".github/workflows/member-company-catalog-persistence.yml": [
@@ -281,7 +427,7 @@
         "startLine": 76
       },
       {
-        "after": "        run: |\n          set -euo pipefail\n          GITHUB_ACTIONS=false DOTNET_CLI_UI_LANGUAGE=en-US dotnet build acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistence.Tests.csproj -c Release --nologo | tee member-company-build-company-tests.log\n      - name: Bind actual current build source and package DLLs before any journey backend\n        timeout-minutes: 1\n        run: python3 -B acceptance/MemberCompanyCatalogPersistence/capture_build_source.py\n      - name: Verify passive linked-instance observation controls without any backend\n        timeout-minutes: 1\n        run: |\n          dotnet test acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistence.Tests.csproj -c Release --no-build --no-restore -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath= --filter \"FullyQualifiedName~CurrentCompanySourceObservationTests\" --logger trx --results-directory ./member-company-observation-controls\n          python3 -B acceptance/MemberCompanyCatalogPersistence/current_consumer.py --verify-observation-controls\n",
+        "after": "        run: |\n          set -euo pipefail\n          GITHUB_ACTIONS=false DOTNET_CLI_UI_LANGUAGE=en-US dotnet build acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistence.Tests.csproj -c Release --nologo | tee member-company-build-company-tests.log\n      - name: Verify bounded runtime-probe ownership controls\n        timeout-minutes: 1\n        run: |\n          python3 -B acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_all_controls.py\n          python3 -B -O acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_all_controls.py\n      - name: Observe actual test-host assembly identities without a backend\n        timeout-minutes: 3\n        run: python3 -B acceptance/MemberCompanyCatalogPersistence/runtime_probe/run_hosted.py\n      - name: Bind actual current build source and package DLLs before any journey backend\n        timeout-minutes: 1\n        run: python3 -B acceptance/MemberCompanyCatalogPersistence/capture_build_source.py\n      - name: Verify passive linked-instance observation controls without any backend\n        timeout-minutes: 1\n        run: |\n          dotnet test acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistence.Tests.csproj -c Release --no-build --no-restore -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath= --filter \"FullyQualifiedName~CurrentCompanySourceObservationTests\" --logger trx --results-directory ./member-company-observation-controls\n          python3 -B acceptance/MemberCompanyCatalogPersistence/current_consumer.py --verify-observation-controls\n",
         "before": "        run: GITHUB_ACTIONS=false dotnet build acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistence.Tests.csproj -c Release --nologo\n",
         "oldLineCount": 1,
         "startLine": 78

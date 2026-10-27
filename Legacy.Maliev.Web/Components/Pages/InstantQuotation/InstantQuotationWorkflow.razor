@@ -914,6 +914,7 @@
             @if (CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.PartialStatus)
             {
                 <p role="status">@Localizer["Your request was saved. File processing is pending. Do not resubmit."]</p>
+                <p><a href="/contact#contact-us" data-contact-email="info@maliev.com">info@maliev.com</a></p>
             }
             else if (CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.RejectedStatus)
             {
@@ -925,6 +926,7 @@
                 else
                 {
                     <p role="alert">@Localizer["We could not confirm whether your request was received. Do not submit it again; contact MALIEV support."]</p>
+                    <p><a href="/contact#contact-us" data-contact-email="info@maliev.com">info@maliev.com</a></p>
                 }
             }
             else

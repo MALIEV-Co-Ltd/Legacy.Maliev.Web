@@ -16,6 +16,239 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(ITestOutputHelper output)
 {
     [Fact]
+    public async Task RealFdmUpload_TouchScrollRetainsPetgSelectionAcrossOwnedRepricing()
+    {
+        var upload = new HashCheckingUploadClient { OwnPhysicalReadLifetime = true };
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var origin = new Uri($"http://127.0.0.1:{ReserveFreePort()}");
+        factory.UseKestrel(origin.Port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
+        var url = new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString();
+        using var readiness = await client.GetAsync(url);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
+        await using var context = await browser.NewContextAsync(new()
+        {
+            ViewportSize = new() { Width = 375, Height = 844 },
+            HasTouch = true,
+            IsMobile = true,
+        });
+        await using var page = await context.NewPageAsync();
+        using var lease = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        ICDPSession? cdp = null;
+        var touchActive = false;
+        Exception? primary = null;
+        try
+        {
+            await page.GotoAsync(url, new() { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30_000 });
+            var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
+            if (await consent.CountAsync() > 0) await consent.ClickAsync();
+            await WaitForUploadInputReadyAsync(page);
+            await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+            {
+                Name = "touch-existing-box.stl",
+                MimeType = "model/stl",
+                Buffer = WallThicknessParityBrowserFixture.Box(5),
+            });
+            await page.WaitForFunctionAsync(
+                "() => document.querySelectorAll('[data-workflow-part]').length === 1 && !!document.querySelector('[data-workflow-price-tier]')",
+                null, new() { Timeout = 60_000 });
+            var id = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
+            var scroller = page.Locator("[data-material-card-scroll]");
+            var petg = scroller.Locator("[data-material-key='PETG']");
+            await petg.TapAsync();
+            await Assertions.Expect(petg).ToHaveAttributeAsync("aria-checked", "true");
+            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+            await Assertions.Expect(review).ToBeEnabledAsync();
+            await Assertions.Expect(petg.Locator("[data-material-card-price]"))
+                .ToHaveAttributeAsync("data-price-status", "completed");
+            var store = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
+            var before = Assert.IsType<InstantQuotationSessionState>(await store.GetAsync(upload.SessionId, upload.OwnerIdentity, lease.Token));
+            AssertCurrentReceipt(before, id, 1);
+            var originalPart = Assert.Single(before.Parts);
+            await scroller.EvaluateAsync("node => node.scrollIntoView({ block: 'center', behavior: 'instant' })");
+            const string geometry = """
+                node => {
+                    const card = node.querySelector('[data-material-key="PETG"]');
+                    const list = node.getBoundingClientRect(), bounds = card.getBoundingClientRect();
+                    return [node.scrollTop, node.scrollHeight, node.clientHeight, list.top, list.bottom,
+                        bounds.top, bounds.bottom, window.scrollY];
+                }
+                """;
+            await page.WaitForFunctionAsync("""
+                () => {
+                    const node = document.querySelector('[data-material-card-scroll]');
+                    const card = node.querySelector('[data-material-key="PETG"]');
+                    const list = node.getBoundingClientRect(), bounds = card.getBoundingClientRect();
+                    return bounds.top >= list.top - 1 && bounds.bottom <= list.bottom + 1;
+                }
+                """, null, new() { Timeout = 3000 });
+            var initial = await scroller.EvaluateAsync<double[]>(geometry);
+            var down = Math.Min(initial[5] - initial[3] - 8, initial[1] - initial[2] - initial[0] - 8);
+            var up = Math.Min(initial[4] - initial[6] - 8, initial[0] - 8);
+            var distance = Math.Min(80, Math.Max(down, up));
+            Assert.True(distance >= 24, "The selected FDM card must have real room for a meaningful touch scroll.");
+            var box = Assert.IsType<LocatorBoundingBoxResult>(await scroller.BoundingBoxAsync());
+            var top = Math.Max(0, box.Y);
+            var bottom = Math.Min(844, box.Y + box.Height);
+            Assert.True(bottom - top >= 100);
+            var x = box.X + box.Width / 2;
+            var travel = down >= up ? -distance : distance;
+            var startY = (top + bottom - travel) / 2;
+            var endY = startY + travel;
+            Assert.InRange(startY, top + 8, bottom - 8);
+            Assert.InRange(endY, top + 8, bottom - 8);
+            var hits = await scroller.EvaluateAsync<bool[]>("""
+                (node, points) => points.map(([x, y]) => node.contains(document.elementFromPoint(x, y)))
+                """, new[] { new[] { x, startY }, new[] { x, (startY + endY) / 2 }, new[] { x, endY } });
+            output.WriteLine($"Material touch input: initial={initial[0]}, outer={initial[7]}, clip=[{top},{bottom}], x={x}, y=[{startY},{endY}], hits=[{string.Join(',', hits)}]");
+            Assert.All(hits, hit => Assert.True(hit));
+            await scroller.EvaluateAsync("""
+                node => {
+                    window.materialTrustedTouchStarts = 0;
+                    node.addEventListener('touchstart', event => {
+                        if (event.isTrusted) window.materialTrustedTouchStarts++;
+                    }, { passive: true, once: true });
+                }
+                """);
+            cdp = await context.NewCDPSessionAsync(page);
+            touchActive = true;
+            await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
+            {
+                ["type"] = "touchStart",
+                ["touchPoints"] = new[] { new { x, y = startY } },
+            });
+            for (var step = 1; step <= 12; step++)
+            {
+                await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
+                {
+                    ["type"] = "touchMove",
+                    ["touchPoints"] = new[] { new { x, y = startY + travel * step / 12 } },
+                });
+                await page.EvaluateAsync("() => new Promise(requestAnimationFrame)");
+            }
+            // Hold the final contact still before release so momentum does not move the retained anchor.
+            for (var frame = 0; frame < 8; frame++)
+            {
+                await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
+                {
+                    ["type"] = "touchMove",
+                    ["touchPoints"] = new[] { new { x, y = endY } },
+                });
+                await page.EvaluateAsync("() => new Promise(requestAnimationFrame)");
+            }
+            await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
+            {
+                ["type"] = "touchEnd",
+                ["touchPoints"] = Array.Empty<object>(),
+            });
+            touchActive = false;
+            try
+            {
+                await page.WaitForFunctionAsync("""
+                    start => window.materialTrustedTouchStarts > 0
+                        && Math.abs(document.querySelector('[data-material-card-scroll]').scrollTop - start) >= 8
+                    """, initial[0], new() { Timeout = 3000 });
+            }
+            finally
+            {
+                try
+                {
+                    var observed = await scroller.EvaluateAsync<double[]>(geometry);
+                    var trusted = await page.EvaluateAsync<int>("() => window.materialTrustedTouchStarts");
+                    output.WriteLine($"Material touch result: trusted={trusted}, initial={initial[0]}, current={observed[0]}, outerBefore={initial[7]}, outerAfter={observed[7]}");
+                }
+                catch (Exception) { /* Best-effort diagnostics must preserve the original test failure. */ }
+            }
+            var touched = await scroller.EvaluateAsync<double[]>(geometry);
+            Assert.InRange(Math.Abs(touched[7] - initial[7]), 0, 1);
+            AssertScrollRetained(touched, touched);
+            upload.BeforePhysicalRead = async (partId, token) =>
+            {
+                if (partId != id) return;
+                entered.TrySetResult();
+                await release.Task.WaitAsync(token);
+            };
+            var quantity = page.Locator($"#quantity-{id}");
+            await quantity.FillAsync("2");
+            await quantity.PressAsync("Tab");
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            await Assertions.Expect(review).ToBeDisabledAsync();
+            await Assertions.Expect(petg).ToHaveAttributeAsync("aria-checked", "true");
+            AssertScrollRetained(touched, await scroller.EvaluateAsync<double[]>(geometry));
+            var pending = Assert.IsType<InstantQuotationSessionState>(await store.GetAsync(upload.SessionId, upload.OwnerIdentity, lease.Token));
+            Assert.Equal("PETG", Assert.Single(pending.Parts).Configuration.MaterialKey);
+            Assert.Equal(2, Assert.Single(pending.Parts).Configuration.Quantity);
+            Assert.Null(pending.QuoteAuthorization);
+            release.TrySetResult();
+            upload.BeforePhysicalRead = null;
+            await Assertions.Expect(review).ToBeEnabledAsync();
+            await Assertions.Expect(petg.Locator("[data-material-card-price]"))
+                .ToHaveAttributeAsync("data-price-status", "completed");
+            AssertScrollRetained(touched, await scroller.EvaluateAsync<double[]>(geometry));
+            var current = Assert.IsType<InstantQuotationSessionState>(await store.GetAsync(upload.SessionId, upload.OwnerIdentity, lease.Token));
+            AssertCurrentReceipt(current, id, 2);
+            Assert.Equal(originalPart.UploadReference, Assert.Single(current.Parts).UploadReference);
+            Assert.Equal(originalPart.PhysicalAnalysisUpload, Assert.Single(current.Parts).PhysicalAnalysisUpload);
+            Assert.Equal(1, upload.VerifiedUploads);
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                () => { upload.StopPhysicalReadAdmission(); return ValueTask.CompletedTask; },
+                () => { release.TrySetResult(); upload.BeforePhysicalRead = null; return ValueTask.CompletedTask; },
+                async () =>
+                {
+                    try { await Task.WhenAll(upload.ClosedPhysicalReads).WaitAsync(TimeSpan.FromSeconds(5)); }
+                    catch (OperationCanceledException) when (upload.ClosedPhysicalReads.All(task => task.IsCompleted)) { }
+                },
+                () => { upload.DisposePhysicalReadLifetime(); return ValueTask.CompletedTask; },
+                async () =>
+                {
+                    if (cdp is not null && touchActive)
+                        await cdp.SendAsync("Input.dispatchTouchEvent", new Dictionary<string, object>
+                        {
+                            ["type"] = "touchCancel",
+                            ["touchPoints"] = Array.Empty<object>(),
+                        });
+                },
+                async () => { if (cdp is not null) await cdp.DetachAsync(); });
+        }
+
+        static void AssertScrollRetained(double[] original, double[] current)
+        {
+            Assert.True(current[5] >= current[3] - 1 && current[6] <= current[4] + 1);
+            // Same one-pixel card-relative anchor bound as the existing manual-scroll regression; layout shrink is rebased.
+            Assert.True(current[5] - current[3] <= original[5] - original[3] + 1);
+        }
+
+        static void AssertCurrentReceipt(InstantQuotationSessionState state, Guid id, int quantity)
+        {
+            var part = Assert.Single(state.Parts);
+            Assert.Equal(id, part.PartId);
+            Assert.Equal("PETG", part.Configuration.MaterialKey);
+            Assert.Equal(quantity, part.Configuration.Quantity);
+            Assert.NotNull(state.QuoteAuthorization);
+            var source = Assert.IsType<InstantQuotationPhysicalAnalysisUpload>(part.PhysicalAnalysisUpload);
+            var receipt = Assert.Single(state.PhysicalReceipts!, item => item.PartId == id
+                && item.MaterialKey == "PETG" && item.ConfiguredMaterialKey == "PETG" && item.Quantity == quantity);
+            Assert.Equal(state.SessionId, receipt.SessionId);
+            Assert.Equal(state.OwnerIdentity, receipt.OwnerIdentity);
+            Assert.Equal(source.FileId, receipt.FileId);
+            Assert.Equal(source.Sha256, receipt.UploadSha256, ignoreCase: true);
+            Assert.Equal(part.Geometry.Sha256, receipt.UploadSha256, ignoreCase: true);
+            Assert.Equal(part.Configuration.BuildPreference, receipt.BuildPreference);
+            Assert.True(receipt.DepositedMm3 > 0 && receipt.MotionSeconds > 0);
+        }
+    }
+
+    [Fact]
     public async Task NineOriginalGlbCopies_SupersededPetgTasksDoNotBlockCurrentSignedPlaBatch()
     {
         var bytes = Convert.FromBase64String(AdmittedGltfMeshReaderTests.OriginalGlb);
@@ -992,8 +1225,8 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
     }
 
     [Theory]
-    [InlineData("en", "Thin walls may print with defects", "Instant 3D Printing Estimate", "0.80 mm", "0.60 mm")]
-    [InlineData("th", "ผนังบางอาจเกิดข้อบกพร่อง", "ประเมินราคาพิมพ์ 3 มิติทันที", "0.80 มม.", "0.60 มม.")]
+    [InlineData("en", "Thin walls may print with defects", "Instant 3D Printing Quote | MALIEV", "0.80 mm", "0.60 mm")]
+    [InlineData("th", "ผนังบางอาจเกิดข้อบกพร่อง", "ประเมินราคาพิมพ์ 3D ออนไลน์ | MALIEV", "0.80 มม.", "0.60 มม.")]
     public async Task ThinFdmUploadWarnsAndHeatmapDoesNotRepriceOrBlockReview(
         string culture, string warningTitle, string pageTitle, string fdmLimit, string resinLimit)
     {

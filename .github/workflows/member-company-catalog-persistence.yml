@@ -83,6 +83,14 @@ jobs:
         run: |
           set -euo pipefail
           GITHUB_ACTIONS=false DOTNET_CLI_UI_LANGUAGE=en-US dotnet build acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistence.Tests.csproj -c Release --nologo | tee member-company-build-company-tests.log
+      - name: Verify bounded runtime-probe ownership controls
+        timeout-minutes: 1
+        run: |
+          python3 -B acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_all_controls.py
+          python3 -B -O acceptance/MemberCompanyCatalogPersistence/runtime_probe/test_all_controls.py
+      - name: Observe actual test-host assembly identities without a backend
+        timeout-minutes: 3
+        run: python3 -B acceptance/MemberCompanyCatalogPersistence/runtime_probe/run_hosted.py
       - name: Bind actual current build source and package DLLs before any journey backend
         timeout-minutes: 1
         run: python3 -B acceptance/MemberCompanyCatalogPersistence/capture_build_source.py

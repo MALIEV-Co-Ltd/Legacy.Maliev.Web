@@ -532,6 +532,55 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<Testin
         }
     }
 
+    [Theory]
+    [InlineData("en", "partial", null, true)]
+    [InlineData("th", "partial", null, true)]
+    [InlineData("en", "rejected", "unknown", true)]
+    [InlineData("th", "rejected", "unknown", true)]
+    [InlineData("en", "rejected", "validation", false)]
+    [InlineData("th", "rejected", "validation", false)]
+    [InlineData("en", "completed", null, false)]
+    [InlineData("th", "completed", null, false)]
+    public async Task SubmittedOutcome_OffersCrawlableEmailOnlyWhenSupportIsRequired(
+        string culture, string status, string? problemCategory, bool needsSupport)
+    {
+        var previousCulture = CultureInfo.CurrentCulture;
+        var previousUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+            var model = InstantQuotationCustomerDisplayModel.Empty with
+            {
+                SubmissionStatus = status,
+                RequestReference = status is "partial" or "completed" ? 720 : null,
+                ProblemCategory = problemCategory,
+            };
+            var html = WebUtility.HtmlDecode(await RenderWorkflowAsync(InstantQuotationWorkflowState.Submitted, model));
+            var submitted = Regex.Match(html, "<section data-workflow-submitted[\\s\\S]*?</section>").Value;
+
+            Assert.NotEmpty(submitted);
+            var emails = Regex.Matches(submitted, "<a[^>]*data-contact-email=\"info@maliev\\.com\"[^>]*>info@maliev\\.com</a>");
+            if (needsSupport)
+            {
+                Assert.Contains("href=\"/contact#contact-us\"", Assert.Single(emails).Value, StringComparison.Ordinal);
+                Assert.DoesNotContain("href=\"mailto:", submitted, StringComparison.OrdinalIgnoreCase);
+            }
+            else
+            {
+                Assert.Empty(emails);
+            }
+            Assert.Equal(status is "partial" or "completed", submitted.Contains("<strong>720</strong>", StringComparison.Ordinal));
+            Assert.Equal(status is "rejected" && problemCategory is "validation",
+                submitted.Contains("href=\"/InstantQuotation/3D-Printing\"", StringComparison.Ordinal));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
+            CultureInfo.CurrentUICulture = previousUiCulture;
+        }
+    }
+
     private static bool ReadBoolean(object target, string propertyName) =>
         (bool)(target.GetType().GetProperty(propertyName)?.GetValue(target)
             ?? throw new InvalidOperationException($"Visibility property {propertyName} was not found."));

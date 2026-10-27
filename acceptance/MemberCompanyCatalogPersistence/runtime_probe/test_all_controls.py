@@ -1,0 +1,6 @@
+import sys,unittest
+import test_assembly_binding,test_birth_time,test_cgroup_controls,test_cgroup_lease,test_claim_testhost,test_hosted_probe,test_identity_control,test_memory_admission,test_owned_receipt_file,test_process_ownership,test_process_settlement,test_run_hosted,test_trx_control
+
+modules=(test_assembly_binding,test_birth_time,test_cgroup_controls,test_cgroup_lease,test_claim_testhost,test_hosted_probe,test_identity_control,test_memory_admission,test_owned_receipt_file,test_process_ownership,test_process_settlement,test_run_hosted,test_trx_control)
+suite=unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromModule(module) for module in modules)
+sys.exit(not unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful())

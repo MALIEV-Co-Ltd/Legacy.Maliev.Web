@@ -117,6 +117,67 @@ public sealed class NonDisclosureAgreementStaticSsrRouteTests : IClassFixture<Te
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "en")]
+    [InlineData(false, "th")]
+    public async Task NonDisclosureAgreementRoute_PreservesSourceExplanationsAndAnchors(
+        bool useBlazorRoute, string culture)
+    {
+        await using var routeFactory = factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:NonDisclosureAgreement", useBlazorRoute ? "true" : "false"));
+        using var client = CreateClient(routeFactory);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using var response = await client.GetAsync($"/legal/nondisclosureagreement?culture={culture}", deadline.Token);
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync(deadline.Token));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        Assert.Equal(useBlazorRoute, source.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var article = Regex.Match(source, "<article\\b[^>]*class=\"legal-document\"[^>]*>(?<content>.*?)</article>",
+            RegexOptions.Singleline | RegexOptions.CultureInvariant);
+        Assert.True(article.Success);
+        var content = article.Groups["content"].Value;
+        var sections = new[]
+        {
+            (Id: "what-it-covers",
+                Heading: culture == "th"
+                    ? "สัญญานี้ครอบคลุมแบบ แบบจำลอง CAD ตัวอย่างชิ้นงาน ข้อกำหนด การพูดคุยเรื่องราคา และข้อมูลโครงการที่ส่งเพื่อขอราคา หรือประเมินงานผลิต"
+                    : "What the agreement covers",
+                Copy: culture == "th"
+                    ? "สัญญานี้ใช้กับแบบ แบบจำลอง CAD ตัวอย่างชิ้นงาน ข้อกำหนด การพูดคุยเรื่องราคา และข้อมูลโครงการที่เป็นความลับซึ่งส่งเพื่อขอราคาหรือประเมินงานผลิต"
+                    : "The agreement is intended for confidential drawings, CAD files, physical samples, specifications, pricing discussions, and other project information shared for quotation or manufacturing review."),
+            (Id: "when-to-send",
+                Heading: culture == "th"
+                    ? "หากโครงการต้องใช้ NDA ให้กรอกและลงนามก่อนส่งไฟล์หรือตัวอย่างที่เป็นความลับ พร้อมแจ้งชื่อโครงการให้ทีมงานทราบ"
+                    : "When to send it",
+                Copy: culture == "th"
+                    ? "หากโครงการต้องใช้ NDA ให้กรอกและลงนามในแบบฟอร์มก่อนส่งไฟล์หรือตัวอย่างที่เป็นความลับ และแจ้งชื่อโครงการให้ทีมงานทราบเพื่อดำเนินการได้ถูกต้อง"
+                    : "If your project requires an NDA, complete and sign the template before sending sensitive files or samples. Tell our team which project the agreement belongs to so we can route it correctly."),
+        };
+        foreach (var section in sections)
+        {
+            var pattern = $"<h3\\b[^>]*\\bid=\"{section.Id}\"[^>]*>{Regex.Escape(section.Heading)}</h3>\\s*<p>{Regex.Escape(section.Copy)}</p>";
+            Assert.Single(Regex.Matches(content, pattern, RegexOptions.Singleline | RegexOptions.CultureInvariant).Cast<Match>());
+        }
+
+        Assert.Contains(culture == "th"
+            ? "ที่ MALIEV เราให้ความสำคัญกับการรักษาความลับของงานและข้อมูลต่าง ๆ ของลูกค้าเป็นอย่างมาก"
+            : "At Maliev, we take our customer's confidentiality very serious.", content, StringComparison.Ordinal);
+        Assert.True(content.IndexOf("id=\"what-it-covers\"", StringComparison.Ordinal)
+            < content.IndexOf("id=\"when-to-send\"", StringComparison.Ordinal));
+        Assert.True(content.IndexOf("id=\"when-to-send\"", StringComparison.Ordinal)
+            < content.IndexOf("id=\"download\"", StringComparison.Ordinal));
+        var download = Regex.Match(content, "<a\\b[^>]*\\bid=\"download\"[^>]*>", RegexOptions.CultureInvariant);
+        Assert.True(download.Success);
+        Assert.Contains("href=\"https://storage.googleapis.com/maliev.com/web-contents/documents/mutual%20non-disclosure%20agreement.pdf\"", download.Value, StringComparison.Ordinal);
+        Assert.Contains("target=\"_blank\"", download.Value, StringComparison.Ordinal);
+        Assert.Contains("rel=\"noopener\"", download.Value, StringComparison.Ordinal);
+        Assert.Matches("<a\\b[^>]*href=\"/contact#contact-us\"[^>]*data-contact-email=\"nda@maliev.com\"[^>]*>nda@maliev.com</a>", content);
+        Assert.DoesNotContain("href=\"mailto:", content, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) => sourceFactory.CreateClient(
         new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
 
