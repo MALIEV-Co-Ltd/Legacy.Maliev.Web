@@ -225,6 +225,21 @@ class CurrentConsumerControls(unittest.TestCase):
             with patch.object(verifier.sys,'platform','linux'),patch.dict(os.environ,{'DOTNET_ROOT':root}),patch.object(verifier.os,'pidfd_open',side_effect=[91,92],create=True),patch.object(verifier.os,'close'),patch.object(verifier.os,'set_blocking'),patch.object(verifier.signal,'SIGKILL',9,create=True),patch.object(verifier.signal,'pidfd_send_signal',side_effect=lambda fd,sig:signals.append((fd,sig)),create=True),patch.object(verifier.selectors,'DefaultSelector',return_value=Selector()),patch.object(verifier.subprocess,'Popen',return_value=proc),patch.object(verifier,'proc_identity',return_value=ident),patch.object(verifier.time,'monotonic',side_effect=[0,31,32]):
                 with self.assertRaisesRegex(ValueError,'deadline'):verifier.verify_signed_package(Path(root)/'p.nupkg','x.1',receipt)
             self.assertEqual([(92,signal.SIGTERM),(92,9)],signals);self.assertTrue(receipt['terminalVerified']);self.assertFalse(receipt['verified']);self.assertFalse(receipt['pipeEof']);self.assertTrue(proc.stdout.closed)
+    def test_missing_http_diagnostic_records_only_bounded_manifest_facts(self):
+        import json,tempfile
+        from unittest.mock import patch
+        spec=importlib.util.spec_from_file_location('diagnostic_capture',HERE/'capture_build_source.py');capture=importlib.util.module_from_spec(spec);spec.loader.exec_module(capture)
+        with tempfile.TemporaryDirectory(prefix='http-manifest-',dir=HERE) as temp:
+            root=Path(temp);project='acceptance/MemberCompanyCatalogPersistence/Tests';out=root/project/'bin/Release/net10.0';out.mkdir(parents=True)
+            deps=out/'MemberCompanyCatalogPersistence.Tests.deps.json';config=out/'MemberCompanyCatalogPersistence.Tests.runtimeconfig.json'
+            deps.write_text(json.dumps({'targets':{'.NETCoreApp,Version=v10.0':{'Microsoft.Extensions.Http/10.0.13':{'runtime':{'lib/net10.0/Microsoft.Extensions.Http.dll':{}}},'unrelated':{'sensitive':'must not retain'}}}}))
+            config.write_text(json.dumps({'runtimeOptions':{'frameworks':[{'name':'Microsoft.AspNetCore.App','version':'10.0.0'}],'other':'must not retain'}}))
+            with patch.object(capture,'ROOT',root):
+                value=capture.http_output_diagnostic(project,'Microsoft.Extensions.Http')
+                self.assertFalse(value['runtimeLoadObserved']);self.assertFalse(value['appLocalPresent']);self.assertEqual(['lib/net10.0/Microsoft.Extensions.Http.dll'],value['manifest']['httpRows'][0]['runtimeAssets']);self.assertEqual([{'name':'Microsoft.AspNetCore.App','version':'10.0.0'}],value['runtimeConfig']['frameworks']);self.assertNotIn('must not retain',json.dumps(value))
+                deps.write_text(json.dumps({'targets':{'net10.0':{'Microsoft.Extensions.Http/../../secret':{'runtime':{}}}}}))
+                self.assertEqual({'unavailable':True},capture.http_output_diagnostic(project,'Microsoft.Extensions.Http')['manifest'])
+                with self.assertRaises(ValueError):capture.http_output_diagnostic(project,'Other')
     def test_build_capture_rejects_non_cli_binary_without_execution(self):
         path=HERE/'capture_build_source.py'
         if not path.exists():self.fail('Static current build/source evidence capture is missing')

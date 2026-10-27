@@ -69,6 +69,37 @@ def xml_repository(raw,expected_url):
     need(row is not None and row.get('url')==expected_url and row.get('type')=='git' and re.fullmatch('[0-9a-f]{40}',row.get('commit','')),'immutable official package repository revision')
     return row.get('commit')
 
+def http_output_diagnostic(project,assembly):
+    """Report bounded dependency-manifest facts, never claim a DLL was loaded."""
+    need(assembly=='Microsoft.Extensions.Http','only the observed missing assembly')
+    directory=project+'/bin/Release/net10.0/'
+    filename=Path(project).name+'.deps.json'
+    if Path(project).name=='Tests':filename='MemberCompanyCatalogPersistence.Tests.deps.json'
+    result={'assembly':assembly,'runtimeLoadObserved':False,'appLocalPresent':(ROOT/(directory+assembly+'.dll')).is_file(),'manifest':None,'runtimeConfig':None}
+    for field,name in [('manifest',filename),('runtimeConfig',filename.replace('.deps.json','.runtimeconfig.json'))]:
+        try:
+            raw=current.read(ROOT,directory+name,8*1024*1024);data=current.parse(raw)
+            if field=='manifest':
+                rows=[]
+                for target,packages in data.get('targets',{}).items():
+                    if not isinstance(packages,dict):continue
+                    for package,detail in packages.items():
+                        if not package.startswith('Microsoft.Extensions.Http/') or not isinstance(detail,dict):continue
+                        if not re.fullmatch(r'[A-Za-z0-9._/,=+-]{1,100}',target) or not re.fullmatch(r'Microsoft\.Extensions\.Http/[0-9A-Za-z.+-]{1,50}',package):raise ValueError('unsafe diagnostic identity')
+                        runtime=detail.get('runtime',{});assets=sorted(k for k in runtime if k.endswith('/Microsoft.Extensions.Http.dll') or k=='Microsoft.Extensions.Http.dll') if isinstance(runtime,dict) else []
+                        if len(rows)>=8 or len(assets)>8 or any(not re.fullmatch(r'[A-Za-z0-9._/-]{1,200}',a) for a in assets):raise ValueError('manifest diagnostic bound')
+                        rows.append(dict(target=target,package=package,runtimeAssets=assets))
+                result[field]=dict(sha256=hashlib.sha256(raw).hexdigest(),httpRows=rows)
+            else:
+                options=data.get('runtimeOptions',{});frameworks=options.get('frameworks',[]) if isinstance(options,dict) else []
+                if isinstance(options,dict) and 'framework' in options:frameworks=frameworks+[options['framework']]
+                if not isinstance(frameworks,list) or len(frameworks)>8:raise ValueError('framework diagnostic bound')
+                filtered=[f for f in frameworks if isinstance(f,dict) and f.get('name') in ('Microsoft.NETCore.App','Microsoft.AspNetCore.App')]
+                if any(not isinstance(f.get('version'),str) or not re.fullmatch(r'[0-9A-Za-z.+-]{1,50}',f['version']) for f in filtered):raise ValueError('unsafe framework version')
+                result[field]=dict(sha256=hashlib.sha256(raw).hexdigest(),frameworks=[{'name':f['name'],'version':f['version']} for f in filtered])
+        except (OSError,ValueError,KeyError,TypeError):result[field]={'unavailable':True}
+    return result
+
 def package_record(assets,name,version,revision,diagnostics=None):
     key=name+'/'+version;libraries=assets['libraries'];need(key in libraries,'exact resolved package version: '+name)
     row=libraries[key];digest=row.get('sha512','').removeprefix('sha512-')
@@ -142,6 +173,8 @@ def capture():
         need(matches==[current.DEFAULTS.encode()],'actual generated Defaults source revision; never stamp a replacement')
         assemblies=[]
         for role,name,revision in current.ASSEMBLIES:
+            if name=='Microsoft.Extensions.Http' and not (ROOT/(projects[1][1]+'/bin/Release/net10.0/'+name+'.dll')).is_file():
+                progress['missingAssemblyDiagnostic']=[http_output_diagnostic(project,name) for _,project in projects]
             raw=current.read(ROOT,projects[1][1]+'/bin/Release/net10.0/'+name+'.dll',16*1024*1024);info=inspect_assembly(raw)
             need(info['assemblyName']==name,'actual built assembly name')
             if role!='defaults':need(info['sha256']==package_hashes[name],'built DLL equals original source-bound package DLL')
