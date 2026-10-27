@@ -172,6 +172,23 @@ class CurrentConsumerControls(unittest.TestCase):
             counters.set('notExecuted','0');results[0].set('outcome','Failed');ET.ElementTree(root).write(path)
             with self.assertRaises(ValueError):d.observation_controls(path)
 
+    def test_original_journey_and_all_unmodified_helper_suffix_bytes_are_preserved(self):
+        d=self.consumer();name='acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistenceTests.cs'
+        original=d.read(HERE.parents[1],d.ARCHIVES[name]['path']);actual=(HERE/'Tests/MemberCompanyCatalogPersistenceTests.cs').read_bytes()
+        start=b'/// <summary>Passive observation only;'
+        suffix=b'/// <summary>Own synchronous request listener; retains only known synthetic phase counts and joins closure before host cleanup.</summary>'
+        self.assertEqual(1,original.count(suffix));self.assertEqual(1,actual.count(suffix),'Original Company browser observer suffix was removed')
+        self.assertEqual(original.split(start)[0],actual.split(start)[0])
+        self.assertEqual(original[original.index(suffix):],actual[actual.index(suffix):])
+        import re
+        declarations=lambda raw:re.findall(rb'\b(?:class|record)\s+([A-Za-z_][A-Za-z0-9_]*)',raw)
+        self.assertEqual(declarations(original),declarations(actual),'Whole-file original helper declaration roster must be preserved')
+    def test_current_observer_exact_regex_assertions_are_xunit_analyzer_compatible(self):
+        raw=(HERE/'Tests/CurrentCompanySourceObservation.cs').read_text()
+        self.assertIn(r'Assert.Matches("\\A[a-f0-9]{40}\\z", candidate ?? string.Empty);',raw)
+        self.assertIn(r'Assert.Matches("\\A[a-f0-9]{40}\\z", parts[1]);',raw)
+        self.assertNotIn('Assert.True(Regex.IsMatch(',raw)
+
 if __name__=='__main__':
     if '--historical' in sys.argv:
         import current_consumer as current

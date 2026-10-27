@@ -384,3 +384,59 @@ internal sealed class CatalogRetryObservation : IHttpMessageHandlerBuilderFilter
         }
     }
 }
+/// <summary>Own synchronous request listener; retains only known synthetic phase counts and joins closure before host cleanup.</summary>
+internal sealed class CompanyBrowserRequestObservation : IDisposable
+{
+    private readonly object gate = new();
+    private readonly IPage page;
+    private readonly Uri origin;
+    private readonly string culture;
+    private readonly string[] queries;
+    private readonly int[] counts = new int[3];
+    private bool unexpected, closed;
+    internal CompanyBrowserRequestObservation(IPage page, Uri origin, string culture)
+    {
+        this.page = page; this.origin = origin; this.culture = culture;
+        queries = ["Synthetic " + culture, "Unavailable " + culture, "RateLimited " + culture];
+        page.Request += Observe;
+    }
+    private void Observe(object? sender, IRequest request)
+    {
+        if (!Uri.TryCreate(request.Url, UriKind.Absolute, out var uri) || uri.AbsolutePath != "/lookups/companies/search") return;
+        lock (gate)
+        {
+            if (closed) return;
+            if (uri.Scheme != origin.Scheme || uri.Host != origin.Host || uri.Port != origin.Port || uri.Query.Length != 0 || request.Method != "POST"
+                || request.PostData is not { Length: > 0 and <= 4096 } body)
+            { unexpected = true; return; }
+            try
+            {
+                using var json = JsonDocument.Parse(body);
+                var value = json.RootElement;
+                var phase = Array.IndexOf(queries, value.GetProperty("q").GetString());
+                if (value.EnumerateObject().Count() != 4 || phase < 0 || value.GetProperty("language").GetString() != culture
+                    || value.GetProperty("queryType").GetString() != "name" || value.GetProperty("limit").GetInt32() != 20)
+                { unexpected = true; return; }
+                counts[phase]++;
+            }
+            catch (Exception exception) when (exception is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
+            { unexpected = true; }
+        }
+    }
+    internal object Receipt()
+    {
+        Dispose(); // Close admission, join admitted callbacks and unsubscribe before accepting a final snapshot.
+        lock (gate)
+        {
+            Assert.False(unexpected, "Unexpected company lookup request metadata; private body suppressed.");
+            Assert.All(counts, count => Assert.Equal(1, count));
+            return queries.Select((query, index) => new { query, language = culture, count = counts[index] }).ToArray();
+        }
+    }
+    public void Dispose()
+    {
+        // Waits for any admitted synchronous callback, closes admission, then removes the listener. No background work remains.
+        lock (gate) closed = true;
+        page.Request -= Observe;
+    }
+}

@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Http.Resilience;
 
@@ -29,7 +28,7 @@ internal sealed class CurrentCompanySourceObservation
         using var document = JsonDocument.Parse(raw, new JsonDocumentOptions { MaxDepth = 16 });
         expected = document.RootElement.Clone();
         var candidate = Environment.GetEnvironmentVariable("MALIEV_COMPANY_CANDIDATE_HEAD");
-        Assert.True(Regex.IsMatch(candidate ?? string.Empty, "\\A[a-f0-9]{40}\\z"));
+        Assert.Matches("\\A[a-f0-9]{40}\\z", candidate ?? string.Empty);
         Assert.Equal(candidate, expected.GetProperty("candidateHead").GetString());
         Assert.True(expected.GetProperty("sourceChecked").GetBoolean());
         SourceProfileSha256 = Hash(ReadBounded(Path.Combine(root, "acceptance", "MemberCompanyCatalogPersistence", "current-profile.json"), 1024 * 1024));
@@ -122,7 +121,7 @@ internal sealed class CurrentCompanySourceObservation
         Assert.InRange(informational?.Length ?? 0, 1, 128);
         var parts = informational!.Split('+');
         Assert.Equal(2, parts.Length);
-        Assert.True(Regex.IsMatch(parts[1], "\\A[a-f0-9]{40}\\z"));
+        Assert.Matches("\\A[a-f0-9]{40}\\z", parts[1]);
         Assert.Equal(requiredRevision, parts[1]);
         var location = assembly.Location;
         Assert.True(Path.IsPathFullyQualified(location));

@@ -80,18 +80,18 @@ EXPECTED_FILES={'.github/workflows/_build-and-test.yml': {'bytes': 56086,
  'acceptance/MemberCompanyCatalogPersistence/README.md': {'bytes': 10624,
                                                           'gitBlob': 'bcba6d368601dbbd826a6a7cc7d635964beacb45',
                                                           'sha256': '54d615ee241988ba2e0a9735e80354e7618c3f209426cf11081bd8d7832e1a9f'},
- 'acceptance/MemberCompanyCatalogPersistence/Tests/CurrentCompanySourceObservation.cs': {'bytes': 8161,
-                                                                                         'gitBlob': '4c7eedec5c850560e53cdb6ca487cf1f5f7b2872',
-                                                                                         'sha256': 'ae37db2e13538d47940e059a903d108c115b29b6cd2c7b01bd09943a3d135fac'},
+ 'acceptance/MemberCompanyCatalogPersistence/Tests/CurrentCompanySourceObservation.cs': {'bytes': 8099,
+                                                                                         'gitBlob': 'd800e29e741b097164f2c32da35e6c4d3b99210f',
+                                                                                         'sha256': '2e739f248b06a35c96e7d0c03a1f7448ce5d3f983114fb1b5b6f12a3253f5401'},
  'acceptance/MemberCompanyCatalogPersistence/Tests/CurrentCompanySourceObservationTests.cs': {'bytes': 3531,
                                                                                               'gitBlob': '412c0c1456107cf7f67432fe8f08832119cd0645',
                                                                                               'sha256': '4e6afcc904b7548ba96abcfd5b1d5fb08f7f2310ddea628f2a0e16e84f48f746'},
  'acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistence.Tests.csproj': {'bytes': 699,
                                                                                                    'gitBlob': '153e1191e101dc146db873fbd42ed29cddedb5d2',
                                                                                                    'sha256': '990ee1f053bbb02bbdbb08d49989aa88b1cf80fb08604f0e2e09cffe2d8f7ed2'},
- 'acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistenceTests.cs': {'bytes': 30244,
-                                                                                              'gitBlob': 'd5b2992c2f3bc166e1c616e597c55231b681c4fa',
-                                                                                              'sha256': '9649773d7b752f997ea84ce9c8d60342b084ce1c616b8a3a47c3e9184eb93940'},
+ 'acceptance/MemberCompanyCatalogPersistence/Tests/MemberCompanyCatalogPersistenceTests.cs': {'bytes': 33043,
+                                                                                              'gitBlob': 'ed4f04607af425f7aef016bc769eca4449436c99',
+                                                                                              'sha256': 'e3105d409f45cf58718c3e31f1a208495086f31fa7eaed067320c9f5f33c1b91'},
  'acceptance/MemberCompanyCatalogPersistence/capture_build_source.py': {'bytes': 12153,
                                                                         'gitBlob': '2c3fad05e63b1ec1c1be2552dee211d04f1b103b',
                                                                         'sha256': '0e40c1d4dcadcc82a07ea5a71b100b951673b9d8c5c28f5b1f1e0606a2fb63f4'},
@@ -122,9 +122,9 @@ EXPECTED_FILES={'.github/workflows/_build-and-test.yml': {'bytes': 56086,
  'acceptance/MemberCompanyCatalogPersistence/retain.py': {'bytes': 20429,
                                                           'gitBlob': '62e3978d390f57291d35fd56484cc96f2d4a342d',
                                                           'sha256': 'db6def19fadfc7b71b9096257c3c37739e72935201775ba2ecbd336bacf9e3ac'},
- 'acceptance/MemberCompanyCatalogPersistence/test_current_consumer.py': {'bytes': 14606,
-                                                                         'gitBlob': '08f4f42a7fe263a1fc8304dcd7048f08cad63ea7',
-                                                                         'sha256': '58461efc2ebdb1bdf82d48fa2e0e3142ce5bee3a08d4ca902a4ac5c183aeda27'},
+ 'acceptance/MemberCompanyCatalogPersistence/test_current_consumer.py': {'bytes': 16131,
+                                                                         'gitBlob': 'd4eb84ceec462be60c9c21e3b01a58d323f80008',
+                                                                         'sha256': 'ec1949bd9354de918193b13eb3efe8d1ffaf9bad5b0f7ce07ee7fc92390d566b'},
  'acceptance/MemberCompanyCatalogPersistence/test_retain.py': {'bytes': 22334,
                                                                'gitBlob': '008b5ed1a5d3d3ef2675fe98989e64eeaff1e78f',
                                                                'sha256': '8827cd060a130a8f8c4b5fac24493f4f62d7c0b5aa99b6430155cdb8df0a4e3a'},
@@ -3148,112 +3148,8 @@ FIXED_TRANSFORMS={'.github/workflows/member-company-catalog-persistence.yml': [{
                                                                                                'oldLineCount': 0,
                                                                                                'startLine': 374},
                                                                                               {'after': '',
-                                                                                               'before': '\n'
-                                                                                                         '/// <summary>Own synchronous request '
-                                                                                                         'listener; retains only known synthetic '
-                                                                                                         'phase counts and joins closure before host '
-                                                                                                         'cleanup.</summary>\n'
-                                                                                                         'internal sealed class '
-                                                                                                         'CompanyBrowserRequestObservation : '
-                                                                                                         'IDisposable\n'
-                                                                                                         '{\n'
-                                                                                                         '    private readonly object gate = new();\n'
-                                                                                                         '    private readonly IPage page;\n'
-                                                                                                         '    private readonly Uri origin;\n'
-                                                                                                         '    private readonly string culture;\n'
-                                                                                                         '    private readonly string[] queries;\n'
-                                                                                                         '    private readonly int[] counts = new '
-                                                                                                         'int[3];\n'
-                                                                                                         '    private bool unexpected, closed;\n'
-                                                                                                         '    internal '
-                                                                                                         'CompanyBrowserRequestObservation(IPage '
-                                                                                                         'page, Uri origin, string culture)\n'
-                                                                                                         '    {\n'
-                                                                                                         '        this.page = page; this.origin = '
-                                                                                                         'origin; this.culture = culture;\n'
-                                                                                                         '        queries = ["Synthetic " + culture, '
-                                                                                                         '"Unavailable " + culture, "RateLimited " + '
-                                                                                                         'culture];\n'
-                                                                                                         '        page.Request += Observe;\n'
-                                                                                                         '    }\n'
-                                                                                                         '    private void Observe(object? sender, '
-                                                                                                         'IRequest request)\n'
-                                                                                                         '    {\n'
-                                                                                                         '        if (!Uri.TryCreate(request.Url, '
-                                                                                                         'UriKind.Absolute, out var uri) || '
-                                                                                                         'uri.AbsolutePath != '
-                                                                                                         '"/lookups/companies/search") return;\n'
-                                                                                                         '        lock (gate)\n'
-                                                                                                         '        {\n'
-                                                                                                         '            if (closed) return;\n'
-                                                                                                         '            if (uri.Scheme != '
-                                                                                                         'origin.Scheme || uri.Host != origin.Host '
-                                                                                                         '|| uri.Port != origin.Port || '
-                                                                                                         'uri.Query.Length != 0 || request.Method != '
-                                                                                                         '"POST"\n'
-                                                                                                         '                || request.PostData is not '
-                                                                                                         '{ Length: > 0 and <= 4096 } body)\n'
-                                                                                                         '            { unexpected = true; return; '
-                                                                                                         '}\n'
-                                                                                                         '            try\n'
-                                                                                                         '            {\n'
-                                                                                                         '                using var json = '
-                                                                                                         'JsonDocument.Parse(body);\n'
-                                                                                                         '                var value = '
-                                                                                                         'json.RootElement;\n'
-                                                                                                         '                var phase = '
-                                                                                                         'Array.IndexOf(queries, '
-                                                                                                         'value.GetProperty("q").GetString());\n'
-                                                                                                         '                if '
-                                                                                                         '(value.EnumerateObject().Count() != 4 || '
-                                                                                                         'phase < 0 || '
-                                                                                                         'value.GetProperty("language").GetString() '
-                                                                                                         '!= culture\n'
-                                                                                                         '                    || '
-                                                                                                         'value.GetProperty("queryType").GetString() '
-                                                                                                         '!= "name" || '
-                                                                                                         'value.GetProperty("limit").GetInt32() != '
-                                                                                                         '20)\n'
-                                                                                                         '                { unexpected = true; '
-                                                                                                         'return; }\n'
-                                                                                                         '                counts[phase]++;\n'
-                                                                                                         '            }\n'
-                                                                                                         '            catch (Exception exception) '
-                                                                                                         'when (exception is JsonException or '
-                                                                                                         'KeyNotFoundException or '
-                                                                                                         'InvalidOperationException or '
-                                                                                                         'FormatException)\n'
-                                                                                                         '            { unexpected = true; }\n'
-                                                                                                         '        }\n'
-                                                                                                         '    }\n'
-                                                                                                         '    internal object Receipt()\n'
-                                                                                                         '    {\n'
-                                                                                                         '        Dispose(); // Close admission, '
-                                                                                                         'join admitted callbacks and unsubscribe '
-                                                                                                         'before accepting a final snapshot.\n'
-                                                                                                         '        lock (gate)\n'
-                                                                                                         '        {\n'
-                                                                                                         '            Assert.False(unexpected, '
-                                                                                                         '"Unexpected company lookup request '
-                                                                                                         'metadata; private body suppressed.");\n'
-                                                                                                         '            Assert.All(counts, count => '
-                                                                                                         'Assert.Equal(1, count));\n'
-                                                                                                         '            return queries.Select((query, '
-                                                                                                         'index) => new { query, language = culture, '
-                                                                                                         'count = counts[index] }).ToArray();\n'
-                                                                                                         '        }\n'
-                                                                                                         '    }\n'
-                                                                                                         '    public void Dispose()\n'
-                                                                                                         '    {\n'
-                                                                                                         '        // Waits for any admitted '
-                                                                                                         'synchronous callback, closes admission, '
-                                                                                                         'then removes the listener. No background '
-                                                                                                         'work remains.\n'
-                                                                                                         '        lock (gate) closed = true;\n'
-                                                                                                         '        page.Request -= Observe;\n'
-                                                                                                         '    }\n'
-                                                                                                         '}\n',
-                                                                                               'oldLineCount': 57,
+                                                                                               'before': '\n',
+                                                                                               'oldLineCount': 1,
                                                                                                'startLine': 378}],
  'acceptance/MemberCompanyCatalogPersistence/retain.py': [{'after': 'import sys\nimport current_consumer as current\n',
                                                            'before': '',
