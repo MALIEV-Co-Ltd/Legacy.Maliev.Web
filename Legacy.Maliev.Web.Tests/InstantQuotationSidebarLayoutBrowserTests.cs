@@ -406,6 +406,38 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
                 "Every rendered line of the full part name must fit its card and rail. "
                 + "Rectangles=[left,top,right,bottom]; failures=[index,edgeMask,left,top,right,bottom], "
                 + "edges=left1/right2/top4/bottom8. " + nameGeometry.GetRawText());
+            var thumbnail = card.Locator("img[data-workflow-thumbnail]");
+            await Assertions.Expect(thumbnail).ToHaveCountAsync(1);
+            await using var thumbnailElement = await thumbnail.ElementHandleAsync()
+                ?? throw new InvalidOperationException("The owning part thumbnail is missing.");
+            await using var thumbnailReady = await page.WaitForFunctionAsync(
+                "image => image.isConnected && image.complete && image.naturalWidth > 0 && image.naturalHeight > 0",
+                thumbnailElement);
+            var thumbnailGeometry = await thumbnail.EvaluateAsync<JsonElement>("""
+                image => {
+                  const r=image.getBoundingClientRect();
+                  const card=image.closest('[data-workflow-part]').getBoundingClientRect();
+                  const rail=image.closest('[data-workflow-parts]').getBoundingClientRect();
+                  return {
+                    loaded:image.complete && image.naturalWidth>0 && image.naturalHeight>0,
+                    positive:r.width>0 && r.height>0,
+                    square:Math.abs(r.width-r.height)<=1,
+                    insideCard:r.left>=card.left-1 && r.right<=card.right+1
+                      && r.top>=card.top-1 && r.bottom<=card.bottom+1,
+                    insideRailHorizontally:r.left>=rail.left-1 && r.right<=rail.right+1,
+                    objectFit:getComputedStyle(image).objectFit,
+                    width:r.width,height:r.height,
+                    naturalWidth:image.naturalWidth,naturalHeight:image.naturalHeight };
+                }
+                """);
+            Assert.True(thumbnailGeometry.GetProperty("loaded").GetBoolean()
+                && thumbnailGeometry.GetProperty("positive").GetBoolean()
+                && thumbnailGeometry.GetProperty("square").GetBoolean()
+                && thumbnailGeometry.GetProperty("insideCard").GetBoolean()
+                && thumbnailGeometry.GetProperty("insideRailHorizontally").GetBoolean()
+                && thumbnailGeometry.GetProperty("objectFit").GetString() == "contain",
+                "The loaded square part thumbnail must fit its card and the rail width. "
+                + thumbnailGeometry.GetRawText());
             var view = card.Locator("button").First;
             var remove = card.Locator("button").Last;
             var keyboardOperation = name == names[0] ? "first-keyboard" : "second-keyboard";

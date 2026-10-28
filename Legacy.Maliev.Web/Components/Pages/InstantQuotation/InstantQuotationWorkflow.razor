@@ -13,18 +13,21 @@
     <p id="instant-quote-status" class="instant-quote__sr-only" aria-live="polite" aria-atomic="true">@StatusMessage</p>
     <p data-workflow-preview-status class="instant-quote__sr-only" role="status">@PreviewStatusMessage</p>
 
-    @if (!VisibleSections.Parts)
+    @if (!VisibleSections.Parts && failedPreviewSelections.Count > 0)
     {
-        @foreach (var failure in failedPreviewSelections)
-        {
-            <article data-workflow-failed-preview data-preview-failure="@failure.Value.Category">
-                <h4>@failure.Value.Name</h4>
-                <p role="alert">@LocalPreviewFailureMessage(failure.Value)</p>
-                <button type="button" disabled="@(InputDisabled || IsRepricing)"
-                        aria-label="@Localizer["Remove {0}", failure.Value.Name]"
-                        @onclick="() => RemoveFailedPreviewAsync(failure.Key)">@Localizer["Remove"]</button>
-            </article>
-        }
+        <div data-workflow-preview-notices tabindex="@(State is InstantQuotationWorkflowState.Empty ? "0" : null)"
+             role="region" aria-labelledby="instant-quote-workflow-heading">
+            @foreach (var failure in failedPreviewSelections)
+            {
+                <article data-workflow-failed-preview data-preview-failure="@failure.Value.Category">
+                    <h4>@failure.Value.Name</h4>
+                    <p role="alert">@LocalPreviewFailureMessage(failure.Value)</p>
+                    <button type="button" disabled="@(InputDisabled || IsRepricing)"
+                            aria-label="@Localizer["Remove {0}", failure.Value.Name]"
+                            @onclick="() => RemoveFailedPreviewAsync(failure.Key)">@Localizer["Remove"]</button>
+                </article>
+            }
+        </div>
     }
 
     @if (VisibleSections.Upload)
@@ -56,11 +59,11 @@
             </span>
             @if (uploadSelectionError is not null)
             {
-                <p role="alert">@uploadSelectionError</p>
+                <p role="alert" tabindex="@(State is InstantQuotationWorkflowState.Empty ? "0" : null)">@uploadSelectionError</p>
             }
             @if (State is InstantQuotationWorkflowState.Empty)
             {
-                <label for="instant-quote-files" class="iq-empty-dropzone" data-workflow-empty-dropzone>
+                <label for="instant-quote-files" class="iq-empty-dropzone" data-workflow-empty-dropzone tabindex="0">
                     <InstantQuotationEmptyScene />
                     <strong>@Localizer["Drop your 3D file here"]</strong>
                     <span>
