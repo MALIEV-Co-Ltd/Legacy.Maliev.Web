@@ -52,6 +52,21 @@ public sealed class SeoBusinessContractParityTests
         };
 
     [Fact]
+    public void Startup_UsesCanonicalPathNormalizationAndRemovesDuplicatePageRoutes()
+    {
+        var startup = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "Program.cs"));
+        var canonicalIndex = startup.IndexOf("app.UseMiddleware<CanonicalUrlRedirectMiddleware>();", StringComparison.Ordinal);
+
+        Assert.True(canonicalIndex >= 0);
+        Assert.DoesNotContain("UseForwardedHeaders", startup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UseHttpsRedirection", startup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UseHsts", startup, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddPageRoute(\"/services/3d-printing\", \"3d-printing\")", startup, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddPageRoute(\"/services/3d-scanning\", \"3d-scanning\")", startup, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddPageRoute(\"/services/cnc-machining\", \"cnc-machining\")", startup, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void EveryIndexedRouteHasAStaticSsrPageMetadataAndHeading()
     {
         foreach (var route in PublicSearchRouteCatalog.Routes)

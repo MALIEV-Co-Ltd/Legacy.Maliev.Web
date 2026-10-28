@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -66,6 +67,9 @@ public sealed class SitemapResponseCachingHttpTests(TestingWebApplicationFactory
             entries.Select(entry => entry.Element(ns + "loc")?.Value));
         for (var index = 0; index < entries.Length; index++)
         {
+            var priority = Assert.Single(entries[index].Elements(ns + "priority"));
+            Assert.True(double.TryParse(priority.Value, NumberStyles.AllowDecimalPoint,
+                CultureInfo.InvariantCulture, out _));
             var links = entries[index].Elements(xhtml + "link").ToArray();
             Assert.Equal(3, links.Length);
             Assert.Equal(new[] { "en", "th", "x-default" }, links.Select(link => link.Attribute("hreflang")?.Value));

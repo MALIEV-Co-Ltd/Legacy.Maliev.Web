@@ -174,6 +174,42 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<TestingW
         Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(false, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "th")]
+    public async Task ServicesRoute_PreservesFinderContactActionsAcrossRenderers(bool useBlazorRoute, string culture)
+    {
+        await using var application = factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:Services", useBlazorRoute.ToString()));
+        using var client = CreateClient(application);
+        using var response = await client.GetAsync($"/services?culture={culture}");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(useBlazorRoute, html.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var finder = Assert.Single(Regex.Matches(html,
+            "<main\\b(?=[^>]*\\sdata-service-finder(?=\\s|=|>))[^>]*>(?<body>[\\s\\S]*?)</main>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        var actions = Assert.Single(Regex.Matches(finder.Groups["body"].Value,
+            "<div class=\"service-finder-result-actions\">(?<body>[\\s\\S]*?)</div>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        var contact = Assert.Single(Regex.Matches(actions.Groups["body"].Value,
+            "<a class=\"service-finder-contact\" href=\"(?<href>[^\"]+)\">(?<copy>[\\s\\S]*?)</a>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Equal(new Uri(client.BaseAddress!, "/Contact"), new Uri(client.BaseAddress!, contact.Groups["href"].Value));
+        Assert.Equal(culture == "th" ? "อยากคุยกับเราโดยตรงไหม? ติดต่อ MALIEV" : "Prefer to talk to us directly? Contact MALIEV",
+            Regex.Replace(contact.Groups["copy"].Value, "<[^>]+>", string.Empty, RegexOptions.CultureInvariant).Trim());
+
+        var viewAll = Assert.Single(Regex.Matches(actions.Groups["body"].Value,
+            "<a class=\"service-finder-view-all\" href=\"(?<href>[^\"]+)\">(?<copy>[\\s\\S]*?)</a>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Equal(new Uri(client.BaseAddress!, "/services"), new Uri(client.BaseAddress!, viewAll.Groups["href"].Value));
+        Assert.Equal(culture == "th" ? "ดูบริการทั้งหมด" : "View all services",
+            Regex.Replace(viewAll.Groups["copy"].Value, "<[^>]+>", string.Empty, RegexOptions.CultureInvariant).Trim());
+    }
+
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) =>
         sourceFactory.CreateClient(new WebApplicationFactoryClientOptions
         {
