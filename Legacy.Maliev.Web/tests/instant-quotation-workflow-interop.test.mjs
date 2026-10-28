@@ -95,21 +95,26 @@ test('empty owner uses original viewport branches and owns coalesced resize and 
   const document = { defaultView: view, body: {} };
   const makeOwner = () => {
     const properties = new Map();
+    const events = new Map();
     return {
       ownerDocument: document,
       getBoundingClientRect: () => ({ top }),
       querySelector: () => null,
+      addEventListener: (key, fn) => events.set(key, fn),
+      removeEventListener: (key, fn) => { if (events.get(key) === fn) events.delete(key); },
       style: { setProperty: (key, value) => properties.set(key, value), removeProperty: key => properties.delete(key) },
       properties,
+      events,
     };
   };
-  const makeInput = owner => ({ dataset: {}, closest: () => owner, addEventListener() {}, removeEventListener() {} });
+  const makeInput = owner => ({ dataset: {}, closest: selector => selector === '.instant-quote__workflow' ? owner : null, addEventListener() {}, removeEventListener() {} });
   const { interop } = harness();
   const owner = makeOwner();
   const input = makeInput(owner);
   const height = () => owner.properties.get('--iq-empty-viewport-height');
   interop.bindInput(input);
   assert.equal(height(), '770px');
+  assert.deepEqual([...owner.events.keys()], ['dragover', 'drop']);
   view.visualViewport.height = 280;
   overflowY = 'hidden';
   interop.bindInput(input);
@@ -131,11 +136,13 @@ test('empty owner uses original viewport branches and owns coalesced resize and 
   const next = makeOwner();
   interop.bindInput(makeInput(next));
   assert.equal(owner.properties.size, 0);
+  assert.equal(owner.events.size, 0);
   assert.equal(frames.size, 0);
   assert.equal(listeners.size, 2);
   listeners.get('resize')();
   interop.dispose();
   assert.equal(next.properties.size, 0);
+  assert.equal(next.events.size, 0);
   assert.equal(frames.size, 0);
   assert.equal(listeners.size, 0);
   assert.equal(viewportListeners.size, 0);
