@@ -7,17 +7,27 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Legacy.Maliev.Web.Areas.Member.Pages.Orders;
 
+/// <summary>Loads an owned member order and records eligible cancellation requests.</summary>
+/// <param name="sessionManager">The server-side account session manager used to resolve identity and manage sign-in state.</param>
+/// <param name="orderClient">The typed client reading or updating orders owned by the current customer.</param>
+/// <param name="memberDetailClient">The typed client supplying associated member detail data.</param>
 [Authorize]
 public sealed class View(
     IAccountSessionManager sessionManager,
     ICustomerOrderClient orderClient,
     ICustomerMemberDetailClient memberDetailClient) : PageModel
 {
+    /// <summary>The owned order details and safe action feedback.</summary>
     public MemberOrderDetailDisplayModel DisplayModel { get; private set; } = MemberOrderDetailDisplayModel.Empty;
 
+    /// <summary>The one-time outcome message carried across this workflow's post/redirect/get boundary.</summary>
     [TempData]
     public string? Notification { get; set; }
 
+    /// <summary>Loads the requested order through the member ownership boundary.</summary>
+    /// <param name="itemID">The identifier of the owned order to display.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The order detail page, a not-found result, or an authentication challenge.</returns>
     public async Task<IActionResult> OnGetAsync(int itemID, CancellationToken cancellationToken)
     {
         if (itemID <= 0)
@@ -28,6 +38,10 @@ public sealed class View(
         return await LoadAsync(itemID, cancellationToken);
     }
 
+    /// <summary>Records a cancellation request for an eligible order owned by the current customer.</summary>
+    /// <param name="orderId">The identifier of the owned order to cancel.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A detail redirect after success, the detail page with errors, a not-found result, or an authentication challenge.</returns>
     public async Task<IActionResult> OnPostCancelOrderAsync(
         int orderId,
         CancellationToken cancellationToken)

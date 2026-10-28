@@ -3,6 +3,12 @@ using Legacy.Maliev.Web.Application.Pricing;
 
 namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
+/// <summary>Captures one selected file and its geometry claim before starting the reserved upload.</summary>
+/// <param name="FileName">The selected file's display name and extension.</param>
+/// <param name="ContentType">The browser-provided media type passed to upload admission.</param>
+/// <param name="Length">The selected raw file size in bytes.</param>
+/// <param name="GeometryClaim">The advisory geometry claim snapshotted for this upload entry.</param>
+/// <param name="OpenReadStreamAsync">The cancellable factory opening the original selected bytes.</param>
 public sealed record InstantQuotationWorkflowUploadFile(
     string FileName,
     string ContentType,
@@ -10,23 +16,44 @@ public sealed record InstantQuotationWorkflowUploadFile(
     InstantQuotationGeometryClaim GeometryClaim,
     Func<CancellationToken, Task<Stream>> OpenReadStreamAsync);
 
+/// <summary>Identifies the local lifecycle of a reserved quotation upload.</summary>
 public enum InstantQuotationWorkflowUploadStatus
 {
+    /// <summary>The selected file is reserved but transfer has not started.</summary>
     Pending,
+    /// <summary>The selected file is being transferred or admitted.</summary>
     Uploading,
+    /// <summary>The server has admitted the file as a quotation part.</summary>
     Uploaded,
+    /// <summary>The upload or subsequent part operation failed.</summary>
     Error,
+    /// <summary>The upload attempt was cancelled locally.</summary>
     Cancelled,
 }
 
+/// <summary>Carries a local upload row for rendering progress and bounded failure feedback.</summary>
+/// <param name="LocalId">The local reservation identifier used to correlate upload and preview state.</param>
+/// <param name="DisplayFileName">The selected file name displayed to the customer.</param>
+/// <param name="Status">The current local upload lifecycle status.</param>
+/// <param name="ProblemCategory">The bounded problem category for a failed operation.</param>
 public sealed record InstantQuotationWorkflowUploadViewModel(
     Guid LocalId,
     string DisplayFileName,
     InstantQuotationWorkflowUploadStatus Status,
     InstantQuotationProblemCategory ProblemCategory);
 
+/// <summary>Pairs a pricing-catalog material key with its customer-facing label.</summary>
+/// <param name="Key">The stable material key accepted by pricing.</param>
+/// <param name="DisplayName">The material label shown in quotation selectors.</param>
 public sealed record InstantQuotationWorkflowMaterialOption(string Key, string DisplayName);
 
+/// <summary>Carries an admitted part, its current configuration and any matching server quote for rendering.</summary>
+/// <param name="PartId">The admitted quotation part identifier.</param>
+/// <param name="PreviewCorrelationId">The local upload identifier correlating the part with its browser preview.</param>
+/// <param name="DisplayFileName">The original file name shown in the workflow.</param>
+/// <param name="Geometry">The admitted geometry retained by the protected session.</param>
+/// <param name="Configuration">The part's accepted material, color, quantity and build settings.</param>
+/// <param name="Quote">The matching current quote, or null while pricing is unavailable.</param>
 public sealed record InstantQuotationWorkflowPartViewModel(
     Guid PartId,
     Guid PreviewCorrelationId,
@@ -35,17 +62,27 @@ public sealed record InstantQuotationWorkflowPartViewModel(
     InstantQuotationPartConfiguration Configuration,
     InstantQuotationPartQuote? Quote);
 
+/// <summary>Persists the protected session identity used to restore the quotation workflow.</summary>
 public interface IInstantQuotationWorkflowSessionIdentityAccessor
 {
+    /// <summary>Reads the protected session identity available to the current component context.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The retained protected identity, or null when no identity is available.</returns>
     ValueTask<string?> GetProtectedSessionIdentityAsync(CancellationToken cancellationToken);
 
+    /// <summary>Ensures the workflow uses the session identity established for the current context.</summary>
+    /// <param name="protectedSessionIdentity">The protected workflow identity to retain.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A value task representing identity establishment or validation.</returns>
     ValueTask SetProtectedSessionIdentityAsync(
         string protectedSessionIdentity,
         CancellationToken cancellationToken);
 }
 
+/// <summary>Coordinates upload admission, protected session persistence and server quotation state for one owner.</summary>
 public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
 {
+    /// <summary>Limits each selected raw upload to 100 MiB before transfer.</summary>
     public const long MaximumFileSize = 100 * 1024 * 1024;
 
     private static readonly IReadOnlySet<string> AllowedExtensions = new HashSet<string>(
@@ -79,6 +116,14 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
     private ConfigurationRequest? uploadPricingRequest;
     private readonly List<(UploadEntry Entry, string AnalyticsAttemptId)> pendingUploadPricingStages = [];
 
+    /// <summary>Creates a workflow coordinator bound to its session owner and configured pricing boundaries.</summary>
+    /// <param name="sessionStore">The protected quotation-session store.</param>
+    /// <param name="uploadClient">The typed file-admission and removal client.</param>
+    /// <param name="pricingService">The pricing service used when no authoritative pricing service is supplied.</param>
+    /// <param name="ownerIdentity">The authenticated owner identifier, or null for the anonymous workflow.</param>
+    /// <param name="analytics">An optional best-effort tracker; null selects the no-op tracker.</param>
+    /// <param name="quoteTicketService">The optional service issuing protected authorizations for current quotes.</param>
+    /// <param name="authoritativePricingService">The optional trusted physical-analysis-backed quotation service.</param>
     public InstantQuotationWorkflowCoordinator(
         IInstantQuotationSessionStore sessionStore,
         IInstantQuotationUploadClient uploadClient,
@@ -98,8 +143,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         lifetimeToken = lifetimeCancellation.Token;
     }
 
+    /// <summary>Gets the workflow stage derived from upload and configuration state.</summary>
     public InstantQuotationWorkflowState State { get; private set; } = InstantQuotationWorkflowState.Empty;
 
+    /// <summary>Gets the initialized session identity retained for subsequent protected store operations.</summary>
     public string ProtectedSessionIdentity
     {
         get
@@ -109,6 +156,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
     }
 
+    /// <summary>Gets a copied rendering projection of the current local upload entries.</summary>
     public IReadOnlyList<InstantQuotationWorkflowUploadViewModel> Uploads => entries
         .Select(static entry => new InstantQuotationWorkflowUploadViewModel(
             entry.LocalId,
@@ -117,6 +165,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             entry.ProblemCategory))
         .ToArray();
 
+    /// <summary>Gets admitted parts joined with quotes by their stable part identifiers.</summary>
     public IReadOnlyList<InstantQuotationWorkflowPartViewModel> Parts
     {
         get
@@ -158,16 +207,21 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         };
     }
 
+    /// <summary>Gets the latest order quote, or null while no current complete pricing result is retained.</summary>
     public InstantQuotationOrderQuote? OrderQuote { get; private set; }
 
+    /// <summary>Gets the monotonically advanced revision of published non-null order quotes.</summary>
     public long AuthoritativeQuoteRevision => authoritativeQuoteRevision;
 
+    /// <summary>Gets the immutable, display-only material-price snapshot for the current generation.</summary>
     public InstantQuotationMaterialPriceDisplaySnapshot MaterialPriceDisplay
     {
         get { lock (displayGate) return materialPriceDisplay; }
     }
 
     /// <summary>Subscribes to display-only frames. Renderers must dispatch and recheck generation themselves.</summary>
+    /// <param name="subscriber">The display-frame callback; it must dispatch rendering and recheck the generation.</param>
+    /// <returns>A subscription whose disposal stops subsequent display notifications.</returns>
     public IDisposable SubscribeMaterialPriceDisplay(
         Func<InstantQuotationMaterialPriceDisplaySnapshot, CancellationToken, ValueTask> subscriber)
     {
@@ -181,19 +235,32 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
     }
 
+    /// <summary>Gets whether all admitted parts are configured and a complete estimate is available.</summary>
     public bool HasCompleteAuthoritativeQuote => IsCompleteAuthoritativeQuote();
 
+    /// <summary>Gets whether every admitted part has a complete retained estimate.</summary>
     public bool HasCompleteAuthoritativeEstimate => IsCompleteAuthoritativeEstimate();
 
+    /// <summary>Gets the material choices available from the server pricing catalog.</summary>
     public IReadOnlyList<InstantQuotationWorkflowMaterialOption> Materials { get; } = PricingCatalog.Materials.Values
         .Select(static material => new InstantQuotationWorkflowMaterialOption(material.Key, material.DisplayName))
         .ToArray();
 
+    /// <summary>Finds the supported color choices for a pricing-catalog material.</summary>
+    /// <param name="materialKey">The stable catalog material key.</param>
+    /// <returns>The catalog color choices, or an empty list when the material has no color entry.</returns>
     public IReadOnlyList<string> GetColors(string materialKey) =>
         PricingCatalog.MaterialColors.TryGetValue(materialKey, out var colors) ? colors : [];
 
+    /// <summary>Initializes a new protected quotation session without requesting restoration.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A task that completes when the workflow is initialized.</returns>
     public Task InitializeAsync(CancellationToken cancellationToken) => InitializeAsync(null, cancellationToken);
 
+    /// <summary>Restores an owner-matching session when valid, otherwise creates an empty session.</summary>
+    /// <param name="protectedSessionIdentity">The optional retained session identity to restore.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A task that completes after restoration or creation of workflow state.</returns>
     public async Task InitializeAsync(
         string? protectedSessionIdentity,
         CancellationToken cancellationToken)
@@ -222,6 +289,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         RefreshState();
     }
 
+    /// <summary>Reserves selected files and starts their uploads concurrently.</summary>
+    /// <param name="files">The selected file descriptors to snapshot into local reservations.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A task that completes when all reserved upload attempts finish.</returns>
     public async Task UploadAsync(
         IReadOnlyList<InstantQuotationWorkflowUploadFile> files,
         CancellationToken cancellationToken)
@@ -230,6 +301,9 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         await UploadReservedAsync(reserved, cancellationToken);
     }
 
+    /// <summary>Snapshots selected files into pending entries without starting byte transfer.</summary>
+    /// <param name="files">The file descriptors and geometry claims to reserve.</param>
+    /// <returns>The new local upload identifiers in selection order.</returns>
     public IReadOnlyList<Guid> ReserveUploads(IReadOnlyList<InstantQuotationWorkflowUploadFile> files)
     {
         ThrowIfDisposed();
@@ -279,6 +353,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
     }
 
+    /// <summary>Starts only the distinct pending reservations named by the caller.</summary>
+    /// <param name="localIds">The local reservation identifiers to upload.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A task that completes when each named upload attempt finishes.</returns>
     public async Task UploadReservedAsync(
         IReadOnlyList<Guid> localIds,
         CancellationToken cancellationToken)
@@ -313,6 +391,8 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         await Task.WhenAll(pending.Select(entry => StartUploadAsync(entry, cancellationToken)));
     }
 
+    /// <summary>Cancels an active upload attempt and retains its identity for an identical retry.</summary>
+    /// <param name="localId">The local upload reservation to cancel.</param>
     public void Cancel(Guid localId)
     {
         var entry = entries.SingleOrDefault(item => item.LocalId == localId);
@@ -342,6 +422,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         return true;
     }
 
+    /// <summary>Retries a failed or cancelled upload, or removes a failed admitted part.</summary>
+    /// <param name="localId">The local upload reservation to retry.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A task that completes after the retry or failed-part removal attempt.</returns>
     public async Task RetryAsync(Guid localId, CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
@@ -362,6 +446,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         await StartUploadAsync(entry, cancellationToken);
     }
 
+    /// <summary>Discards an unadmitted pending or failed local upload and updates pricing.</summary>
+    /// <param name="localId">The local upload reservation to discard.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A task that completes after discarding and pricing updates.</returns>
     public async Task DiscardUploadAsync(Guid localId, CancellationToken cancellationToken)
     {
         ThrowIfDisposed();
@@ -404,6 +492,10 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         await FlushUploadPricingAsync(cancellationToken);
     }
 
+    /// <summary>Removes an admitted file and republishes persisted quotation state only after acknowledged removal.</summary>
+    /// <param name="partId">The admitted quotation part to remove.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A task that completes after the removal attempt and any resulting repricing.</returns>
     public Task RemoveAsync(Guid partId, CancellationToken cancellationToken) =>
         RemoveCoreAsync(partId, null, cancellationToken);
 
@@ -465,6 +557,13 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         await PublishPendingUploadPricingStagesAsync(pricingStages);
     }
 
+    /// <summary>Updates material, color and quantity while retaining the existing applicable build preference.</summary>
+    /// <param name="partId">The admitted part whose configuration is being changed.</param>
+    /// <param name="materialKey">The supported pricing-catalog material key.</param>
+    /// <param name="color">A color supported by the selected material.</param>
+    /// <param name="quantity">The requested count within the catalog's additive quantity limit.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A task that completes after protected persistence and repricing.</returns>
     public async Task UpdateConfigurationAsync(
         Guid partId,
         string materialKey,
@@ -481,6 +580,14 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             cancellationToken);
     }
 
+    /// <summary>Updates part configuration with an explicit build preference, normalizing resin to Standard.</summary>
+    /// <param name="partId">The admitted part whose configuration is being changed.</param>
+    /// <param name="materialKey">The supported pricing-catalog material key.</param>
+    /// <param name="color">A color supported by the selected material.</param>
+    /// <param name="quantity">The requested count within the catalog's additive quantity limit.</param>
+    /// <param name="buildPreference">The defined FDM build preference; resin always uses Standard.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A task that completes after protected persistence and repricing.</returns>
     public async Task UpdateConfigurationAsync(
         Guid partId,
         string materialKey,
@@ -648,6 +755,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         internal Task? CancellationCallbacks { get; set; }
     }
 
+    /// <summary>Enters review only after every admitted part is configured and the retained quote is complete.</summary>
     public void EnterReview()
     {
         ThrowIfDisposed();
@@ -660,6 +768,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         State = InstantQuotationWorkflowState.Review;
     }
 
+    /// <summary>Enters customer details only from review with a complete retained quotation.</summary>
     public void EnterCustomerDetails()
     {
         ThrowIfDisposed();
@@ -671,6 +780,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         State = InstantQuotationWorkflowState.CustomerDetails;
     }
 
+    /// <summary>Returns from review to the stage derived from the current part configuration.</summary>
     public void ReturnToConfiguration()
     {
         ThrowIfDisposed();
@@ -680,6 +790,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
     }
 
+    /// <summary>Returns from customer details to review only while a complete quotation remains available.</summary>
     public void ReturnToReview()
     {
         ThrowIfDisposed();
@@ -689,6 +800,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
         }
     }
 
+    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
         if (disposed)

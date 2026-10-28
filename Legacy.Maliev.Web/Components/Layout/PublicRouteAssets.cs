@@ -8,6 +8,8 @@ public static class PublicRouteAssets
     /// <summary>
     /// Gets route-scoped stylesheets for a request path.
     /// </summary>
+    /// <param name="requestPath">The incoming document path used to select route-owned stylesheets.</param>
+    /// <returns>The stylesheet bundle names for the route, or an empty list when it owns no route-specific styles.</returns>
     public static IReadOnlyList<string> GetStyles(PathString requestPath)
     {
         var path = Normalize(requestPath);
@@ -49,6 +51,8 @@ public static class PublicRouteAssets
     /// <summary>
     /// Gets route-scoped scripts for a request path.
     /// </summary>
+    /// <param name="requestPath">The incoming document path used to select route-owned scripts.</param>
+    /// <returns>The script bundle names for the route, or an empty list when it owns no route-specific scripts.</returns>
     public static IReadOnlyList<string> GetScripts(PathString requestPath)
     {
         var path = Normalize(requestPath);

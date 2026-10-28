@@ -4,6 +4,7 @@ using Legacy.Maliev.Web.Application;
 
 namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
+/// <summary>Provides Thai country labels while preserving the service's canonical country names.</summary>
 public static class InstantQuotationCountryLabels
 {
     private static readonly IReadOnlyDictionary<string, string> ThaiByIso2 =
@@ -261,6 +262,10 @@ public static class InstantQuotationCountryLabels
             ["ZW"] = "ซิมบับเว",
         }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>Selects a known Thai ISO-country label only for a Thai UI culture.</summary>
+    /// <param name="country">The country supplied by the country service.</param>
+    /// <param name="uiCulture">The UI culture used to choose the display language.</param>
+    /// <returns>The known Thai name, or the service-provided name when no Thai translation applies.</returns>
     public static string DisplayName(Country country, CultureInfo uiCulture)
     {
         ArgumentNullException.ThrowIfNull(country);

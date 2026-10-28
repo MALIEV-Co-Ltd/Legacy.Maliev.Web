@@ -10,6 +10,7 @@ using Microsoft.JSInterop;
 
 namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
+/// <summary>Renders and coordinates the interactive additive quotation workflow without granting authority to browser preview results.</summary>
 public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 {
     [Inject]
@@ -18,9 +19,11 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     [Inject]
     private IJSRuntime JS { get; set; } = null!;
 
+    /// <summary>Gets or sets the initial render stage used before an interactive coordinator is available.</summary>
     [Parameter]
     public InstantQuotationWorkflowState InitialState { get; set; } = InstantQuotationWorkflowState.Empty;
 
+    /// <summary>Gets or sets the customer form values and bounded submission feedback rendered by the workflow.</summary>
     [Parameter]
     public InstantQuotationCustomerDisplayModel CustomerModel { get; set; } = InstantQuotationCustomerDisplayModel.Empty;
 
@@ -463,6 +466,9 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         _ => Localizer["Ready for manufacturing"],
     };
 
+    /// <summary>Initializes preview interop, reconciles visible previews and records only visibly complete quotation milestones.</summary>
+    /// <param name="firstRender">Whether this is the component's first completed render.</param>
+    /// <returns>A task that completes after this render's preview and focus work.</returns>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // Input binding can yield while a retry changes state before its new canvas renders.
@@ -638,6 +644,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         await FocusPendingSectionAsync();
     }
 
+    /// <summary>Restores owner-bound quotation state and requires the configured server pricing boundaries before enabling the workflow.</summary>
+    /// <returns>A task that completes after initialization or bounded initialization failure.</returns>
     protected override async Task OnInitializedAsync()
     {
         if (InitialState is InstantQuotationWorkflowState.Submitted
@@ -698,6 +706,9 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
+    /// <summary>Reads the authenticated subject identifier used to bind the quotation session to its owner.</summary>
+    /// <param name="principal">The current principal, or null when no authentication state is available.</param>
+    /// <returns>The authenticated name-identifier claim, or null for an unauthenticated or unidentified principal.</returns>
     public static string? ResolveOwnerIdentity(ClaimsPrincipal? principal)
     {
         if (principal?.Identity?.IsAuthenticated is not true)
@@ -1301,6 +1312,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
+    /// <summary>Records a quotation workflow start from the browser while the component remains active.</summary>
+    /// <returns>A value task for the best-effort analytics observation.</returns>
     [JSInvokable]
     public ValueTask ReportQuoteStartedAsync() =>
         disposed ? ValueTask.CompletedTask : analytics.RecordQuoteStartedAsync(analyticsWorkflowId);
@@ -1591,6 +1604,16 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
+    /// <summary>Applies a newer thickness report only to an admitted part still present in the workflow.</summary>
+    /// <param name="partId">The admitted part identifier in compact N format.</param>
+    /// <param name="available">Whether advisory wall-thickness measurements are available.</param>
+    /// <param name="warning">Whether the advisory result reports walls below the process limit.</param>
+    /// <param name="incomplete">Whether some regions could not be measured reliably.</param>
+    /// <param name="process">The browser-reported process label used only in advisory feedback.</param>
+    /// <param name="limitMm">The advisory process wall-thickness limit in millimetres.</param>
+    /// <param name="minMm">The measured minimum thickness in millimetres, or null when unavailable.</param>
+    /// <param name="revision">The positive report revision used to reject obsolete results.</param>
+    /// <returns>A task that completes after any accepted advisory state is dispatched to the renderer.</returns>
     [JSInvokable]
     public Task ReportThicknessStateAsync(
         string partId,
@@ -1628,6 +1651,11 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     internal static bool ShouldAcceptThicknessReport(bool partExists, long? currentRevision, long revision)
         => partExists && revision > 0 && (!currentRevision.HasValue || revision > currentRevision.Value);
 
+    /// <summary>Marks the retained exceptional preview as measured only for a newer matching incomplete report.</summary>
+    /// <param name="key">The retained exceptional preview key.</param>
+    /// <param name="revision">The newer browser report revision.</param>
+    /// <param name="incomplete">Whether the preview is still classified as incomplete.</param>
+    /// <returns>A task that completes after the matching display state is dispatched.</returns>
     [JSInvokable]
     public Task ReportIncompletePreviewAsync(string key, long revision, bool incomplete)
         => InvokeAsync(() =>
@@ -1678,6 +1706,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
+    /// <summary>Marks browser preview functionality unavailable without changing quotation pricing authority.</summary>
+    /// <returns>A task that completes after the unavailable state is dispatched for rendering.</returns>
     [JSInvokable]
     public Task ReportPreviewUnavailableAsync()
     {
@@ -2125,6 +2155,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private static string Measurement(double value) => value.ToString("N2");
 
+    /// <summary>Releases display subscriptions, browser preview handles and the owned workflow coordinator.</summary>
+    /// <returns>A value task that completes when owned interop and workflow resources have been released.</returns>
     public async ValueTask DisposeAsync()
     {
         if (disposed) return;
@@ -2242,8 +2274,18 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unknown instant quotation workflow state."),
     };
 
+    /// <summary>Formats the stable admitted-part identifier used to address its browser preview.</summary>
+    /// <param name="partId">The admitted part identifier.</param>
+    /// <returns>The identifier in compact N format.</returns>
     public static string ViewerPartKey(Guid partId) => partId.ToString("N");
 
+    /// <summary>Determines which visible quotation milestones are eligible for analytics at a positive authoritative revision.</summary>
+    /// <param name="configurationVisible">Whether the configuration section is currently visible.</param>
+    /// <param name="reviewVisible">Whether the review section is currently visible.</param>
+    /// <param name="estimateComplete">Whether all current parts have a complete server estimate.</param>
+    /// <param name="reviewQuoteComplete">Whether a complete configured quotation is available for review.</param>
+    /// <param name="authoritativeQuoteRevision">The positive revision of the current authoritative quote.</param>
+    /// <returns>The visible estimate and review eligibility flags; both are false without a positive revision.</returns>
     public static VisibleAnalyticsMilestones GetVisibleAnalyticsMilestones(
         bool configurationVisible,
         bool reviewVisible,
@@ -2255,6 +2297,9 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
                 reviewVisible && reviewQuoteComplete)
             : new(false, false);
 
+    /// <summary>Carries analytics eligibility derived from actual section visibility and quote completeness.</summary>
+    /// <param name="EstimateShown">Whether a complete estimate is visibly presented.</param>
+    /// <param name="ReviewReached">Whether a complete configured quotation is visibly under review.</param>
     public readonly record struct VisibleAnalyticsMilestones(bool EstimateShown, bool ReviewReached);
 
     private sealed record ThicknessStatus(

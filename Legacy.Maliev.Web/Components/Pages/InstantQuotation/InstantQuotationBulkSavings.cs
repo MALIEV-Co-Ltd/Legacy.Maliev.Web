@@ -2,8 +2,13 @@ using Legacy.Maliev.Web.Application.Pricing;
 
 namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
+/// <summary>Derives display-only bulk savings from the current part's matching server quote.</summary>
 public static class InstantQuotationBulkSavings
 {
+    /// <summary>Compares active and single-piece tier prices only while the accepted configuration remains current.</summary>
+    /// <param name="part">The part configuration and its matching price tiers.</param>
+    /// <param name="quantityBeingEdited">Whether a quantity draft makes the current quote unsuitable for savings display.</param>
+    /// <returns>The positive order saving rounded to two decimals, or null when no current saving is available.</returns>
     public static double? Calculate(
         InstantQuotationWorkflowPartViewModel part,
         bool quantityBeingEdited)
