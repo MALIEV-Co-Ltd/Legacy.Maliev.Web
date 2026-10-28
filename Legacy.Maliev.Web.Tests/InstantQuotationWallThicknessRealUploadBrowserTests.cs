@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -6,8 +7,10 @@ using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
 using Xunit.Abstractions;
 
@@ -553,6 +556,34 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         }
     }
 
+    [Fact]
+    public void MobileFailureProbe_RetainsOnlyFixedMetadataWithoutFormattingAndCapsRecords()
+    {
+        using var probe = new MobileFailureCallSiteProbe();
+        var logger = probe.CreateLogger("private-category-sentinel");
+        var exception = new Microsoft.JSInterop.JSException("private-message-sentinel");
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.SetRemoteStackTrace(exception, "private-stack-sentinel");
+        exception.Data["private-data-sentinel"] = "private-data-value-sentinel";
+        Assert.Contains("private-stack-sentinel", exception.StackTrace!, StringComparison.Ordinal);
+        var formatted = false;
+        for (var index = 0; index < 20; index++)
+            logger.Log(LogLevel.Warning, new EventId(1), "private-state-sentinel", exception,
+                (_, _) => { formatted = true; throw new InvalidOperationException("Formatter must not be called."); });
+        Assert.False(formatted);
+        var records = probe.Snapshot();
+        Assert.Equal(16, records.Length);
+        Assert.All(records, record =>
+        {
+            Assert.Equal("other", record.CallSite);
+            Assert.True(record.JavaScript);
+            Assert.False(record.Disconnected || record.InvalidOperation || record.Cancelled);
+        });
+        var serialized = JsonSerializer.Serialize(records);
+        foreach (var sentinel in new[] { "private-category-sentinel", "private-message-sentinel", "private-stack-sentinel",
+            "private-state-sentinel", "private-data-sentinel", "private-data-value-sentinel" })
+            Assert.DoesNotContain(sentinel, serialized, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("desktop", "model/x.stl-ascii")]
     [InlineData("iphone", "application/sla")]
@@ -563,8 +594,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         const string expectedTypes = ".stl,.obj,.3mf,.glb,.gltf,.stp,.step,.igs,.iges,model/stl,application/sla,application/vnd.ms-pki.stl,model/x.stl-binary,model/x.stl-ascii,model/obj,model/3mf,model/gltf-binary,model/gltf+json,model/step,model/iges";
         var upload = new HashCheckingUploadClient();
         var pricing = new CountingPricingService();
+        var failureCallSites = new MobileFailureCallSiteProbe();
         await using var factory = new RealUploadTestingWebApplicationFactory(
-            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing, mobileFailureProbe: failureCallSites);
         var port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
         var quoteUrl = new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString();
@@ -703,6 +735,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             try
             {
                 output.WriteLine($"[mobile-upload-services] started={Math.Min(upload.StartedUploads, 32)}; verified={Math.Min(upload.VerifiedUploads, 32)}; validationRejected={Math.Min(upload.ValidationRejectedUploads, 32)}");
+                output.WriteLine("[mobile-upload-call-sites] " + JsonSerializer.Serialize(failureCallSites.Snapshot()));
             }
             catch { /* Secondary evidence must preserve the original upload admission failure. */ }
             throw;
@@ -4545,7 +4578,8 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         CountingPricingService pricing,
         MaterialCompletionObservation? observation = null,
         SupersededPetgPricing? obsolete = null,
-        BatchEstimateGate? batchEstimates = null) : TestingWebApplicationFactory(contentRoot)
+        BatchEstimateGate? batchEstimates = null,
+        MobileFailureCallSiteProbe? mobileFailureProbe = null) : TestingWebApplicationFactory(contentRoot)
     {
         internal System.Collections.Concurrent.ConcurrentQueue<string> ExceptionKinds { get; } = new();
 
@@ -4567,6 +4601,70 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 obsolete?.Decorate(services);
                 batchEstimates?.Decorate(services);
             });
+            if (mobileFailureProbe is not null)
+                builder.ConfigureTestServices(services => services.AddSingleton<ILoggerProvider>(mobileFailureProbe));
+        }
+    }
+
+    private sealed record MobileFailureCallSite(string CallSite, bool JavaScript, bool Disconnected,
+        bool InvalidOperation, bool Cancelled);
+
+    private sealed class MobileFailureCallSiteProbe : ILoggerProvider
+    {
+        private readonly Queue<MobileFailureCallSite> records = new();
+        public ILogger CreateLogger(string categoryName) => new ProbeLogger(this);
+        public void Dispose() { }
+        public MobileFailureCallSite[] Snapshot() { lock (records) return records.ToArray(); }
+
+        private void Record(Exception exception)
+        {
+            lock (records)
+            {
+                if (records.Count >= 16) return;
+                var site = "other";
+                var javaScript = false;
+                var disconnected = false;
+                var invalidOperation = false;
+                var cancelled = false;
+                var depth = 0;
+                for (Exception? current = exception; current is not null && depth++ < 4; current = current.InnerException)
+                {
+                    javaScript |= current is Microsoft.JSInterop.JSException;
+                    disconnected |= current is Microsoft.JSInterop.JSDisconnectedException;
+                    invalidOperation |= current is InvalidOperationException;
+                    cancelled |= current is OperationCanceledException;
+                    foreach (var frame in (new StackTrace(current, false).GetFrames() ?? []).Take(32))
+                    {
+                        var method = frame.GetMethod();
+                        var owner = method?.DeclaringType;
+                        if (owner != typeof(InstantQuotationWorkflow) && owner?.DeclaringType != typeof(InstantQuotationWorkflow)) continue;
+                        var name = owner == typeof(InstantQuotationWorkflow) ? method!.Name : owner!.Name;
+                        if (Matches(name, "BindConsultationDropdownAsync")) site = "consultation-bind";
+                        else if (site != "consultation-bind" && Matches(name, "ReadGeometryClaimAsync")) site = "geometry";
+                        else if (site == "other" && new[] { "UploadFilesAsync", "BeginPreviewSelectionAsync",
+                            "InitializePreviewInteropAsync", "EnsurePreviewInteropAsync", "EnsurePreviewInputBoundAsync",
+                            "InvokePreviewAsync" }.Any(expected => Matches(name, expected)))
+                            site = "preview-input";
+                    }
+                }
+                records.Enqueue(new(site, javaScript, disconnected, invalidOperation, cancelled));
+            }
+        }
+
+        private static bool Matches(string name, string expected) => name == expected
+            || name.StartsWith("<" + expected + ">", StringComparison.Ordinal);
+
+        private sealed class ProbeLogger(MobileFailureCallSiteProbe probe) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+            public bool IsEnabled(LogLevel level) => level >= LogLevel.Warning;
+            public void Log<TState>(LogLevel level, EventId eventId, TState state, Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                if (!IsEnabled(level) || exception is null) return;
+                try { probe.Record(exception); }
+                catch { /* Diagnostics must not replace the original circuit failure. */ }
+            }
         }
     }
 

@@ -2978,6 +2978,8 @@ public sealed class InstantQuotationResinPresentationTests
     [InlineData("replaced")]
     [InlineData("disposed")]
     [InlineData("current")]
+    [InlineData("render-replaced")]
+    [InlineData("render-hidden")]
     public async Task ConsultationDropdown_BindFailureRespectsCurrentOwner(string boundary)
     {
         using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -3011,13 +3013,20 @@ public sealed class InstantQuotationResinPresentationTests
             {
                 await javascript.Entered.Task.WaitAsync(lease.Token);
                 if (boundary == "disposed") next = component.DisposeAsync().AsTask();
-                else if (boundary == "hidden")
+                else if (boundary is "hidden" or "render-hidden")
                 {
                     await EventCallback.Factory.Create(component, coordinator.EnterReview).InvokeAsync();
                     Assert.DoesNotContain("id=\"instant-quote-consultation\"", root.ToHtmlString(), StringComparison.Ordinal);
-                    next = Bind(initial, default);
+                    if (boundary == "hidden") next = Bind(initial, default);
                 }
                 else if (boundary == "replaced") next = Bind(initial, new ElementReference("consultation-new"));
+                else if (boundary == "render-replaced")
+                    type.GetField("consultationToggle", flags)!.SetValue(component, new ElementReference("consultation-new"));
+                if (boundary is "render-hidden" or "render-replaced")
+                {
+                    Assert.Equal(new ElementReference("consultation-old"), type.GetField("consultationOwner", flags)!.GetValue(component));
+                    Assert.Same(initial, bindingField.GetValue(component));
+                }
                 javascript.Release.TrySetException(failure);
                 if (boundary == "current")
                 {
@@ -3029,9 +3038,10 @@ public sealed class InstantQuotationResinPresentationTests
                 await Task.WhenAll(initial, next).WaitAsync(lease.Token);
                 Assert.True(initial.IsCompletedSuccessfully);
                 Assert.True(next.IsCompletedSuccessfully);
-                if (boundary == "hidden")
+                if (boundary is "hidden" or "render-hidden")
                     await EventCallback.Factory.Create(component, coordinator.ReturnToConfiguration).InvokeAsync();
-                await Bind(next, new ElementReference("consultation-new")).WaitAsync(lease.Token);
+                await Bind(boundary is "render-hidden" or "render-replaced" ? initial : next,
+                    new ElementReference("consultation-new")).WaitAsync(lease.Token);
                 Assert.Equal(boundary == "disposed" ? 1 : 2, javascript.BindCalls);
                 if (boundary != "disposed")
                 {
