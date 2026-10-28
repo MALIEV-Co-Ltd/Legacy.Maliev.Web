@@ -311,6 +311,79 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(false, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "th")]
+    public async Task Route_PreservesSourceFinishingWorkflowLinkAcrossRenderers(bool useBlazorRoute, string culture)
+    {
+        await using var application = factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:Services", useBlazorRoute.ToString()));
+        using var client = CreateClient(application);
+        using var response = await client.GetAsync($"/services/3d-printing?culture={culture}");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var main = Assert.Single(Regex.Matches(html,
+            "<main\\b(?=[^>]*data-migration-component=\"three-dimensional-printing-content\")[^>]*>(?<body>[\\s\\S]*?)</main>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Equal(useBlazorRoute, main.Value.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var workflow = Assert.Single(Regex.Matches(main.Groups["body"].Value,
+            "<section\\b(?=[^>]*id=\"printing-workflow\")[^>]*>(?<body>[\\s\\S]*?)</section>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        var steps = Regex.Matches(workflow.Groups["body"].Value, "<li>(?<body>[\\s\\S]*?)</li>", RegexOptions.CultureInvariant)
+            .Cast<Match>().ToArray();
+        Assert.Equal(4, steps.Length);
+        var finishStep = steps[3].Groups["body"].Value;
+        Assert.Contains(culture == "th" ? "<h3>พิมพ์ ประกอบ เก็บผิว และจัดส่ง</h3>" : "<h3>Print, join, finish, and deliver</h3>",
+            finishStep, StringComparison.Ordinal);
+        var link = Assert.Single(Regex.Matches(finishStep,
+            "<a href=\"(?<href>/services/finishing-and-color)\">(?<copy>[^<]+)</a>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Equal(new Uri(client.BaseAddress!, "/services/finishing-and-color"), new Uri(client.BaseAddress!, link.Groups["href"].Value));
+        Assert.Equal(culture == "th" ? "วิธีตกลงเรื่องสี ความเงา และรอยต่อ" : "How we agree colour, sheen, and seams",
+            link.Groups["copy"].Value);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task FinishingRoute_PreservesSourcePricingActionAndImageDescriptions(string culture)
+    {
+        // Finishing has a component route only; retained printing is covered separately.
+        using var client = CreateClient(factory);
+        using var response = await client.GetAsync($"/services/finishing-and-color?culture={culture}");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var main = Assert.Single(Regex.Matches(html,
+            "<main\\b(?=[^>]*data-migration-component=\"finishing-and-color-content\")[^>]*>(?<body>[\\s\\S]*?)</main>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", main.Value, StringComparison.Ordinal);
+        var hero = Assert.Single(Regex.Matches(main.Groups["body"].Value,
+            "<section\\b(?=[^>]*aria-labelledby=\"finishing-title\")[^>]*>(?<body>[\\s\\S]*?)</section>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        var pricingLink = Assert.Single(Regex.Matches(hero.Groups["body"].Value,
+            "<a\\b(?=[^>]*class=\"service-button service-button-secondary\")(?=[^>]*href=\"(?<href>[^\"]+)\")[^>]*>(?<copy>[^<]+)</a>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Equal(new Uri(client.BaseAddress!, "/InstantQuotation/3D-Printing"), new Uri(client.BaseAddress!, pricingLink.Groups["href"].Value));
+        Assert.Equal(culture == "th" ? "ประเมินราคาพิมพ์ 3D ทันที" : "Get instant 3D pricing", pricingLink.Groups["copy"].Value);
+
+        // The colour matcher is a nested section before the standards image.
+        var standards = Assert.Single(Regex.Matches(main.Groups["body"].Value,
+            "<section\\b(?=[^>]*id=\"finishing-standards\")[^>]*>(?<body>(?:(?<nested><section\\b[^>]*>)|(?<-nested></section>)|(?!</?section\\b)[\\s\\S])*)(?(nested)(?!))</section>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        foreach (var section in new[] { hero, standards })
+        {
+            var image = Assert.Single(Regex.Matches(section.Groups["body"].Value,
+                "<img\\b(?=[^>]*src=\"/src/images/services/printing/printing-finish-color-approval.webp\")(?=[^>]*alt=\"(?<alt>[^\"]*)\")[^>]*>",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.Equal(culture == "th" ? "ช่างกำลังเทียบสีชิ้นงานพิมพ์ 3 มิติกับแผ่นเทียบสีและภาพอ้างอิง" : "Technician comparing a 3D-printed part with color swatches and a reference image",
+                image.Groups["alt"].Value);
+        }
+    }
+
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) =>
         sourceFactory.CreateClient(new WebApplicationFactoryClientOptions
         {
