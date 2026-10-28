@@ -573,6 +573,7 @@ builder.Services.AddHttpClient<Legacy.Maliev.Web.Application.ICustomerDocumentCl
 }).RemoveAllResilienceHandlers()
   .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 #pragma warning restore EXTEXP0001
+builder.Services.AddWebForwardedHeaderTrust();
 var app = builder.Build();
 var testingRateLimiter = app.Environment.IsEnvironment("Testing")
     ? app.Services.GetRequiredService<TestingRateLimiterLifetime>() : null;
