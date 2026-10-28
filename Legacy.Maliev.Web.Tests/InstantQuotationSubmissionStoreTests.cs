@@ -653,6 +653,7 @@ public sealed class InstantQuotationSubmissionStoreTests
             {
                 throw new RedisConnectionException(
                     ConnectionFailureType.UnableToConnect,
+                    CommandFlags.CommandRetryNever,
                     "Test Redis unavailable.");
             }
         }

@@ -4,7 +4,7 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
 {
     private const string ServiceDefaultsCommit = "4ffba0639620e7e923d331317f3f28501526b573";
 
-    private const string DotNetPatchVersion = "10.0.12";
+    private const string DotNetPatchVersion = "10.0.14";
 
     [Fact]
     public void WebProject_UsesLegacyServiceDefaultsOnly()
@@ -80,7 +80,7 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
         Assert.Contains($"Include=\"Microsoft.AspNetCore.Mvc.Testing\" Version=\"{DotNetPatchVersion}\"", testProject, StringComparison.Ordinal);
         Assert.Contains("Include=\"MassTransit.RabbitMQ\" Version=\"9.2.3\"", webProject, StringComparison.Ordinal);
         Assert.Contains("Include=\"MassTransit.Abstractions\" Version=\"9.2.3\"", webProject, StringComparison.Ordinal);
-        Assert.Contains("Include=\"Scalar.AspNetCore\" Version=\"2.17.13\"", webProject, StringComparison.Ordinal);
+        Assert.Contains("Include=\"Scalar.AspNetCore\" Version=\"2.18.3\"", webProject, StringComparison.Ordinal);
         Assert.DoesNotMatch("Microsoft\\.[^\"]+\" Version=\"10\\.0\\.(?:[0-9]|1[01])\"", webProject + testProject);
     }
 
