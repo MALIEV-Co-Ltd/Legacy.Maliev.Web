@@ -88,7 +88,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     {
         public string Name { get; } = name;
         public long Generation { get; } = generation;
-        public InstantQuotationPartConfiguration Configuration { get; set; } = new("PLA", "Black", 1);
+        public InstantQuotationPartConfiguration Configuration { get; set; } = new("PLA", "Any", 1);
         public string Quantity { get; set; } = "1";
         public long Revision { get; set; }
         public bool Modified { get; set; }

@@ -3971,7 +3971,13 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         var singleId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
         var singleColor = page.Locator($"#color-{singleId}");
         await Assertions.Expect(page.Locator("[data-workflow-summary-configuration]")).ToHaveTextAsync("PLA 1×");
-        Assert.Equal("Black", await singleColor.InputValueAsync());
+        Assert.Equal("Any", await singleColor.InputValueAsync());
+        // Fresh source defaults must reach review without touching configuration first.
+        await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button")
+            .ClickAsync();
+        await Assertions.Expect(page.Locator($"#review-color-{singleId}")).ToHaveValueAsync("Any");
+        await page.Locator("[data-review-back]").ClickAsync();
+        await singleColor.WaitForAsync();
         await singleColor.SelectOptionAsync("White");
         await MaterialCardBrowserActions.SelectAsync(page, "PETG");
         await page.WaitForFunctionAsync(
@@ -4046,6 +4052,11 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         Assert.Equal(2, multi.Geometry.BodyCount);
         Assert.Equal("Any", multi.Configuration.Color);
         var multiId = multi.PartId;
+        await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button")
+            .ClickAsync();
+        await Assertions.Expect(page.Locator($"#review-color-{multiId}")).ToHaveValueAsync("Any");
+        Assert.True(await page.Locator($"#review-color-{multiId}").IsDisabledAsync());
+        await page.Locator("[data-review-back]").ClickAsync();
         await page.Locator($"[data-workflow-part][data-part-id='{multiId}'] button[aria-pressed]").ClickAsync();
         var multiColor = page.Locator($"#color-{multiId}");
         await multiColor.WaitForAsync();

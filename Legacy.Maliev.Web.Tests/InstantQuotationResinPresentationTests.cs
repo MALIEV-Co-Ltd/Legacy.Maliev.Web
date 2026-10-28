@@ -2321,7 +2321,18 @@ public sealed class InstantQuotationResinPresentationTests
     }
     /// <summary>Checks source material defaults before a synthetic admission; this is not browser or manufacturing proof.</summary>
     [Fact]
-    public async Task PendingMaterialSelection_UsesTargetDefaultAcrossAdmission()
+    public Task PendingMaterialSelection_UsesTargetDefaultAcrossAdmission() =>
+        PendingSourceConfigurationAcrossAdmissionAsync("material");
+
+    [Theory]
+    [InlineData("untouched")]
+    [InlineData("quantity")]
+    [InlineData("black")]
+    [InlineData("newer-revision")]
+    public Task PendingInitialSourceConfiguration_PreservesEditsAndOwnershipAcrossAdmission(string edit) =>
+        PendingSourceConfigurationAcrossAdmissionAsync(edit);
+
+    private async Task PendingSourceConfigurationAcrossAdmissionAsync(string edit)
     {
         using var culture = new CultureScope("en");
         var store = new SessionStore();
@@ -2377,10 +2388,40 @@ public sealed class InstantQuotationResinPresentationTests
                 Assert.True(retainedCallback.HasDelegate);
                 Assert.Contains("data-workflow-local-settings", root.ToHtmlString(), StringComparison.Ordinal);
                 Assert.Equal("PLA", pendingSelector.SelectedMaterialKey);
-                Assert.Matches("<select\\b(?=[^>]*id=\"pending-color-" + previewKey + "\")(?=[^>]*value=\"Black\")[^>]*>", root.ToHtmlString());
-                await retainedCallback.InvokeAsync("PETG");
-                Assert.Equal("PETG", pendingSelector.SelectedMaterialKey);
                 Assert.Matches("<select\\b(?=[^>]*id=\"pending-color-" + previewKey + "\")(?=[^>]*value=\"Any\")[^>]*>", root.ToHtmlString());
+                var expectedConfiguration = new InstantQuotationPartConfiguration("PLA", "Any", 1);
+                async Task EditAsync(string method, params object[] args) =>
+                    await (Task)typeof(InstantQuotationWorkflow).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!
+                        .Invoke(component, args)!;
+                if (edit == "material")
+                {
+                    await retainedCallback.InvokeAsync("PETG");
+                    expectedConfiguration = expectedConfiguration with { MaterialKey = "PETG" };
+                }
+                else if (edit == "quantity")
+                {
+                    await EditAsync("ChangePendingQuantityAsync", previewKey, new ChangeEventArgs { Value = "7" });
+                    expectedConfiguration = expectedConfiguration with { Quantity = 7 };
+                }
+                else if (edit == "black")
+                {
+                    await EditAsync("ChangePendingColorAsync", previewKey, new ChangeEventArgs { Value = "Black" });
+                    expectedConfiguration = expectedConfiguration with { Color = "Black" };
+                }
+                else if (edit == "newer-revision")
+                {
+                    await EditAsync("ChangePendingQuantityAsync", previewKey, new ChangeEventArgs { Value = "2" });
+                    await EditAsync("ChangePendingQuantityAsync", previewKey, new ChangeEventArgs { Value = "3" });
+                    expectedConfiguration = expectedConfiguration with { Quantity = 3 };
+                }
+                Assert.Equal(expectedConfiguration.MaterialKey, pendingSelector.SelectedMaterialKey);
+                var intents = (System.Collections.IDictionary)typeof(InstantQuotationWorkflow)
+                    .GetField("pendingConfigurations", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
+                var intent = intents[previewKey]!;
+                Assert.Equal(expectedConfiguration, intent.GetType().GetProperty("Configuration")!.GetValue(intent));
+                Assert.Equal(edit == "newer-revision" ? 2L : edit == "untouched" ? 0L : 1L,
+                    intent.GetType().GetProperty("Revision")!.GetValue(intent));
+                Assert.Matches("<select\\b(?=[^>]*id=\"pending-color-" + previewKey + "\")(?=[^>]*value=\"" + expectedConfiguration.Color + "\")[^>]*>", root.ToHtmlString());
                 Assert.Empty(coordinator.Parts);
                 Assert.False(coordinator.HasCompleteAuthoritativeQuote);
                 Assert.Null((await store.GetAsync("presentation-session", null, lease.Token))!.QuoteAuthorization);
@@ -2390,12 +2431,11 @@ public sealed class InstantQuotationResinPresentationTests
                 typeof(ComponentBase).GetMethod("StateHasChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
                     .Invoke(component, null);
                 var part = Assert.Single(coordinator.Parts);
-                var expectedConfiguration = new InstantQuotationPartConfiguration("PETG", "Any", 1, BuildPreference.Standard);
                 Assert.Equal(expectedConfiguration, part.Configuration);
                 Assert.DoesNotContain("data-workflow-local-settings", root.ToHtmlString(), StringComparison.Ordinal);
                 Assert.Same(pendingSelector, activator.MaterialSelectors.Last());
                 Assert.Single(activator.MaterialSelectors);
-                Assert.Equal("PETG", Assert.Single(coordinator.Parts).Configuration.MaterialKey);
+                Assert.Equal(expectedConfiguration.MaterialKey, Assert.Single(coordinator.Parts).Configuration.MaterialKey);
                 var stored = Assert.IsType<InstantQuotationSessionState>(
                     await store.GetAsync("presentation-session", null, lease.Token));
                 var saved = Assert.Single(stored.Parts);
@@ -2408,14 +2448,25 @@ public sealed class InstantQuotationResinPresentationTests
                 Assert.Equal(expectedConfiguration.Quantity, line.Quantity);
                 Assert.Equal(expectedConfiguration.BuildPreference, line.BuildPreference);
                 Assert.NotNull(line.PhysicalReceipt);
-                Assert.Equal("PETG", line.PhysicalReceipt.MaterialKey);
+                Assert.Equal(expectedConfiguration.MaterialKey, line.PhysicalReceipt.MaterialKey);
                 var html = root.ToHtmlString();
-                var petg = Assert.Single(Regex.Matches(html, "<div\\b[^>]*role=\"radio\"[^>]*data-material-key=\"PETG\"[^>]*>").Cast<Match>());
-                Assert.Contains("aria-checked=\"true\"", petg.Value, StringComparison.Ordinal);
+                var selectedMaterial = Assert.Single(Regex.Matches(html, "<div\\b[^>]*role=\"radio\"[^>]*data-material-key=\"" + expectedConfiguration.MaterialKey + "\"[^>]*>").Cast<Match>());
+                Assert.Contains("aria-checked=\"true\"", selectedMaterial.Value, StringComparison.Ordinal);
+                if (edit == "newer-revision")
+                {
+                    Assert.False(intents.Contains(previewKey));
+                    await EditAsync("ChangePendingQuantityAsync", previewKey, new ChangeEventArgs { Value = "7" });
+                    await EditAsync("ChangePendingColorAsync", previewKey, new ChangeEventArgs { Value = "White" });
+                    expectedConfiguration = expectedConfiguration with { Quantity = 7, Color = "White" };
+                    Assert.Equal(expectedConfiguration, Assert.Single(coordinator.Parts).Configuration);
+                }
                 admitRelease.TrySetResult();
                 await uploading.WaitAsync(lease.Token);
                 Assert.Equal(part.PartId, Assert.Single(coordinator.Parts).PartId);
-                Assert.Equal(part.Configuration, Assert.Single(coordinator.Parts).Configuration);
+                Assert.Equal(expectedConfiguration, Assert.Single(coordinator.Parts).Configuration);
+                var finalSaved = Assert.Single((await store.GetAsync("presentation-session", null, lease.Token))!.Parts);
+                Assert.Equal(part.PartId, finalSaved.PartId);
+                Assert.Equal(expectedConfiguration, finalSaved.Configuration);
             }
             catch (Exception exception) { primary = exception; throw; }
             finally

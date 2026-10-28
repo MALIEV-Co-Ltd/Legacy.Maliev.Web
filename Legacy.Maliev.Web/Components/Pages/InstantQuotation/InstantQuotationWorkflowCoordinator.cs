@@ -1064,7 +1064,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
                         entry.File.FileName,
                         result.UploadReference!,
                         geometry,
-                        new InstantQuotationPartConfiguration("PLA", geometry.BodyCount > 1 ? "Any" : "Black", 1),
+                        new InstantQuotationPartConfiguration("PLA", "Any", 1),
                         result.PhysicalAnalysisUpload);
                     entry.Status = InstantQuotationWorkflowUploadStatus.Uploaded;
                     entry.ProblemCategory = InstantQuotationProblemCategory.None;
@@ -1341,7 +1341,7 @@ public sealed class InstantQuotationWorkflowCoordinator : IAsyncDisposable
             || !quoteTicketService.Validate(session, quote, authorization, DateTimeOffset.UtcNow))
             return;
 
-        var defaults = new InstantQuotationPartConfiguration("PLA", "Black", 1);
+        var defaults = new InstantQuotationPartConfiguration("PLA", "Any", 1);
         lock (configurationGate)
         {
             foreach (var entry in entries)
