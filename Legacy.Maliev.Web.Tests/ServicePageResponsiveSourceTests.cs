@@ -141,6 +141,22 @@ public sealed class ServicePageResponsiveSourceTests
         Assert.Matches(@"(?m)^\s*\.service-actions\s*\{[^}]*\bjustify-content:\s*center\s*;", mobile.Groups["rules"].Value);
     }
 
+    [Fact]
+    public void SharedServiceCss_PreservesSourceNotePriceAndMobileBulletHierarchy()
+    {
+        var css = Read("Legacy.Maliev.Web", "wwwroot", "src", "app", "css", "service-pages.css");
+        // Frozen edf4 evolves the original left border into a full border while retaining rounded notes.
+        Assert.Matches(@"(?m)^\.service-note\s*\{(?=[^}]*\bborder:\s*1px solid #c5daf7\s*;)(?=[^}]*border-radius:\s*var\(--service-radius-sm\)\s*;)", css);
+        Assert.Matches(@"(?m)^\.service-pricing-card strong\s*\{(?=[^}]*border-top:\s*1px solid var\(--service-line\)\s*;)(?=[^}]*font-size:\s*1\.3rem\s*;)(?=[^}]*line-height:\s*1\.3\s*;)", css);
+
+        var mobile = Assert.Single(System.Text.RegularExpressions.Regex.Matches(
+                css,
+                @"(?ms)^@media\s*\(max-width:\s*47\.99rem\)\s*\{(?<rules>.*?)^\}")
+            .Cast<System.Text.RegularExpressions.Match>(),
+            block => block.Groups["rules"].Value.Contains(".service-hero {", StringComparison.Ordinal));
+        Assert.Matches(@"(?m)^\s*\.service-hero-points\s*\{(?=[^}]*width:\s*fit-content\s*;)(?=[^}]*margin-inline:\s*auto\s*;)(?=[^}]*flex-direction:\s*column\s*;)(?=[^}]*align-items:\s*flex-start\s*;)(?=[^}]*justify-content:\s*center\s*;)", mobile.Groups["rules"].Value);
+    }
+
     private static string Read(params string[] parts) => File.ReadAllText(Path.Combine([Root, .. parts]));
 
     private static string FindRepositoryRoot()
