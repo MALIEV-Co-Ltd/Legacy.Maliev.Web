@@ -142,7 +142,9 @@
     .service-page-toc[data-toc-open="true"] .service-page-toc-preview { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .service-page-toc-toggle i, .service-page-toc-toggle .svg-inline--fa { transition: none; } }
-.service-page > section[id] { scroll-margin-top: calc(var(--service-toc-height) + 1.25rem); }
+.service-page > nav[data-service-toc]:not([hidden]) ~ nav[data-service-page-toc] { display: none; }
+.service-page > section[id],
+.service-page > section:not([id]) h2[id]:first-of-type { scroll-margin-top: calc(var(--service-toc-height) + 1.25rem); }
 
 .service-section { padding-block: 5rem; }
 .service-section-soft { background: var(--service-soft); }
