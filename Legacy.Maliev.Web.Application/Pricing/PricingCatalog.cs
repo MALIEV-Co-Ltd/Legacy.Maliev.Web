@@ -201,28 +201,28 @@ public static class PricingCatalog
     private static IReadOnlyDictionary<string, IReadOnlyList<string>> BuildMaterialColors()
     {
         string[] full = ["Any", "Black", "White", "Gray", "Silver", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink"];
-        string[] neutral = ["Any", "Natural", "Black", "White", "Gray"];
-        string[] carbon = ["Black", "Natural"];
+        string[] blackOnly = ["Black"];
+        string[] nylon = ["Natural", "Black"];
 
         return new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
         {
             ["PLA"] = new FrozenList<string>(full),
-            ["PETG"] = new FrozenList<string>(full),
-            ["ABS"] = new FrozenList<string>(full),
-            ["ASA"] = new FrozenList<string>(full),
-            ["HIPS"] = new FrozenList<string>(["Black", "White"]),
-            ["TPU"] = new FrozenList<string>(["Any", "Black", "White", "Clear", "Red", "Blue"]),
-            ["PC"] = new FrozenList<string>(neutral),
-            ["PC-FR"] = new FrozenList<string>(neutral),
-            ["PA6"] = new FrozenList<string>(neutral),
-            ["PA12"] = new FrozenList<string>(neutral),
-            ["ABS-FR"] = new FrozenList<string>(neutral),
-            ["PLA-CF"] = new FrozenList<string>(carbon),
-            ["PETG-CF"] = new FrozenList<string>(carbon),
-            ["PET-CF"] = new FrozenList<string>(carbon),
-            ["PA-CF"] = new FrozenList<string>(carbon),
-            ["ASA-CF"] = new FrozenList<string>(carbon),
-            ["PETG-ESD"] = new FrozenList<string>(carbon),
+            ["PETG"] = new FrozenList<string>(["Any", "Black", "White", "Gray", "Clear", "Red", "Orange", "Yellow", "Green", "Blue"]),
+            ["ABS"] = new FrozenList<string>(["Any", "Black", "White", "Gray", "Red", "Yellow", "Green", "Blue"]),
+            ["ASA"] = new FrozenList<string>(["Any", "Black", "White", "Gray", "Natural"]),
+            ["HIPS"] = new FrozenList<string>(["White"]),
+            ["TPU"] = new FrozenList<string>(["Black", "White"]),
+            ["PC"] = new FrozenList<string>(["Black", "Translucent"]),
+            ["PC-FR"] = new FrozenList<string>(blackOnly),
+            ["PA6"] = new FrozenList<string>(nylon),
+            ["PA12"] = new FrozenList<string>(nylon),
+            ["ABS-FR"] = new FrozenList<string>(blackOnly),
+            ["PLA-CF"] = new FrozenList<string>(blackOnly),
+            ["PETG-CF"] = new FrozenList<string>(blackOnly),
+            ["PET-CF"] = new FrozenList<string>(blackOnly),
+            ["PA-CF"] = new FrozenList<string>(blackOnly),
+            ["ASA-CF"] = new FrozenList<string>(blackOnly),
+            ["PETG-ESD"] = new FrozenList<string>(blackOnly),
             ["PA612-ESD"] = new FrozenList<string>(["Black"]),
             ["ABS-ESD"] = new FrozenList<string>(["Black"]),
             ["PVA"] = new FrozenList<string>(["Natural"]),
@@ -285,7 +285,7 @@ public static class PricingCatalog
             Fdm("PA6", "PA6 — Nylon 6", 1.14, 1.95, FdmFlowClass.Engineering, 4, requiresDrying: true),
             Fdm("PA12", "PA12 — Nylon 12", 1.012, 2.034, FdmFlowClass.Engineering, 4, requiresDrying: true),
             Fdm("PA-CF", "PA-CF — Nylon + Carbon Fiber", 1.16, 3.534, FdmFlowClass.Engineering, 4, requiresDrying: true),
-            Fdm("TPU", "TPU — Flexible Thermoplastic Polyurethane", 1.43, 1.05, FdmFlowClass.Flexible, 12, requiresDrying: true),
+            Fdm("TPU", "TPU 95A — Flexible Thermoplastic Polyurethane", 1.43, 1.05, FdmFlowClass.Flexible, 12, requiresDrying: true),
             Fdm("PVA", "PVA — Water-Soluble Support", 1.23, 2.568, FdmFlowClass.Standard, 8, requiresDrying: true),
             Resin("M68", "Standard Resin (M68)", 2.14),
             Resin("K", "Tough Resin (K)", 2.14),

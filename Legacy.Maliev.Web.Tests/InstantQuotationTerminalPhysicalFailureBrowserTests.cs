@@ -144,7 +144,7 @@ public sealed class InstantQuotationTerminalPhysicalFailureBrowserTests
         public AuthorityGuardStore Store { get; private set; } = null!;
         private int pageErrors;
         public int PageErrors => Volatile.Read(ref pageErrors);
-        public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+        public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
         private Fixture(byte[] bytes) { Reader = new(bytes); Factory = new(Reader); }
 
         private static int ReserveFreePort() => BrowserTestServerPort.Reserve();

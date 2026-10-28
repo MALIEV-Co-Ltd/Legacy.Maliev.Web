@@ -1202,7 +1202,7 @@ public sealed class InstantQuotationWorkflowUploadTests
 
         var updated = Assert.Single(workflow.Parts);
         Assert.Equal(new InstantQuotationPartConfiguration("PETG", "Blue", 10), updated.Configuration);
-        Assert.Equal(["Any", "Black", "White", "Gray", "Silver", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink"], workflow.GetColors("PETG"));
+        Assert.Equal(["Any", "Black", "White", "Gray", "Clear", "Red", "Orange", "Yellow", "Green", "Blue"], workflow.GetColors("PETG"));
         Assert.Equal(2, pricing.QuoteCalls);
         Assert.Equal(updated.PartId, Assert.Single(store.LastSavedState!.Parts).PartId);
         Assert.Equal("PETG", Assert.Single(store.LastSavedState.Parts).Configuration.MaterialKey);
@@ -1290,7 +1290,7 @@ public sealed class InstantQuotationWorkflowUploadTests
         var updated = Assert.Single(workflow.Parts);
         Assert.Equal(BuildPreference.Quality, updated.Configuration.BuildPreference);
         Assert.Equal("PLA", updated.Configuration.MaterialKey);
-        Assert.Equal("Black", updated.Configuration.Color);
+        Assert.Equal("Any", updated.Configuration.Color);
         Assert.Equal(1, updated.Configuration.Quantity);
         Assert.Equal(2, pricing.QuoteCalls);
         Assert.Equal(BuildPreference.Quality, Assert.Single(store.LastSavedState!.Parts).Configuration.BuildPreference);
