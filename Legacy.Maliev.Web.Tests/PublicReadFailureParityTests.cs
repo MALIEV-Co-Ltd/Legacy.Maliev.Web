@@ -174,8 +174,9 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
                 Assert.Equal(StatusCodes.Status503ServiceUnavailable, Assert.IsType<StatusCodeResult>(result).StatusCode);
             }
         }
-        Assert.Equal("/Jobs/2147483647", Assert.Single(upstream.Paths));
-        Assert.DoesNotContain("/jobs/levels", upstream.Paths);
+        Assert.Equal(2, upstream.Paths.Count);
+        Assert.Single(upstream.Paths, path => path == "/Jobs/2147483647");
+        Assert.Single(upstream.Paths, path => path == "/jobs/levels");
     }
 
     public static IEnumerable<object[]> RouteCases()
@@ -308,7 +309,9 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
             Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
             Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
         }
-        Assert.Equal("/Jobs/2147483647", Assert.Single(upstream.Paths));
+        Assert.Equal(2, upstream.Paths.Count);
+        Assert.Single(upstream.Paths, path => path == "/Jobs/2147483647");
+        Assert.Single(upstream.Paths, path => path == "/jobs/levels");
     }
 
     private WebApplicationFactory<Program> CreateFactory(Upstream upstream, string route, bool enabled,

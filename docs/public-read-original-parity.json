@@ -46,7 +46,7 @@
         ],
         "regression": "Legacy.Maliev.Web.Tests/PublicReadFailureParityTests.cs"
       },
-      "assertion": "Direct NotFoundResult at2147483647; real Jobs/2147483647 HTTP404 renders EN/TH404 safely; original levels200 fixture retained but current detail contract intentionally makes no levels request",
+      "assertion": "Direct NotFoundResult at2147483647; real Jobs/2147483647 HTTP404 renders EN/TH404 safely; original levels200 fixture retained; detail requests both the offer and levels, as the original source does",
       "disposition": "Await native qualification and Root complete two-path acceptance; existing guard reused without duplicate production change"
     }
   ],
