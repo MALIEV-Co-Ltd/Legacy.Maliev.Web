@@ -1,6 +1,12 @@
+using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
+using Legacy.Maliev.Web.Components.Pages.About;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -23,7 +29,10 @@ public sealed class AboutPageContractTests : IClassFixture<TestingWebApplication
         Assert.Single(Regex.Matches(html, "<h1(?:\\s|>)", RegexOptions.IgnoreCase));
         Assert.Contains($">{heading}<", html, StringComparison.Ordinal);
         Assert.Contains(capabilities, html, StringComparison.Ordinal);
-        Assert.Contains(customers, html, StringComparison.Ordinal);
+        Assert.DoesNotContain(customers, html, StringComparison.Ordinal);
+        Assert.DoesNotContain("profile-customers", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-customer=", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("/src/images/customers/", html, StringComparison.Ordinal);
         Assert.Contains("class=\"landing-main profile-about\"", html, StringComparison.Ordinal);
         Assert.Contains("data-capability-carousel", html, StringComparison.Ordinal);
         Assert.Contains("data-capability-track", html, StringComparison.Ordinal);
@@ -74,8 +83,8 @@ public sealed class AboutPageContractTests : IClassFixture<TestingWebApplication
     [InlineData("th")]
     public async Task About_PreservesExactCustomerRosterAndCorrectedArtwork(string culture)
     {
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
-        var html = WebUtility.HtmlDecode(await client.GetStringAsync($"/about?culture={culture}"));
+        var html = await RenderAboutComponentAsync<CorporateCustomers>(factory.Services, culture);
+        Assert.Contains(culture == "th" ? "ลูกค้าองค์กรบางส่วนของเรา" : "Selected corporate customers", html, StringComparison.Ordinal);
         string[] expected = [
             "ptt", "pttep", "bangchak", "siemens-mobility", "mitsubishi-materials", "fabrinet",
             "minor-food", "kohler", "grohe", "murata", "olympus", "air-liquide", "lixil", "kobelco",
@@ -130,5 +139,41 @@ public sealed class AboutPageContractTests : IClassFixture<TestingWebApplication
         Assert.Contains("/src/images/customers/tpi-polene-power-emblem.webp", html, StringComparison.Ordinal);
         Assert.DoesNotContain("/src/images/customers/yg-1.png", html, StringComparison.Ordinal);
         Assert.DoesNotContain("/src/images/customers/tpi-polene-power.png", html, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "Have an idea, drawing or sample part?")]
+    [InlineData("th", "มีไอเดีย แบบงาน หรือชิ้นงานตัวอย่าง?")]
+    public async Task AboutContent_HidesCustomersAndPreservesFollowingCallToAction(string culture, string callToAction)
+    {
+        var html = await RenderAboutComponentAsync<AboutContent>(factory.Services, culture);
+        Assert.DoesNotContain("profile-customers", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-customer=", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("/src/images/customers/", html, StringComparison.Ordinal);
+        Assert.Contains(callToAction, html, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/Contact?culture={culture}\"", html, StringComparison.Ordinal);
+    }
+
+    internal static async Task<string> RenderAboutComponentAsync<TComponent>(IServiceProvider services, string culture)
+        where TComponent : IComponent
+    {
+        await using var scope = services.CreateAsyncScope();
+        await using var renderer = new HtmlRenderer(scope.ServiceProvider, scope.ServiceProvider.GetRequiredService<ILoggerFactory>());
+        return await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var previousCulture = CultureInfo.CurrentCulture;
+            var previousUiCulture = CultureInfo.CurrentUICulture;
+            try
+            {
+                CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
+                CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+                return WebUtility.HtmlDecode((await renderer.RenderComponentAsync<TComponent>(ParameterView.Empty)).ToHtmlString());
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = previousCulture;
+                CultureInfo.CurrentUICulture = previousUiCulture;
+            }
+        });
     }
 }

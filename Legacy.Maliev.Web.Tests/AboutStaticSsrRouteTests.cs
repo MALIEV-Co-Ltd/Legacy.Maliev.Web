@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using Legacy.Maliev.Web.Components.Pages.About;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -32,7 +33,12 @@ public sealed class AboutStaticSsrRouteTests : IClassFixture<TestingWebApplicati
         var about = Assert.Single(Regex.Matches(html,
             "<main class=\"landing-main profile-about\"[^>]*>(?<body>.*?)</main>",
             RegexOptions.Singleline).Cast<Match>()).Groups["body"].Value;
-        var imageUrls = Regex.Matches(about, "<img\\b[^>]*src=\"(?<url>/src/images/[^\"]+)\"",
+        Assert.DoesNotContain("profile-customers", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-customer=", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("/src/images/customers/", html, StringComparison.Ordinal);
+        Assert.DoesNotContain(culture == "th" ? "ลูกค้าองค์กรบางส่วนของเรา" : "Selected corporate customers", html, StringComparison.Ordinal);
+        var customerHtml = await AboutPageContractTests.RenderAboutComponentAsync<CorporateCustomers>(configured.Services, culture);
+        var imageUrls = Regex.Matches(about + customerHtml, "<img\\b[^>]*src=\"(?<url>/src/images/[^\"]+)\"",
                 RegexOptions.CultureInvariant)
             .Select(match => match.Groups["url"].Value)
             .Distinct(StringComparer.Ordinal)
@@ -51,22 +57,22 @@ public sealed class AboutStaticSsrRouteTests : IClassFixture<TestingWebApplicati
             Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(expected)),
                 Convert.ToHexStringLower(SHA256.HashData(actual)));
         }
-        Assert.Equal(36, Regex.Matches(html, "data-customer=\"([^\"]+)\"").Count);
+        Assert.Equal(36, Regex.Matches(customerHtml, "data-customer=\"([^\"]+)\"").Count);
         Assert.Contains(culture == "th"
             ? "บริษัทที่เลือกใช้บริการพัฒนาและผลิตชิ้นงานกับ MALIEV"
-            : "Companies that have chosen MALIEV for manufacturing and development work.", html, StringComparison.Ordinal);
+            : "Companies that have chosen MALIEV for manufacturing and development work.", customerHtml, StringComparison.Ordinal);
         foreach (var customer in new[] { "alten-korea", "forth", "do-day-dream", "thai-agri-foods", "sahamitr-pressure-container", "crown-ceramics" })
         {
-            Assert.Single(Regex.Matches(html, $"data-customer=\"{customer}\""));
-            Assert.Contains($"/src/images/customers/{customer}.webp", html, StringComparison.Ordinal);
+            Assert.Single(Regex.Matches(customerHtml, $"data-customer=\"{customer}\""));
+            Assert.Contains($"/src/images/customers/{customer}.webp", customerHtml, StringComparison.Ordinal);
         }
-        Assert.DoesNotContain("index-creative-village", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("Index Creative Village", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("อินเด็กซ์ ครีเอทีฟ วิลเลจ", html, StringComparison.Ordinal);
-        Assert.Contains(culture == "th" ? "คราวน์ เซรามิคส์" : "Crown Ceramics", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("index-creative-village", customerHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("Index Creative Village", customerHtml, StringComparison.Ordinal);
+        Assert.DoesNotContain("อินเด็กซ์ ครีเอทีฟ วิลเลจ", customerHtml, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "คราวน์ เซรามิคส์" : "Crown Ceramics", customerHtml, StringComparison.Ordinal);
         foreach (var customer in new[] { "sahamitr-pressure-container", "crown-ceramics" })
         {
-            var card = Assert.Single(Regex.Matches(html,
+            var card = Assert.Single(Regex.Matches(customerHtml,
                 $"<li class=\"profile-customer\" data-customer=\"{customer}\">(?<card>.*?)</li>",
                 RegexOptions.Singleline)).Groups["card"].Value;
             Assert.Contains("class=\"profile-customer-logo\"", card, StringComparison.Ordinal);
