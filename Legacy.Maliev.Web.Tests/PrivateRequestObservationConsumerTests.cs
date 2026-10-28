@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -12,11 +14,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Actual Web Program with fixture-owned peers, clock, health check and Razor failure filter.</summary>
+[Collection("Shared diagnostics output")]
 public sealed class PrivateRequestObservationConsumerTests
 {
     private const string Diagnostic = "/internal/diagnostics/observability";
@@ -119,31 +123,77 @@ public sealed class PrivateRequestObservationConsumerTests
         AssertNoRequestLogging(factory.Records.Snapshot);
     }
 
-    [Fact]
-    public async Task ActualProgram_OrdinaryRazorThrowReexecutesErrorWithExactlyOneSanitizedWebIncident()
+    [Theory]
+    [InlineData("en", "GET", false, "Application error", "Please include this incident ID when contacting support.", "Error page preview")]
+    [InlineData("th", "GET", false, "ข้อผิดพลาดของระบบ", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ", "ตัวอย่างหน้าข้อผิดพลาด")]
+    [InlineData("en", "POST", false, "Application error", "Please include this incident ID when contacting support.", "Error page preview")]
+    [InlineData("th", "POST", false, "ข้อผิดพลาดของระบบ", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ", "ตัวอย่างหน้าข้อผิดพลาด")]
+    [InlineData("en", "POST", true, "Application error", "Please include this incident ID when contacting support.", "Error page preview")]
+    [InlineData("th", "POST", true, "ข้อผิดพลาดของระบบ", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ", "ตัวอย่างหน้าข้อผิดพลาด")]
+    public async Task ActualProgram_OrdinaryRazorThrowReexecutesErrorWithExactlyOneSanitizedWebIncident(
+        string culture, string method, bool staticSsrError, string applicationError, string incidentInstruction, string previewLabel)
     {
-        using var factory = new ObservationFactory("127.0.0.1", ordinaryFailure: true);
+        using var console = new CapturedConsoleOutput();
+        using var factory = new ObservationFactory("127.0.0.1", ordinaryFailure: true,
+            failureMethod: method, staticSsrError: staticSsrError);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false,
             BaseAddress = new Uri("https://localhost"),
         });
+        using var request = new HttpRequestMessage(new HttpMethod(method),
+            "/contact?handler=SubmitRequest&token=" + Sensitive + "&culture=" + culture);
+        const string traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+        const string parentSpanId = "00f067aa0ba902b7";
+        request.Headers.Add("traceparent", $"00-{traceId}-{parentSpanId}-01");
+        if (method == "POST")
+        {
+            var bootstrap = await client.GetStringAsync("/?culture=" + culture);
+            var token = Regex.Match(bootstrap, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"",
+                RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+            Assert.True(token.Success, "The real page must issue an antiforgery token before the POST.");
+            request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = WebUtility.HtmlDecode(token.Groups[1].Value),
+            });
+        }
         factory.Records.Clear();
-        using var response = await client.GetAsync("/contact?token=" + Sensitive + "&culture=en");
+        using var response = await client.SendAsync(request);
         Assert.Equal(1, factory.PageFilter.Throws);
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        var rawDocument = await response.Content.ReadAsStringAsync();
+        Assert.True(response.Headers.Contains("X-Incident-Id"),
+            $"Missing incident header: bodyLength={rawDocument.Length}; errorContent={rawDocument.Contains("error-content", StringComparison.Ordinal)}; locationPresent={response.Headers.Location is not null}; headers={string.Join(',', response.Headers.Select(header => header.Key))}");
         var incident = Assert.Single(response.Headers.GetValues("X-Incident-Id"));
         Assert.Matches("^[a-f0-9]{32}$", incident);
-        var document = await response.Content.ReadAsStringAsync();
+        var document = WebUtility.HtmlDecode(rawDocument);
         Assert.Contains(incident, document, StringComparison.Ordinal);
+        Assert.Contains($">{applicationError}<", document, StringComparison.Ordinal);
+        Assert.Contains($">{incidentInstruction}<", document, StringComparison.Ordinal);
+        Assert.DoesNotContain($">{previewLabel}<", document, StringComparison.Ordinal);
+        Assert.Contains("id=\"incident-id\"", document, StringComparison.Ordinal);
+        Assert.Contains("id=\"incident-occurred-at\"", document, StringComparison.Ordinal);
+        Assert.Contains("mailto:support@maliev.com?subject=" + Uri.EscapeDataString($"Application error {incident}"),
+            document, StringComparison.Ordinal);
+        Assert.DoesNotContain("StackTrace", document, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("UrlReferrer", document, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain(Sensitive, document, StringComparison.Ordinal);
         Assert.Equal(1, factory.PageFilter.Throws);
-        Assert.Equal(1, factory.PageFilter.ErrorExecutions);
+        Assert.Equal(staticSsrError ? 0 : 1, factory.PageFilter.ErrorExecutions);
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("no-referrer", Assert.Single(response.Headers.GetValues("Referrer-Policy")));
         var webIncident = Assert.Single(factory.Records.Snapshot, entry =>
             entry.Category == "Legacy.Maliev.Web.Middleware.ErrorIncidentMiddleware"
             && entry.Fields.GetValueOrDefault("EventName") as string == "UnhandledRequestFailure");
         Assert.Equal(LogLevel.Critical, webIncident.Level);
         Assert.Equal(incident, webIncident.Fields["IncidentId"]);
+        Assert.Equal(method, webIncident.Fields["Method"]);
+        Assert.Equal("/contact", webIncident.Fields["Path"]);
+        var occurredAtUtc = DateTimeOffset.Parse(
+            Assert.IsType<string>(webIncident.Fields["OccurredAtUtc"]), CultureInfo.InvariantCulture);
+        Assert.Equal(TimeSpan.Zero, occurredAtUtc.Offset);
+        Assert.Contains(">" + occurredAtUtc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture) + "</time>",
+            document, StringComparison.Ordinal);
         Assert.DoesNotContain(factory.Records.Snapshot, entry =>
             entry.Fields.GetValueOrDefault("EventName") as string == "HandledOperationFailure");
         Assert.DoesNotContain(factory.Records.Snapshot, entry => entry.HasSyntheticScope);
@@ -154,6 +204,33 @@ public sealed class PrivateRequestObservationConsumerTests
         Assert.Equal(incident, formatted.GetProperty("IncidentId").GetString());
         Assert.Equal(webIncident.Fields["OccurredAtUtc"], formatted.GetProperty("OccurredAtUtc").GetString());
         Assert.Equal(typeof(InvalidOperationException).FullName, formatted.GetProperty("exceptionType").GetString());
+
+        // Disposing the actual host drains its console logger before inspecting the wire output.
+        factory.Dispose();
+        var wire = Assert.Single(console.Text
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(line =>
+            {
+                using var entry = JsonDocument.Parse(line);
+                return entry.RootElement.Clone();
+            }), entry => entry.GetProperty("logger").GetString() == webIncident.Category
+                && entry.GetProperty("EventName").GetString() == "UnhandledRequestFailure");
+        Assert.Equal("CRITICAL", wire.GetProperty("severity").GetString());
+        Assert.Equal(incident, wire.GetProperty("IncidentId").GetString());
+        Assert.Equal(webIncident.Fields["OccurredAtUtc"], wire.GetProperty("OccurredAtUtc").GetString());
+        Assert.Equal(typeof(InvalidOperationException).FullName, wire.GetProperty("exceptionType").GetString());
+        var activityScope = Assert.Single(webIncident.Scopes, scope => scope.ContainsKey("TraceId"));
+        Assert.Equal(traceId, activityScope["TraceId"]);
+        Assert.Equal(parentSpanId, activityScope["ParentId"]);
+        Assert.Equal(traceId, wire.GetProperty("traceId").GetString());
+        var spanId = wire.GetProperty("spanId").GetString();
+        Assert.Equal(activityScope["SpanId"], spanId);
+        Assert.Matches("^[a-f0-9]{16}$", spanId);
+        Assert.NotEqual(parentSpanId, spanId);
+        Assert.NotEqual(traceId, incident);
+        foreach (var name in new[] { "State", "Scopes", "Message", "Path", "Authorization", "Cookie" })
+            Assert.False(wire.TryGetProperty(name, out _));
+        Assert.DoesNotContain(Sensitive, console.Text, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -447,6 +524,112 @@ public sealed class PrivateRequestObservationConsumerTests
         }
     }
 
+    /// <summary>Malformed Testing JSON fails while CreateBuilder is still constructing the actual application.</summary>
+    [Fact]
+    public void ActualProgram_TestingBuilderConstructionPreservesOriginalFailureAndExitCode()
+    {
+        var previousExitCode = Environment.ExitCode;
+        var contentRoot = Path.Combine(Path.GetTempPath(), "maliev-web-startup-" + Guid.NewGuid().ToString("N"));
+        var settings = Path.Combine(contentRoot, "appsettings.Testing.json");
+        using var console = new CapturedConsoleOutput();
+        try
+        {
+            Directory.CreateDirectory(contentRoot);
+            File.WriteAllText(settings, "{\"" + Sensitive + "\": invalid-json}");
+            using var factory = new ConstructionFailureFactory(contentRoot);
+            Environment.ExitCode = 53;
+
+            var failure = Assert.Throws<InvalidDataException>(() =>
+            {
+                using var client = factory.CreateClient();
+            });
+
+            Assert.Same(factory.StartupFailure, failure);
+            Assert.Contains("appsettings.Testing.json", failure.Message, StringComparison.Ordinal);
+            Assert.IsType<FormatException>(failure.InnerException);
+            Assert.Equal(53, Environment.ExitCode);
+            Assert.DoesNotContain("StartupFailure", console.Text, StringComparison.Ordinal);
+            Assert.DoesNotContain(Sensitive, console.Text, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Environment.ExitCode = previousExitCode;
+            if (File.Exists(settings)) File.Delete(settings);
+            if (Directory.Exists(contentRoot)) Directory.Delete(contentRoot);
+            Assert.False(File.Exists(settings));
+            Assert.False(Directory.Exists(contentRoot));
+        }
+    }
+
+    [Theory]
+    [InlineData(null, null, null, false)]
+    [InlineData("Testing", null, null, true)]
+    [InlineData("Testing", "Production", null, false)]
+    [InlineData("Production", "Testing", null, true)]
+    [InlineData("Testing", "Testing", "--environment=Production", false)]
+    [InlineData("Production", "Production", "--environment=Testing", true)]
+    [InlineData(null, null, "--environment=Testing", true)]
+    [InlineData(null, "Testing", "--environment=testing", true)]
+    [InlineData(null, "Testing", "--environment", true)]
+    public void ProgramEntry_StartupEnvironmentHonorsHostProviderPrecedence(
+        string? aspNetEnvironment, string? dotNetEnvironment, string? argument, bool expected)
+    {
+        using var configuration = new ConfigurationManager();
+        if (aspNetEnvironment is not null)
+            configuration.AddInMemoryCollection(new Dictionary<string, string?> { [HostDefaults.EnvironmentKey] = aspNetEnvironment });
+        if (dotNetEnvironment is not null)
+            configuration.AddInMemoryCollection(new Dictionary<string, string?> { [HostDefaults.EnvironmentKey] = dotNetEnvironment });
+        var preserveTestingException = false;
+
+        Program.ResolveStartupEnvironment(configuration, argument is null ? null : [argument], ref preserveTestingException);
+
+        Assert.Equal(expected, preserveTestingException);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ProgramEntry_StartupArgumentFailureRemainsInsideSelectedBoundary(bool testing)
+    {
+        using var configuration = new ConfigurationManager();
+        configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            [HostDefaults.EnvironmentKey] = testing ? "Testing" : "Production",
+        });
+        using var output = new StringWriter();
+        var previousExitCode = Environment.ExitCode;
+        var preserveTestingException = false;
+        Task Start()
+        {
+            Program.ResolveStartupEnvironment(configuration, ["-" + Sensitive + "=Testing"], ref preserveTestingException);
+            return Task.CompletedTask;
+        }
+        try
+        {
+            Environment.ExitCode = 53;
+
+            var failure = await Xunit.Record.ExceptionAsync(() =>
+                Program.RunHostAsync(Start, output, preserveTestingException: () => preserveTestingException));
+
+            if (testing)
+            {
+                Assert.IsType<FormatException>(failure);
+                Assert.Equal(53, Environment.ExitCode);
+                Assert.Equal(string.Empty, output.ToString());
+            }
+            else
+            {
+                Assert.Null(failure);
+                Assert.Equal(1, Environment.ExitCode);
+                using var json = JsonDocument.Parse(output.ToString());
+                Assert.Equal("StartupFailure", json.RootElement.GetProperty("EventName").GetString());
+                Assert.Equal(typeof(FormatException).FullName, json.RootElement.GetProperty("exceptionType").GetString());
+                Assert.DoesNotContain(Sensitive, output.ToString(), StringComparison.Ordinal);
+            }
+        }
+        finally { Environment.ExitCode = previousExitCode; }
+    }
+
     private static JsonElement AssertFormattedEvent(string[] records, string name, string severity)
     {
         var events = records.Select(output =>
@@ -547,14 +730,53 @@ public sealed class PrivateRequestObservationConsumerTests
     private static void AssertPrivate(Record[] records) => Assert.DoesNotContain(Sensitive,
         JsonSerializer.Serialize(records), StringComparison.Ordinal);
 
+    private sealed class CapturedConsoleOutput : IDisposable
+    {
+        private readonly TextWriter original = Console.Out;
+        private readonly StringWriter output = new(CultureInfo.InvariantCulture);
+
+        public CapturedConsoleOutput() => Console.SetOut(output);
+        public string Text => output.ToString();
+
+        public void Dispose()
+        {
+            Console.SetOut(original);
+            output.Dispose();
+        }
+    }
+
+    private sealed class ConstructionFailureFactory(string contentRoot) : TestingWebApplicationFactory
+    {
+        public Exception? StartupFailure { get; private set; }
+
+        protected override IHost CreateHost(IHostBuilder builder)
+        {
+            // DeferredHostBuilder forwards these host settings as arguments before CreateBuilder loads JSON.
+            builder.UseEnvironment("Testing");
+            builder.ConfigureHostConfiguration(configuration => configuration.AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    [HostDefaults.ContentRootKey] = contentRoot,
+                    ["hostBuilder:reloadConfigOnChange"] = "false",
+                }));
+            try { return base.CreateHost(builder); }
+            catch (Exception original)
+            {
+                StartupFailure = original;
+                throw;
+            }
+        }
+    }
+
     private sealed class ObservationFactory(string? peer, bool overwriteSynthetic = false,
         bool overwriteHealth = false, bool ordinaryFailure = false, bool handledFailure = false,
         bool forgedIncidentHeader = false, bool consoleOverride = false,
-        bool missingRecaptchaProject = false, bool? tracingEnabled = null) : TestingWebApplicationFactory
+        bool missingRecaptchaProject = false, bool? tracingEnabled = null,
+        string failureMethod = "GET", bool staticSsrError = false) : TestingWebApplicationFactory
     {
         public RecordingProvider Records { get; } = new();
         public ObservationClock Clock { get; } = new();
-        public FailurePageFilter PageFilter { get; } = new(ordinaryFailure, handledFailure, forgedIncidentHeader);
+        public FailurePageFilter PageFilter { get; } = new(ordinaryFailure, handledFailure, forgedIncidentHeader, failureMethod);
         public bool ShouldOverwriteHealth => overwriteHealth;
         public int SyntheticOverwrites;
         public int HealthOverwrites;
@@ -565,8 +787,8 @@ public sealed class PrivateRequestObservationConsumerTests
             base.ConfigureWebHost(builder);
             // Program snapshots route switches during builder creation. Use the
             // same host-setting boundary as the retained Razor route regressions.
-            builder.UseSetting("BlazorRouting:Contact", ordinaryFailure || handledFailure ? "false" : "true");
-            builder.UseSetting("BlazorRouting:Error", ordinaryFailure || handledFailure ? "false" : "true");
+            builder.UseSetting("BlazorRouting:Contact", (ordinaryFailure || handledFailure) && !staticSsrError ? "false" : "true");
+            builder.UseSetting("BlazorRouting:Error", (ordinaryFailure || handledFailure) && !staticSsrError ? "false" : "true");
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
@@ -660,7 +882,7 @@ public sealed class PrivateRequestObservationConsumerTests
         }
     }
 
-    private sealed class FailurePageFilter(bool enabled, bool handled, bool forgedIncidentHeader) : IAsyncPageFilter
+    private sealed class FailurePageFilter(bool enabled, bool handled, bool forgedIncidentHeader, string failureMethod) : IAsyncPageFilter
     {
         public int Throws;
         public int HandledExecutions;
@@ -668,7 +890,8 @@ public sealed class PrivateRequestObservationConsumerTests
         public Task OnPageHandlerSelectionAsync(PageHandlerSelectedContext context) => Task.CompletedTask;
         public async Task OnPageHandlerExecutionAsync(PageHandlerExecutingContext context, PageHandlerExecutionDelegate next)
         {
-            if (enabled && context.HttpContext.Request.Path.Equals(new PathString("/contact")))
+            if (enabled && context.HttpContext.Request.Path.Equals(new PathString("/contact"))
+                && context.HttpContext.Request.Method == failureMethod)
             {
                 Interlocked.Increment(ref Throws);
                 throw new InvalidOperationException(Sensitive);

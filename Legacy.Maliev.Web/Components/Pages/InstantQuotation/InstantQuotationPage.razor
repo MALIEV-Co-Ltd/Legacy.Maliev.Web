@@ -18,12 +18,14 @@
 @{
     var context = HttpContextAccessor.HttpContext
         ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
-    var title = Localizer["Instant 3D Printing Estimate"];
-    var description = Localizer["Estimate 3D printing price and production time with MALIEV's deterministic pricing calculator."];
+    var title = Localizer["Instant 3D Printing Quote | MALIEV"];
+    var description = Localizer["Upload a 3D model, choose material and quantity, and receive an online estimate for printing cost and lead time."];
+    var keywords = Localizer["3d print, 3d printing company, 3d printing model, 3d printing online, 3d printing service, 3d printing services, 3d printing website, 3d printing, online 3d printing, instant pricing, instant quotation"];
 }
 <PageTitle>@title</PageTitle>
 <HeadContent>
     <meta name="description" content="@description" />
+    <meta name="keywords" content="@keywords" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
     <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
 </HeadContent>

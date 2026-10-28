@@ -72,22 +72,34 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
                 "CareerDetailPage.razor",
                 "CareerIndexPage.razor",
                 "ChangeEmailConfirmationPage.razor",
+                "CncCuttingToolsPage.razor",
+                "CncFeedsAndSpeedsPage.razor",
+                "CncGeometryAndWorkholdingPage.razor",
+                "CncHolesAndTolerancesPage.razor",
                 "CncMachiningPage.razor",
+                "CncMachiningProcessesPage.razor",
                 "CncMachiningSpecificationPage.razor",
                 "ContactPage.razor",
                 "CustomManufacturingPage.razor",
                 "EmailConfirmationPage.razor",
                 "ErrorPage.razor",
                 "FinishingAndColorPage.razor",
+                "FinishingHeatTreatmentPage.razor",
+                "FinishingSurfaceFinishesPage.razor",
                 "ForgotPasswordPage.razor",
                 "GuidelinesPage.razor",
                 "HomePage.razor",
+                "InspectionMeasuringPartsPage.razor",
                 "InstantQuotationPage.razor",
                 "KnowledgeIndexPage.razor",
                 "LegalPage.razor",
                 "LineContactPage.razor",
                 "LoginPage.razor",
                 "LogoutPage.razor",
+                "ManufacturingProcessSelectionPage.razor",
+                "MaterialsEngineeringPlasticsPage.razor",
+                "MaterialsMetalsPage.razor",
+                "MaterialsSelectionPage.razor",
                 "MemberAccountIndexPage.razor",
                 "MemberAddressPage.razor",
                 "MemberChangeEmailPage.razor",
@@ -201,27 +213,41 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
 
     [Theory]
     [InlineData("en", "3D Printing Services", "How much does 3D printing cost?")]
-    [InlineData("th", "บริการรับพิมพ์ 3D", "พิมพ์ 3D ราคาเท่าไร?")]
+    [InlineData("th", "บริการรับพิมพ์ 3D", "รับพิมพ์ 3D ราคาเท่าไร และประเมินอย่างไร?")]
     public async Task Route_PreservesServiceFaqAndBreadcrumbStructuredData(
         string culture,
         string serviceName,
         string faqQuestion)
     {
-        using var client = CreateClient(factory);
-        using var response = await client.GetAsync($"/services/3d-printing?culture={culture}");
-        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
-        var documents = StructuredDataRegex().Matches(source)
-            .Select(match => JsonDocument.Parse(match.Groups["json"].Value))
-            .ToArray();
+        var expectedSchemaAnswer = culture == "th"
+            ? "ราคาเริ่มต้นและราคาสุดท้ายขึ้นกับวัสดุ ปริมาตร เวลา ซัพพอร์ต ทิศทาง ความเสี่ยง การเก็บงาน และจำนวน อัปโหลดไฟล์จริง เลือกวัสดุหรือกระบวนการ และแจ้งจำนวนในหน้า Instant Quotation เพื่อประเมินราคา หากยังไม่มีไฟล์ให้ขอวิศวกรช่วยเลือกกระบวนการ"
+            : "Cost depends on material, occupied volume, print time, support, orientation, risk, finishing, and quantity. Upload the model to MALIEV Instant Quotation for an estimate.";
+        var expectedVisibleAnswer = culture == "th"
+            ? "ราคาเริ่มต้นของงาน FDM และเรซิ่นแสดงอยู่ในส่วนราคาเริ่มต้นของหน้านี้ ราคาสุดท้ายขึ้นกับวัสดุ ปริมาตร เวลา ซัพพอร์ต ทิศทาง ความเสี่ยง การเก็บงาน และจำนวน อัปโหลดไฟล์จริง เลือกวัสดุหรือกระบวนการ และแจ้งจำนวนในหน้า Instant Quotation เพื่อประเมินราคา หากยังไม่มีไฟล์ให้ขอวิศวกรช่วยเลือกกระบวนการ"
+            : "Indicative starting prices for FDM and resin are listed in the pricing section on this page. The final price depends on material, occupied volume, print time, support, orientation, risk, finishing, and quantity. Upload the actual model to Instant Quotation for an estimate.";
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        using var service = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "Service");
-        using var faq = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "FAQPage");
-        Assert.Contains(documents, document => document.RootElement.GetProperty("@type").GetString() == "BreadcrumbList");
-        Assert.Equal(serviceName, service.RootElement.GetProperty("name").GetString());
-        Assert.Equal("3D Printing", service.RootElement.GetProperty("serviceType").GetString());
-        Assert.Equal(8, faq.RootElement.GetProperty("mainEntity").GetArrayLength());
-        Assert.Equal(faqQuestion, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("name").GetString());
+        foreach (var useBlazorRoute in new[] { true, false })
+        {
+            using var routeFactory = factory.WithWebHostBuilder(builder =>
+                builder.UseSetting("BlazorRouting:Services", useBlazorRoute.ToString()));
+            using var client = CreateClient(routeFactory);
+            using var response = await client.GetAsync($"/services/3d-printing?culture={culture}");
+            var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+            var documents = StructuredDataRegex().Matches(source)
+                .Select(match => JsonDocument.Parse(match.Groups["json"].Value))
+                .ToArray();
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            using var service = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "Service");
+            using var faq = documents.Single(document => document.RootElement.GetProperty("@type").GetString() == "FAQPage");
+            Assert.Contains(documents, document => document.RootElement.GetProperty("@type").GetString() == "BreadcrumbList");
+            Assert.Equal(serviceName, service.RootElement.GetProperty("name").GetString());
+            Assert.Equal("3D Printing", service.RootElement.GetProperty("serviceType").GetString());
+            Assert.Equal(8, faq.RootElement.GetProperty("mainEntity").GetArrayLength());
+            Assert.Equal(faqQuestion, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("name").GetString());
+            Assert.Equal(expectedSchemaAnswer, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("acceptedAnswer").GetProperty("text").GetString());
+            Assert.Matches($"<summary>\\s*{Regex.Escape(faqQuestion)}\\s*</summary>\\s*<p>\\s*{Regex.Escape(expectedVisibleAnswer)}\\s*</p>", source);
+        }
     }
 
     [Fact]
@@ -231,8 +257,8 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         var content = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "ThreeDimensionalPrintingContent.razor"));
         var pricing = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Shared", "ServicePricing.razor"));
 
-        Assert.Contains("well-designed part — not a guarantee", content, StringComparison.Ordinal);
-        Assert.Contains("งานที่ออกแบบมาเหมาะสม ไม่ใช่การรับประกัน", content, StringComparison.Ordinal);
+        Assert.Contains("Compare typical starting ranges for a well-designed part. These are not guarantees; send the drawing so we can confirm the critical dimensions before production.", content, StringComparison.Ordinal);
+        Assert.Contains("เปรียบเทียบค่าความคลาดเคลื่อนเริ่มต้นโดยทั่วไปสำหรับชิ้นงานที่ออกแบบมาเหมาะสม ค่านี้ไม่ใช่การรับประกัน กรุณาส่งแบบเพื่อให้เรายืนยันขนาดสำคัญก่อนผลิต", content, StringComparison.Ordinal);
         Assert.Contains("drawing — we can ream, tap, or machine", content, StringComparison.Ordinal);
         Assert.Contains("Indicative starting prices for FDM and resin are listed in the pricing section on this page.", content, StringComparison.Ordinal);
         Assert.Contains("ราคาเริ่มต้นของงาน FDM และเรซิ่นแสดงอยู่ในส่วนราคาเริ่มต้นของหน้านี้", content, StringComparison.Ordinal);
@@ -283,6 +309,79 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         Assert.Contains("\"@type\":\"FAQPage\"", WebUtility.HtmlDecode(source), StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
         Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(false, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "th")]
+    public async Task Route_PreservesSourceFinishingWorkflowLinkAcrossRenderers(bool useBlazorRoute, string culture)
+    {
+        await using var application = factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:Services", useBlazorRoute.ToString()));
+        using var client = CreateClient(application);
+        using var response = await client.GetAsync($"/services/3d-printing?culture={culture}");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var main = Assert.Single(Regex.Matches(html,
+            "<main\\b(?=[^>]*data-migration-component=\"three-dimensional-printing-content\")[^>]*>(?<body>[\\s\\S]*?)</main>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Equal(useBlazorRoute, main.Value.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var workflow = Assert.Single(Regex.Matches(main.Groups["body"].Value,
+            "<section\\b(?=[^>]*id=\"printing-workflow\")[^>]*>(?<body>[\\s\\S]*?)</section>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        var steps = Regex.Matches(workflow.Groups["body"].Value, "<li>(?<body>[\\s\\S]*?)</li>", RegexOptions.CultureInvariant)
+            .Cast<Match>().ToArray();
+        Assert.Equal(4, steps.Length);
+        var finishStep = steps[3].Groups["body"].Value;
+        Assert.Contains(culture == "th" ? "<h3>พิมพ์ ประกอบ เก็บผิว และจัดส่ง</h3>" : "<h3>Print, join, finish, and deliver</h3>",
+            finishStep, StringComparison.Ordinal);
+        var link = Assert.Single(Regex.Matches(finishStep,
+            "<a href=\"(?<href>/services/finishing-and-color)\">(?<copy>[^<]+)</a>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Equal(new Uri(client.BaseAddress!, "/services/finishing-and-color"), new Uri(client.BaseAddress!, link.Groups["href"].Value));
+        Assert.Equal(culture == "th" ? "วิธีตกลงเรื่องสี ความเงา และรอยต่อ" : "How we agree colour, sheen, and seams",
+            link.Groups["copy"].Value);
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task FinishingRoute_PreservesSourcePricingActionAndImageDescriptions(string culture)
+    {
+        // Finishing has a component route only; retained printing is covered separately.
+        using var client = CreateClient(factory);
+        using var response = await client.GetAsync($"/services/finishing-and-color?culture={culture}");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var main = Assert.Single(Regex.Matches(html,
+            "<main\\b(?=[^>]*data-migration-component=\"finishing-and-color-content\")[^>]*>(?<body>[\\s\\S]*?)</main>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", main.Value, StringComparison.Ordinal);
+        var hero = Assert.Single(Regex.Matches(main.Groups["body"].Value,
+            "<section\\b(?=[^>]*aria-labelledby=\"finishing-title\")[^>]*>(?<body>[\\s\\S]*?)</section>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        var pricingLink = Assert.Single(Regex.Matches(hero.Groups["body"].Value,
+            "<a\\b(?=[^>]*class=\"service-button service-button-secondary\")(?=[^>]*href=\"(?<href>[^\"]+)\")[^>]*>(?<copy>[^<]+)</a>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Equal(new Uri(client.BaseAddress!, "/InstantQuotation/3D-Printing"), new Uri(client.BaseAddress!, pricingLink.Groups["href"].Value));
+        Assert.Equal(culture == "th" ? "ประเมินราคาพิมพ์ 3D ทันที" : "Get instant 3D pricing", pricingLink.Groups["copy"].Value);
+
+        // The colour matcher is a nested section before the standards image.
+        var standards = Assert.Single(Regex.Matches(main.Groups["body"].Value,
+            "<section\\b(?=[^>]*id=\"finishing-standards\")[^>]*>(?<body>(?:(?<nested><section\\b[^>]*>)|(?<-nested></section>)|(?!</?section\\b)[\\s\\S])*)(?(nested)(?!))</section>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        foreach (var section in new[] { hero, standards })
+        {
+            var image = Assert.Single(Regex.Matches(section.Groups["body"].Value,
+                "<img\\b(?=[^>]*src=\"/src/images/services/printing/printing-finish-color-approval.webp\")(?=[^>]*alt=\"(?<alt>[^\"]*)\")[^>]*>",
+                RegexOptions.CultureInvariant).Cast<Match>());
+            Assert.Equal(culture == "th" ? "ช่างกำลังเทียบสีชิ้นงานพิมพ์ 3 มิติกับแผ่นเทียบสีและภาพอ้างอิง" : "Technician comparing a 3D-printed part with color swatches and a reference image",
+                image.Groups["alt"].Value);
+        }
     }
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) =>

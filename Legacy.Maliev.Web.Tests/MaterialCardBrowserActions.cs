@@ -15,13 +15,13 @@ internal static class MaterialCardBrowserActions
         try
         {
             await card.ClickAsync();
+            await Assertions.Expect(card).ToHaveAttributeAsync("aria-checked", "true");
         }
         catch
         {
             await CaptureClickFailureAsync(card);
             throw;
         }
-        await Assertions.Expect(card).ToHaveAttributeAsync("aria-checked", "true");
     }
 
     private static async Task CaptureClickFailureAsync(ILocator card)
@@ -46,13 +46,26 @@ internal static class MaterialCardBrowserActions
                     };
                     const bounds = card.getBoundingClientRect();
                     const hit = card.ownerDocument.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+                    const information = card.querySelector('.material-card__heading button[aria-expanded]');
+                    const priceStatus = card.querySelector('[data-price-status]')?.getAttribute('data-price-status');
                     const selected = rail?.querySelector('[aria-checked="true"]');
                     const owner = card.contains(hit) ? 'card' : parts?.contains(hit) ? 'parts'
                         : footer?.contains(hit) ? 'footer' : content?.contains(hit) ? 'content'
                         : configuration?.contains(hit) ? 'configuration' : 'other';
                     return { viewport: { width: innerWidth, height: innerHeight }, card: rect(card), rail: rect(rail),
                         content: rect(content), configuration: rect(configuration), parts: rect(parts), footer: rect(footer),
-                        selectedRequested: selected === card, selectedPla: selected?.dataset.materialKey === 'PLA', centerOwner: owner };
+                        selectedRequested: selected === card, selectedPla: selected?.dataset.materialKey === 'PLA', centerOwner: owner,
+                        requestedCardConnected: card.isConnected, requestedCardChecked: card.getAttribute('aria-checked') === 'true',
+                        informationExpanded: information?.getAttribute('aria-expanded') === 'true',
+                        centerIsInformationButton: !!information && (information === hit || information.contains(hit)),
+                        currentPriceStatus: ['pending', 'completed', 'unavailable'].includes(priceStatus) ? priceStatus : 'unknown',
+                        workflowBusy: workflow?.getAttribute('aria-busy') === 'true',
+                        pickerDisabled: !!card.closest('fieldset')?.disabled, pickerInert: !!card.closest('[inert]'),
+                        recoveredInput: window.__malievRecoveredFileChanges ? {
+                            changes: window.__malievRecoveredFileChanges.records.slice(0, 4),
+                            clicks: window.__malievRecoveredFileChanges.clicks.slice(0, 4),
+                            current: window.__malievRecoveredFileChanges.current()
+                        } : undefined };
                 }
                 """);
             // Wait cancellation does not cancel Playwright; the caller's page disposal owns final teardown.
@@ -67,7 +80,7 @@ internal static class MaterialCardBrowserActions
         }
         catch (Exception)
         {
-            // Best-effort categorical evidence must never replace the original click failure.
+            // Best-effort categorical evidence must never replace the original selection failure.
         }
     }
 

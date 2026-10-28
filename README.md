@@ -104,9 +104,10 @@ Ordinary non-Testing entry-point failures use `PrivateStartupBoundary` and set
 exit code 1. Testing startup validation and cancellation failures are rethrown
 unchanged without changing the process exit code, so WebApplicationFactory
 observes the original failed startup rather than successful completion.
-`HostAbortedException` is rethrown unchanged for host discovery/tooling. Tests use
-an isolated entry writer and the actual DI-selected console formatter without
-replacing process-wide console streams. Existing request observation continues
+`HostAbortedException` is rethrown unchanged for host discovery/tooling. Startup
+tests use an isolated entry writer. Actual incident regressions retain their
+serialized console capture and drain the host before checking the selected
+private formatter's wire output and request correlation. Existing request observation continues
 to own handled-failure and bounded/resettable health records.
 
 The selected shared producer comes from PR #93. Its exact protected-main checks

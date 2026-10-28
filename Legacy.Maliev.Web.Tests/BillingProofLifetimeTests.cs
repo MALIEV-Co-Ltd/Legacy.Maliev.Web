@@ -3,6 +3,91 @@ namespace Legacy.Maliev.Web.Tests;
 /// <summary>Pure controlled lifecycle faults; no process, browser, Docker or database is started.</summary>
 public sealed class BillingProofLifetimeTests
 {
+
+    [Theory]
+    [InlineData("System.IO.IOException", "IOException")]
+    [InlineData("System.Net.Sockets.SocketException", "SocketException")]
+    [InlineData("Microsoft.AspNetCore.Connections.AddressInUseException", "AddressInUseException")]
+    [InlineData("Microsoft.Extensions.Options.OptionsValidationException", "OptionsValidationException")]
+    [InlineData("System.InvalidOperationException", "InvalidOperationException")]
+    [InlineData("Npgsql.NpgsqlException", "NpgsqlException")]
+    [InlineData("Npgsql.PostgresException", "PostgresException")]
+    public void StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(string exceptionType, string expected)
+    {
+        Assert.Equal(expected, BillingSystemChild.ClassifyStartupFailure(StartupRecord(exceptionType)).ToString());
+    }
+
+    [Fact]
+    public void StartupFailure_DiscardsMalformedForeignOversizedAndArbitraryText()
+    {
+        var valid = StartupRecord("System.IO.IOException");
+        foreach (var rejected in new[]
+        {
+            "credential=synthetic-secret",
+            "{",
+            "[]",
+            valid.Replace("\"eventId\":5102", "\"eventId\":1", StringComparison.Ordinal),
+            valid.Replace("PrivateStartupBoundary", "OtherLogger", StringComparison.Ordinal),
+            valid.Replace("\"Operation\":\"HostInitialization\"", "\"Operation\":\"OtherOperation\"", StringComparison.Ordinal),
+            valid.Replace("\"severity\":\"CRITICAL\"", "\"severity\":\"INFO\"", StringComparison.Ordinal),
+            new string('x', 4097),
+        })
+        {
+            Assert.Equal(BillingStartupFailure.NotObserved, BillingSystemChild.ClassifyStartupFailure(rejected));
+        }
+        Assert.Equal(BillingStartupFailure.OtherException,
+            BillingSystemChild.ClassifyStartupFailure(StartupRecord("PrivateCustomerSecret.Exception")));
+    }
+
+    [Theory]
+    [InlineData(false, "NotObserved")]
+    [InlineData(true, "IOException")]
+    public async Task StartupFailure_DrainRetainsOnlyFixedStderrClassificationAcrossChunks(bool observeStartupFailure, string expected)
+    {
+        var child = new BillingSystemChild(new System.Diagnostics.ProcessStartInfo());
+        var output = new string('x', 5000) + "\n" + new string('x', 1137) + "\n"
+            + StartupRecord("System.IO.IOException") + "\n" + "credential=synthetic-secret\n";
+        using var reader = new StreamReader(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(output)));
+        try
+        {
+            await child.DrainAsync(reader, observeStartupFailure);
+            Assert.Equal(expected, child.StartupFailure.ToString());
+            Assert.DoesNotContain("synthetic-secret", child.StartupFailure.ToString(), StringComparison.Ordinal);
+        }
+        finally { child.CloseHandle(); }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task StartupFailure_ReaderFailureCannotReplaceTheOriginalExitedChildAssertion(bool cancelled)
+    {
+        var readers = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var deadline = new CancellationTokenSource();
+        if (cancelled) deadline.Cancel();
+        var process = new ControlledChild { ProvenStartState = "exited", CleanupFailure = "readers", ReaderJoin = cancelled ? readers.Task : null };
+        process.Start();
+        var child = new BillingChildLease(process);
+        var message = await child.StartupFailureAsync(deadline.Token);
+        readers.TrySetResult();
+        Assert.Contains("exitCode=0", message, StringComparison.Ordinal);
+        Assert.Contains("ReadersUnsettled", message, StringComparison.Ordinal);
+        Assert.Throws<Xunit.Sdk.FalseException>(() => Assert.False(child.HasExited, message));
+        Assert.Equal(0, process.Kills);
+        Assert.False(process.HandleClosed);
+    }
+
+    private static string StartupRecord(string exceptionType) => System.Text.Json.JsonSerializer.Serialize(new
+    {
+        severity = "CRITICAL",
+        logger = "Maliev.Aspire.ServiceDefaults.Diagnostics.PrivateStartupBoundary",
+        eventId = 5102,
+        exceptionType,
+        EventName = "StartupFailure",
+        Operation = "HostInitialization",
+        message = "credential=synthetic-secret",
+    });
+
     [Fact]
     public async Task Expiry_JoinsAdmittedSynchronousBodyBeforeDependencyRelease()
     {
@@ -163,6 +248,51 @@ public sealed class BillingProofLifetimeTests
         Assert.Equal(1, dependencies);
         Assert.True(process.HandleClosed);
         Assert.False(owner.IsRetained);
+        Assert.Equal(1, process.Starts);
+    }
+
+    [Theory]
+    [InlineData("identity", "capture-identity", "IOException")]
+    [InlineData("graceful-stop", "request-graceful-stop", "IOException")]
+    [InlineData("kill", "kill-exact", "IOException")]
+    [InlineData("reap", "wait-exit", "TimeoutException")]
+    [InlineData("readers", "join-readers", "TimeoutException")]
+    [InlineData("reader-close", "close-readers", "IOException")]
+    [InlineData("handle-close", "close-handle", "IOException")]
+    public async Task ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(string failure, string stage, string exceptionType)
+    {
+        var owner = new BillingProofLifetime();
+        var process = new ControlledChild { AcquisitionFailure = failure == "identity" ? "identity" : null };
+        var dependencies = 0;
+        owner.OwnDependency(() => { dependencies++; return ValueTask.CompletedTask; });
+        try
+        {
+            if (failure == "identity")
+                Assert.Throws<IOException>(() => owner.StartChild(process));
+            else
+                owner.StartChild(process);
+            process.AcquisitionFailure = null;
+            process.CleanupFailure = failure;
+
+            var quarantine = await Assert.ThrowsAsync<BillingProofQuarantineException>(() => owner.DisposeAsync().AsTask());
+
+            Assert.Contains("child:" + exceptionType + ":" + stage, quarantine.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("Controlled cleanup fault.", quarantine.Message, StringComparison.Ordinal);
+            using var receipt = System.Text.Json.JsonDocument.Parse(quarantine.Receipt!);
+            Assert.Equal(stage, receipt.RootElement.GetProperty("children")[0].GetProperty("cleanupStage").GetString());
+            Assert.True(owner.IsRetained);
+            Assert.False(process.HandleClosed);
+            Assert.Equal(0, dependencies);
+        }
+        finally
+        {
+            process.AcquisitionFailure = null;
+            process.CleanupFailure = null;
+            await owner.DisposeAsync();
+        }
+        Assert.False(owner.IsRetained);
+        Assert.True(process.HandleClosed);
+        Assert.Equal(1, dependencies);
         Assert.Equal(1, process.Starts);
     }
 
@@ -445,18 +575,19 @@ public sealed class BillingProofLifetimeTests
         internal int Kills { get; private set; }
         public object Receipt => new { Starts, Kills, Exited, ReadersClosed, HandleClosed, controlled = true };
         internal bool OutputFaulted { get; set; }
+        internal Task? ReaderJoin { get; init; }
         public bool ReaderFailed => OutputFaulted;
         public bool StartRefused => refused;
         public bool HasExited => Exited;
         public int ExitCode => 0;
         public void Start() { Starts++; if (ProvenStartState == "refused") { refused = true; throw new IOException("Controlled explicit Start refusal."); } if (ProvenStartState == "exited") Exited = true; FailAcquisition("start"); }
         public bool VerifyNoLiveChild() => refused || Exited;
-        public void CaptureIdentity() => FailAcquisition("identity");
+        public void CaptureIdentity() { FailAcquisition("identity"); FailCleanup("identity"); }
         public void StartReaders() => FailAcquisition("readers");
         public Task WaitForExitAsync() => Exited && CleanupFailure != "reap" ? Task.CompletedTask : Task.FromException(new TimeoutException());
-        public void RequestGracefulStop() { }
+        public void RequestGracefulStop() => FailCleanup("graceful-stop");
         public void KillExact() { FailCleanup("kill"); Kills++; if (CleanupFailure != "reap") Exited = true; }
-        public Task JoinReadersAsync() => CleanupFailure == "readers" ? Task.FromException(new TimeoutException()) : Task.CompletedTask;
+        public Task JoinReadersAsync() => ReaderJoin ?? (CleanupFailure == "readers" ? Task.FromException(new TimeoutException()) : Task.CompletedTask);
         public void CloseReaders() { FailCleanup("reader-close"); ReadersClosed = true; Events?.Add("readers"); }
         public void CloseHandle() { FailCleanup("handle-close"); HandleClosed = true; Events?.Add("handle"); }
         private void FailAcquisition(string stage) { if (AcquisitionFailure == stage) throw new IOException("Controlled acquisition fault."); }

@@ -33,6 +33,9 @@ public sealed class CncOwnedResourceScopeTests(Xunit.Abstractions.ITestOutputHel
             await Task.CompletedTask;
             throw new InvalidOperationException("original-body-failure");
         }, rows => receipts = rows));
+        // A startup failure precedes the injected refusal; surface it instead of masking it as null custody.
+        if (recovery is null && failure is not null)
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
         if (mode != "docker-acquisition")
         {
             Assert.NotNull(recovery);
@@ -47,6 +50,23 @@ public sealed class CncOwnedResourceScopeTests(Xunit.Abstractions.ITestOutputHel
                 Assert.False(refusal.RootElement.GetProperty("closed").GetBoolean());
                 if (mode == "reader-settlement") Assert.False(refusal.RootElement.GetProperty("readersSettled").GetBoolean());
                 else Assert.False(refusal.RootElement.GetProperty("terminal").GetBoolean());
+                if (mode == "unknown-identity")
+                {
+                    var capturedExecutable = recovery.ExecutableIdentityForControl;
+                    recovery.RejectIdentity = false;
+                    recovery.ExecutableIdentityForControl = null;
+                    try
+                    {
+                        var missingExecutable = await Assert.ThrowsAsync<InvalidOperationException>(() => recovery.CloseAsync());
+                        Assert.Equal("Owned PID/birth/executable identity changed; preserve process.", missingExecutable.Message);
+                        Assert.False(recovery.Process.HasExited);
+                        Assert.True(CncOwnedResourceScope.RetainedCustody.ContainsKey(key));
+                    }
+                    finally
+                    {
+                        recovery.ExecutableIdentityForControl = capturedExecutable;
+                    }
+                }
             }
             finally
             {
@@ -115,9 +135,17 @@ public sealed class CncOwnedResourceScopeTests(Xunit.Abstractions.ITestOutputHel
                 _ = child.Process.WorkingSet64;
                 _ = child.Process.TotalProcessorTime;
             };
-            Assert.IsType<InvalidOperationException>(Record.Exception(readMetrics));
+            Assert.True(Record.Exception(readMetrics) is InvalidOperationException or System.ComponentModel.Win32Exception);
             var observed = OwnedProcessMetricObservation.TryRead(child.Process, handle, pid, readMetrics);
             Assert.False(observed, "The same real metrics read that faults without the terminal guard must settle the exact owned child.");
+            Action readExecutable = () =>
+            {
+                child.Process.Refresh();
+                _ = child.Process.MainModule?.FileName ?? throw new InvalidOperationException("Executable identity unavailable.");
+            };
+            Assert.True(Record.Exception(readExecutable) is InvalidOperationException or System.ComponentModel.Win32Exception);
+            Assert.False(OwnedProcessMetricObservation.TryRead(child.Process, handle, pid, readExecutable),
+                "The same exact-terminal guard must also settle executable observation after natural exit.");
             await child.CompleteAsync(TimeSpan.FromSeconds(10), CancellationToken.None);
         }, rows => output.WriteLine(JsonSerializer.Serialize(rows)));
     }
@@ -130,9 +158,13 @@ public sealed class CncOwnedResourceScopeTests(Xunit.Abstractions.ITestOutputHel
         await CncOwnedResourceScope.ExecuteAsync(async scope =>
         {
             var child = scope.StartChild(dll!, new() { ["MALIEV_CNC_PROBE_MODE"] = "partial-start" });
-            var original = new InvalidOperationException("controlled-live-metric-error");
-            Assert.Same(original, Record.Exception(() => OwnedProcessMetricObservation.TryRead(
-                child.Process, child.Process.SafeHandle, child.Process.Id, () => throw original)));
+            foreach (var original in new Exception[]
+            {
+                new InvalidOperationException("controlled-live-metric-error"),
+                new System.ComponentModel.Win32Exception(5, "controlled-live-metric-error"),
+            })
+                Assert.Same(original, Record.Exception(() => OwnedProcessMetricObservation.TryRead(
+                    child.Process, child.Process.SafeHandle, child.Process.Id, () => throw original)));
             await Task.CompletedTask;
         }, rows => output.WriteLine(JsonSerializer.Serialize(rows)));
     }
@@ -158,11 +190,85 @@ public sealed class CncOwnedResourceScopeTests(Xunit.Abstractions.ITestOutputHel
             using var disposed = new System.Diagnostics.Process();
             if (mode == "closed-handle") invalid.Dispose();
             if (mode == "disposed-process") disposed.Dispose();
-            var original = new InvalidOperationException("controlled-unverifiable-metric-error");
-            Assert.Same(original, Record.Exception(() => OwnedProcessMetricObservation.TryRead(
-                mode == "disposed-process" ? disposed : child.Process,
-                mode is "invalid-handle" or "closed-handle" ? invalid : handle,
-                mode == "pid-mismatch" ? -1 : pid, () => throw original)));
+            foreach (var original in new Exception[]
+            {
+                new InvalidOperationException("controlled-unverifiable-metric-error"),
+                new System.ComponentModel.Win32Exception(5, "controlled-unverifiable-metric-error"),
+            })
+                Assert.Same(original, Record.Exception(() => OwnedProcessMetricObservation.TryRead(
+                    mode == "disposed-process" ? disposed : child.Process,
+                    mode is "invalid-handle" or "closed-handle" ? invalid : handle,
+                    mode == "pid-mismatch" ? -1 : pid, () => throw original)));
         }, rows => output.WriteLine(JsonSerializer.Serialize(rows)));
+    }
+
+    [Fact]
+    public async Task ExecutableIdentity_ObservesExactOwnedImageWithoutLinuxModuleEnumeration()
+    {
+        var dll = Environment.GetEnvironmentVariable("MALIEV_CNC_LEASE_PROBE_DLL");
+        Assert.True(File.Exists(dll));
+        await CncOwnedResourceScope.ExecuteAsync(async scope =>
+        {
+            var child = scope.StartChild(dll!, new() { ["MALIEV_CNC_PROBE_MODE"] = "partial-start" });
+            var moduleReads = 0;
+            var actual = CncOwnedResourceScope.OwnedChild.ReadExecutableIdentity(child.Process, process =>
+            {
+                moduleReads++;
+                if (OperatingSystem.IsLinux()) throw new InvalidOperationException("controlled-module-enumeration-unavailable");
+                return CncOwnedResourceScope.OwnedChild.ReadExecutableIdentity(process);
+            });
+            Assert.True(Path.IsPathFullyQualified(actual));
+            if (OperatingSystem.IsLinux())
+            {
+                Assert.Equal(0, moduleReads);
+                Assert.Equal(new FileInfo($"/proc/{child.Process.Id}/exe").LinkTarget, actual);
+            }
+            else
+            {
+                Assert.Equal(1, moduleReads);
+                Assert.Equal(CncOwnedResourceScope.OwnedChild.ReadExecutableIdentity(child.Process), actual);
+            }
+            Assert.False(child.Process.HasExited);
+            await Task.CompletedTask;
+        }, rows =>
+        {
+            using var json = JsonDocument.Parse(JsonSerializer.Serialize(Assert.Single(rows)));
+            Assert.True(json.RootElement.GetProperty("terminal").GetBoolean());
+            Assert.True(json.RootElement.GetProperty("readersSettled").GetBoolean());
+        });
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("", "")]
+    [InlineData("relative", "relative")]
+    [InlineData("/owned/dotnet", "/other/dotnet")]
+    public void ExecutableIdentity_MissingOrDifferentObservationCannotAuthorizeSignal(string? captured, string? observed)
+    {
+        Assert.False(CncOwnedResourceScope.OwnedChild.IsMatchingExecutableIdentity(captured, observed));
+    }
+
+    [Theory]
+    [InlineData("namespace-mismatch")]
+    [InlineData("namespace-unavailable")]
+    [InlineData("image-unavailable")]
+    [InlineData("relative-image")]
+    public void ExecutableIdentity_LinuxObservationFailsClosedWithoutMatchingNamespaceAndAbsoluteImage(string mode)
+    {
+        var reads = new List<string>();
+        var failure = Record.Exception(() => CncOwnedResourceScope.OwnedChild.ReadLinuxExecutableIdentity(
+            123, path =>
+            {
+                reads.Add(path);
+                if (path == "/proc/self")
+                    return mode == "namespace-mismatch" ? "-1"
+                        : mode == "namespace-unavailable" ? null
+                        : Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                return mode == "image-unavailable" ? null : "relative-dotnet";
+            }));
+        Assert.IsType<InvalidOperationException>(failure);
+        Assert.Equal("/proc/self", reads[0]);
+        Assert.Equal(mode is "namespace-mismatch" or "namespace-unavailable" ? 1 : 2, reads.Count);
+        if (reads.Count == 2) Assert.Equal("/proc/123/exe", reads[1]);
     }
 }

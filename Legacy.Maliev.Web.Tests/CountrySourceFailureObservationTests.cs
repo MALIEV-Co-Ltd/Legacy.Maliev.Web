@@ -202,6 +202,121 @@ public sealed class CountrySourceFailureObservationTests
         fixture.AssertQuiet();
     }
 
+    [Theory]
+    [InlineData("orders", "orders/private-customer-name/123456789/file.step?email=private@example.com", "OrderService", "Orders.Get")]
+    [InlineData("customers", "customers/private-customer-name/123456789/file.step?email=private@example.com", "CustomerService", "Customers.Get")]
+    [InlineData("orders", "private-customer-name/orders/123456789?email=private@example.com", "OrderService", "UnknownOperation")]
+    [InlineData("customers", "private-customer-name/customers/123456789?email=private@example.com", "CustomerService", "UnknownOperation")]
+    public async Task RegisteredMemberClientFinal503PreservesResponseAndSafeOperation(
+        string clientName, string route, string dependency, string operation)
+    {
+        using var fixture = new Fixture((_, _) => Task.FromResult(Response(503)), observedClient: clientName);
+        using var client = fixture.Factory.CreateClient(clientName);
+        using var caller = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        using var response = await client.GetAsync(route, caller.Token);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal("private-response-body customer filename.stl", await response.Content.ReadAsStringAsync(caller.Token));
+        Assert.Equal(4, fixture.Transport.Calls);
+        Assert.Null(client.DefaultRequestHeaders.Authorization);
+        fixture.AssertFailure(503, dependency, operation);
+    }
+
+    [Theory]
+    [InlineData("orders", "OrderService", "Orders.Get")]
+    [InlineData("customers", "CustomerService", "Customers.Get")]
+    public async Task RegisteredMemberClientTransportFailurePreservesExceptionAndSafeOperation(
+        string clientName, string dependency, string operation)
+    {
+        var failure = new HttpRequestException("private-exception email=private@example.com filename.stl Bearer private-token");
+        using var fixture = new Fixture((_, _) => Task.FromException<HttpResponseMessage>(failure), observedClient: clientName);
+        using var client = fixture.Factory.CreateClient(clientName);
+        using var caller = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        var actual = await Assert.ThrowsAsync<HttpRequestException>(() =>
+            client.GetAsync(clientName + "/private-customer-name/123456789?email=private@example.com", caller.Token));
+
+        Assert.Same(failure, actual);
+        Assert.Equal(4, fixture.Transport.Calls);
+        fixture.AssertFailure(null, dependency, operation);
+    }
+
+    [Theory]
+    [InlineData("orders", "OrderService", "Orders.Post")]
+    [InlineData("customers", "CustomerService", "Customers.Post")]
+    public async Task RegisteredMemberClientUnsafeWritePreservesBodyHeadersResponseAndNoRetry(
+        string clientName, string dependency, string operation)
+    {
+        var expected = Response(503);
+        using var fixture = new Fixture(async (request, token) =>
+        {
+            Assert.Equal(HttpMethod.Post, request.Method);
+            Assert.Equal("private-request-body", await request.Content!.ReadAsStringAsync(token));
+            Assert.Equal("private-header", Assert.Single(request.Headers.GetValues("X-Private-Fixture")));
+            return expected;
+        }, observedClient: clientName);
+        using var client = fixture.Factory.CreateClient(clientName);
+        using var caller = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var request = new HttpRequestMessage(HttpMethod.Post, clientName + "/private-customer-name")
+        { Content = new StringContent("private-request-body") };
+        request.Headers.Add("X-Private-Fixture", "private-header");
+
+        using var response = await client.SendAsync(request, caller.Token);
+
+        Assert.Same(expected, response);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal("private-response-body customer filename.stl", await response.Content.ReadAsStringAsync(caller.Token));
+        Assert.Equal(1, fixture.Transport.Calls);
+        fixture.AssertFailure(503, dependency, operation);
+    }
+
+    [Theory]
+    [InlineData("orders", false)]
+    [InlineData("orders", true)]
+    [InlineData("customers", false)]
+    [InlineData("customers", true)]
+    public async Task RegisteredMemberClientSuccessfulOrRecoveredReadStaysQuiet(string clientName, bool recover)
+    {
+        var calls = 0;
+        using var fixture = new Fixture((_, _) => Task.FromResult(recover && Interlocked.Increment(ref calls) == 1
+            ? Response(503) : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("retained-response") }),
+            observedClient: clientName);
+        using var client = fixture.Factory.CreateClient(clientName);
+        using var caller = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        using var response = await client.GetAsync(clientName + "/private-customer-name", caller.Token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("retained-response", await response.Content.ReadAsStringAsync(caller.Token));
+        Assert.Equal(recover ? 2 : 1, fixture.Transport.Calls);
+        fixture.AssertQuiet();
+    }
+
+    [Theory]
+    [InlineData("orders")]
+    [InlineData("customers")]
+    public async Task RegisteredMemberClientCallerCancellationPropagatesAndStaysQuiet(string clientName)
+    {
+        using var fixture = new Fixture(Block, observedClient: clientName);
+        using var client = fixture.Factory.CreateClient(clientName);
+        using var caller = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var pending = client.GetAsync(clientName + "/private-customer-name", caller.Token);
+        try
+        {
+            await fixture.Transport.Entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            caller.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending.WaitAsync(TimeSpan.FromSeconds(2)));
+            Assert.Equal(1, fixture.Transport.Calls);
+            fixture.AssertQuiet();
+        }
+        finally
+        {
+            caller.Cancel();
+            await SettleAsync(pending);
+        }
+    }
+
     private static HttpResponseMessage Response(int status) => new((HttpStatusCode)status)
     { Content = new StringContent("private-response-body customer filename.stl") };
 
@@ -226,7 +341,7 @@ public sealed class CountrySourceFailureObservationTests
         internal IHttpClientFactory Factory => host.Services.GetRequiredService<IHttpClientFactory>();
         internal ICountryClient Country => Scope.ServiceProvider.GetRequiredService<ICountryClient>();
 
-        internal Fixture(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send, TimeSpan? timeout = null, bool probeNamedPipeline = false)
+        internal Fixture(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send, TimeSpan? timeout = null, bool probeNamedPipeline = false, string? observedClient = null)
         {
             Transport = new(send);
             var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
@@ -234,6 +349,8 @@ public sealed class CountrySourceFailureObservationTests
             builder.Logging.AddFilter("Maliev.Aspire.ServiceDefaults.Diagnostics.PrivateDependencyFailureHandler", LogLevel.Debug);
             builder.Configuration["Services:Country"] = "https://private-country-host.example/";
             builder.Configuration["Services:Career"] = "https://private-career-host.example/";
+            builder.Configuration["Services:Order"] = "https://private-order-host.example/";
+            builder.Configuration["Services:Customer"] = "https://private-customer-host.example/";
             builder.Services.AddLegacyServiceClients(builder.Configuration);
             if (probeNamedPipeline)
             {
@@ -253,6 +370,10 @@ public sealed class CountrySourceFailureObservationTests
                 if (timeout is { } shortened) client.Timeout = shortened;
             }).ConfigurePrimaryHttpMessageHandler(() => Transport);
             builder.Services.AddHttpClient("careers").ConfigurePrimaryHttpMessageHandler(() => Transport);
+            if (observedClient is not null)
+            {
+                builder.Services.AddHttpClient(observedClient).ConfigurePrimaryHttpMessageHandler(() => Transport);
+            }
             host = builder.Build();
             Scope = host.Services.CreateScope();
         }
@@ -283,24 +404,26 @@ public sealed class CountrySourceFailureObservationTests
             Assert.DoesNotContain("Bearer", metadata, StringComparison.OrdinalIgnoreCase);
         }
 
-        internal void AssertFailure(int? status)
+        internal void AssertFailure(int? status, string dependency = "CountryService", string operation = "Countries.Get")
         {
             var entry = Assert.Single(Events.Failures);
             Assert.Empty(Events.ResourceNotFound);
             Assert.Equal(LogLevel.Error, entry.Level);
             Assert.Null(entry.Exception);
-            Assert.Equal("CountryService", entry.Fields["Dependency"]);
-            Assert.Equal("Countries.Get", entry.Fields["Operation"]);
+            Assert.Equal(dependency, entry.Fields["Dependency"]);
+            Assert.Equal(operation, entry.Fields["Operation"]);
             if (status is { } code) Assert.Equal(code, entry.Fields["StatusCode"]);
             else Assert.False(entry.Fields.ContainsKey("StatusCode"));
             Assert.Empty(Events.CountryWarnings);
             using var document = JsonDocument.Parse(entry.Wire);
             Assert.Equal(5101, document.RootElement.GetProperty("eventId").GetInt32());
-            Assert.Equal("CountryService", document.RootElement.GetProperty("Dependency").GetString());
-            Assert.Equal("Countries.Get", document.RootElement.GetProperty("Operation").GetString());
+            Assert.Equal(dependency, document.RootElement.GetProperty("Dependency").GetString());
+            Assert.Equal(operation, document.RootElement.GetProperty("Operation").GetString());
             Assert.Equal("ERROR", document.RootElement.GetProperty("severity").GetString());
             Assert.DoesNotContain("private-", entry.Wire, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("filename.stl", entry.Wire, StringComparison.Ordinal);
+            Assert.DoesNotContain("123456789", entry.Wire, StringComparison.Ordinal);
+            Assert.DoesNotContain("private@example.com", entry.Wire, StringComparison.Ordinal);
             Assert.DoesNotContain("Bearer", entry.Wire, StringComparison.OrdinalIgnoreCase);
         }
 

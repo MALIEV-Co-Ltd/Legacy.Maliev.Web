@@ -2,7 +2,12 @@ using System.Net;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Legacy.Maliev.Web.Components.Shared;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -125,6 +130,62 @@ public sealed partial class PublicServiceStructuredDataMigrationTests : IClassFi
         finally
         {
             CultureInfo.CurrentCulture = originalCulture;
+        }
+    }
+
+    /// <summary>Renders the source-final breadcrumb fallback and the localized finishing label through the real component.</summary>
+    /// <param name="culture">The supported document culture.</param>
+    /// <param name="serviceKey">The known, missing or unrecognized display-only service key.</param>
+    /// <param name="expectedName">The final-source label shown in navigation and JSON-LD.</param>
+    /// <param name="expectedPath">The owned canonical service path.</param>
+    /// <returns>A task completing the real renderer and structured breadcrumb assertions.</returns>
+    [Theory]
+    [InlineData("en", null, "CNC machining", "/services/cnc-machining")]
+    [InlineData("th", null, "งาน CNC", "/services/cnc-machining")]
+    [InlineData("en", "Unknown Service", "CNC machining", "/services/cnc-machining")]
+    [InlineData("th", "Unknown Service", "งาน CNC", "/services/cnc-machining")]
+    [InlineData("en", " ", "CNC machining", "/services/cnc-machining")]
+    [InlineData("th", " ", "งาน CNC", "/services/cnc-machining")]
+    [InlineData("en", "Finishing and Color", "Finishing and colour standards", "/services/finishing-and-color")]
+    [InlineData("th", "Finishing and Color", "การเก็บผิวและมาตรฐานสี", "/services/finishing-and-color")]
+    public async Task BreadcrumbComponent_PreservesSourceFallbackAndLocalizedFinishingLabel(
+        string culture, string? serviceKey, string expectedName, string expectedPath)
+    {
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+            await using var services = new ServiceCollection().AddLogging().BuildServiceProvider();
+            await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+            var parameters = ParameterView.FromDictionary(new Dictionary<string, object?>
+            {
+                [nameof(ServiceBreadcrumb.ServiceKey)] = serviceKey,
+            });
+            var html = await renderer.Dispatcher.InvokeAsync(() =>
+            {
+                var rendered = renderer.BeginRenderingComponent<ServiceBreadcrumb>(parameters);
+                return WebUtility.HtmlDecode(rendered.ToHtmlString());
+            });
+            var script = Assert.Single(JsonLdScriptRegex().Matches(html).Cast<Match>());
+            using var schema = JsonDocument.Parse(script.Groups["json"].Value);
+            var root = schema.RootElement;
+            var items = root.GetProperty("itemListElement").EnumerateArray().ToArray();
+            var expectedUrl = "https://www.maliev.com" + expectedPath + (culture == "en" ? "?culture=en" : "");
+
+            Assert.Equal("https://schema.org", root.GetProperty("@context").GetString());
+            Assert.Equal("BreadcrumbList", root.GetProperty("@type").GetString());
+            Assert.Equal(3, items.Length);
+            Assert.Equal("ListItem", items[2].GetProperty("@type").GetString());
+            Assert.Equal(3, items[2].GetProperty("position").GetInt32());
+            Assert.Equal(expectedName, items[2].GetProperty("name").GetString());
+            Assert.Equal(expectedUrl, items[2].GetProperty("item").GetString());
+            Assert.Contains($"<li aria-current=\"page\">{expectedName}</li>", html, StringComparison.Ordinal);
+            Assert.Contains(culture == "th" ? "aria-label=\"เส้นทางนำทาง\"" : "aria-label=\"Breadcrumb\"",
+                html, StringComparison.Ordinal);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalUiCulture;
         }
     }
 
