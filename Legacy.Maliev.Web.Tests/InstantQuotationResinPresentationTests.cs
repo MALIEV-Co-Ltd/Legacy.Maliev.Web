@@ -21,6 +21,51 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationResinPresentationTests
 {
     [Theory]
+    [InlineData("en", 2, true, false)]
+    [InlineData("th", 2, true, false)]
+    [InlineData("en", 3, false, false)]
+    [InlineData("th", 3, false, false)]
+    [InlineData("en", 350, false, false)]
+    [InlineData("th", 350, false, false)]
+    [InlineData("en", 351, false, true)]
+    [InlineData("th", 351, false, true)]
+    public async Task Configuration_Source21CopyPreservesWireColorAndPhysicalBoundaries(
+        string culture, double maximum, bool small, bool large)
+    {
+        using var cultures = new CultureScope(culture);
+        var part = Part("PLA", BuildPreference.Standard) with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(
+                1, new string('A', 64), 1, 1, maximum, 1_000, 600, [100], [40], 12, 3, true, true, true, 1),
+            Configuration = new("PLA", "Any", 1),
+        };
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            new SessionStore(part), new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        var localizer = services.GetRequiredService<Microsoft.Extensions.Localization.IStringLocalizer<ThreeDimensionalPrintingEstimateContent>>();
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        var html = WebUtility.HtmlDecode(await renderer.Dispatcher.InvokeAsync(async () =>
+            (await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty)).ToHtmlString()));
+        Assert.Contains("<option value=\"Any\" selected>" + (culture == "th" ? "ไม่ระบุสี" : "No preference") + "</option>", html, StringComparison.Ordinal);
+        Assert.Contains("data-source-printing-intro", html, StringComparison.Ordinal);
+        Assert.Contains(localizer["Upload and choose how you want your part to be printed. You'll know instantly how much does your part cost."].Value, html, StringComparison.Ordinal);
+        foreach (var key in new[] { "Non-watertight mesh", "May cause printing issues", "Non-manifold edges", "Check model integrity", "Multi-body mesh" })
+            Assert.Contains(localizer[key].Value, html, StringComparison.Ordinal);
+        Assert.Contains(localizer["Check for unintended merged bodies ({0} bodies)", 3].Value, html, StringComparison.Ordinal);
+        Assert.Contains(localizer["Multi-body mesh ({0} bodies)", 3].Value, html, StringComparison.Ordinal);
+        Assert.Equal(small, html.Contains("data-dfm-code=\"dimension-too-small\"", StringComparison.Ordinal));
+        Assert.Equal(large, html.Contains("data-dfm-code=\"dimension-too-large\"", StringComparison.Ordinal));
+        foreach (var key in new[] { "Unusually small dimensions", "May be difficult to print or handle reliably", "A dimension is below 3 mm." })
+            Assert.Equal(small, html.Contains(localizer[key].Value, StringComparison.Ordinal));
+        foreach (var key in new[] { "Unusually large dimensions", "May exceed our standard build volume and require splitting", "A dimension exceeds 350 mm." })
+            Assert.Equal(large, html.Contains(localizer[key].Value, StringComparison.Ordinal));
+        Assert.Equal("Any", Assert.Single(coordinator.Parts).Configuration.Color);
+    }
+
+    [Theory]
     [InlineData("en", "White", "PETG", 1, "Any")]
     [InlineData("th", "White", "PETG", 1, "Any")]
     [InlineData("en", "Pink", "PA-CF", 1, "Black")]
@@ -2321,9 +2366,26 @@ public sealed class InstantQuotationResinPresentationTests
     }
     /// <summary>Checks source material defaults before a synthetic admission; this is not browser or manufacturing proof.</summary>
     [Fact]
-    public async Task PendingMaterialSelection_UsesTargetDefaultAcrossAdmission()
+    public Task PendingMaterialSelection_UsesTargetDefaultAcrossAdmission() =>
+        PendingSourceConfigurationAcrossAdmissionAsync("material");
+
+    [Theory]
+    [InlineData("untouched")]
+    [InlineData("quantity")]
+    [InlineData("black")]
+    [InlineData("newer-revision")]
+    public Task PendingInitialSourceConfiguration_PreservesEditsAndOwnershipAcrossAdmission(string edit) =>
+        PendingSourceConfigurationAcrossAdmissionAsync(edit);
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public Task PendingColor_Source21LabelPreservesAnyAcrossAdmission(string culture) =>
+        PendingSourceConfigurationAcrossAdmissionAsync("untouched", culture);
+
+    private async Task PendingSourceConfigurationAcrossAdmissionAsync(string edit, string cultureName = "en")
     {
-        using var culture = new CultureScope("en");
+        using var culture = new CultureScope(cultureName);
         var store = new SessionStore();
         await using var coordinator = new InstantQuotationWorkflowCoordinator(
             store, new SyntheticUploadClient(), new InstantQuotationPricingService(), null,
@@ -2377,10 +2439,42 @@ public sealed class InstantQuotationResinPresentationTests
                 Assert.True(retainedCallback.HasDelegate);
                 Assert.Contains("data-workflow-local-settings", root.ToHtmlString(), StringComparison.Ordinal);
                 Assert.Equal("PLA", pendingSelector.SelectedMaterialKey);
-                Assert.Matches("<select\\b(?=[^>]*id=\"pending-color-" + previewKey + "\")(?=[^>]*value=\"Black\")[^>]*>", root.ToHtmlString());
-                await retainedCallback.InvokeAsync("PETG");
-                Assert.Equal("PETG", pendingSelector.SelectedMaterialKey);
                 Assert.Matches("<select\\b(?=[^>]*id=\"pending-color-" + previewKey + "\")(?=[^>]*value=\"Any\")[^>]*>", root.ToHtmlString());
+                Assert.Contains("<option value=\"Any\" selected>" + (cultureName == "th" ? "ไม่ระบุสี" : "No preference") + "</option>", WebUtility.HtmlDecode(root.ToHtmlString()), StringComparison.Ordinal);
+                var expectedConfiguration = new InstantQuotationPartConfiguration("PLA", "Any", 1);
+                Task EditAsync(string method, params object[] args) =>
+                    EventCallback.Factory.Create(component, async () =>
+                        await (Task)typeof(InstantQuotationWorkflow).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!
+                            .Invoke(component, args)!).InvokeAsync();
+                if (edit == "material")
+                {
+                    await retainedCallback.InvokeAsync("PETG");
+                    expectedConfiguration = expectedConfiguration with { MaterialKey = "PETG" };
+                }
+                else if (edit == "quantity")
+                {
+                    await EditAsync("ChangePendingQuantityAsync", previewKey, new ChangeEventArgs { Value = "7" });
+                    expectedConfiguration = expectedConfiguration with { Quantity = 7 };
+                }
+                else if (edit == "black")
+                {
+                    await EditAsync("ChangePendingColorAsync", previewKey, new ChangeEventArgs { Value = "Black" });
+                    expectedConfiguration = expectedConfiguration with { Color = "Black" };
+                }
+                else if (edit == "newer-revision")
+                {
+                    await EditAsync("ChangePendingQuantityAsync", previewKey, new ChangeEventArgs { Value = "2" });
+                    await EditAsync("ChangePendingQuantityAsync", previewKey, new ChangeEventArgs { Value = "3" });
+                    expectedConfiguration = expectedConfiguration with { Quantity = 3 };
+                }
+                Assert.Equal(expectedConfiguration.MaterialKey, pendingSelector.SelectedMaterialKey);
+                var intents = (System.Collections.IDictionary)typeof(InstantQuotationWorkflow)
+                    .GetField("pendingConfigurations", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(component)!;
+                var intent = intents[previewKey]!;
+                Assert.Equal(expectedConfiguration, intent.GetType().GetProperty("Configuration")!.GetValue(intent));
+                Assert.Equal(edit == "newer-revision" ? 2L : edit == "untouched" ? 0L : 1L,
+                    intent.GetType().GetProperty("Revision")!.GetValue(intent));
+                Assert.Matches("<select\\b(?=[^>]*id=\"pending-color-" + previewKey + "\")(?=[^>]*value=\"" + expectedConfiguration.Color + "\")[^>]*>", root.ToHtmlString());
                 Assert.Empty(coordinator.Parts);
                 Assert.False(coordinator.HasCompleteAuthoritativeQuote);
                 Assert.Null((await store.GetAsync("presentation-session", null, lease.Token))!.QuoteAuthorization);
@@ -2390,12 +2484,11 @@ public sealed class InstantQuotationResinPresentationTests
                 typeof(ComponentBase).GetMethod("StateHasChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
                     .Invoke(component, null);
                 var part = Assert.Single(coordinator.Parts);
-                var expectedConfiguration = new InstantQuotationPartConfiguration("PETG", "Any", 1, BuildPreference.Standard);
                 Assert.Equal(expectedConfiguration, part.Configuration);
                 Assert.DoesNotContain("data-workflow-local-settings", root.ToHtmlString(), StringComparison.Ordinal);
                 Assert.Same(pendingSelector, activator.MaterialSelectors.Last());
                 Assert.Single(activator.MaterialSelectors);
-                Assert.Equal("PETG", Assert.Single(coordinator.Parts).Configuration.MaterialKey);
+                Assert.Equal(expectedConfiguration.MaterialKey, Assert.Single(coordinator.Parts).Configuration.MaterialKey);
                 var stored = Assert.IsType<InstantQuotationSessionState>(
                     await store.GetAsync("presentation-session", null, lease.Token));
                 var saved = Assert.Single(stored.Parts);
@@ -2408,14 +2501,25 @@ public sealed class InstantQuotationResinPresentationTests
                 Assert.Equal(expectedConfiguration.Quantity, line.Quantity);
                 Assert.Equal(expectedConfiguration.BuildPreference, line.BuildPreference);
                 Assert.NotNull(line.PhysicalReceipt);
-                Assert.Equal("PETG", line.PhysicalReceipt.MaterialKey);
+                Assert.Equal(expectedConfiguration.MaterialKey, line.PhysicalReceipt.MaterialKey);
                 var html = root.ToHtmlString();
-                var petg = Assert.Single(Regex.Matches(html, "<div\\b[^>]*role=\"radio\"[^>]*data-material-key=\"PETG\"[^>]*>").Cast<Match>());
-                Assert.Contains("aria-checked=\"true\"", petg.Value, StringComparison.Ordinal);
+                var selectedMaterial = Assert.Single(Regex.Matches(html, "<div\\b[^>]*role=\"radio\"[^>]*data-material-key=\"" + expectedConfiguration.MaterialKey + "\"[^>]*>").Cast<Match>());
+                Assert.Contains("aria-checked=\"true\"", selectedMaterial.Value, StringComparison.Ordinal);
+                if (edit == "newer-revision")
+                {
+                    Assert.False(intents.Contains(previewKey));
+                    await EditAsync("ChangePendingQuantityAsync", previewKey, new ChangeEventArgs { Value = "7" });
+                    await EditAsync("ChangePendingColorAsync", previewKey, new ChangeEventArgs { Value = "White" });
+                    expectedConfiguration = expectedConfiguration with { Quantity = 7, Color = "White" };
+                    Assert.Equal(expectedConfiguration, Assert.Single(coordinator.Parts).Configuration);
+                }
                 admitRelease.TrySetResult();
                 await uploading.WaitAsync(lease.Token);
                 Assert.Equal(part.PartId, Assert.Single(coordinator.Parts).PartId);
-                Assert.Equal(part.Configuration, Assert.Single(coordinator.Parts).Configuration);
+                Assert.Equal(expectedConfiguration, Assert.Single(coordinator.Parts).Configuration);
+                var finalSaved = Assert.Single((await store.GetAsync("presentation-session", null, lease.Token))!.Parts);
+                Assert.Equal(part.PartId, finalSaved.PartId);
+                Assert.Equal(expectedConfiguration, finalSaved.Configuration);
             }
             catch (Exception exception) { primary = exception; throw; }
             finally
@@ -2813,6 +2917,143 @@ public sealed class InstantQuotationResinPresentationTests
     }
 
     [Theory]
+    [InlineData("hidden")]
+    [InlineData("replaced")]
+    [InlineData("disposed")]
+    public async Task ConsultationDropdown_DisposesLateBindingsAndKeepsTheMountedInstance(string boundary)
+    {
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var javascript = new HeldConsultationJavaScript(lease.Token);
+        var activator = new CapturingActivator();
+        using var services = Services(activator, javascript);
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var type = typeof(InstantQuotationWorkflow);
+            var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            Task Bind(Task previous, ElementReference owner)
+            {
+                var task = (Task)type.GetMethod("BindConsultationDropdownAsync", flags)!.Invoke(component, [previous, owner])!;
+                type.GetField("consultationBinding", flags)!.SetValue(component, task);
+                return task;
+            }
+            var initial = Bind(Task.CompletedTask, new ElementReference("consultation-old"));
+            Task next = Task.CompletedTask;
+            try
+            {
+                await javascript.Entered.Task.WaitAsync(lease.Token);
+                if (boundary == "disposed")
+                {
+                    next = component.DisposeAsync().AsTask();
+                    Assert.False(next.IsCompleted);
+                }
+                else next = Bind(initial, boundary == "replaced" ? new ElementReference("consultation-new") : default);
+                javascript.Release.TrySetResult(javascript.First);
+                await Task.WhenAll(initial, next).WaitAsync(lease.Token);
+                Assert.Equal(1, javascript.First.ControllerDisposals);
+                Assert.Equal(1, javascript.First.ReferenceDisposals);
+                if (boundary == "replaced")
+                {
+                    await Bind(next, new ElementReference("consultation-new")).WaitAsync(lease.Token);
+                    Assert.Equal(2, javascript.BindCalls);
+                    Assert.Equal(0, javascript.Second.ControllerDisposals);
+                    await component.DisposeAsync();
+                    Assert.Equal(1, javascript.Second.ControllerDisposals);
+                    Assert.Equal(1, javascript.Second.ReferenceDisposals);
+                }
+                else Assert.Equal(1, javascript.BindCalls);
+            }
+            finally
+            {
+                javascript.Release.TrySetResult(javascript.First);
+                await Task.WhenAll(initial, next).WaitAsync(lease.Token);
+            }
+        });
+    }
+
+    private sealed class HeldConsultationJavaScript(CancellationToken lease) : IJSRuntime
+    {
+        internal readonly TaskCompletionSource Entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal readonly TaskCompletionSource<IJSObjectReference> Release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal readonly ConsultationReference First = new();
+        internal readonly ConsultationReference Second = new();
+        internal int BindCalls;
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) => InvokeAsync<TValue>(identifier, default, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken token, object?[]? args)
+        {
+            if (identifier != "bootstrap.Dropdown.getOrCreateInstance") return ValueTask.FromResult(default(TValue)!);
+            Assert.Single(args!);
+            BindCalls++;
+            if (BindCalls > 1) return ValueTask.FromResult((TValue)(object)Second);
+            Entered.TrySetResult();
+            return new(CompleteAsync<TValue>());
+        }
+        private async Task<TValue> CompleteAsync<TValue>() => (TValue)(object)await Release.Task.WaitAsync(lease);
+    }
+
+    private sealed class ConsultationReference : IJSObjectReference
+    {
+        internal int ControllerDisposals;
+        internal int ReferenceDisposals;
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) => InvokeAsync<TValue>(identifier, default, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken token, object?[]? args)
+        {
+            Assert.Equal("dispose", identifier);
+            ControllerDisposals++;
+            return ValueTask.FromResult(default(TValue)!);
+        }
+        public ValueTask DisposeAsync() { ReferenceDisposals++; return ValueTask.CompletedTask; }
+    }
+
+    [Theory]
+    [InlineData("en", "Review all items", "local preview")]
+    [InlineData("th", "ตรวจสอบรายการทั้งหมด", "โหมดทดสอบบนเครื่อง")]
+    public async Task DevelopmentPreview_ReviewUsesSeparateCaptionAndNeverEnablesSubmission(string culture, string action, string caption)
+    {
+        using var cultures = new CultureScope(culture);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            new SessionStore(), new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        var environment = services.GetRequiredService<IWebHostEnvironment>();
+        environment.EnvironmentName = "Development";
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var root = await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var type = typeof(InstantQuotationWorkflow);
+            var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            var previews = Assert.IsAssignableFrom<System.Collections.IDictionary>(
+                type.GetField("developmentPreviews", flags)!.GetValue(component));
+            var partType = type.GetNestedType("DevelopmentPreviewPart", BindingFlags.NonPublic)!;
+            var localId = Guid.NewGuid();
+            previews.Add(localId, Activator.CreateInstance(partType, localId, "caption-preview", "controlled-demo.stl",
+                new InstantQuotationGeometryClaim(1, new string('A', 64), 10, 10, 10, 1_000, 600, [100], [40], 12, 1, true, false, false, 1))!);
+            void Refresh() => typeof(ComponentBase).GetMethod("StateHasChanged", flags)!.Invoke(component, null);
+            Refresh();
+            var demoColor = Regex.Match(WebUtility.HtmlDecode(root.ToHtmlString()), "<select\\b[^>]*id=\"demo-color\"[^>]*>[\\s\\S]*?</select>").Value;
+            Assert.NotEmpty(demoColor);
+            Assert.Contains("<option value=\"Any\" selected>" + (culture == "th" ? "ไม่ระบุสี" : "No preference") + "</option>", demoColor, StringComparison.Ordinal);
+            var button = Assert.Single(Regex.Matches(root.ToHtmlString(), "<button\\b[^>]*data-local-demo-review[^>]*>[\\s\\S]*?</button>").Cast<Match>()).Value;
+            Assert.Contains("<span class=\"d-block\">" + action + "</span>", WebUtility.HtmlDecode(button), StringComparison.Ordinal);
+            Assert.Contains("<small class=\"d-block\">" + caption + "</small>", WebUtility.HtmlDecode(button), StringComparison.Ordinal);
+            type.GetMethod("ShowDevelopmentContact", flags)!.Invoke(component, null);
+            Refresh();
+            var submit = Assert.Single(Regex.Matches(root.ToHtmlString(), "<button\\b[^>]*data-local-demo-no-submit[^>]*>").Cast<Match>()).Value;
+            Assert.Contains("disabled", submit, StringComparison.Ordinal);
+            Assert.DoesNotContain("<form", root.ToHtmlString(), StringComparison.Ordinal);
+            environment.EnvironmentName = "Production";
+            Refresh();
+            Assert.DoesNotContain("data-workflow-local-demo", root.ToHtmlString(), StringComparison.Ordinal);
+        });
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task DevelopmentPreview_RenderOwnsItsCanvasBeforeAwaitingInputBinding(bool replaceWhileBinding)
@@ -3149,7 +3390,7 @@ public sealed class InstantQuotationResinPresentationTests
         AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(10, 1_000, 100, [10], [10], 12, 1, true),
         new(material, material == "M68" ? "Gray" : "Black", 1, preference));
 
-    private static ServiceProvider Services(CapturingActivator activator, RecordingJavaScript javascript) =>
+    private static ServiceProvider Services(CapturingActivator activator, IJSRuntime javascript) =>
         new ServiceCollection().AddLogging().AddLocalization(options => options.ResourcesPath = "Resources")
             .AddSingleton<IComponentActivator>(activator).AddSingleton<IJSRuntime>(javascript)
             .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager())

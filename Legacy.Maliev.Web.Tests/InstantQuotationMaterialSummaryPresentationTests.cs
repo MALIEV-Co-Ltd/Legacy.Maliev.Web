@@ -53,7 +53,7 @@ public sealed class InstantQuotationMaterialSummaryPresentationTests
     [Theory]
     [InlineData("en")]
     [InlineData("th")]
-    public async Task KnownInitialLocalMaterial_RendersPlaOneWithBlackWithoutAuthority(string culture)
+    public async Task KnownInitialLocalMaterial_RendersPlaOneWithAnyWithoutAuthority(string culture)
     {
         await RenderAsync(culture, "default", (html, component) =>
         {
@@ -61,7 +61,7 @@ public sealed class InstantQuotationMaterialSummaryPresentationTests
             var intent = Map(component, "pendingConfigurations")["local-preview"]!;
             var configuration = Assert.IsType<InstantQuotationPartConfiguration>(
                 intent.GetType().GetProperty("Configuration")!.GetValue(intent));
-            Assert.Equal(new InstantQuotationPartConfiguration("PLA", "Black", 1), configuration);
+            Assert.Equal(new InstantQuotationPartConfiguration("PLA", "Any", 1), configuration);
             Assert.Null(Field("workflow").GetValue(component));
             Assert.DoesNotContain("data-workflow-part-summary", html, StringComparison.Ordinal);
             Assert.DoesNotContain("data-workflow-price-tier", html, StringComparison.Ordinal);

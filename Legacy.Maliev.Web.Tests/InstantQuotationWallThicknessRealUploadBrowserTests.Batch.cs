@@ -113,7 +113,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
                 await page.EvaluateAsync("() => window.source428.pending.splice(0).forEach(item => item.release())");
             }
             finally { estimates.Release.TrySetResult(); }
-            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
             await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 90000 });
             await Assertions.Expect(page.Locator("[data-workflow-pending-parse]")).ToHaveCountAsync(0);
             await Assertions.Expect(page.Locator("[data-workflow-local-settings]")).ToHaveCountAsync(0);
@@ -217,7 +217,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
             await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
             await WaitForBatchInputAsync(page);
             FilePayload Copy(int index) => new() { Name = $"add-copy-{index}.glb", MimeType = "model/gltf-binary", Buffer = bytes };
-            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
             await page.Locator("[data-workflow-gltf-unit]").SelectOptionAsync("millimetres");
             await page.SetInputFilesAsync("#instant-quote-files", Copy(0));
             await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 90000 });

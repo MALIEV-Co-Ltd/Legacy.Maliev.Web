@@ -1079,7 +1079,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         private string sessionId = "";
         private int pageErrorCount;
         public ILocator Quantity => Page.Locator("input[name='quantity']");
-        public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+        public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
         public Fixture() => Factory = new(Control);
 
         private static int ReserveFreePort() => BrowserTestServerPort.Reserve();

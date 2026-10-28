@@ -468,7 +468,24 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<Testin
             System.Text.RegularExpressions.RegexOptions.Singleline)
             .Cast<System.Text.RegularExpressions.Match>().ToList();
         var lookupButtons = allEnabledButtons.Where(match => match.Value.Contains("data-lookup-", StringComparison.Ordinal)).ToList();
-        var enabledButtons = allEnabledButtons.Except(lookupButtons).ToList();
+        var consultationButtons = allEnabledButtons.Where(match => System.Text.RegularExpressions.Regex.IsMatch(
+            match.Value, "<button\\b[^>]*\\bid=\"instant-quote-consultation\"(?=\\s|>)")).ToList();
+        if (state is InstantQuotationWorkflowState.Uploaded)
+        {
+            var consultation = Assert.Single(consultationButtons).Value;
+            Assert.Contains("type=\"button\"", consultation, StringComparison.Ordinal);
+            Assert.Contains("data-summary-consultation", consultation, StringComparison.Ordinal);
+            Assert.Contains("data-bs-toggle=\"dropdown\"", consultation, StringComparison.Ordinal);
+            Assert.Contains("aria-controls=\"instant-quote-consultation-menu\"", consultation, StringComparison.Ordinal);
+            Assert.Contains("aria-expanded=\"false\"", consultation, StringComparison.Ordinal);
+            Assert.Matches("<ul\\b[^>]*\\bid=\"instant-quote-consultation-menu\"[^>]*aria-labelledby=\"instant-quote-consultation\"", html);
+        }
+        else
+        {
+            Assert.Empty(consultationButtons);
+            Assert.DoesNotContain("id=\"instant-quote-consultation\"", html, StringComparison.Ordinal);
+        }
+        var enabledButtons = allEnabledButtons.Except(lookupButtons).Except(consultationButtons).ToList();
         if (state is InstantQuotationWorkflowState.CustomerDetails)
         {
             // Keep the original viewer/save action gate while accounting for the separately wired lookup controls.

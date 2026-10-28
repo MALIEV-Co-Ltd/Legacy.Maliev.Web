@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -136,7 +136,7 @@
     <value>อีเมล</value>
   </data>
   <data name="Lead time" xml:space="preserve">
-    <value>ระยะเวลา</value>
+    <value>ระยะเวลาผลิต</value>
   </data>
   <data name="First name" xml:space="preserve">
     <value>ชื่อ</value>
@@ -166,7 +166,7 @@
     <value>เบอร์โทร</value>
   </data>
   <data name="Upload and choose how you want your part to be printed. You'll know instantly how much does your part cost." xml:space="preserve">
-    <value>อัปโหลดไฟล์ แล้วเลือกวิธีพิมพ์งานที่ต้องการ ระบบจะประเมินราคาให้ทันที ไม่ต้องรอเจ้าหน้าที่คำนวณราคา</value>
+    <value>อัปโหลดไฟล์ แล้วเลือกรูปแบบการพิมพ์ที่ต้องการ ระบบประเมินราคาให้ทันที ไม่ต้องรอใบเสนอราคา</value>
   </data>
   <data name="You only pay when your order is accepted." xml:space="preserve">
     <value>คุณสามารถชำระค่าพิมพ์ได้ หลังจากที่เราตรวจสอบไฟล์งานคุณเรียบร้อยแล้วเท่านั้น</value>
@@ -178,7 +178,7 @@
     <value>ตัวอักษร</value>
   </data>
   <data name="max." xml:space="preserve">
-    <value>ยาวสุด</value>
+    <value>ไม่เกิน</value>
   </data>
   <data name="Company (if any)" xml:space="preserve">
     <value>บริษัท (ถ้ามี)</value>
@@ -274,10 +274,10 @@
     <value>ข้ามการตรวจสอบโทโพโลยีโดยละเอียดสำหรับเมชชิ้นใหญ่นี้ จำเป็นต้องให้วิศวกรตรวจสอบ</value>
   </data>
   <data name="Non-watertight mesh" xml:space="preserve">
-    <value>เมชมีผิวไม่ปิดสนิท</value>
+    <value>โมเดลไม่ปิดสนิท (มีรูรั่ว)</value>
   </data>
   <data name="Non-manifold edges" xml:space="preserve">
-    <value>พบขอบที่ไม่เป็นแมนิโฟลด์</value>
+    <value>เส้นขอบไม่สมบูรณ์ (Non-manifold)</value>
   </data>
   <data name="Multi-body mesh ({0} bodies)" xml:space="preserve">
     <value>เมชมีหลายชิ้นส่วน ({0} ชิ้น)</value>
@@ -412,7 +412,7 @@
   <data name="Remove {0}" xml:space="preserve"><value>ลบ {0}</value></data>
   <data name="Supported files: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS, and IGES. Maximum 100 files, 100 MB each." xml:space="preserve"><value>ไฟล์ที่รองรับ: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS และ IGES สูงสุด 100 ไฟล์ ไฟล์ละ 100 MB</value></data>
   <data name="Thailand" xml:space="preserve"><value>ประเทศไทย</value></data>
-  <data name="Any" xml:space="preserve"><value>สีใดก็ได้</value></data>
+  <data name="Any" xml:space="preserve"><value>ไม่ระบุสี</value></data>
   <data name="Black" xml:space="preserve"><value>ดำ</value></data>
   <data name="White" xml:space="preserve"><value>ขาว</value></data>
   <data name="Gray" xml:space="preserve"><value>เทา</value></data>
@@ -446,6 +446,7 @@
   <data name="PA12 — Nylon 12" xml:space="preserve"><value>PA12 — ไนลอน 12</value></data>
   <data name="PA-CF — Nylon + Carbon Fiber" xml:space="preserve"><value>PA-CF — ไนลอนผสมเส้นใยคาร์บอน</value></data>
   <data name="TPU — Flexible Thermoplastic Polyurethane" xml:space="preserve"><value>TPU — เทอร์โมพลาสติกโพลียูรีเทนชนิดยืดหยุ่น</value></data>
+  <data name="TPU 95A — Flexible Thermoplastic Polyurethane" xml:space="preserve"><value>TPU 95A — เทอร์โมพลาสติกโพลียูรีเทนชนิดยืดหยุ่น</value></data>
   <data name="PVA — Water-Soluble Support" xml:space="preserve"><value>PVA — วัสดุรองรับชนิดละลายน้ำ</value></data>
   <data name="Standard Resin (M68)" xml:space="preserve"><value>เรซินมาตรฐาน (M68)</value></data>
   <data name="Tough Resin (K)" xml:space="preserve"><value>เรซินเหนียว (K)</value></data>
@@ -543,6 +544,8 @@
   <data name="Privacy Policy" xml:space="preserve"><value>นโยบายความเป็นส่วนตัว</value></data>
   <data name="Non-Disclosure Agreement" xml:space="preserve"><value>สัญญาปกปิดความลับ</value></data>
   <data name="Talk to an engineer" xml:space="preserve"><value>ปรึกษาวิศวกร</value></data>
+  <data name="Contact us page" xml:space="preserve"><value>หน้าติดต่อเรา</value></data>
+  <data name="local preview" xml:space="preserve"><value>โหมดทดสอบบนเครื่อง</value></data>
   <data name="(opens in a new tab)" xml:space="preserve"><value>(เปิดในแท็บใหม่)</value></data>
   <data name="Show details" xml:space="preserve"><value>แสดงรายละเอียด</value></data>
   <data name="Hide details" xml:space="preserve"><value>ซ่อนรายละเอียด</value></data>
@@ -752,4 +755,13 @@
   <data name="3d print, 3d printing company, 3d printing model, 3d printing online, 3d printing service, 3d printing services, 3d printing website, 3d printing, online 3d printing, instant pricing, instant quotation" xml:space="preserve">
     <value>พิมพ์ 3d, พิมพ์ 3 มิติ, พิมพ์ 3 มิติ, พิมพ์ 3d, รับพิมพ์ 3 มิติ, รับพิมพ์ 3d, ประเมินราคาทันที, instant pricing</value>
   </data>
+  <data name="No preference" xml:space="preserve"><value>ไม่ระบุสี</value></data>
+  <data name="May cause printing issues" xml:space="preserve"><value>อาจส่งผลให้พิมพ์ผิดพลาด</value></data>
+  <data name="Check model integrity" xml:space="preserve"><value>ตรวจสอบความสมบูรณ์ของโมเดล</value></data>
+  <data name="Multi-body mesh" xml:space="preserve"><value>โมเดลแบบหลายชิ้นส่วน</value></data>
+  <data name="Check for unintended merged bodies ({0} bodies)" xml:space="preserve"><value>ตรวจสอบชิ้นส่วนที่รวมกันโดยไม่ตั้งใจ ({0} ชิ้น)</value></data>
+  <data name="Unusually small dimensions" xml:space="preserve"><value>ขนาดชิ้นงานเล็กผิดปกติ</value></data>
+  <data name="May be difficult to print or handle reliably" xml:space="preserve"><value>อาจพิมพ์ได้ยากหรือหยิบจับลำบาก</value></data>
+  <data name="Unusually large dimensions" xml:space="preserve"><value>ขนาดชิ้นงานใหญ่ผิดปกติ</value></data>
+  <data name="May exceed our standard build volume and require splitting" xml:space="preserve"><value>อาจเกินพื้นที่พิมพ์มาตรฐาน และต้องแบ่งชิ้นงาน</value></data>
 </root>

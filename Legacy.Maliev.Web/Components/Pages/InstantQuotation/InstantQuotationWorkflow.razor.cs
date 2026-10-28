@@ -46,6 +46,9 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool initializationFailed;
     private InputFile? fileInput;
     private ElementReference workflowSection;
+    private ElementReference consultationToggle, consultationOwner, boundConsultationToggle;
+    private IJSObjectReference? consultationDropdown;
+    private Task consultationBinding = Task.CompletedTask;
     private ElementReference previewCanvas;
     private ElementReference incompletePreviewCanvas;
     private string? incompletePreviewKey;
@@ -88,7 +91,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     {
         public string Name { get; } = name;
         public long Generation { get; } = generation;
-        public InstantQuotationPartConfiguration Configuration { get; set; } = new("PLA", "Black", 1);
+        public InstantQuotationPartConfiguration Configuration { get; set; } = new("PLA", "Any", 1);
         public string Quantity { get; set; } = "1";
         public long Revision { get; set; }
         public bool Modified { get; set; }
@@ -468,6 +471,11 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         // Input binding can yield while a retry changes state before its new canvas renders.
         var renderedDevelopmentGeneration = developmentPreviewGeneration;
         var renderedDevelopmentCanvas = developmentPreviewCanvas;
+        var binding = BindConsultationDropdownAsync(consultationBinding,
+            VisibleSections.Configuration ? consultationToggle : default);
+        consultationBinding = binding;
+        await binding;
+        if (disposed) return;
         if (firstRender)
         {
             await EnsurePreviewInteropAsync();
@@ -1384,6 +1392,27 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         }
     }
 
+    private async Task BindConsultationDropdownAsync(Task previous, ElementReference owner)
+    {
+        consultationOwner = owner;
+        await previous;
+        if (disposed || !owner.Equals(consultationOwner) || owner.Equals(boundConsultationToggle)) return;
+        var old = consultationDropdown;
+        consultationDropdown = null;
+        boundConsultationToggle = default;
+        await DisposePreviewInteropAsync(old);
+        if (disposed || !owner.Equals(consultationOwner) || owner.Equals(default(ElementReference))) return;
+        IJSObjectReference controller;
+        try { controller = await JS.InvokeAsync<IJSObjectReference>("bootstrap.Dropdown.getOrCreateInstance", owner); }
+        catch (JSDisconnectedException) { return; }
+        if (disposed || !owner.Equals(consultationOwner)) await DisposePreviewInteropAsync(controller);
+        else
+        {
+            consultationDropdown = controller;
+            boundConsultationToggle = owner;
+        }
+    }
+
     private async Task EnsurePreviewInputBoundAsync()
     {
         if (previewInterop is null || fileInput is null)
@@ -2149,28 +2178,36 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         physicalAnalysisCancellation?.Cancel();
         try
         {
-            if (previewInitialization is { } initialization) await initialization;
+            try { if (previewInitialization is { } initialization) await initialization; }
+            finally { await consultationBinding; }
         }
         finally
         {
             try
             {
-                await DisposePreviewInteropAsync(previewInterop);
+                await DisposePreviewInteropAsync(consultationDropdown);
             }
             finally
             {
                 try
                 {
-                    await DisposePreviewModuleAsync(previewModule);
+                    await DisposePreviewInteropAsync(previewInterop);
                 }
                 finally
                 {
-                    previewStatusReporter?.Dispose();
-                    if (!batchInProgress) uploadBatchGate.Dispose();
-
-                    if (workflow is not null)
+                    try
                     {
-                        await workflow.DisposeAsync();
+                        await DisposePreviewModuleAsync(previewModule);
+                    }
+                    finally
+                    {
+                        previewStatusReporter?.Dispose();
+                        if (!batchInProgress) uploadBatchGate.Dispose();
+
+                        if (workflow is not null)
+                        {
+                            await workflow.DisposeAsync();
+                        }
                     }
                 }
             }

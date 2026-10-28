@@ -125,7 +125,7 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
         try
         {
             await page.Locator("[data-workflow-price-tier]").Last.WaitForAsync();
-            await page.WaitForFunctionAsync("() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')");
+            await page.WaitForFunctionAsync("() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions > button:not(:disabled)')");
         }
         catch (TimeoutException original)
         {
@@ -140,7 +140,7 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
                             material: configuration?.querySelector('[data-material-selector] [aria-checked="true"]')?.dataset.materialKey,
                             quantity: quantity?.value,
                             unavailablePresent: !!configuration?.querySelector('[data-workflow-price-unavailable]'),
-                            configurationEnabled: !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')
+                            configurationEnabled: !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions > button:not(:disabled)')
                         });
                     }
                     """), description => output.WriteLine(description));
@@ -186,7 +186,7 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
         await page.WaitForFunctionAsync("() => document.querySelector('.instant-quote__thickness-toggle')?.getAttribute('aria-pressed') === 'true'");
         Assert.Contains(fdmLimit, await page.Locator(".instant-quote__thickness-legend").InnerTextAsync(), StringComparison.Ordinal);
         Assert.Equal(before, await total.InnerTextAsync());
-        Assert.True(await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button").IsEnabledAsync());
+        Assert.True(await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button").IsEnabledAsync());
         var afterToggle = await sessions.GetAsync(transport.SessionId!, transport.OwnerIdentity, default);
         Assert.Equal(session.QuoteAuthorization.OrderTicket, afterToggle!.QuoteAuthorization!.OrderTicket);
         Assert.Equal(receipt, Assert.Single(afterToggle.PhysicalReceipts!, item => item.PartId == partId

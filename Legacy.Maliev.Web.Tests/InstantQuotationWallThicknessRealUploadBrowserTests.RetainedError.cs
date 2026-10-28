@@ -38,7 +38,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
         });
         await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-workflow-part]').length === 1 && !document.querySelector('#instant-quote-files').disabled",
             null, new() { Timeout = 90000 });
-        await Assertions.Expect(page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button")).ToBeEnabledAsync();
+        await Assertions.Expect(page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button")).ToBeEnabledAsync();
         var store = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
         var before = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
         Assert.NotNull(before?.QuoteAuthorization);
