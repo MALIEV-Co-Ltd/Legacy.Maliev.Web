@@ -58,6 +58,9 @@ public enum InstantQuotationStageFailure
     SnapshotUnavailable,
     ServerRejected,
     Network,
+    GeometryRequiresReview,
+    GeometryComplexityExceeded,
+    SimulationFailed,
 }
 
 public interface IInstantQuotationAnalyticsSink
@@ -385,6 +388,9 @@ public sealed class InstantQuotationAnalyticsTracker : IInstantQuotationAnalytic
         InstantQuotationStageFailure.SnapshotUnavailable => "snapshot_unavailable",
         InstantQuotationStageFailure.ServerRejected => "server_rejected",
         InstantQuotationStageFailure.Network => "network",
+        InstantQuotationStageFailure.GeometryRequiresReview => "geometry_requires_review",
+        InstantQuotationStageFailure.GeometryComplexityExceeded => "geometry_complexity_exceeded",
+        InstantQuotationStageFailure.SimulationFailed => "simulation_failed",
         _ => null,
     };
 

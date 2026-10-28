@@ -132,7 +132,7 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
             cancellationToken.ThrowIfCancellationRequested();
             return InstantQuotationBoundPhysicalAnalysisResult.Unavailable(exception.ReasonCode switch
             {
-                "geometry_requires_review" => InstantQuotationBoundPhysicalAnalysisFailure.GeometryReview,
+                "geometry_requires_review" or "geometry_slice_empty" => InstantQuotationBoundPhysicalAnalysisFailure.GeometryReview,
                 "triangle_budget_exceeded" or "layer_budget_exceeded" or "path_segment_budget_exceeded"
                     or "boolean_work_budget_exceeded" or "geometry_complexity_exceeded"
                     => InstantQuotationBoundPhysicalAnalysisFailure.ComplexityExceeded,
