@@ -63,6 +63,13 @@ public sealed class InstantQuotationSessionIdentityMiddleware(RequestDelegate ne
         var isCircuitRequest = context.Request.Path.StartsWithSegments(
             "/_blazor",
             StringComparison.OrdinalIgnoreCase);
+        if (isQuotationRoute && HttpMethods.IsPost(context.Request.Method)
+            && string.Equals(context.Request.Query["handler"], "StartAnother", StringComparison.OrdinalIgnoreCase))
+        {
+            // MVC must validate antiforgery before a restart can write an identity cookie.
+            await next(context);
+            return;
+        }
         if (!isQuotationRoute && !isCircuitRequest)
         {
             await next(context);

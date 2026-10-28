@@ -337,6 +337,10 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
     private sealed class Source292SubmissionObserver(
         IInstantQuotationSubmissionService inner, Source292RequestBoundary boundary) : IInstantQuotationSubmissionService
     {
+        public Task<InstantQuotationSessionState?> StartAnotherAsync(
+            string sessionId, string? ownerIdentity, CancellationToken cancellationToken) =>
+            inner.StartAnotherAsync(sessionId, ownerIdentity, cancellationToken);
+
         public async Task<InstantQuotationSubmissionResult> SubmitAsync(
             string sessionId, string? ownerIdentity, InstantQuotationCustomerSubmission customer, CancellationToken cancellationToken)
         {

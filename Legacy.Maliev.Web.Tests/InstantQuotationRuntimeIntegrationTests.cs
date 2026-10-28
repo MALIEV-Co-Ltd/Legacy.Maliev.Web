@@ -56,6 +56,32 @@ public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<Test
         Assert.Equal(TimeSpan.FromHours(3), DistributedInstantQuotationSessionStore.SessionLifetime);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("not-protected")]
+    public async Task StartAnother_WithoutAntiforgeryDoesNotCreateOrReplaceIdentity(string? cookie)
+    {
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
+        using var request = new HttpRequestMessage(HttpMethod.Post,
+            "/InstantQuotation/3D-Printing?handler=StartAnother&culture=en");
+        if (cookie is not null)
+        {
+            request.Headers.Add("Cookie", $"__Host-Maliev.InstantQuotation={cookie}");
+        }
+
+        using var response = await client.SendAsync(request);
+
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        var cookies = response.Headers.TryGetValues("Set-Cookie", out var values) ? values : [];
+        Assert.DoesNotContain(cookies,
+            value => value.StartsWith("__Host-Maliev.InstantQuotation=", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task Route_FirstRequestEstablishesProtectedCookie_AndReloadDoesNotExtendIt()
     {

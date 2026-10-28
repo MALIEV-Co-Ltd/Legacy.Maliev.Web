@@ -360,6 +360,10 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         private int calls;
         internal int Calls => Volatile.Read(ref calls);
 
+        public Task<InstantQuotationSessionState?> StartAnotherAsync(
+            string sessionId, string? ownerIdentity, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Invalid customer input must not reach submission.");
+
         public Task<InstantQuotationSubmissionResult> SubmitAsync(
             string sessionId, string? ownerIdentity, InstantQuotationCustomerSubmission customer,
             CancellationToken cancellationToken)
