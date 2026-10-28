@@ -1405,6 +1405,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         IJSObjectReference controller;
         try { controller = await JS.InvokeAsync<IJSObjectReference>("bootstrap.Dropdown.getOrCreateInstance", owner); }
         catch (JSDisconnectedException) { return; }
+        catch (JSException) when (disposed || !owner.Equals(consultationOwner)) { return; }
         if (disposed || !owner.Equals(consultationOwner)) await DisposePreviewInteropAsync(controller);
         else
         {

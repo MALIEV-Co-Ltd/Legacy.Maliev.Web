@@ -2973,6 +2973,87 @@ public sealed class InstantQuotationResinPresentationTests
         });
     }
 
+    [Theory]
+    [InlineData("hidden")]
+    [InlineData("replaced")]
+    [InlineData("disposed")]
+    [InlineData("current")]
+    public async Task ConsultationDropdown_BindFailureRespectsCurrentOwner(string boundary)
+    {
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var javascript = new HeldConsultationJavaScript(lease.Token);
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            new SessionStore(Part("PLA", BuildPreference.Standard)), new UnusedUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, javascript);
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var root = await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            Assert.Contains("id=\"instant-quote-consultation\"", root.ToHtmlString(), StringComparison.Ordinal);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            var type = typeof(InstantQuotationWorkflow);
+            var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            var bindingField = type.GetField("consultationBinding", flags)!;
+            Task Bind(Task previous, ElementReference owner)
+            {
+                type.GetField("consultationToggle", flags)!.SetValue(component, owner);
+                var task = (Task)type.GetMethod("BindConsultationDropdownAsync", flags)!.Invoke(component, [previous, owner])!;
+                bindingField.SetValue(component, task);
+                return task;
+            }
+            var failure = new JSException("Controlled consultation bind failure.");
+            var initial = Bind(Task.CompletedTask, new ElementReference("consultation-old"));
+            Task next = Task.CompletedTask;
+            try
+            {
+                await javascript.Entered.Task.WaitAsync(lease.Token);
+                if (boundary == "disposed") next = component.DisposeAsync().AsTask();
+                else if (boundary == "hidden")
+                {
+                    await EventCallback.Factory.Create(component, coordinator.EnterReview).InvokeAsync();
+                    Assert.DoesNotContain("id=\"instant-quote-consultation\"", root.ToHtmlString(), StringComparison.Ordinal);
+                    next = Bind(initial, default);
+                }
+                else if (boundary == "replaced") next = Bind(initial, new ElementReference("consultation-new"));
+                javascript.Release.TrySetException(failure);
+                if (boundary == "current")
+                {
+                    Assert.Same(failure, await Assert.ThrowsAsync<JSException>(() => initial.WaitAsync(lease.Token)));
+                    Assert.True(initial.IsFaulted);
+                    Assert.Equal(1, javascript.BindCalls);
+                    return;
+                }
+                await Task.WhenAll(initial, next).WaitAsync(lease.Token);
+                Assert.True(initial.IsCompletedSuccessfully);
+                Assert.True(next.IsCompletedSuccessfully);
+                if (boundary == "hidden")
+                    await EventCallback.Factory.Create(component, coordinator.ReturnToConfiguration).InvokeAsync();
+                await Bind(next, new ElementReference("consultation-new")).WaitAsync(lease.Token);
+                Assert.Equal(boundary == "disposed" ? 1 : 2, javascript.BindCalls);
+                if (boundary != "disposed")
+                {
+                    Assert.Same(javascript.Second, type.GetField("consultationDropdown", flags)!.GetValue(component));
+                    Assert.Equal(0, javascript.Second.ControllerDisposals);
+                    await component.DisposeAsync();
+                    Assert.Equal(1, javascript.Second.ControllerDisposals);
+                    Assert.Equal(1, javascript.Second.ReferenceDisposals);
+                }
+            }
+            finally
+            {
+                javascript.Release.TrySetException(failure);
+                try { await Task.WhenAll(initial, next).WaitAsync(lease.Token); }
+                catch (JSException error) when (ReferenceEquals(error, failure)) { }
+                // The expected failure is observed; do not replay a test-owned fault during renderer cleanup.
+                bindingField.SetValue(component, Task.CompletedTask);
+                await component.DisposeAsync();
+            }
+        });
+    }
+
     private sealed class HeldConsultationJavaScript(CancellationToken lease) : IJSRuntime
     {
         internal readonly TaskCompletionSource Entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
