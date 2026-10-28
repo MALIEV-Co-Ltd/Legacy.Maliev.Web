@@ -60,6 +60,24 @@ public sealed class LocalizedCanonicalCookieHttpTests(TestingWebApplicationFacto
     }
 
     [Fact]
+    public async Task SourceCanonicalHttpOrigin_ContinuesWithoutInternalRedirectLoop()
+    {
+        var nextCalled = false;
+        var context = SourceCanonicalContext(
+            HttpMethods.Get, "http", "www.maliev.com", "/services/3d-printing", string.Empty);
+        var middleware = new global::Legacy.Maliev.Web.CanonicalUrlRedirectMiddleware(_ =>
+        {
+            nextCalled = true;
+            return Task.CompletedTask;
+        });
+
+        await middleware.InvokeAsync(context);
+
+        Assert.True(nextCalled);
+        Assert.False(context.Response.Headers.ContainsKey("Location"));
+    }
+
+    [Fact]
     public async Task SourceLocalPreview_NormalizesPathWithoutChangingHost()
     {
         var context = SourceCanonicalContext(

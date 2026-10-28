@@ -1,4 +1,10 @@
 @inject IStringLocalizer<MemberWorkspaceShell> WorkspaceLocalizer
+@{
+    var hasPassword = !string.Equals(
+        ViewContext.HttpContext.User.FindFirst("has_password")?.Value,
+        "false",
+        StringComparison.OrdinalIgnoreCase);
+}
 
 <aside id="member-navigation" class="workspace-sidebar workspace-sidebar--member" aria-label="@Localizer["Member workspace"]">
     <div class="workspace-sidebar__header">
@@ -35,7 +41,14 @@
                 <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Account/Manage/Profile"><i class="fas fa-user-circle" aria-hidden="true"></i><span>@Localizer["Profile"]</span></a></li>
                 <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Account/Manage/Address"><i class="fas fa-map-marker-alt" aria-hidden="true"></i><span>@Localizer["Addresses"]</span></a></li>
                 <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Account/Manage/ChangeEmail"><i class="fas fa-envelope" aria-hidden="true"></i><span>@Localizer["Change email"]</span></a></li>
-                <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Account/Manage/ChangePassword"><i class="fas fa-key" aria-hidden="true"></i><span>@Localizer["Change password"]</span></a></li>
+                @if (hasPassword)
+                {
+                    <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Account/Manage/ChangePassword"><i class="fas fa-key" aria-hidden="true"></i><span>@WorkspaceLocalizer["Change password"]</span></a></li>
+                }
+                else
+                {
+                    <li><a class="workspace-nav-link" asp-area="Member" asp-page="/Account/Manage/CreatePassword"><i class="fas fa-key" aria-hidden="true"></i><span>@WorkspaceLocalizer["Create password"]</span></a></li>
+                }
             </ul>
         </section>
     </nav>
