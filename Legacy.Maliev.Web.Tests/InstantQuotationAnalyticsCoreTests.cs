@@ -6,6 +6,45 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class InstantQuotationAnalyticsCoreTests
 {
+
+    [Fact]
+    public async Task QuoteStarted_IsExactOncePerWorkflowBeforeAnyAuthoritativeMilestone()
+    {
+        var sink = new RecordingSink();
+        var tracker = new InstantQuotationAnalyticsTracker(sink);
+
+        await tracker.RecordQuoteStartedAsync("workflow-1");
+        await tracker.RecordQuoteStartedAsync("workflow-1");
+
+        AssertJson(Assert.Single(sink.Payloads), new Dictionary<string, object>
+        {
+            ["event"] = "quote_started",
+            ["service"] = "3d_printing",
+        });
+        await NoOpInstantQuotationAnalyticsTracker.Instance.RecordQuoteStartedAsync("workflow-1");
+    }
+
+    [Fact]
+    public async Task QuoteStarted_NewWorkflowInSameCircuitEmitsWithoutLeakingCorrelation()
+    {
+        var sink = new RecordingSink();
+        var tracker = new InstantQuotationAnalyticsTracker(sink);
+        await tracker.RecordQuoteStartedAsync("");
+        await tracker.RecordQuoteStartedAsync("workflow-private-1");
+        await tracker.RecordQuoteStartedAsync("workflow-private-2");
+        Assert.Equal(2, sink.Payloads.Count);
+        foreach (var payload in sink.Payloads)
+        {
+            AssertJson(payload, new Dictionary<string, object>
+            {
+                ["event"] = "quote_started",
+                ["service"] = "3d_printing",
+            });
+        }
+
+        await new InstantQuotationAnalyticsTracker(new ThrowingSink()).RecordQuoteStartedAsync("workflow-1");
+    }
+
     [Fact]
     public async Task NoOpTracker_KeepsPendingEventsInactive()
     {

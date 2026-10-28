@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -111,12 +110,7 @@ public sealed class CrawlableEmailFallbackBrowserTests(PublicContactBrowserFixtu
     private async Task<JsonElement> ExecuteRenderedScript(string culture, string marker, string mode = "normal")
     {
         await using var context = await fixture.Browser.NewContextAsync();
-        var response = await context.APIRequest.GetAsync(new Uri(fixture.Origin, $"/contact?culture={culture}").ToString());
-        Assert.True(response.Ok);
-        var html = await response.TextAsync();
-        var match = Regex.Match(html,
-            "<script[^>]*data-migration-component=\"public-contact-channel-analytics\"[^>]*>(?<script>[\\s\\S]*?)</script>");
-        Assert.True(match.Success);
+        var script = fixture.GetRenderedContactScript(culture);
         await using var page = await context.NewPageAsync();
         await page.SetContentAsync($"<base href='{fixture.Origin}contact'><a href='/contact#contact-us'>Public contact</a>");
         var json = await page.EvaluateAsync<string>("""
@@ -150,7 +144,7 @@ public sealed class CrawlableEmailFallbackBrowserTests(PublicContactBrowserFixtu
                     preventDefault: () => { prevented = true; } });
                 return JSON.stringify({ events, destinations, prevented, dataLayerWrites });
             }
-            """, new { marker, mode, script = match.Groups["script"].Value });
+            """, new { marker, mode, script });
         using var document = JsonDocument.Parse(json);
         return document.RootElement.Clone();
     }

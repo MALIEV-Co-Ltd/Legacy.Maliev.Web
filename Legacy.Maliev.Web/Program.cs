@@ -1,3 +1,4 @@
+using Legacy.Maliev.Web.Pages.Shared;
 using Legacy.Maliev.Web.Infrastructure;
 using Legacy.Maliev.Web;
 using Legacy.Maliev.Web.Application;
@@ -19,8 +20,11 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+using var testingWebRoot = TestingWebRootLease.Create(builder.Environment);
 if (builder.Environment.IsEnvironment("Testing"))
 {
+    builder.Services.AddSingleton(_ => new TestingRateLimiterLifetime());
+    if (testingWebRoot is not null) builder.Services.AddSingleton(testingWebRoot);
     builder.WebHost.UseStaticWebAssets();
 }
 
@@ -278,7 +282,13 @@ builder.Services.AddRazorPages(options =>
         options.Conventions.AddAreaPageRouteModelConvention(
             "Member",
             "/Index",
-            model => model.Selectors.Clear());
+            model =>
+            {
+                foreach (var selector in model.Selectors)
+                {
+                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                }
+            });
         options.Conventions.AddAreaPageRouteModelConvention(
             "Member",
             "/Account/Index",
@@ -379,6 +389,54 @@ builder.Services.AddRazorPages(options =>
         options.Conventions.AddAreaPageRouteModelConvention(
             "Knowledges",
             "/Specifications/CNC-Machining",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/CNC/Cutting-Tools",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/CNC/Feeds-and-Speeds",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/CNC/Geometry-and-Workholding",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/CNC/Holes-and-Tolerances",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/CNC/Machining-Processes",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Finishing/Heat-Treatment",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Finishing/Surface-Finishes",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Inspection/Measuring-Parts",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Manufacturing/Process-Selection",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Materials/Engineering-Plastics",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Materials/Metals",
+            model => model.Selectors.Clear());
+        options.Conventions.AddAreaPageRouteModelConvention(
+            "Knowledges",
+            "/Materials/Selection",
             model => model.Selectors.Clear());
     }
 })
@@ -516,6 +574,8 @@ builder.Services.AddHttpClient<Legacy.Maliev.Web.Application.ICustomerDocumentCl
   .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 #pragma warning restore EXTEXP0001
 var app = builder.Build();
+var testingRateLimiter = app.Environment.IsEnvironment("Testing")
+    ? app.Services.GetRequiredService<TestingRateLimiterLifetime>() : null;
 app.UseMiddleware<BuildIdentityHeaderMiddleware>();
 app.Use(async (context, next) =>
 {
@@ -550,7 +610,8 @@ app.UseMiddleware<QuotationRouteRedirectMiddleware>();
 app.UseMiddleware<Legacy.Maliev.Web.CncUploadAdmissionMiddleware>();
 app.UseRouting();
 app.UseCors();
-app.UseRateLimiter();
+if (testingRateLimiter is not null) testingRateLimiter.Use(app);
+else app.UseRateLimiter();
 app.UseAuthentication();
 app.UseMiddleware<InstantQuotationSessionIdentityMiddleware>();
 app.UseAuthorization();
@@ -563,6 +624,9 @@ if (useBlazorRouteHost)
         branch => branch.Run(InstantQuotationCompatibilityEndpoint.HandleAsync));
 }
 app.MapDefaultEndpoints("web");
+app.UseWhen(
+    CareerSearchCompatibilityEndpoint.Matches,
+    branch => branch.Run(CareerSearchCompatibilityEndpoint.HandleAsync));
 app.MapBuildIdentity();
 app.MapLegacySitemap();
 app.MapGet("/instantquotation", () => Results.LocalRedirect("/InstantQuotation/3D-Printing"))

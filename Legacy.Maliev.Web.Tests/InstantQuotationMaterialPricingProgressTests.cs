@@ -23,101 +23,115 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
     [InlineData(InstantQuotationMaterialPricingStatus.Completed)]
     public async Task SelectedStatus_IsPublishedBeforeComparisonBytesComplete(InstantQuotationMaterialPricingStatus status)
     {
-        await using var fixture = new Fixture(gateRead: 2);
-        var session = await fixture.CreateAsync();
-        var frames = new List<InstantQuotationMaterialPricingProgress>();
-        Task<InstantQuotationOrderQuote?> run = fixture.Service.QuoteAsync(session, Owner, true,
-            (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
-        await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        try
+        await Fixture.RunAsync(async fixture =>
         {
-            Assert.False(run.IsCompleted);
-            var frame = Assert.Single(frames, frame => frame.MaterialKey == "ABS" && frame.Status == status);
-            Assert.Equal(PartId, frame.PartId);
-            if (status == InstantQuotationMaterialPricingStatus.Pending) Assert.Null(frame.UnitPrice);
-            else Assert.Equal(210, frame.UnitPrice);
-        }
-        finally { fixture.Reader.Release.TrySetResult(); await run; }
+            var session = await fixture.CreateAsync();
+            var frames = new List<InstantQuotationMaterialPricingProgress>();
+            using var cancellation = new CancellationTokenSource();
+            Task<InstantQuotationOrderQuote?> run = fixture.Service.QuoteAsync(session, Owner, true,
+                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, cancellation.Token);
+            try
+            {
+                await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.False(run.IsCompleted);
+                var frame = Assert.Single(frames, frame => frame.MaterialKey == "ABS" && frame.Status == status);
+                Assert.Equal(PartId, frame.PartId);
+                if (status == InstantQuotationMaterialPricingStatus.Pending) Assert.Null(frame.UnitPrice);
+                else Assert.Equal(210, frame.UnitPrice);
+            }
+            catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
+            finally { await fixture.DrainAsync(run, cancellation.Cancel, () => fixture.Reader.Release.TrySetResult(), cancellation.Token); }
+        }, output, gateRead: 2);
     }
 
     [Fact]
     public async Task AwaitedObserver_PreventsNextComparisonReadUntilItReturns()
     {
-        await using var fixture = new Fixture();
-        var session = await fixture.CreateAsync();
-        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        Task<InstantQuotationOrderQuote?> run = fixture.Service.QuoteAsync(session, Owner, true,
-            async (frame, token) =>
-            {
-                if (frame.MaterialKey == "ABS" && frame.Status == InstantQuotationMaterialPricingStatus.Completed)
-                { entered.TrySetResult(); await release.Task.WaitAsync(token); }
-            }, default);
-        Task first = await Task.WhenAny(entered.Task, run);
-        try
+        await Fixture.RunAsync(async fixture =>
         {
-            Assert.Same(entered.Task, first);
-            Assert.Equal(1, fixture.Reader.ReadCount);
-            Assert.False(run.IsCompleted);
-        }
-        finally { release.TrySetResult(); await run; }
+            var session = await fixture.CreateAsync();
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); fixture.OwnGate(release);
+            Task<InstantQuotationOrderQuote?> run = fixture.Service.QuoteAsync(session, Owner, true,
+                async (frame, token) =>
+                {
+                    if (frame.MaterialKey == "ABS" && frame.Status == InstantQuotationMaterialPricingStatus.Completed)
+                    { entered.TrySetResult(); await release.Task.WaitAsync(token); }
+                }, default);
+            Task first = await Task.WhenAny(entered.Task, run);
+            try
+            {
+                Assert.Same(entered.Task, first);
+                Assert.Equal(1, fixture.Reader.ReadCount);
+                Assert.False(run.IsCompleted);
+            }
+            catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
+            finally { await fixture.DrainAsync(run, () => { }, () => release.TrySetResult(), default); }
+        }, output);
     }
 
     [Fact]
     public async Task FailedComparison_HasUnavailableNullAmount_AndPreservesSelectedFinalPrice()
     {
-        await using var fixture = new Fixture(failComparisons: true);
-        var session = await fixture.CreateAsync();
-        var frames = new List<InstantQuotationMaterialPricingProgress>();
-        var quote = await fixture.Service.QuoteAsync(session, Owner, true,
-            (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
-        Assert.NotNull(quote);
-        Assert.Equal(0.512, Assert.Single(quote.Parts).BoundingCm3PerUnit, 3);
-        var unavailable = Assert.Single(frames, frame => frame.MaterialKey == "PLA"
-            && frame.Status == InstantQuotationMaterialPricingStatus.Unavailable);
-        Assert.Null(unavailable.UnitPrice);
-        Assert.Equal(PartId, unavailable.PartId);
-        Assert.True(fixture.Reader.ReadCount > 1);
+        await Fixture.RunAsync(async fixture =>
+        {
+            var session = await fixture.CreateAsync();
+            var frames = new List<InstantQuotationMaterialPricingProgress>();
+            var quote = await fixture.Service.QuoteAsync(session, Owner, true,
+                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
+            Assert.NotNull(quote);
+            Assert.Equal(0.512, Assert.Single(quote.Parts).BoundingCm3PerUnit, 3);
+            var unavailable = Assert.Single(frames, frame => frame.MaterialKey == "PLA"
+                && frame.Status == InstantQuotationMaterialPricingStatus.Unavailable);
+            Assert.Null(unavailable.UnitPrice);
+            Assert.Equal(PartId, unavailable.PartId);
+            Assert.True(fixture.Reader.ReadCount > 1);
+        }, output, failComparisons: true);
     }
 
     [Fact]
     public async Task ComparisonBudget_ClosesPendingDisplayWithoutRevokingSelectedQuote()
     {
-        await using var fixture = new Fixture(gateRead: 2);
-        var session = await fixture.CreateAsync();
-        var frames = new List<InstantQuotationMaterialPricingProgress>();
-        var run = fixture.Service.QuoteAsync(session, Owner, true,
-            (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
-        await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        var quote = await run.WaitAsync(TimeSpan.FromSeconds(10));
-        Assert.NotNull(quote);
-        Assert.Equal(2, fixture.Reader.ReadCount);
-        var attempted = Assert.Single(frames, frame => frame.MaterialKey != "ABS"
-            && frame.Status == InstantQuotationMaterialPricingStatus.Pending);
-        Assert.Equal(PrintProcess.Fdm, PricingCatalog.ResolveMaterial(attempted.MaterialKey)!.Process);
-        var terminal = Assert.Single(frames, frame => frame.MaterialKey == attempted.MaterialKey
-            && frame.Status == InstantQuotationMaterialPricingStatus.Unavailable);
-        Assert.Null(terminal.UnitPrice);
-        Assert.DoesNotContain(frames, frame => frame.MaterialKey != "ABS"
-            && frame.Status == InstantQuotationMaterialPricingStatus.Completed);
-        Assert.Equal(210, Assert.Single(quote.Parts).UnitPrice);
+        await Fixture.RunAsync(async fixture =>
+        {
+            var session = await fixture.CreateAsync();
+            var frames = new List<InstantQuotationMaterialPricingProgress>();
+            var run = fixture.Service.QuoteAsync(session, Owner, true,
+                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
+            await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            var quote = await run.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.NotNull(quote);
+            Assert.Equal(2, fixture.Reader.ReadCount);
+            var attempted = Assert.Single(frames, frame => frame.MaterialKey != "ABS"
+                && frame.Status == InstantQuotationMaterialPricingStatus.Pending);
+            Assert.Equal(PrintProcess.Fdm, PricingCatalog.ResolveMaterial(attempted.MaterialKey)!.Process);
+            var terminal = Assert.Single(frames, frame => frame.MaterialKey == attempted.MaterialKey
+                && frame.Status == InstantQuotationMaterialPricingStatus.Unavailable);
+            Assert.Null(terminal.UnitPrice);
+            Assert.DoesNotContain(frames, frame => frame.MaterialKey != "ABS"
+                && frame.Status == InstantQuotationMaterialPricingStatus.Completed);
+            Assert.Equal(210, Assert.Single(quote.Parts).UnitPrice);
+        }, output, gateRead: 2);
     }
 
     [Fact]
     public async Task CallerCancellation_PropagatesAfterReachedRead_WithoutCompletedComparison()
     {
-        await using var fixture = new Fixture(gateRead: 2);
-        var session = await fixture.CreateAsync();
-        using var cancellation = new CancellationTokenSource();
-        var frames = new List<InstantQuotationMaterialPricingProgress>();
-        var run = fixture.Service.QuoteAsync(session, Owner, true,
-            (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, cancellation.Token);
-        await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        cancellation.Cancel();
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run);
-        Assert.Equal(2, fixture.Reader.ReadCount);
-        Assert.DoesNotContain(frames, frame => frame.MaterialKey == "PLA"
-            && frame.Status == InstantQuotationMaterialPricingStatus.Completed);
+        await Fixture.RunAsync(async fixture =>
+        {
+            var session = await fixture.CreateAsync();
+            using var cancellation = new CancellationTokenSource();
+            var frames = new List<InstantQuotationMaterialPricingProgress>();
+            var run = fixture.Service.QuoteAsync(session, Owner, true,
+                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, cancellation.Token);
+            await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            cancellation.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run);
+            fixture.ExpectFailure(run);
+            Assert.Equal(2, fixture.Reader.ReadCount);
+            Assert.DoesNotContain(frames, frame => frame.MaterialKey == "PLA"
+                && frame.Status == InstantQuotationMaterialPricingStatus.Completed);
+        }, output, gateRead: 2, clock: new ManualClock());
     }
 
     [Theory]
@@ -126,57 +140,57 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
     public async Task ComparisonCallbackBudget_ClosesAttemptedCardAndPreservesSelectedQuote(InstantQuotationMaterialPricingStatus gatedStatus)
     {
         var clock = new ManualClock();
-        await using var fixture = new Fixture(clock: clock);
-        var session = await fixture.CreateAsync();
-        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var frames = new System.Collections.Concurrent.ConcurrentQueue<InstantQuotationMaterialPricingProgress>();
-        using var caller = new CancellationTokenSource();
-        var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, _) =>
+        await Fixture.RunAsync(async fixture =>
         {
-            frames.Enqueue(frame);
-            if (frame.MaterialKey != "ABS" && frame.Status == gatedStatus)
+            var session = await fixture.CreateAsync();
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); fixture.OwnGate(release);
+            var frames = new System.Collections.Concurrent.ConcurrentQueue<InstantQuotationMaterialPricingProgress>();
+            using var caller = new CancellationTokenSource();
+            var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, _) =>
             {
-                entered.TrySetResult();
-                return new ValueTask(release.Task); // A late observer must never resume the producer.
+                frames.Enqueue(frame);
+                if (frame.MaterialKey != "ABS" && frame.Status == gatedStatus)
+                {
+                    entered.TrySetResult();
+                    return new ValueTask(release.Task); // A late observer must never resume the producer.
+                }
+                return ValueTask.CompletedTask;
+            }, caller.Token);
+            try
+            {
+                await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                var readsAtDeadline = fixture.Reader.ReadCount;
+                clock.Advance(TimeSpan.FromSeconds(3)); fixture.Record("clock", "advance-3");
+                Assert.False(run.IsCompleted);
+                release.TrySetResult();
+                var quote = await run.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.NotNull(quote);
+                Assert.False(caller.IsCancellationRequested);
+                Assert.Equal(210, Assert.Single(quote.Parts).UnitPrice);
+                Assert.Equal(readsAtDeadline, fixture.Reader.ReadCount);
+                var attempted = Assert.Single(frames, frame => frame.MaterialKey != "ABS"
+                    && frame.Status == InstantQuotationMaterialPricingStatus.Pending);
+                Assert.All(frames.Where(frame => frame.MaterialKey != "ABS"),
+                    frame => Assert.Equal(attempted.MaterialKey, frame.MaterialKey));
+                if (gatedStatus == InstantQuotationMaterialPricingStatus.Pending)
+                    Assert.Contains(frames, frame => frame.MaterialKey == attempted.MaterialKey
+                        && frame.Status == InstantQuotationMaterialPricingStatus.Unavailable && frame.UnitPrice is null);
+                else
+                    Assert.DoesNotContain(frames, frame => frame.MaterialKey == attempted.MaterialKey
+                        && frame.Status == InstantQuotationMaterialPricingStatus.Unavailable);
+                var display = new Legacy.Maliev.Web.Components.Pages.InstantQuotation.InstantQuotationMaterialPriceDisplaySnapshot(1);
+                foreach (var frame in frames) display = display.Apply(frame);
+                Assert.DoesNotContain(display.Entries, frame => frame.Status == InstantQuotationMaterialPricingStatus.Pending);
+                release.TrySetResult();
+                Assert.Equal(readsAtDeadline, fixture.Reader.ReadCount);
             }
-            return ValueTask.CompletedTask;
-        }, caller.Token);
-        try
-        {
-            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            var readsAtDeadline = fixture.Reader.ReadCount;
-            clock.Advance(TimeSpan.FromSeconds(3));
-            Assert.False(run.IsCompleted);
-            release.TrySetResult();
-            var quote = await run.WaitAsync(TimeSpan.FromSeconds(10));
-            Assert.NotNull(quote);
-            Assert.False(caller.IsCancellationRequested);
-            Assert.Equal(210, Assert.Single(quote.Parts).UnitPrice);
-            Assert.Equal(readsAtDeadline, fixture.Reader.ReadCount);
-            var attempted = Assert.Single(frames, frame => frame.MaterialKey != "ABS"
-                && frame.Status == InstantQuotationMaterialPricingStatus.Pending);
-            Assert.All(frames.Where(frame => frame.MaterialKey != "ABS"),
-                frame => Assert.Equal(attempted.MaterialKey, frame.MaterialKey));
-            if (gatedStatus == InstantQuotationMaterialPricingStatus.Pending)
-                Assert.Contains(frames, frame => frame.MaterialKey == attempted.MaterialKey
-                    && frame.Status == InstantQuotationMaterialPricingStatus.Unavailable && frame.UnitPrice is null);
-            else
-                Assert.DoesNotContain(frames, frame => frame.MaterialKey == attempted.MaterialKey
-                    && frame.Status == InstantQuotationMaterialPricingStatus.Unavailable);
-            var display = new Legacy.Maliev.Web.Components.Pages.InstantQuotation.InstantQuotationMaterialPriceDisplaySnapshot(1);
-            foreach (var frame in frames) display = display.Apply(frame);
-            Assert.DoesNotContain(display.Entries, frame => frame.Status == InstantQuotationMaterialPricingStatus.Pending);
-            release.TrySetResult();
-            Assert.Equal(readsAtDeadline, fixture.Reader.ReadCount);
-        }
-        finally
-        {
-            caller.Cancel();
-            release.TrySetResult();
-            // Bounded cleanup cannot mask the primary regression assertion or timeout.
-            try { await run.WaitAsync(TimeSpan.FromSeconds(10)); } catch { }
-        }
+            catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
+            finally
+            {
+                await fixture.DrainAsync(run, caller.Cancel, () => release.TrySetResult(), caller.Token);
+            }
+        }, output, clock: clock);
     }
 
     [Theory]
@@ -185,119 +199,151 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
     public async Task ComparisonCallbackAbsoluteDeadline_RejectsQuoteAndLateCompletionCannotResume(InstantQuotationMaterialPricingStatus gatedStatus)
     {
         var clock = new ManualClock();
-        await using var fixture = new Fixture(clock: clock);
-        var session = await fixture.CreateAsync();
-        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var caller = new CancellationTokenSource();
-        CancellationToken callbackToken = default;
-        var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, token) =>
+        await Fixture.RunAsync(async fixture =>
         {
-            if (frame.MaterialKey != "ABS" && frame.Status == gatedStatus)
+            var session = await fixture.CreateAsync();
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); fixture.OwnGate(release);
+            using var caller = new CancellationTokenSource();
+            CancellationToken callbackToken = default;
+            var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, token) =>
             {
-                callbackToken = token;
-                entered.TrySetResult();
-                return new ValueTask(release.Task);
+                if (frame.MaterialKey != "ABS" && frame.Status == gatedStatus)
+                {
+                    callbackToken = token;
+                    entered.TrySetResult();
+                    return new ValueTask(release.Task);
+                }
+                return ValueTask.CompletedTask;
+            }, caller.Token);
+            try
+            {
+                await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                var readsAtDeadline = fixture.Reader.ReadCount;
+                clock.Advance(TimeSpan.FromSeconds(3)); fixture.Record("clock", "advance-3");
+                Assert.False(run.IsCompleted);
+                Assert.False(callbackToken.IsCancellationRequested);
+                clock.Advance(TimeSpan.FromSeconds(30)); fixture.Record("clock", "advance-30");
+                Assert.Null(await run.WaitAsync(TimeSpan.FromSeconds(10)));
+                Assert.True(callbackToken.IsCancellationRequested);
+                Assert.False(caller.IsCancellationRequested);
+                release.TrySetResult();
+                Assert.Equal(readsAtDeadline, fixture.Reader.ReadCount);
             }
-            return ValueTask.CompletedTask;
-        }, caller.Token);
-        try
-        {
-            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            var readsAtDeadline = fixture.Reader.ReadCount;
-            clock.Advance(TimeSpan.FromSeconds(3));
-            Assert.False(run.IsCompleted);
-            Assert.False(callbackToken.IsCancellationRequested);
-            clock.Advance(TimeSpan.FromSeconds(30));
-            Assert.Null(await run.WaitAsync(TimeSpan.FromSeconds(10)));
-            Assert.True(callbackToken.IsCancellationRequested);
-            Assert.False(caller.IsCancellationRequested);
-            release.TrySetResult();
-            Assert.Equal(readsAtDeadline, fixture.Reader.ReadCount);
-        }
-        finally
-        {
-            caller.Cancel();
-            release.TrySetResult();
-            try { await run.WaitAsync(TimeSpan.FromSeconds(10)); } catch { }
-        }
+            catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
+            finally
+            {
+                await fixture.DrainAsync(run, caller.Cancel, () => release.TrySetResult(), caller.Token);
+            }
+        }, output, clock: clock);
     }
 
     [Fact]
     public async Task ComparisonCallback_WholeQuoteCanCompleteAfterThirtySecondsWithinAbsoluteBudget()
     {
         var clock = new ManualClock();
-        await using var fixture = new Fixture(clock: clock);
-        var session = await fixture.CreateAsync();
-        var selectedEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var selectedRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var comparisonEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var comparisonRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var caller = new CancellationTokenSource();
-        CancellationToken comparisonCallbackToken = default;
-        int heldComparison = 0;
-        var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, token) =>
+        var completionWait = new System.Diagnostics.Stopwatch();
+        await Fixture.RunAsync(async fixture =>
         {
-            if (frame.MaterialKey == "ABS" && frame.Status == InstantQuotationMaterialPricingStatus.Completed)
+            var session = await fixture.CreateAsync();
+            var selectedEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var selectedRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); fixture.OwnGate(selectedRelease);
+            var comparisonEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var comparisonRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); fixture.OwnGate(comparisonRelease);
+            using var caller = new CancellationTokenSource();
+            CancellationToken comparisonCallbackToken = default;
+            int heldComparison = 0;
+            var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, token) =>
             {
-                selectedEntered.TrySetResult();
-                return new ValueTask(selectedRelease.Task);
-            }
-            if (frame.MaterialKey != "ABS" && frame.Status == InstantQuotationMaterialPricingStatus.Pending
-                && Interlocked.Exchange(ref heldComparison, 1) == 0)
+                if (frame.MaterialKey == "ABS" && frame.Status == InstantQuotationMaterialPricingStatus.Completed)
+                {
+                    selectedEntered.TrySetResult();
+                    return new ValueTask(selectedRelease.Task);
+                }
+                if (frame.MaterialKey != "ABS" && frame.Status == InstantQuotationMaterialPricingStatus.Pending
+                    && Interlocked.Exchange(ref heldComparison, 1) == 0)
+                {
+                    comparisonCallbackToken = token;
+                    comparisonEntered.TrySetResult();
+                    return new ValueTask(comparisonRelease.Task);
+                }
+                return ValueTask.CompletedTask;
+            }, caller.Token);
+            try
             {
-                comparisonCallbackToken = token;
-                comparisonEntered.TrySetResult();
-                return new ValueTask(comparisonRelease.Task);
+                await selectedEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                clock.Advance(TimeSpan.FromSeconds(29)); fixture.Record("clock", "advance-29");
+                selectedRelease.TrySetResult();
+                await comparisonEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                clock.Advance(TimeSpan.FromSeconds(2)); fixture.Record("clock", "advance-2");
+                Assert.False(run.IsCompleted);
+                Assert.False(comparisonCallbackToken.IsCancellationRequested);
+                Assert.False(caller.IsCancellationRequested);
+                comparisonRelease.TrySetResult();
+                completionWait.Start();
+                Assert.NotNull(await run.WaitAsync(TimeSpan.FromSeconds(10)));
             }
-            return ValueTask.CompletedTask;
-        }, caller.Token);
-        try
-        {
-            await selectedEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            clock.Advance(TimeSpan.FromSeconds(29));
-            selectedRelease.TrySetResult();
-            await comparisonEntered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            clock.Advance(TimeSpan.FromSeconds(2));
-            Assert.False(run.IsCompleted);
-            Assert.False(comparisonCallbackToken.IsCancellationRequested);
-            Assert.False(caller.IsCancellationRequested);
-            comparisonRelease.TrySetResult();
-            Assert.NotNull(await run.WaitAsync(TimeSpan.FromSeconds(10)));
-        }
-        finally
-        {
-            caller.Cancel();
-            selectedRelease.TrySetResult();
-            comparisonRelease.TrySetResult();
-            try { await run.WaitAsync(TimeSpan.FromSeconds(10)); } catch { }
-        }
+            catch (Exception exception)
+            {
+                fixture.PrimaryFailure = exception;
+                try
+                {
+                    using var process = System.Diagnostics.Process.GetCurrentProcess();
+                    output.WriteLine("pricing-completion-resource-state: {0}", JsonSerializer.Serialize(new
+                    {
+                        FailureType = exception.GetType().FullName,
+                        CompletionWaitMilliseconds = completionWait.ElapsedMilliseconds,
+                        QuoteState = run.Status.ToString(),
+                        CallerCanceled = caller.IsCancellationRequested,
+                        CallbackCanceled = comparisonCallbackToken.IsCancellationRequested,
+                        ReaderCount = fixture.Reader.ReadCount,
+                        WorkingSetBytes = Environment.WorkingSet,
+                        ManagedBytes = GC.GetTotalMemory(false),
+                        AvailableMemoryBytes = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes,
+                        ProcessCpuMilliseconds = process.TotalProcessorTime.TotalMilliseconds,
+                        ThreadPoolThreads = ThreadPool.ThreadCount,
+                        ThreadPoolPendingItems = ThreadPool.PendingWorkItemCount,
+                    }));
+                }
+                catch (Exception) { /* Diagnostics cannot replace the original assertion or timeout. */ }
+                throw;
+            }
+            finally
+            {
+                await fixture.DrainAsync(run, caller.Cancel, () => MaterialPricingTestCleanup.ReleaseAll(
+                    () => selectedRelease.TrySetResult(), () => comparisonRelease.TrySetResult()), caller.Token);
+            }
+        }, output, failComparisons: true, clock: clock);
     }
 
     [Fact]
     public async Task NoncooperativeObserver_CallerAbortStopsWaitAndLateCompletionCannotContinueAnalysis()
     {
-        await using var fixture = new Fixture();
-        var session = await fixture.CreateAsync();
-        using var cancellation = new CancellationTokenSource();
-        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var run = fixture.Service.QuoteAsync(session, Owner, true, (_, _) =>
+        await Fixture.RunAsync(async fixture =>
         {
-            entered.TrySetResult();
-            return new ValueTask(release.Task); // Deliberately ignores the supplied token.
-        }, cancellation.Token);
-        var first = await Task.WhenAny(entered.Task, run);
-        try
-        {
-            Assert.Same(entered.Task, first);
-            cancellation.Cancel();
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run.WaitAsync(TimeSpan.FromSeconds(10)));
-            int readsAfterAbort = fixture.Reader.ReadCount;
-            release.TrySetResult();
-            Assert.Equal(readsAfterAbort, fixture.Reader.ReadCount);
-        }
-        finally { cancellation.Cancel(); release.TrySetResult(); try { await run; } catch (OperationCanceledException) { } }
+            var session = await fixture.CreateAsync();
+            using var cancellation = new CancellationTokenSource();
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); fixture.OwnGate(release);
+            var run = fixture.Service.QuoteAsync(session, Owner, true, (_, _) =>
+            {
+                entered.TrySetResult();
+                return new ValueTask(release.Task); // Deliberately ignores the supplied token.
+            }, cancellation.Token);
+            var first = await Task.WhenAny(entered.Task, run);
+            try
+            {
+                Assert.Same(entered.Task, first);
+                cancellation.Cancel();
+                await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run.WaitAsync(TimeSpan.FromSeconds(10)));
+                fixture.ExpectFailure(run);
+                int readsAfterAbort = fixture.Reader.ReadCount;
+                release.TrySetResult();
+                Assert.Equal(readsAfterAbort, fixture.Reader.ReadCount);
+            }
+            catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
+            finally { await fixture.DrainAsync(run, cancellation.Cancel, () => release.TrySetResult(), cancellation.Token); }
+        }, output);
     }
 
     [Theory]
@@ -306,166 +352,169 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
     [InlineData("invalid-operation")]
     public async Task ObserverFailure_CannotReturnAUsableFinalQuote(string category)
     {
-        await using var fixture = new Fixture();
-        var session = await fixture.CreateAsync();
-        Exception failure = category switch
+        await Fixture.RunAsync(async fixture =>
         {
-            "argument" => new ArgumentException("controlled observer failure"),
-            "invalid-operation" => new InvalidOperationException("controlled observer failure"),
-            _ => new IOException("controlled observer failure"),
-        };
-        var actual = await Record.ExceptionAsync(() => fixture.Service.QuoteAsync(
-            session, Owner, false, (_, _) => ValueTask.FromException(failure), default));
-        Assert.Same(failure, actual);
+            var session = await fixture.CreateAsync();
+            Exception failure = category switch
+            {
+                "argument" => new ArgumentException("controlled observer failure"),
+                "invalid-operation" => new InvalidOperationException("controlled observer failure"),
+                _ => new IOException("controlled observer failure"),
+            };
+            var quoteRun = fixture.Service.QuoteAsync(session, Owner, false, (_, _) => ValueTask.FromException(failure), default);
+            var actual = await Record.ExceptionAsync(() => quoteRun);
+            Assert.Same(failure, actual);
+            fixture.ExpectFailure(quoteRun);
+        }, output);
     }
 
     [Fact]
     public async Task SelectedFailure_ReportsUnavailableAndNeverReturnsUsableQuote()
     {
-        await using var fixture = new Fixture(failSelected: true);
-        var session = await fixture.CreateAsync();
-        var frames = new List<InstantQuotationMaterialPricingProgress>();
-        var quote = await fixture.Service.QuoteAsync(session, Owner, true,
-            (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
-        Assert.Null(quote);
-        Assert.Equal(1, fixture.Reader.ReadCount);
-        Assert.Equal(new[] { InstantQuotationMaterialPricingStatus.Pending, InstantQuotationMaterialPricingStatus.Unavailable },
-            frames.Select(frame => frame.Status));
-        Assert.All(frames, frame => { Assert.Equal("ABS", frame.MaterialKey); Assert.Null(frame.UnitPrice); });
+        await Fixture.RunAsync(async fixture =>
+        {
+            var session = await fixture.CreateAsync();
+            var frames = new List<InstantQuotationMaterialPricingProgress>();
+            var quote = await fixture.Service.QuoteAsync(session, Owner, true,
+                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
+            Assert.Null(quote);
+            Assert.Equal(1, fixture.Reader.ReadCount);
+            Assert.Equal(new[] { InstantQuotationMaterialPricingStatus.Pending, InstantQuotationMaterialPricingStatus.Unavailable },
+                frames.Select(frame => frame.Status));
+            Assert.All(frames, frame => { Assert.Equal("ABS", frame.MaterialKey); Assert.Null(frame.UnitPrice); });
+        }, output, failSelected: true);
     }
 
     [Fact]
     public async Task OwnedSelectedDeadline_BoundsNoncooperativeCompletedCallback_AndLateFaultCannotResume()
     {
         var clock = new ManualClock();
-        await using var fixture = new Fixture(clock: clock);
-        var session = await fixture.CreateAsync();
-        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var late = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        CancellationToken observed = default;
-        var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, token) =>
+        await Fixture.RunAsync(async fixture =>
         {
-            if (frame.Status != InstantQuotationMaterialPricingStatus.Completed) return ValueTask.CompletedTask;
-            observed = token;
-            entered.TrySetResult();
-            return new ValueTask(late.Task);
-        }, default);
-        await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        Assert.Equal(1, fixture.Reader.ReadCount);
-        clock.Advance(TimeSpan.FromSeconds(30));
-        Assert.Null(await run.WaitAsync(TimeSpan.FromSeconds(10)));
-        Assert.True(observed.IsCancellationRequested);
-        late.TrySetException(new InvalidOperationException("controlled late observer fault"));
-        // Drain the deliberately late callback itself. Producer already returned and
-        // has no continuation capable of resuming comparison analysis.
-        await Assert.ThrowsAsync<InvalidOperationException>(() => late.Task);
-        Assert.Equal(1, fixture.Reader.ReadCount);
+            var session = await fixture.CreateAsync();
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var late = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); fixture.OwnGate(late);
+            CancellationToken observed = default;
+            var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, token) =>
+            {
+                if (frame.Status != InstantQuotationMaterialPricingStatus.Completed) return ValueTask.CompletedTask;
+                observed = token;
+                entered.TrySetResult();
+                return new ValueTask(late.Task);
+            }, default);
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.Equal(1, fixture.Reader.ReadCount);
+            clock.Advance(TimeSpan.FromSeconds(30)); fixture.Record("clock", "advance-30");
+            Assert.Null(await run.WaitAsync(TimeSpan.FromSeconds(10)));
+            Assert.True(observed.IsCancellationRequested);
+            late.TrySetException(new InvalidOperationException("controlled late observer fault"));
+            // Drain the deliberately late callback itself. Producer already returned and
+            // has no continuation capable of resuming comparison analysis.
+            await Assert.ThrowsAsync<InvalidOperationException>(() => late.Task);
+            fixture.ExpectFailure(late.Task);
+            Assert.Equal(1, fixture.Reader.ReadCount);
+        }, output, clock: clock);
     }
 
     [Fact]
     public async Task SynchronouslyBlockingObserver_ProducerDeadlineDoesNotWaitForDelegateReturn()
     {
         var clock = new ManualClock();
-        await using var fixture = new Fixture(clock: clock);
-        var session = await fixture.CreateAsync();
-        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var exited = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var release = new ManualResetEventSlim();
-        var run = Task.Run(() => fixture.Service.QuoteAsync(session, Owner, true, (frame, _) =>
+        await Fixture.RunAsync(async fixture =>
         {
-            if (frame.Status != InstantQuotationMaterialPricingStatus.Completed) return ValueTask.CompletedTask;
-            entered.TrySetResult();
-            try { release.Wait(); return ValueTask.CompletedTask; }
-            finally { exited.TrySetResult(); }
-        }, default));
-        try
-        {
-            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            Assert.Equal(1, fixture.Reader.ReadCount);
-            clock.Advance(TimeSpan.FromSeconds(30));
-            Assert.Null(await run.WaitAsync(TimeSpan.FromSeconds(2)));
-            Assert.False(exited.Task.IsCompleted);
-            Assert.Equal(1, fixture.Reader.ReadCount);
-        }
-        finally
-        {
-            release.Set();
-            await exited.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            await run.WaitAsync(TimeSpan.FromSeconds(10));
-        }
+            var session = await fixture.CreateAsync();
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var exited = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var release = new ManualResetEventSlim();
+            var run = Task.Run(() => fixture.Service.QuoteAsync(session, Owner, true, (frame, _) =>
+            {
+                if (frame.Status != InstantQuotationMaterialPricingStatus.Completed) return ValueTask.CompletedTask;
+                entered.TrySetResult();
+                try { release.Wait(); return ValueTask.CompletedTask; }
+                finally { exited.TrySetResult(); }
+            }, default));
+            try
+            {
+                await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.Equal(1, fixture.Reader.ReadCount);
+                clock.Advance(TimeSpan.FromSeconds(30)); fixture.Record("clock", "advance-30");
+                Assert.Null(await run.WaitAsync(TimeSpan.FromSeconds(2)));
+                Assert.False(exited.Task.IsCompleted);
+                Assert.Equal(1, fixture.Reader.ReadCount);
+            }
+            catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
+            finally
+            {
+                await fixture.DrainAsync(exited.Task, () => { }, release.Set, default);
+                await fixture.DrainAsync(run, () => { }, () => { }, default);
+            }
+        }, output, clock: clock);
     }
 
     [Fact]
     public async Task AbsoluteDeadline_BoundsTerminalUnavailableCallbackAfterComparisonBudget()
     {
         var clock = new ManualClock();
-        await using var fixture = new Fixture(gateRead: 2, clock: clock);
-        var session = await fixture.CreateAsync();
-        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var late = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var caller = new CancellationTokenSource();
-        int observedBoundaries = 0;
-        Exception? primaryFailure = null;
-        bool waitingForReader = true;
-        var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, _) =>
+        await Fixture.RunAsync(async fixture =>
         {
-            // Fixed bits record only structural boundaries, without material/session data.
-            int boundary = (frame.MaterialKey == "ABS", frame.Status) switch
+            var session = await fixture.CreateAsync();
+            var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var late = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); fixture.OwnGate(late);
+            using var caller = new CancellationTokenSource();
+            int observedBoundaries = 0;
+            bool waitingForReader = true;
+            var run = fixture.Service.QuoteAsync(session, Owner, true, (frame, _) =>
             {
-                (true, InstantQuotationMaterialPricingStatus.Pending) => 1,
-                (true, InstantQuotationMaterialPricingStatus.Completed) => 2,
-                (true, InstantQuotationMaterialPricingStatus.Unavailable) => 4,
-                (false, InstantQuotationMaterialPricingStatus.Pending) => 8,
-                (false, InstantQuotationMaterialPricingStatus.Completed) => 16,
-                (false, InstantQuotationMaterialPricingStatus.Unavailable) => 32,
-                _ => 0,
-            };
-            Interlocked.Or(ref observedBoundaries, boundary);
-            if (frame.Status != InstantQuotationMaterialPricingStatus.Unavailable) return ValueTask.CompletedTask;
-            entered.TrySetResult(); return new ValueTask(late.Task);
-        }, caller.Token);
-        try
-        {
-            await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            waitingForReader = false;
-            clock.Advance(TimeSpan.FromSeconds(3));
-            await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            Assert.False(run.IsCompleted);
-            clock.Advance(TimeSpan.FromSeconds(30));
-            Assert.Null(await run.WaitAsync(TimeSpan.FromSeconds(10)));
-            late.TrySetResult();
-            Assert.Equal(2, fixture.Reader.ReadCount);
-        }
-        catch (Exception exception)
-        {
-            primaryFailure = exception;
-            if (waitingForReader)
-            {
-                // Samples are advisory; reporting must preserve the original exception.
-                try
+                // Fixed bits record only structural boundaries, without material/session data.
+                int boundary = (frame.MaterialKey == "ABS", frame.Status) switch
                 {
-                    output.WriteLine("reader-ordinal-2: reads={0}; entered={1}; quote={2}; unavailable={3}; boundaries={4}; fault={5}",
-                        fixture.Reader.ReadCount, fixture.Reader.Entered.Task.IsCompleted, run.Status,
-                        entered.Task.IsCompleted, Volatile.Read(ref observedBoundaries),
-                        run.Exception?.GetBaseException().GetType().Name ?? "none");
-                }
-                catch { }
+                    (true, InstantQuotationMaterialPricingStatus.Pending) => 1,
+                    (true, InstantQuotationMaterialPricingStatus.Completed) => 2,
+                    (true, InstantQuotationMaterialPricingStatus.Unavailable) => 4,
+                    (false, InstantQuotationMaterialPricingStatus.Pending) => 8,
+                    (false, InstantQuotationMaterialPricingStatus.Completed) => 16,
+                    (false, InstantQuotationMaterialPricingStatus.Unavailable) => 32,
+                    _ => 0,
+                };
+                Interlocked.Or(ref observedBoundaries, boundary);
+                if (frame.Status != InstantQuotationMaterialPricingStatus.Unavailable) return ValueTask.CompletedTask;
+                entered.TrySetResult(); return new ValueTask(late.Task);
+            }, caller.Token);
+            try
+            {
+                await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                waitingForReader = false;
+                clock.Advance(TimeSpan.FromSeconds(3)); fixture.Record("clock", "advance-3");
+                await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.False(run.IsCompleted);
+                clock.Advance(TimeSpan.FromSeconds(30)); fixture.Record("clock", "advance-30");
+                Assert.Null(await run.WaitAsync(TimeSpan.FromSeconds(10)));
+                late.TrySetResult();
+                Assert.Equal(2, fixture.Reader.ReadCount);
             }
-            throw;
-        }
-        finally
-        {
-            Exception? cleanupFailure = null;
-            try { caller.Cancel(); }
-            catch (Exception exception) { cleanupFailure = exception; }
-            fixture.Reader.Release.TrySetResult();
-            late.TrySetResult();
-            // Attempt a bounded drain before disposal, without replacing a primary failure.
-            try { await run.WaitAsync(TimeSpan.FromSeconds(10)); }
-            catch (Exception exception) { cleanupFailure ??= exception; }
-            if (primaryFailure is null && cleanupFailure is not null)
-                System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(cleanupFailure).Throw();
-        }
+            catch (Exception exception)
+            {
+                fixture.PrimaryFailure = exception;
+                if (waitingForReader)
+                {
+                    // Samples are advisory; reporting must preserve the original exception.
+                    try
+                    {
+                        output.WriteLine("reader-ordinal-2: reads={0}; entered={1}; quote={2}; unavailable={3}; boundaries={4}; fault={5}",
+                            fixture.Reader.ReadCount, fixture.Reader.Entered.Task.IsCompleted, run.Status,
+                            entered.Task.IsCompleted, Volatile.Read(ref observedBoundaries),
+                            run.Exception?.GetBaseException().GetType().Name ?? "none");
+                    }
+                    catch { }
+                }
+                throw;
+            }
+            finally
+            {
+                await fixture.DrainAsync(run, caller.Cancel, () => MaterialPricingTestCleanup.ReleaseAll(
+                    () => fixture.Reader.Release.TrySetResult(), () => late.TrySetResult()), caller.Token);
+            }
+        }, output, gateRead: 2, clock: clock);
     }
 
     [Theory]
@@ -473,58 +522,89 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
     [InlineData("collision")]
     public async Task UnsupportedMaterialOrPartCollision_ReturnsNoQuoteAndNoByteReads(string fault)
     {
-        await using var fixture = new Fixture();
-        var original = await fixture.CreateAsync();
-        var part = original.Parts.Single();
-        var state = fault == "collision"
-            ? new InstantQuotationOrderState([part, part])
-            : new InstantQuotationOrderState([part with { Configuration = part.Configuration with { MaterialKey = "unsupported" } }]);
-        var frames = new List<InstantQuotationMaterialPricingProgress>();
-        var quote = await fixture.Service.QuoteAsync(original with { RequestState = state }, Owner, true,
-            (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
-        Assert.Null(quote); Assert.Empty(frames); Assert.Equal(0, fixture.Reader.ReadCount);
+        await Fixture.RunAsync(async fixture =>
+        {
+            var original = await fixture.CreateAsync();
+            var part = original.Parts.Single();
+            var state = fault == "collision"
+                ? new InstantQuotationOrderState([part, part])
+                : new InstantQuotationOrderState([part with { Configuration = part.Configuration with { MaterialKey = "unsupported" } }]);
+            var frames = new List<InstantQuotationMaterialPricingProgress>();
+            var quote = await fixture.Service.QuoteAsync(original with { RequestState = state }, Owner, true,
+                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
+            Assert.Null(quote); Assert.Empty(frames); Assert.Equal(0, fixture.Reader.ReadCount);
+        }, output);
     }
 
     [Fact]
     public async Task MultiPart_SelectedFramesCompleteBeforeComparisons_AndEachAmountMatchesFinalCard()
     {
-        await using var fixture = new Fixture();
-        var session = await fixture.CreateAsync(partCount: 2);
-        var frames = new List<InstantQuotationMaterialPricingProgress>();
-        var quote = await fixture.Service.QuoteAsync(session, Owner, true,
-            (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
-        Assert.NotNull(quote);
-        Assert.Equal(2, quote.Parts.Count);
-        var selected = frames.Where(frame => frame.MaterialKey == "ABS" && frame.Status == InstantQuotationMaterialPricingStatus.Completed).ToArray();
-        Assert.Equal(2, selected.Length);
-        Assert.All(selected, frame => Assert.Equal(210, frame.UnitPrice));
-        Assert.True(frames.FindIndex(frame => frame.MaterialKey != "ABS") > frames.FindLastIndex(frame => frame.MaterialKey == "ABS"));
-        foreach (var frame in frames.Where(frame => frame.Status == InstantQuotationMaterialPricingStatus.Completed))
+        await Fixture.RunAsync(async fixture =>
         {
-            Assert.True(frame.UnitPrice is { } amount && double.IsFinite(amount) && amount > 0);
-            var line = Assert.Single(quote.Parts, line => line.PartId == frame.PartId);
-            var card = Assert.Single(line.MaterialPrices, card => card.MaterialKey == frame.MaterialKey);
-            Assert.Equal(card.UnitPrice, frame.UnitPrice);
-            using var json = JsonDocument.Parse(JsonSerializer.Serialize(frame));
-            Assert.Equal(new[] { "MaterialKey", "PartId", "Status", "UnitPrice" },
-                json.RootElement.EnumerateObject().Select(property => property.Name).Order());
-        }
-        Assert.All(frames.Where(frame => frame.Status != InstantQuotationMaterialPricingStatus.Completed),
-            frame => Assert.Null(frame.UnitPrice));
+            var session = await fixture.CreateAsync(partCount: 2);
+            var frames = new List<InstantQuotationMaterialPricingProgress>();
+            CancellationToken? selectedObserverToken = null;
+            CancellationToken? comparisonObserverToken = null;
+            var quote = await fixture.Service.QuoteAsync(session, Owner, true,
+                (frame, token) =>
+                {
+                    frames.Add(frame);
+                    if (frame.MaterialKey == "ABS") selectedObserverToken = token;
+                    else comparisonObserverToken = token;
+                    return ValueTask.CompletedTask;
+                }, default);
+            try { Assert.NotNull(quote); }
+            catch
+            {
+                try
+                {
+                    fixture.Record("selected-progress-token", TokenState(selectedObserverToken));
+                    fixture.Record("comparison-progress-token", TokenState(comparisonObserverToken));
+                }
+                catch { /* Secondary metadata must preserve the original null-quote failure. */ }
+                throw;
+            }
+            Assert.Equal(2, quote.Parts.Count);
+            var selected = frames.Where(frame => frame.MaterialKey == "ABS" && frame.Status == InstantQuotationMaterialPricingStatus.Completed).ToArray();
+            Assert.Equal(2, selected.Length);
+            Assert.All(selected, frame => Assert.Equal(210, frame.UnitPrice));
+            Assert.True(frames.FindIndex(frame => frame.MaterialKey != "ABS") > frames.FindLastIndex(frame => frame.MaterialKey == "ABS"));
+            foreach (var frame in frames.Where(frame => frame.Status == InstantQuotationMaterialPricingStatus.Completed))
+            {
+                Assert.True(frame.UnitPrice is { } amount && double.IsFinite(amount) && amount > 0);
+                var line = Assert.Single(quote.Parts, line => line.PartId == frame.PartId);
+                var card = Assert.Single(line.MaterialPrices, card => card.MaterialKey == frame.MaterialKey);
+                Assert.Equal(card.UnitPrice, frame.UnitPrice);
+                using var json = JsonDocument.Parse(JsonSerializer.Serialize(frame));
+                Assert.Equal(new[] { "MaterialKey", "PartId", "Status", "UnitPrice" },
+                    json.RootElement.EnumerateObject().Select(property => property.Name).Order());
+            }
+            Assert.All(frames.Where(frame => frame.Status != InstantQuotationMaterialPricingStatus.Completed),
+                frame => Assert.Null(frame.UnitPrice));
+
+            static string TokenState(CancellationToken? token) => token?.IsCancellationRequested switch
+            {
+                true => "canceled",
+                false => "active",
+                null => "unobserved",
+            };
+        }, output);
     }
 
     [Fact]
     public async Task CaseInsensitiveSelectedMaterial_IsNotAnalyzedOrPublishedAgainAsComparison()
     {
-        await using var fixture = new Fixture();
-        var session = await fixture.CreateAsync(materialKey: "abs");
-        var frames = new List<InstantQuotationMaterialPricingProgress>();
-        var quote = await fixture.Service.QuoteAsync(session, Owner, true,
-            (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
-        Assert.NotNull(quote);
-        Assert.Equal(210, Assert.Single(quote.Parts).UnitPrice);
-        Assert.Equal(new[] { InstantQuotationMaterialPricingStatus.Pending, InstantQuotationMaterialPricingStatus.Completed },
-            frames.Where(frame => frame.MaterialKey == "ABS").Select(frame => frame.Status));
+        await Fixture.RunAsync(async fixture =>
+        {
+            var session = await fixture.CreateAsync(materialKey: "abs");
+            var frames = new List<InstantQuotationMaterialPricingProgress>();
+            var quote = await fixture.Service.QuoteAsync(session, Owner, true,
+                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
+            Assert.NotNull(quote);
+            Assert.Equal(210, Assert.Single(quote.Parts).UnitPrice);
+            Assert.Equal(new[] { InstantQuotationMaterialPricingStatus.Pending, InstantQuotationMaterialPricingStatus.Completed },
+                frames.Where(frame => frame.MaterialKey == "ABS").Select(frame => frame.Status));
+        }, output);
     }
 
     [Theory]
@@ -532,70 +612,242 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
     [InlineData(true)]
     public async Task ResinSelected_UsesSameExistingKernelAndComparisonLiteral(bool includeComparisons)
     {
-        await using var fixture = new Fixture();
-        var session = await fixture.CreateAsync(materialKey: "M68");
-        var expected = await fixture.Service.QuoteAsync(session, Owner, includeComparisons, default);
-        var frames = new List<InstantQuotationMaterialPricingProgress>();
-        var quote = await fixture.Service.QuoteAsync(session, Owner, includeComparisons,
-            (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
-        Assert.NotNull(quote);
-        Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(quote));
-        if (!includeComparisons) Assert.Equal(0, fixture.Reader.ReadCount);
-        else Assert.True(fixture.Reader.ReadCount > 0);
-        Assert.Null(Assert.Single(quote.Parts).PhysicalReceipt);
-        var completed = Assert.Single(frames, frame => frame.MaterialKey == "M68"
-            && frame.Status == InstantQuotationMaterialPricingStatus.Completed);
-        Assert.Equal("M68", completed.MaterialKey);
-        Assert.Equal(Assert.Single(quote.Parts).UnitPrice, completed.UnitPrice);
-        if (includeComparisons)
+        await Fixture.RunAsync(async fixture =>
         {
-            // Same literal 8mm ABS physics/commercial anchor, now as comparison rather
-            // than selected. Originating selected resin cannot change this unit price.
-            var comparison = Assert.Single(frames, frame => frame.MaterialKey == "ABS"
+            var session = await fixture.CreateAsync(materialKey: "M68");
+            var frames = new List<InstantQuotationMaterialPricingProgress>();
+            var quote = await fixture.QuoteWithWallLifetimeAsync(token =>
+                fixture.Service.QuoteAsync(session, Owner, includeComparisons,
+                    (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, token));
+            Assert.NotNull(quote);
+            if (!includeComparisons)
+            {
+                var expected = await fixture.QuoteWithWallLifetimeAsync(token =>
+                    fixture.Service.QuoteAsync(session, Owner, false, token));
+                Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(quote));
+            }
+            if (!includeComparisons) Assert.Equal(0, fixture.Reader.ReadCount);
+            else Assert.True(fixture.Reader.ReadCount > 0);
+            Assert.Null(Assert.Single(quote.Parts).PhysicalReceipt);
+            var completed = Assert.Single(frames, frame => frame.MaterialKey == "M68"
                 && frame.Status == InstantQuotationMaterialPricingStatus.Completed);
-            Assert.Equal(210, comparison.UnitPrice);
-            Assert.Equal(210, Assert.Single(quote.Parts.Single().MaterialPrices,
-                card => card.MaterialKey == "ABS").UnitPrice);
-            Assert.True(frames.IndexOf(completed) < frames.IndexOf(comparison));
-        }
+            Assert.Equal("M68", completed.MaterialKey);
+            Assert.Equal(Assert.Single(quote.Parts).UnitPrice, completed.UnitPrice);
+            if (includeComparisons)
+            {
+                // Same literal 8mm ABS physics/commercial anchor, now as comparison rather
+                // than selected. Originating selected resin cannot change this unit price.
+                var comparison = Assert.Single(frames, frame => frame.MaterialKey == "ABS"
+                    && frame.Status == InstantQuotationMaterialPricingStatus.Completed);
+                Assert.Equal(210, comparison.UnitPrice);
+                Assert.Equal(210, Assert.Single(quote.Parts.Single().MaterialPrices,
+                    card => card.MaterialKey == "ABS").UnitPrice);
+                Assert.True(frames.IndexOf(completed) < frames.IndexOf(comparison));
+            }
+        }, output);
+    }
+
+    [Fact]
+    public async Task ResinSelected_UnavailableOptionalFdmReads_PreserveWholeQuoteAcrossOverloads()
+    {
+        await Fixture.RunAsync(async fixture =>
+        {
+            var session = await fixture.CreateAsync(materialKey: "M68");
+            var expected = await fixture.Service.QuoteAsync(session, Owner, true, default);
+            Assert.NotNull(expected);
+            var plainReadCount = fixture.Reader.ReadCount;
+            Assert.True(plainReadCount > 0);
+            var frames = new List<InstantQuotationMaterialPricingProgress>();
+            var quote = await fixture.Service.QuoteAsync(session, Owner, true,
+                (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
+            Assert.NotNull(quote);
+            Assert.True(fixture.Reader.ReadCount > plainReadCount);
+            // Equality is deliberately tested with unavailable optional FDM evidence,
+            // not independently deadline-limited successful physical comparisons.
+            Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(quote));
+            var line = Assert.Single(quote.Parts);
+            Assert.Null(line.PhysicalReceipt);
+            var selected = Assert.Single(frames, frame => frame.MaterialKey == "M68"
+                && frame.Status == InstantQuotationMaterialPricingStatus.Completed);
+            Assert.Equal(line.UnitPrice, selected.UnitPrice);
+            var fdmCards = line.MaterialPrices
+                .Where(card => PricingCatalog.ResolveMaterial(card.MaterialKey)!.Process == PrintProcess.Fdm)
+                .ToArray();
+            Assert.NotEmpty(fdmCards);
+            Assert.All(fdmCards, card =>
+            {
+                Assert.Null(card.UnitPrice);
+                Assert.Null(card.PhysicalReceipt);
+            });
+            var attemptedFdm = frames.Where(frame => frame.Status == InstantQuotationMaterialPricingStatus.Pending
+                && PricingCatalog.ResolveMaterial(frame.MaterialKey)!.Process == PrintProcess.Fdm).ToArray();
+            Assert.NotEmpty(attemptedFdm);
+            Assert.All(attemptedFdm, attempted =>
+            {
+                var unavailable = Assert.Single(frames, frame => frame.MaterialKey == attempted.MaterialKey
+                    && frame.Status == InstantQuotationMaterialPricingStatus.Unavailable);
+                Assert.Null(unavailable.UnitPrice);
+            });
+            Assert.DoesNotContain(frames, frame => frame.Status == InstantQuotationMaterialPricingStatus.Completed
+                && PricingCatalog.ResolveMaterial(frame.MaterialKey)!.Process == PrintProcess.Fdm);
+        }, output, failSelected: true);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PlainOverload_UsesInjectedClockForOwnedDeadlines(bool includeComparisons)
+    {
+        var clock = new ManualClock();
+        await Fixture.RunAsync(async fixture =>
+        {
+            var session = await fixture.CreateAsync(materialKey: includeComparisons ? "M68" : "ABS");
+            using var caller = new CancellationTokenSource();
+            var run = fixture.Service.QuoteAsync(session, Owner, includeComparisons, caller.Token);
+            try
+            {
+                await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.False(run.IsCompleted);
+                Assert.False(fixture.Reader.ObservedCancellation.IsCancellationRequested);
+                clock.Advance(TimeSpan.FromSeconds(includeComparisons ? 3 : 30));
+                Assert.True(fixture.Reader.ObservedCancellation.IsCancellationRequested);
+                var quote = await run.WaitAsync(TimeSpan.FromSeconds(10));
+                if (includeComparisons)
+                {
+                    Assert.NotNull(quote);
+                    var line = Assert.Single(quote.Parts);
+                    Assert.Equal(770, line.UnitPrice);
+                    Assert.Null(line.PhysicalReceipt);
+                    var fdmCards = line.MaterialPrices.Where(
+                        card => PricingCatalog.ResolveMaterial(card.MaterialKey)!.Process == PrintProcess.Fdm).ToArray();
+                    Assert.NotEmpty(fdmCards);
+                    Assert.All(fdmCards, card =>
+                    {
+                        Assert.Null(card.UnitPrice);
+                        Assert.Null(card.PhysicalReceipt);
+                    });
+                }
+                else
+                {
+                    Assert.Null(quote);
+                }
+                Assert.Equal(1, fixture.Reader.ReadCount);
+                Assert.False(caller.IsCancellationRequested);
+            }
+            catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
+            finally
+            {
+                await fixture.DrainAsync(run, caller.Cancel, () => fixture.Reader.Release.TrySetResult(), caller.Token);
+            }
+        }, output, gateRead: 1, clock: clock);
+    }
+
+    [Fact]
+    public async Task PlainOverload_SelectedDeadlineUsesInjectedClock()
+    {
+        var clock = new ManualClock();
+        await Fixture.RunAsync(async fixture =>
+        {
+            var session = await fixture.CreateAsync();
+            using var caller = new CancellationTokenSource();
+            var run = fixture.Service.QuoteAsync(session, Owner, true, caller.Token);
+            try
+            {
+                await fixture.Reader.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.False(run.IsCompleted);
+                clock.Advance(TimeSpan.FromSeconds(30)); fixture.Record("clock", "advance-30");
+                Assert.Null(await run.WaitAsync(TimeSpan.FromSeconds(10)));
+                Assert.False(caller.IsCancellationRequested);
+                Assert.Equal(1, fixture.Reader.ReadCount);
+            }
+            catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
+            finally
+            {
+                await fixture.DrainAsync(run, caller.Cancel, () => fixture.Reader.Release.TrySetResult(), caller.Token);
+            }
+        }, output, gateRead: 1, clock: clock);
     }
 
     [Fact]
     public async Task DisplayOverload_DoesNotChangeFinalKernelMoneyOrProtectedSession()
     {
-        await using var fixture = new Fixture();
-        var session = await fixture.CreateAsync();
-        var expected = await fixture.Service.QuoteAsync(session, Owner, true, default);
-        var frames = new List<InstantQuotationMaterialPricingProgress>();
-        var actual = await fixture.Service.QuoteAsync(session, Owner, true,
-            (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, default);
-        Assert.NotNull(actual);
-        Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(actual));
-        var stored = await fixture.Store.GetAsync(session.SessionId, Owner, default);
-        Assert.Null(stored!.QuoteAuthorization);
-        Assert.Equal(session.UpdatedAt, stored.UpdatedAt);
-        Assert.Equal(0.512, Assert.Single(actual.Parts).BoundingCm3PerUnit, 3);
-        Assert.Equal(1, Assert.Single(actual.Parts).Quantity);
-        // Independent commercial anchor: raw base rounds to 100, process floor 300,
-        // reserve 30, setup 39.0625, packaging 20, gross 430, unrounded VAT
-        // 28.0766752577, explicit minimum surcharge 200; ceil10(201.9233) = 210.
-        Assert.InRange(Assert.Single(actual.Parts).DirectCostPerUnit, 47.5000001, 50);
-        Assert.Equal(210, Assert.Single(actual.Parts).UnitPrice);
+        var clock = new ManualClock();
+        await Fixture.RunAsync(async fixture =>
+        {
+            var session = await fixture.CreateAsync();
+            var expected = await fixture.QuoteWithWallLifetimeAsync(token =>
+                fixture.Service.QuoteAsync(session, Owner, true, token));
+            var frames = new List<InstantQuotationMaterialPricingProgress>();
+            var actual = await fixture.QuoteWithWallLifetimeAsync(token =>
+                fixture.Service.QuoteAsync(session, Owner, true,
+                    (frame, _) => { frames.Add(frame); return ValueTask.CompletedTask; }, token));
+            Assert.NotNull(actual);
+            Assert.Equal(JsonSerializer.Serialize(expected), JsonSerializer.Serialize(actual));
+            var stored = await fixture.Store.GetAsync(session.SessionId, Owner, default);
+            Assert.Null(stored!.QuoteAuthorization);
+            Assert.Equal(session.UpdatedAt, stored.UpdatedAt);
+            Assert.Equal(0.512, Assert.Single(actual.Parts).BoundingCm3PerUnit, 3);
+            Assert.Equal(1, Assert.Single(actual.Parts).Quantity);
+            // Independent commercial anchor: raw base rounds to 100, process floor 300,
+            // reserve 30, setup 39.0625, packaging 20, gross 430, unrounded VAT
+            // 28.0766752577, explicit minimum surcharge 200; ceil10(201.9233) = 210.
+            Assert.InRange(Assert.Single(actual.Parts).DirectCostPerUnit, 47.5000001, 50);
+            Assert.Equal(210, Assert.Single(actual.Parts).UnitPrice);
+        }, output, clock: clock);
     }
 
-    private sealed class Fixture : IAsyncDisposable
+    [Fact]
+    public async Task UnacknowledgedCompletedQuoteFault_FailsOwnedFixtureAfterAllCleanupAttempts()
+    {
+        var failure = new IOException("controlled unacknowledged quote failure");
+        var actual = await Assert.ThrowsAsync<IOException>(() => Fixture.RunAsync(async fixture =>
+        {
+            var session = await fixture.CreateAsync();
+            var quote = fixture.Service.QuoteAsync(session, Owner, false,
+                (_, _) => ValueTask.FromException(failure), default);
+            // Await completion without asserting or acknowledging the quote's expected failure.
+            await quote.ContinueWith(_ => { }, CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default).WaitAsync(TimeSpan.FromSeconds(10));
+        }, output));
+        Assert.Same(failure, actual);
+    }
+
+    [Fact]
+    public async Task AssertedIntentionalQuoteFault_RemainsValidThroughOwnedFixtureCleanup()
+    {
+        var failure = new IOException("controlled acknowledged quote failure");
+        await Fixture.RunAsync(async fixture =>
+        {
+            var session = await fixture.CreateAsync();
+            var quote = fixture.Service.QuoteAsync(session, Owner, false,
+                (_, _) => ValueTask.FromException(failure), default);
+            Assert.Same(failure, await Assert.ThrowsAsync<IOException>(() => quote));
+            fixture.ExpectFailure(quote);
+        }, output);
+    }
+
+    private sealed class Fixture
     {
         private readonly Factory factory;
         private readonly AsyncServiceScope scope;
+        private readonly MaterialPricingTestDiagnostics diagnostics;
+        private readonly HashSet<Task> drained = [];
+        private readonly HashSet<Task> expectedFailures = [];
+        private readonly List<Action> gates = [];
+        private readonly List<MaterialPricingQuoteCleanupReceipt> cleanup = [];
+        private System.Diagnostics.Stopwatch? cleanupClock;
+        public Exception? PrimaryFailure { get; set; }
         public Reader Reader { get; }
         public IInstantQuotationAuthoritativePricingService Service { get; }
         public IInstantQuotationSessionStore Store { get; }
-        public Fixture(int gateRead = 0, bool failComparisons = false, bool failSelected = false, TimeProvider? clock = null)
+        private Fixture(int gateRead = 0, bool failComparisons = false, bool failSelected = false, TimeProvider? clock = null)
         {
             Reader = new Reader(gateRead, failComparisons, failSelected);
             factory = new Factory(Reader, clock);
             scope = factory.Services.CreateAsyncScope();
-            Service = scope.ServiceProvider.GetRequiredService<IInstantQuotationAuthoritativePricingService>();
+            diagnostics = new MaterialPricingTestDiagnostics(scope.ServiceProvider.GetRequiredService<IInstantQuotationAuthoritativePricingService>());
+            Service = diagnostics;
+            Reader.Report = (state, canceled) => diagnostics.Record("reader", state, canceled);
             Store = scope.ServiceProvider.GetRequiredService<IInstantQuotationSessionStore>();
         }
         public async Task<InstantQuotationSessionState> CreateAsync(string materialKey = "ABS", int partCount = 1)
@@ -615,7 +867,90 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
             Reader.SessionId = session.SessionId;
             return session;
         }
-        public async ValueTask DisposeAsync() { Reader.Release.TrySetResult(); await scope.DisposeAsync(); await factory.DisposeAsync(); }
+        public async Task<InstantQuotationOrderQuote?> QuoteWithWallLifetimeAsync(
+            Func<CancellationToken, Task<InstantQuotationOrderQuote?>> start)
+        {
+            using var lifetime = new CancellationTokenSource(TimeSpan.FromSeconds(33));
+            Task<InstantQuotationOrderQuote?>? actual = null;
+            try
+            {
+                actual = start(lifetime.Token);
+                return await actual.WaitAsync(lifetime.Token);
+            }
+            catch (Exception exception) { PrimaryFailure ??= exception; throw; }
+            finally
+            {
+                if (actual is not null && !actual.IsCompletedSuccessfully)
+                {
+                    await DrainAsync(actual, lifetime.Cancel, () => { }, lifetime.Token);
+                }
+            }
+        }
+        public void Record(string phase, string state) => diagnostics.Record(phase, state);
+        public void OwnGate(TaskCompletionSource gate) => gates.Add(() => gate.TrySetResult());
+        public void ExpectFailure(Task actual)
+        {
+            if (!actual.IsFaulted && !actual.IsCanceled) throw new InvalidOperationException("Only asserted terminal failures can be acknowledged.");
+            expectedFailures.Add(actual);
+        }
+        private TimeSpan CleanupRemaining()
+        {
+            cleanupClock ??= System.Diagnostics.Stopwatch.StartNew();
+            var remaining = TimeSpan.FromSeconds(10) - cleanupClock.Elapsed;
+            return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+        }
+        public async Task DrainAsync(Task actual, Action cancel, Action release, CancellationToken caller)
+        {
+            try
+            {
+                await MaterialPricingTestCleanup.DrainQuoteAsync(actual, cancel, release, caller,
+                PrimaryFailure, cleanup.Add, CleanupRemaining(),
+                taskKind: diagnostics.OwnedTasks.Contains(actual) ? "quote" : "boundary");
+            }
+            finally
+            {
+                drained.Add(actual);
+            }
+        }
+        public static async Task RunAsync(Func<Fixture, Task> body, ITestOutputHelper output,
+            int gateRead = 0, bool failComparisons = false, bool failSelected = false, TimeProvider? clock = null)
+        {
+            var fixture = new Fixture(gateRead, failComparisons, failSelected, clock);
+            await MaterialPricingTestCleanup.RunAsync(async () =>
+            {
+                try { await body(fixture); }
+                catch (Exception exception) { fixture.PrimaryFailure = exception; throw; }
+                finally { await fixture.FinishTasksAsync(); }
+            }, fixture.scope.DisposeAsync, fixture.factory.DisposeAsync,
+                receipt => output.WriteLine("material-pricing-lifecycle: {0}", JsonSerializer.Serialize(new
+                { Fixture = receipt, Quotes = fixture.cleanup, Trace = fixture.diagnostics.Snapshot() })));
+        }
+        private async Task FinishTasksAsync()
+        {
+            Exception? failure = null;
+            Reader.Release.TrySetResult();
+            try { MaterialPricingTestCleanup.ReleaseAll(gates.ToArray()); }
+            catch (Exception exception) { failure = exception; }
+            foreach (var group in new (string Kind, Func<Task[]> Tasks)[]
+                { ("quote", () => diagnostics.OwnedTasks), ("callback", () => diagnostics.CallbackTasks),
+                    ("diagnostic", () => diagnostics.ObservationTasks) })
+            {
+                foreach (var actual in group.Tasks().Distinct().Where(task => !drained.Contains(task)))
+                {
+                    try
+                    {
+                        await MaterialPricingTestCleanup.DrainQuoteAsync(actual, () => { }, () => { }, default,
+                        PrimaryFailure, cleanup.Add, CleanupRemaining(),
+                        expectedTerminalFailure: expectedFailures.Contains(actual), taskKind: group.Kind);
+                    }
+                    catch (Exception exception) { failure ??= exception; }
+                    finally { drained.Add(actual); }
+                }
+            }
+            try { diagnostics.DisposeSubscriptions(); }
+            catch (Exception exception) { failure ??= exception; }
+            if (PrimaryFailure is null && failure is not null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+        }
     }
     private sealed class Factory(Reader reader, TimeProvider? clock) : TestingWebApplicationFactory
     {
@@ -632,8 +967,10 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
     }
     private sealed class Reader(int gateRead, bool failComparisons, bool failSelected) : IInstantQuotationPhysicalAnalysisInputReader
     {
+        public Action<string, bool>? Report { get; set; }
         public string? SessionId { get; set; }
         public int ReadCount { get; private set; }
+        public CancellationToken ObservedCancellation { get; private set; }
         public HashSet<Guid> PartIds { get; set; } = [PartId];
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -642,7 +979,10 @@ public sealed class InstantQuotationMaterialPricingProgressTests(ITestOutputHelp
         {
             Assert.Equal(SessionId, sessionId); Assert.Equal(Owner, ownerIdentity); Assert.Contains(partId, PartIds);
             ReadCount++;
+            ObservedCancellation = cancellationToken;
+            Report?.Invoke("entered", cancellationToken.IsCancellationRequested);
             if (ReadCount == gateRead) { Entered.TrySetResult(); await Release.Task.WaitAsync(cancellationToken); }
+            Report?.Invoke("returned", cancellationToken.IsCancellationRequested);
             return failSelected || (failComparisons && ReadCount > 1)
                 ? InstantQuotationPhysicalAnalysisInputResult.Unavailable(InstantQuotationPhysicalAnalysisInputFailure.ContentUnavailable)
                 : new(Bytes, InstantQuotationPhysicalAnalysisInputFailure.None, FileId, "part.stl", Digest);

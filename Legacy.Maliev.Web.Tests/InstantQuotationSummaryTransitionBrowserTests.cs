@@ -1,5 +1,3 @@
-using System.Net;
-using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
@@ -74,26 +72,46 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         await using var fixture = await Fixture.CreateAsync(culture, width, output, holdUnrelatedFetch: true);
         Assert.True(fixture.HasPendingNavigationControl);
         await fixture.AssertFinalAsync(2);
+        fixture.Control.HoldAuthorization = true;
         fixture.Control.Armed = true;
+        InstantQuotationSessionState captured;
         try
         {
             await fixture.Quantity.FillAsync("4");
             await fixture.Quantity.PressAsync("Tab");
             await fixture.Control.Pending.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
-            Assert.Equal(4, Assert.Single(fixture.Control.Captured!.Parts).Configuration.Quantity);
+            captured = Assert.IsType<InstantQuotationSessionState>(fixture.Control.Captured);
+            var paused = await fixture.StoredAsync();
+            Assert.Equal(captured.UpdatedAt, paused.UpdatedAt);
+            Assert.Equal(Assert.Single(captured.Parts).Configuration, Assert.Single(paused.Parts).Configuration);
+            Assert.Null(paused.QuoteAuthorization);
+            Assert.Equal(4, Assert.Single(captured.Parts).Configuration.Quantity);
             Assert.False(fixture.Control.Finished.Task.IsCompleted,
                 "The captured accepted quantity4 request must remain incomplete while its pricing callback is held.");
             Assert.Equal(600d, Assert.Single(Assert.IsType<InstantQuotationOrderQuote>(fixture.Control.Final).Parts).UnitPrice);
             Assert.True(fixture.HasPendingNavigationControl);
         }
-        finally { fixture.Control.ReleaseAll(); }
-        await fixture.Control.Finished.Task.WaitAsync(TimeSpan.FromSeconds(10));
-        var captured = Assert.IsType<InstantQuotationSessionState>(fixture.Control.Captured);
-        var stored = await fixture.StoredAsync();
-        Assert.Equal(captured.UpdatedAt, stored.UpdatedAt);
-        Assert.Equal(Assert.Single(captured.Parts).Configuration, Assert.Single(stored.Parts).Configuration);
+        finally { fixture.Control.ReleasePricing(); }
+        try
+        {
+            await fixture.Control.Authorization.Entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await fixture.Control.Finished.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.False(fixture.Control.AuthorizationStored.Task.IsCompleted,
+                "Pricing return must not count as completed authorization persistence.");
+            await Assertions.Expect(fixture.Review).ToBeDisabledAsync();
+            var beforeAuthorization = await fixture.StoredAsync();
+            Assert.Equal(captured.UpdatedAt, beforeAuthorization.UpdatedAt);
+            Assert.Equal(Assert.Single(captured.Parts).Configuration, Assert.Single(beforeAuthorization.Parts).Configuration);
+            Assert.Null(beforeAuthorization.QuoteAuthorization);
+        }
+        finally { fixture.Control.Authorization.Release.TrySetResult(); }
+        await fixture.Control.AuthorizationStored.Task.WaitAsync(TimeSpan.FromSeconds(10));
         await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
         await fixture.AssertFinalAsync(4);
+        var stored = await fixture.StoredAsync();
+        Assert.True(stored.UpdatedAt > captured.UpdatedAt,
+            "Successful authorization persistence must advance the paused accepted revision.");
+        Assert.Equal(Assert.Single(captured.Parts).Configuration, Assert.Single(stored.Parts).Configuration);
         Assert.True(fixture.HasPendingNavigationControl);
         await fixture.AssertHealthAsync();
     }
@@ -119,6 +137,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
             await fixture.CaptureAsync("completed-frame");
         }
         finally { fixture.Control.ReleaseAll(); }
+        await fixture.Control.Finished.Task.WaitAsync(TimeSpan.FromSeconds(10));
         await Assertions.Expect(fixture.Review).ToBeEnabledAsync();
         await fixture.AssertFinalAsync(4);
         await fixture.CaptureAsync("final");
@@ -205,7 +224,11 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         public Pause Pending { get; } = new();
         public Pause Completed { get; } = new();
         public TaskCompletionSource Finished { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public void ReleaseAll() { Pending.Release.TrySetResult(); Completed.Release.TrySetResult(); }
+        public bool HoldAuthorization;
+        public Pause Authorization { get; } = new();
+        public TaskCompletionSource AuthorizationStored { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public void ReleasePricing() { Pending.Release.TrySetResult(); Completed.Release.TrySetResult(); }
+        public void ReleaseAll() { ReleasePricing(); Authorization.Release.TrySetResult(); }
     }
 
     private sealed class Boundary(IInstantQuotationAuthoritativePricingService inner,
@@ -257,6 +280,37 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         }
     }
 
+    private sealed class AuthorizationBoundaryStore(IInstantQuotationSessionStore inner, Control control)
+        : IInstantQuotationSessionStore
+    {
+        public Task<InstantQuotationSessionState> CreateAsync(string? owner, InstantQuotationOrderState request,
+            CancellationToken token) => inner.CreateAsync(owner, request, token);
+        public Task<InstantQuotationSessionState?> GetAsync(string id, string? owner, CancellationToken token)
+            => inner.GetAsync(id, owner, token);
+        public Task<bool> RemoveAsync(string id, string? owner, CancellationToken token)
+            => inner.RemoveAsync(id, owner, token);
+        public async Task<bool> PutAsync(InstantQuotationSessionState session, string? owner, CancellationToken token)
+        {
+            var captured = control.Captured;
+            var gated = control.HoldAuthorization && captured is not null
+                && session.SessionId == captured.SessionId && owner == captured.OwnerIdentity
+                && session.QuoteAuthorization is not null
+                && session.Parts.Single().Configuration == captured.Parts.Single().Configuration;
+            if (gated)
+            {
+                control.Authorization.Entered.TrySetResult();
+                await control.Authorization.Release.Task.WaitAsync(token);
+            }
+            var stored = await inner.PutAsync(session, owner, token);
+            if (gated)
+            {
+                Assert.True(stored, "The owned authorization persistence must succeed.");
+                control.AuthorizationStored.TrySetResult();
+            }
+            return stored;
+        }
+    }
+
     private sealed class Host(Control control) : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -264,6 +318,13 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
             base.ConfigureWebHost(builder);
             builder.ConfigureServices(services =>
             {
+                var originalStore = services.Single(item => item.ServiceType == typeof(IInstantQuotationSessionStore));
+                services.RemoveAll<IInstantQuotationSessionStore>();
+                services.Add(new ServiceDescriptor(typeof(IInstantQuotationSessionStore), provider =>
+                    new AuthorizationBoundaryStore((IInstantQuotationSessionStore)(originalStore.ImplementationInstance
+                        ?? originalStore.ImplementationFactory?.Invoke(provider)
+                        ?? ActivatorUtilities.CreateInstance(provider, originalStore.ImplementationType!)), control),
+                    originalStore.Lifetime));
                 var original = services.Single(item => item.ServiceType == typeof(IInstantQuotationAuthoritativePricingService));
                 services.RemoveAll<IInstantQuotationAuthoritativePricingService>();
                 services.AddScoped<IInstantQuotationAuthoritativePricingService>(provider =>
@@ -298,13 +359,14 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         public ILocator PartPrice => Page.Locator("[data-workflow-part-price]");
         private Fixture() => Factory = new(Control);
 
+        private static int ReserveFreePort() => BrowserTestServerPort.Reserve();
+
         public static async Task<Fixture> CreateAsync(string culture, int width, ITestOutputHelper output, ReducedMotion motion = ReducedMotion.NoPreference, bool holdUnrelatedFetch = false)
         {
             var fixture = new Fixture { culture = culture };
             try
             {
-                var listener = new TcpListener(IPAddress.Loopback, 0);
-                listener.Start(); var port = ((IPEndPoint)listener.LocalEndpoint).Port; listener.Stop();
+                var port = ReserveFreePort();
                 var origin = new Uri($"http://127.0.0.1:{port}");
                 fixture.Factory.UseKestrel(port);
                 using var client = fixture.Factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
@@ -383,6 +445,10 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
 
         private async Task ObserveNavigationAsync(string phase, Uri origin, ITestOutputHelper output, Func<Task<IResponse?>> navigate)
         {
+            using var responseProbe = Factory.Services.GetRequiredService<TestResponseProbeRegistry>()
+                .TryBeginNavigation(origin, TestResponseRequestLabel.BaseQuotation);
+            using var milestones = new MaterialInitialNavigationDiagnostics(
+                Page, origin, responseProbe?.Probe, phase, "domcontentloaded");
             var gate = new object();
             var pending = new Dictionary<IRequest, string>();
             int started = 0, finished = 0, failed = 0, omitted = 0;
@@ -414,14 +480,19 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
             Page.Response += onResponse;
             try
             {
-                var response = await navigate();
-                Assert.NotNull(response);
-                Assert.Equal(200, response.Status);
-                // InputFile.init runs through JS interop after the real Interactive Server circuit renders.
-                // SSR markup alone cannot set this binding; global network quiet is not session readiness.
-                await Page.WaitForFunctionAsync(
-                    "() => typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'number'",
-                    options: new() { Timeout = Math.Max(1, 30000 - timer.ElapsedMilliseconds) });
+                await milestones.RunAsync(async () =>
+                {
+                    var response = await navigate();
+                    Assert.NotNull(response);
+                    Assert.Equal(200, response.Status);
+                    // InputFile.init runs through JS interop after the real Interactive Server circuit renders.
+                    // SSR markup alone cannot set this binding; global network quiet is not session readiness.
+                    await Page.WaitForFunctionAsync(
+                        "() => typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'number'",
+                        options: new() { Timeout = Math.Max(1, 30000 - timer.ElapsedMilliseconds) });
+                    milestones.ObserveInputFileReady();
+                    return response;
+                }, output.WriteLine);
             }
             finally
             {
