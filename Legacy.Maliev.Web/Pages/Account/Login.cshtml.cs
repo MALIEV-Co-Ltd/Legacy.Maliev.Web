@@ -73,6 +73,8 @@ public sealed class Login(
 
     public IActionResult OnGet(string? email, string? returnUrl, bool accountCreated = false)
     {
+        if (DevelopmentCustomerFixture.IsActive(HttpContext))
+            return LocalRedirect("/InstantQuotation/3D-Printing");
         if (User.Identity?.IsAuthenticated == true)
         {
             return LocalRedirect("~/Account");
@@ -85,6 +87,22 @@ public sealed class Login(
             Notification = localizer["Account created. Check your email and follow the link to confirm your address before signing in."];
         }
         return Page();
+    }
+
+    /// <summary>Starts the Development-only local customer UI without creating a commercial customer session.</summary>
+    /// <returns>The fixed quotation redirect, or not found when the fixture is unavailable.</returns>
+    public async Task<IActionResult> OnPostDevelopmentCustomerFixtureAsync()
+    {
+        if (!await DevelopmentCustomerFixture.TrySignInAsync(HttpContext)) return NotFound();
+        return LocalRedirect("/InstantQuotation/3D-Printing");
+    }
+
+    /// <summary>Clears only the active Development fixture cookie without revoking a real customer session.</summary>
+    /// <returns>The fixed public home redirect, or not found when the fixture is inactive.</returns>
+    public async Task<IActionResult> OnPostDevelopmentCustomerFixtureSignOutAsync()
+    {
+        if (!await DevelopmentCustomerFixture.TrySignOutAsync(HttpContext)) return NotFound();
+        return LocalRedirect("/");
     }
 
     public async Task<IActionResult> OnPostLoginAsync(CancellationToken cancellationToken)

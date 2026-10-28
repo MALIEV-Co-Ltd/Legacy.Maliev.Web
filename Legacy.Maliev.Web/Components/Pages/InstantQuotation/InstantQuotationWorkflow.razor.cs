@@ -36,7 +36,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private AdditiveLeadTimeRange? developmentLeadTime;
     private bool DevelopmentPreviewEnabled =>
         Services.GetService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>()?.IsDevelopment() == true;
-    private bool HasDevelopmentPreview => DevelopmentPreviewEnabled && developmentPreviews.Count > 0;
+    private bool HasDevelopmentPreview => developmentPreviews.Count > 0 && DevelopmentPreviewEnabled;
     private bool DevelopmentPriceAvailable => developmentPreviews.Count > 0
         && developmentPreviews.Values.All(part => part.Price is not null)
         && developmentTotal is not null && developmentLeadTime is not null;
@@ -46,6 +46,8 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool initializationFailed;
     private InputFile? fileInput;
     private ElementReference workflowSection;
+    private ElementReference developmentPreviewButton;
+    private bool developmentCustomerPreview;
     private ElementReference previewCanvas;
     private ElementReference incompletePreviewCanvas;
     private string? incompletePreviewKey;
@@ -120,9 +122,20 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     private bool ThicknessNeedsAttention => thicknessStatuses.Values.Any(
         status => status.Warning || status.Incomplete);
 
-    private InstantQuotationWorkflowState State => initializationFailed
+    private InstantQuotationWorkflowState UnderlyingState => initializationFailed
         ? InstantQuotationWorkflowState.Error
         : workflow?.State ?? InitialState;
+
+    private bool CanShowDevelopmentCustomerPreview => CustomerModel.IsDevelopmentCustomerFixture
+        && !disposed && !initializationFailed && !batchInProgress && !bulkApplying && developmentRetries.Count == 0
+        && !IsRepricing && pendingConfigurations.Count == 0 && failedPreviewSelections.Count == 0
+        && !(HasDevelopmentPreview && Parts.Count == 0)
+        && pendingPreviewSelections.Count == 0 && !HasLocalFileFailures && incompletePreviewKey is null
+        && UnderlyingState is not (InstantQuotationWorkflowState.Error or InstantQuotationWorkflowState.Uploading or InstantQuotationWorkflowState.Submitted);
+
+    private InstantQuotationWorkflowState State => developmentCustomerPreview && CanShowDevelopmentCustomerPreview
+        ? InstantQuotationWorkflowState.CustomerDetails
+        : UnderlyingState;
 
     private bool HasLocalFileFailures => failedPreviewSelections.Count > 0
         || Uploads.Any(upload => upload.Status is InstantQuotationWorkflowUploadStatus.Error
@@ -2051,6 +2064,13 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         pendingFocus = PendingWorkflowFocus.Review;
     }
 
+    private void ShowDevelopmentCustomerPreview()
+    {
+        if (!CanShowDevelopmentCustomerPreview) return;
+        developmentCustomerPreview = true;
+        pendingFocus = PendingWorkflowFocus.CustomerDetails;
+    }
+
     private void EnterCustomerDetails()
     {
         if (disposed || InputDisabled || IsRepricing || failedPreviewSelections.Count > 0) return;
@@ -2068,6 +2088,12 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
 
     private void ReturnToReview()
     {
+        if (developmentCustomerPreview)
+        {
+            developmentCustomerPreview = false;
+            pendingFocus = PendingWorkflowFocus.DevelopmentPreview;
+            return;
+        }
         workflow?.ReturnToReview();
         pendingFocus = PendingWorkflowFocus.Review;
     }
@@ -2079,6 +2105,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
             PendingWorkflowFocus.Configuration => configurationSection,
             PendingWorkflowFocus.Review => reviewSection,
             PendingWorkflowFocus.CustomerDetails => customerDetailsSection,
+            PendingWorkflowFocus.DevelopmentPreview => developmentPreviewButton,
             _ => default,
         };
         if (pendingFocus is PendingWorkflowFocus.None)
@@ -2474,6 +2501,7 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         Configuration,
         Review,
         CustomerDetails,
+        DevelopmentPreview,
     }
 
     internal sealed record WorkflowSectionVisibility(

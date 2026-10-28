@@ -27,6 +27,15 @@
         }
     }
 
+    @if (CanShowDevelopmentCustomerPreview && !VisibleSections.CustomerDetails && !VisibleSections.Submitted)
+    {
+        <button type="button" class="maliev-button maliev-button--secondary"
+                data-development-customer-preview @ref="developmentPreviewButton" @onclick="ShowDevelopmentCustomerPreview">
+            <i class="fas fa-flask" aria-hidden="true"></i>
+            @Localizer["Preview customer details"]
+        </button>
+    }
+
     @if (VisibleSections.Upload)
     {
         <div class="instant-quote__gltf-unit">

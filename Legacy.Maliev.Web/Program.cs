@@ -477,6 +477,7 @@ builder.Services.AddLegacyServiceClients(builder.Configuration);
 builder.Services.AddThaiLookupClient();
 builder.Services.AddThaiLookupBoundary();
 builder.Services.AddLegacyAccountAuthentication();
+DevelopmentCustomerFixture.AddServices(builder.Services, builder.Environment);
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -613,6 +614,7 @@ app.UseCors();
 if (testingRateLimiter is not null) testingRateLimiter.Use(app);
 else app.UseRateLimiter();
 app.UseAuthentication();
+if (app.Environment.IsDevelopment()) app.Use(DevelopmentCustomerFixture.ObserveAsync);
 app.UseMiddleware<InstantQuotationSessionIdentityMiddleware>();
 app.UseAuthorization();
 app.UseAntiforgery();

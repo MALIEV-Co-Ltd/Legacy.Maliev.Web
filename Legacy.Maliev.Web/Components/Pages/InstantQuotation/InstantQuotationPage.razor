@@ -151,6 +151,8 @@
         };
         if (authenticatedProfile is not null)
             customerModel = InstantQuotationCustomerDisplayModel.FromProfile(customerModel, authenticatedProfile);
+        if (DevelopmentCustomerFixture.IsActive(context))
+            customerModel = DevelopmentCustomerFixture.ApplyProfile(customerModel);
     }
 
     private string LocalizedCountryName(Country country)
