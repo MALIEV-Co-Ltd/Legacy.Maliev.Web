@@ -11,6 +11,125 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
 {
+    /// <summary>The causal trace retains only bounded primitive metadata, never browser identities or text.</summary>
+    [Fact]
+    public void BatchMaterialTrace_RejectsPrivateFieldsInvalidValuesAndUnboundedRows()
+    {
+        const string secret = "private-batch-key-label-url-message-sentinel";
+        var valid = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            @event = 2,
+            owner = true,
+            requested = true,
+            @checked = false,
+            factoryReturned = true,
+            trusted = true,
+            information = false,
+            connected = true,
+            relativeMs = 7,
+            key = secret,
+            label = secret,
+            url = secret,
+            message = secret,
+        });
+        var rows = ParseBatchMaterialTrace("[" + string.Join(',', Enumerable.Repeat(valid, 40)) + "]");
+        Assert.Equal(32, rows.Count);
+        var retained = System.Text.Json.JsonSerializer.Serialize(rows);
+        Assert.DoesNotContain(secret, retained, StringComparison.Ordinal);
+        using var document = System.Text.Json.JsonDocument.Parse(retained);
+        Assert.All(document.RootElement.EnumerateArray(), row => Assert.Equal(
+            new[] { "Event", "Owner", "Requested", "Checked", "FactoryReturned", "Trusted", "Information", "Connected", "RelativeMs" },
+            row.EnumerateObject().Select(property => property.Name)));
+        foreach (var invalid in new[]
+        {
+            valid.Replace("\"event\":2", "\"event\":8", StringComparison.Ordinal),
+            valid.Replace("\"relativeMs\":7", "\"relativeMs\":-1", StringComparison.Ordinal),
+            valid.Replace("\"relativeMs\":7", "\"relativeMs\":300001", StringComparison.Ordinal),
+            valid.Replace("\"owner\":true", "\"owner\":\"private\"", StringComparison.Ordinal),
+        })
+        {
+            var paired = ParseBatchMaterialTrace("[" + invalid + "," + valid + "]");
+            var control = Assert.Single(paired);
+            Assert.Equal(2, control.Event);
+            Assert.Equal(7L, control.RelativeMs);
+            Assert.True(control.Owner);
+        }
+    }
+
+    private readonly record struct BatchMaterialTraceRow(int Event, bool Owner, bool Requested, bool Checked,
+        bool FactoryReturned, bool Trusted, bool Information, bool Connected, long RelativeMs);
+
+    private static IReadOnlyList<BatchMaterialTraceRow> ParseBatchMaterialTrace(string raw)
+    {
+        if (string.IsNullOrEmpty(raw) || raw.Length > 16384) return [];
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(raw);
+            if (document.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array) return [];
+            var rows = new List<BatchMaterialTraceRow>();
+            foreach (var value in document.RootElement.EnumerateArray().Take(32))
+            {
+                if (value.ValueKind != System.Text.Json.JsonValueKind.Object
+                    || !value.TryGetProperty("event", out var kind) || kind.ValueKind != System.Text.Json.JsonValueKind.Number
+                    || !kind.TryGetInt32(out var code) || code is < 0 or > 7
+                    || !value.TryGetProperty("relativeMs", out var elapsed) || elapsed.ValueKind != System.Text.Json.JsonValueKind.Number
+                    || !elapsed.TryGetInt64(out var milliseconds) || milliseconds is < 0 or > 300000) continue;
+                var names = new[] { "owner", "requested", "checked", "factoryReturned", "trusted", "information", "connected" };
+                var flags = new bool[names.Length];
+                var valid = true;
+                for (var index = 0; index < names.Length; index++)
+                {
+                    if (!value.TryGetProperty(names[index], out var flag)
+                        || flag.ValueKind is not (System.Text.Json.JsonValueKind.True or System.Text.Json.JsonValueKind.False))
+                    {
+                        valid = false;
+                        break;
+                    }
+                    flags[index] = flag.GetBoolean();
+                }
+                if (valid) rows.Add(new BatchMaterialTraceRow(code, flags[0], flags[1], flags[2], flags[3],
+                    flags[4], flags[5], flags[6], milliseconds));
+            }
+            return rows;
+        }
+        catch (System.Text.Json.JsonException) { return []; }
+    }
+
+    private async Task CaptureBatchMaterialTraceAsync(IPage page)
+    {
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            var read = page.EvaluateAsync<string>("() => JSON.stringify(window.source428Trace?.snapshot() ?? [])");
+            ObserveBatchTrace(read);
+            var rows = ParseBatchMaterialTrace(await read.WaitAsync(timeout.Token));
+            var retained = System.Text.Json.JsonSerializer.Serialize(rows);
+            output.WriteLine("[batch-material-trace] " + retained);
+            var directory = Path.Combine(AppContext.BaseDirectory, "TestResults", "material-display-browser-diagnostics");
+            Directory.CreateDirectory(directory);
+            var write = File.WriteAllTextAsync(Path.Combine(directory, $"batch-material-click-{Guid.NewGuid():N}.json"), retained, timeout.Token);
+            ObserveBatchTrace(write);
+            await write.WaitAsync(timeout.Token);
+        }
+        catch (Exception) { /* Diagnostic failure must preserve the original assertion. */ }
+    }
+
+    private static async Task StopBatchMaterialTraceAsync(IPage page)
+    {
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+            var stop = page.EvaluateAsync("() => window.source428Trace?.dispose()");
+            ObserveBatchTrace(stop);
+            await stop.WaitAsync(timeout.Token);
+        }
+        catch (Exception) { /* The existing owned-page close also releases the document observers. */ }
+    }
+
+    private static void ObserveBatchTrace(Task task) =>
+        _ = task.ContinueWith(static completed => { _ = completed.Exception; }, CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+
     [Fact]
     public async Task NinePartUpload_InteractionDuringPricing_DrainsAllPendingWork()
     {
@@ -41,12 +160,72 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
         });
         var errors = new List<string>();
         page.PageError += (_, error) => errors.Add(error);
+        await page.AddInitScriptAsync("""
+            (() => {
+              // 0 owner, 1 pointer, 2 capture, 3 bubble, 4 factory entry, 5 factory return, 6 checked mutation, 7 snapshot.
+              // Factory return is synchronous and does not claim that scheduled layout has completed.
+              const started = performance.now(), rows = [], returned = new WeakMap();
+              let expected = null, observed = null, closed = false;
+              const owner = root => !!expected && root?.closest('[data-workflow-material-picker]')?.dataset.browserPreviewKey === expected;
+              const find = () => [...document.querySelectorAll('[data-material-selector]')].find(owner) ?? null;
+              const append = (event, root, original = null) => {
+                try {
+                  if (closed || expected === null || rows.length >= 32) return;
+                  const target = original?.target instanceof Element ? original.target : null;
+                  const card = root?.querySelector('[role="radio"][data-material-key="PETG"]');
+                  rows.push({ event, owner: owner(root), requested: !!target?.closest('[role="radio"][data-material-key="PETG"]'),
+                    checked: card?.getAttribute('aria-checked') === 'true', factoryReturned: returned.get(root) === true,
+                    trusted: original?.isTrusted === true, information: !!target?.closest('.material-card__heading button'),
+                    connected: root?.isConnected === true, relativeMs: Math.max(0, Math.min(300000, Math.floor(performance.now() - started))) });
+                } catch { /* Observation must not change application work. */ }
+              };
+              const observer = new MutationObserver(records => {
+                for (const record of records) {
+                  if (record.target.matches('[role="radio"][data-material-key="PETG"]')) append(6, observed);
+                }
+              });
+              const observe = root => {
+                if (!owner(root) || observed === root) return;
+                observer.disconnect(); observed = root;
+                observer.observe(root, { subtree: true, attributes: true, attributeFilter: ['aria-checked'] });
+              };
+              const capture = (event, code) => {
+                try {
+                  const root = event.target instanceof Element ? event.target.closest('[data-material-selector]') : null;
+                  if (!root) return;
+                  observe(root); append(code, root, event);
+                } catch { /* Fixed metadata only; never intercept the event. */ }
+              };
+              const pointer = event => capture(event, 1), click = event => capture(event, 2), bubble = event => capture(event, 3);
+              document.addEventListener('pointerdown', pointer, true);
+              document.addEventListener('click', click, true);
+              document.addEventListener('click', bubble);
+              window.source428Trace = {
+                track(key) { try { expected = key; const root = find(); observe(root); append(0, root); } catch {} },
+                factory(code, root) { try { if (closed) return; returned.set(root, code === 5); observe(root); append(code, root); } catch {} },
+                snapshot() { append(7, find()); return rows.slice(); },
+                dispose() {
+                  closed = true; observer.disconnect(); observed = null; expected = null; rows.length = 0;
+                  document.removeEventListener('pointerdown', pointer, true);
+                  document.removeEventListener('click', click, true);
+                  document.removeEventListener('click', bubble);
+                  delete window.source428Trace;
+                }
+              };
+            })();
+            """);
         await page.RouteAsync("**/dist/instant-quotation-workflow.mjs", route => route.FulfillAsync(new RouteFulfillOptions
         {
             ContentType = "text/javascript",
             Body = """
                 export * from '/dist/instant-quotation-workflow.mjs?source428-original';
-                import { createInstantQuotationWorkflowInterop as actual } from '/dist/instant-quotation-workflow.mjs?source428-original';
+                import { createInstantQuotationWorkflowInterop as actual, createMaterialCardSelector as actualSelector } from '/dist/instant-quotation-workflow.mjs?source428-original';
+                export function createMaterialCardSelector(...args) {
+                  try { window.source428Trace?.factory(4, args[0]); } catch {}
+                  const controller = actualSelector(...args);
+                  try { window.source428Trace?.factory(5, args[0]); } catch {}
+                  return controller;
+                }
                 export async function createInstantQuotationWorkflowInterop(...args) {
                   const interop = await actual(...args);
                   const state = window.source428 = { pending: [], tasks: [], closed: false };
@@ -80,7 +259,13 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
                 new PageWaitForFunctionOptions { Timeout = 60000 });
             await Assertions.Expect(page.Locator("article[data-workflow-pending-parse]")).ToHaveCountAsync(9);
             var keys = await page.Locator("article[data-workflow-pending-parse]").EvaluateAllAsync<string[]>(
-                "rows => rows.map(row => row.dataset.browserPreviewKey)");
+                """
+                rows => {
+                  const keys = rows.map(row => row.dataset.browserPreviewKey);
+                  try { window.source428Trace?.track(keys[8]); } catch {}
+                  return keys;
+                }
+                """);
             Assert.Equal(9, keys.Distinct(StringComparer.Ordinal).Count());
             await ViewBatchKeyAsync(page, keys[8]);
             await MaterialCardBrowserActions.SelectAsync(page, "PETG");
@@ -131,10 +316,12 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
                 part.DisplayFileName == "partial-copy-8.glb" ? "PETG" : "PLA", part.Configuration.MaterialKey));
             await AssertActualBatchAuthorityAsync(scope.ServiceProvider, upload, session, estimates.LatestQuote!, 9);
             Assert.Empty(errors);
+            await CaptureBatchMaterialTraceAsync(page);
         }
         catch (Exception exception)
         {
             primary = exception;
+            await CaptureBatchMaterialTraceAsync(page);
             output.WriteLine("Batch exception kinds: " + string.Join(';', factory.ExceptionKinds));
             throw;
         }
@@ -159,7 +346,11 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
                 },
                 () => { estimates.StopAdmission(); estimates.Release.TrySetResult(); return ValueTask.CompletedTask; },
                 () => { upload.StopUploadAdmission(); return ValueTask.CompletedTask; },
-                async () => await CloseOwnedPageAsync(page, playwright),
+                async () =>
+                {
+                    try { await StopBatchMaterialTraceAsync(page); }
+                    finally { await CloseOwnedPageAsync(page, playwright); }
+                },
                 async () =>
                 {
                     if (callbackDrain is null) return;
