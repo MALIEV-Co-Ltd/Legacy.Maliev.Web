@@ -2980,10 +2980,22 @@ public sealed class InstantQuotationResinPresentationTests
     [InlineData("current")]
     [InlineData("render-replaced")]
     [InlineData("render-hidden")]
+    [InlineData("dom-detached")]
+    [InlineData("dom-query-disconnected")]
+    [InlineData("current-query-failure")]
+    [InlineData("current-query-cancelled")]
     public async Task ConsultationDropdown_BindFailureRespectsCurrentOwner(string boundary)
     {
         using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var javascript = new HeldConsultationJavaScript(lease.Token);
+        javascript.ElementConnected = boundary != "dom-detached";
+        javascript.MembershipFailure = boundary switch
+        {
+            "dom-query-disconnected" => new JSDisconnectedException("Controlled disconnected membership query."),
+            "current-query-failure" => new JSException("Controlled unavailable membership query."),
+            "current-query-cancelled" => new TaskCanceledException("Controlled cancelled membership query."),
+            _ => null,
+        };
         await using var coordinator = new InstantQuotationWorkflowCoordinator(
             new SessionStore(Part("PLA", BuildPreference.Standard)), new UnusedUploadClient(), new InstantQuotationPricingService(), null,
             authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
@@ -3027,17 +3039,25 @@ public sealed class InstantQuotationResinPresentationTests
                     Assert.Equal(new ElementReference("consultation-old"), type.GetField("consultationOwner", flags)!.GetValue(component));
                     Assert.Same(initial, bindingField.GetValue(component));
                 }
+                if (boundary is "dom-detached" or "dom-query-disconnected")
+                {
+                    Assert.Equal(new ElementReference("consultation-old"), type.GetField("consultationOwner", flags)!.GetValue(component));
+                    Assert.Equal(new ElementReference("consultation-old"), type.GetField("consultationToggle", flags)!.GetValue(component));
+                    Assert.Contains("id=\"instant-quote-consultation\"", root.ToHtmlString(), StringComparison.Ordinal);
+                }
                 javascript.Release.TrySetException(failure);
-                if (boundary == "current")
+                if (boundary is "current" or "current-query-failure" or "current-query-cancelled")
                 {
                     Assert.Same(failure, await Assert.ThrowsAsync<JSException>(() => initial.WaitAsync(lease.Token)));
                     Assert.True(initial.IsFaulted);
                     Assert.Equal(1, javascript.BindCalls);
+                    Assert.Equal(1, javascript.MembershipChecks);
                     return;
                 }
                 await Task.WhenAll(initial, next).WaitAsync(lease.Token);
                 Assert.True(initial.IsCompletedSuccessfully);
                 Assert.True(next.IsCompletedSuccessfully);
+                Assert.Equal(boundary is "dom-detached" or "dom-query-disconnected" ? 1 : 0, javascript.MembershipChecks);
                 if (boundary is "hidden" or "render-hidden")
                     await EventCallback.Factory.Create(component, coordinator.ReturnToConfiguration).InvokeAsync();
                 await Bind(boundary is "render-hidden" or "render-replaced" ? initial : next,
@@ -3071,9 +3091,20 @@ public sealed class InstantQuotationResinPresentationTests
         internal readonly ConsultationReference First = new();
         internal readonly ConsultationReference Second = new();
         internal int BindCalls;
+        internal bool ElementConnected = true;
+        internal Exception? MembershipFailure;
+        internal int MembershipChecks;
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) => InvokeAsync<TValue>(identifier, default, args);
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken token, object?[]? args)
         {
+            if (identifier == "document.contains")
+            {
+                Assert.Equal(typeof(bool), typeof(TValue));
+                Assert.Equal(new ElementReference("consultation-old"), Assert.IsType<ElementReference>(Assert.Single(args!)));
+                MembershipChecks++;
+                if (MembershipFailure is not null) throw MembershipFailure;
+                return ValueTask.FromResult((TValue)(object)ElementConnected);
+            }
             if (identifier != "bootstrap.Dropdown.getOrCreateInstance") return ValueTask.FromResult(default(TValue)!);
             Assert.Single(args!);
             BindCalls++;

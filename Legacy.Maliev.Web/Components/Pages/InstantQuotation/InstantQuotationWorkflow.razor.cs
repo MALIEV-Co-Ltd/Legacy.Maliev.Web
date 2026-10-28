@@ -1410,6 +1410,16 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         {
             return;
         }
+        catch (JSException)
+        {
+            bool? connected = null;
+            try { connected = await JS.InvokeAsync<bool>("document.contains", owner); }
+            catch (JSDisconnectedException) { return; }
+            catch (JSException) { }
+            catch (OperationCanceledException) { }
+            if (connected is false) return;
+            throw;
+        }
         if (disposed || !owner.Equals(consultationOwner)) await DisposePreviewInteropAsync(controller);
         else
         {
