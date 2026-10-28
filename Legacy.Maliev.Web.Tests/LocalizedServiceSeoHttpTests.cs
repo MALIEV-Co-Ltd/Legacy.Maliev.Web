@@ -149,6 +149,9 @@ public sealed class LocalizedServiceSeoHttpTests(TestingWebApplicationFactory fa
             return;
         }
 
+        Assert.Equal(3, Regex.Matches(html, "https://shop\\.maliev\\.com/blogs/news/",
+            RegexOptions.CultureInvariant).Count);
+
         var guideId = route switch
         {
             "/services/3d-printing" => "printing-guides",
