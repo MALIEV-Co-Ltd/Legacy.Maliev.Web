@@ -95,11 +95,18 @@ public sealed class InstantQuotationPreviewInitializationTests
     private static InstantQuotationWorkflow Create(IJSRuntime runtime)
     {
         var component = new InstantQuotationWorkflow();
+        typeof(InstantQuotationWorkflow).GetProperty("Services", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(component, new NoOptionalServices());
         typeof(InstantQuotationWorkflow).GetProperty("JS", BindingFlags.Instance | BindingFlags.NonPublic)!
             .SetValue(component, runtime);
         typeof(InstantQuotationWorkflow).GetField("fileInput", BindingFlags.Instance | BindingFlags.NonPublic)!
             .SetValue(component, new InputFile());
         return component;
+    }
+
+    private sealed class NoOptionalServices : IServiceProvider
+    {
+        public object? GetService(Type serviceType) => null;
     }
 
     private static T Invoke<T>(InstantQuotationWorkflow component, string method, params object[] args) =>
