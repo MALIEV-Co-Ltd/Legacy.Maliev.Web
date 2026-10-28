@@ -2496,11 +2496,14 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                     MimeType = "application/pdf",
                     Buffer = System.Text.Encoding.UTF8.GetBytes("%PDF-1.7 unsupported model"),
                 });
-                var notices = page.Locator("[data-workflow-preview-notices]");
-                await Assertions.Expect(notices.Locator("[role='alert']")).ToBeVisibleAsync();
-                await AssertEmptyErrorReachableAsync(notices);
-                await notices.Locator("button").ClickAsync();
-                await Assertions.Expect(notices).ToHaveCountAsync(0);
+                var rejected = page.Locator("[data-workflow-failed-preview]");
+                await Assertions.Expect(page.Locator("[data-workflow-file-error]")).ToBeVisibleAsync();
+                await Assertions.Expect(rejected).ToHaveCountAsync(1);
+                var remove = rejected.Locator("[data-workflow-remove-failed]");
+                await remove.FocusAsync();
+                await remove.PressAsync("Enter");
+                await Assertions.Expect(rejected).ToHaveCountAsync(0);
+                await page.Keyboard.PressAsync("Control+Home");
 
                 temporaryFile = Path.Combine(Path.GetTempPath(), $"maliev-empty-selection-{Guid.NewGuid():N}.stl");
                 using (var file = new FileStream(temporaryFile, FileMode.CreateNew, FileAccess.Write, FileShare.None))
@@ -2528,7 +2531,10 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 element => {
                   const owner = element.closest('.instant-quote__workflow');
                   const bounds = owner.getBoundingClientRect();
-                  return Math.abs(bounds.height - 240) <= 1
+                  const minimum = getComputedStyle(document.body).overflowY === 'hidden'
+                    && getComputedStyle(owner).flexDirection !== 'column' ? 420 : 240;
+                  const expected = Math.max(minimum, Math.floor((visualViewport?.height || innerHeight) - Math.max(0, bounds.top)));
+                  return Math.abs(bounds.height - expected) <= 1
                     && [element, owner.querySelector('[data-workflow-gltf-unit]'), owner.querySelector('.iq-empty-dropzone')]
                       .every(node => { const r = node.getBoundingClientRect(); return r.height > 0 && r.top >= bounds.top - 1 && r.bottom <= bounds.bottom + 1; });
                 }

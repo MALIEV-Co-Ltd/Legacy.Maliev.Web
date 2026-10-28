@@ -848,6 +848,8 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                 const controls = configuration.querySelector('[data-workflow-material-color-quantity]');
                 const color = controls.querySelector('select[name="color"]');
                 const category = cards.querySelector('[data-material-category]');
+                const bulk = configuration.querySelector('[data-workflow-bulk-pricing]');
+                if (!bulk) throw new Error('The real quoted part must render its bulk-price rail.');
                 const total = configuration.querySelector('[data-workflow-order-total]');
                 const labels = [...controls.querySelectorAll('[data-workflow-build-preference] label')];
                 const c = configuration.getBoundingClientRect();
@@ -855,6 +857,18 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
                 return {
                     cardWidth: card.getBoundingClientRect().width,
                     listHeight: cards.getBoundingClientRect().height,
+                    listMinHeight: parseFloat(getComputedStyle(cards).minHeight),
+                    rootFontSize: parseFloat(getComputedStyle(document.documentElement).fontSize),
+                    scrollOwners: [configuration, content, cards, bulk].map(element => ({
+                        identity: element === cards ? 'materials' : element === bulk ? 'bulk' : element === content ? 'content' : 'configuration',
+                        overflowY: getComputedStyle(element).overflowY,
+                        minHeight: getComputedStyle(element).minHeight,
+                        maxHeight: getComputedStyle(element).maxHeight,
+                        scrollHeight: element.scrollHeight, clientHeight: element.clientHeight,
+                    })),
+                    nestedPortraitScroller: [configuration, content, cards, bulk].some(element =>
+                        ['auto', 'scroll'].includes(getComputedStyle(element).overflowY)
+                          && element.scrollHeight > element.clientHeight + 1),
                     controlsWidth: controls.getBoundingClientRect().width,
                     colorWidth: color.getBoundingClientRect().width,
                     footerShare: Math.round(footer.getBoundingClientRect().height / innerHeight * 100),
@@ -877,6 +891,12 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
         var context = $"{width}×{height}: {layout}";
         Assert.True(layout.GetProperty("cardWidth").GetDouble() >= 150, context);
         Assert.True(layout.GetProperty("listHeight").GetDouble() >= 120, context);
+        if (width < 1200)
+        {
+            var sourceListFloor = 15 * layout.GetProperty("rootFontSize").GetDouble();
+            Assert.True(layout.GetProperty("listMinHeight").GetDouble() >= sourceListFloor, context);
+            Assert.True(layout.GetProperty("listHeight").GetDouble() >= sourceListFloor, context);
+        }
         // The modern full-width control group replaces the original separate settings rail.
         Assert.True(layout.GetProperty("controlsWidth").GetDouble() >= 200, context);
         Assert.True(layout.GetProperty("colorWidth").GetDouble() >= 150, context);
@@ -894,6 +914,7 @@ public sealed class MaterialPricingDisplayBrowserTests(ITestOutputHelper output)
             Assert.True(layout.GetProperty("configWidth").GetDouble() >= width - 40, context);
             Assert.True(layout.GetProperty("viewerHeight").GetDouble() <= height * .45, context);
             Assert.False(layout.GetProperty("nestedConfigurationScroller").GetBoolean(), context);
+            Assert.False(layout.GetProperty("nestedPortraitScroller").GetBoolean(), context);
         }
         else
         {

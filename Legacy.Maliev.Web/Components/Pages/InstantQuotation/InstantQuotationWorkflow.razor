@@ -13,21 +13,18 @@
     <p id="instant-quote-status" class="instant-quote__sr-only" aria-live="polite" aria-atomic="true">@StatusMessage</p>
     <p data-workflow-preview-status class="instant-quote__sr-only" role="status">@PreviewStatusMessage</p>
 
-    @if (!VisibleSections.Parts && failedPreviewSelections.Count > 0)
+    @if (!VisibleSections.Parts)
     {
-        <div data-workflow-preview-notices tabindex="@(State is InstantQuotationWorkflowState.Empty ? "0" : null)"
-             role="region" aria-labelledby="instant-quote-workflow-heading">
-            @foreach (var failure in failedPreviewSelections)
-            {
-                <article data-workflow-failed-preview data-preview-failure="@failure.Value.Category">
-                    <h4>@failure.Value.Name</h4>
-                    <p role="alert">@LocalPreviewFailureMessage(failure.Value)</p>
-                    <button type="button" disabled="@(InputDisabled || IsRepricing)"
-                            aria-label="@Localizer["Remove {0}", failure.Value.Name]"
-                            @onclick="() => RemoveFailedPreviewAsync(failure.Key)">@Localizer["Remove"]</button>
-                </article>
-            }
-        </div>
+        @foreach (var failure in failedPreviewSelections)
+        {
+            <article data-workflow-failed-preview data-preview-failure="@failure.Value.Category">
+                <h4>@failure.Value.Name</h4>
+                <p role="alert">@LocalPreviewFailureMessage(failure.Value)</p>
+                <button type="button" disabled="@(InputDisabled || IsRepricing)"
+                        aria-label="@Localizer["Remove {0}", failure.Value.Name]"
+                        @onclick="() => RemoveFailedPreviewAsync(failure.Key)">@Localizer["Remove"]</button>
+            </article>
+        }
     }
 
     @if (VisibleSections.Upload)
@@ -69,7 +66,7 @@
                     <span>
                         @Localizer["or click to browse"] · STL, OBJ, 3MF, STEP, IGES, GLB, GLTF
                     </span>
-                    <span data-workflow-upload-limit>@Localizer["Up to {0} MB per file", InstantQuotationWorkflowCoordinator.MaximumFileSize / (1024 * 1024)]</span>
+                    <span data-workflow-upload-limit>@Localizer["Up to {0} MB per file · add multiple parts", InstantQuotationWorkflowCoordinator.MaximumFileSize / (1024 * 1024)]</span>
                 </label>
             }
         </section>
@@ -338,7 +335,7 @@
                 <span aria-hidden="true">＋</span>
                 <strong>@Localizer["Add parts"]</strong>
                 <small>STL, OBJ, 3MF, STEP, IGES, GLB, GLTF</small>
-                <small data-workflow-upload-limit>@Localizer["Up to {0} MB per file", InstantQuotationWorkflowCoordinator.MaximumFileSize / (1024 * 1024)]</small>
+                <small data-workflow-upload-limit>@Localizer["Up to {0} MB per file · add multiple parts", InstantQuotationWorkflowCoordinator.MaximumFileSize / (1024 * 1024)]</small>
             </label>
             @foreach (var pending in pendingPreviewSelections)
             {

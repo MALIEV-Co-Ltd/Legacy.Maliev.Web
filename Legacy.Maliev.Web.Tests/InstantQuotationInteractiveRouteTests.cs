@@ -440,8 +440,8 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<Testin
             Assert.True(dropzone.Success);
             var limitMb = InstantQuotationWorkflowCoordinator.MaximumFileSize / (1024 * 1024);
             var expected = culture == "th"
-                ? $"สูงสุด {limitMb} MB ต่อไฟล์"
-                : $"Up to {limitMb} MB per file";
+                ? $"สูงสุด {limitMb} MB ต่อไฟล์ · เพิ่มได้หลายชิ้น"
+                : $"Up to {limitMb} MB per file · add multiple parts";
 
             Assert.Contains(expected, dropzone.Groups["content"].Value, StringComparison.Ordinal);
             Assert.DoesNotContain("instant-quote__sr-only", dropzone.Value, StringComparison.Ordinal);

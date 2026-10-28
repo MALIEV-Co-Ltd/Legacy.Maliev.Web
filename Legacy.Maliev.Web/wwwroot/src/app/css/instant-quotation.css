@@ -318,7 +318,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     margin-top: 1.25rem;
 }
 
-.instant-quote__workflow[data-workflow-state="empty"] {
+.instant-quote__workflow[data-workflow-state="empty"]:not(:has(> [data-workflow-parts-panel])) {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     height: var(--iq-empty-viewport-height, max(240px, calc(100dvh - 4.5625rem)));
@@ -326,7 +326,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     background: #f5f8fc;
 }
 
-.instant-quote__workflow[data-workflow-state="empty"] [data-workflow-upload] {
+.instant-quote__workflow[data-workflow-state="empty"]:not(:has(> [data-workflow-parts-panel])) [data-workflow-upload] {
     display: grid;
     grid-template-rows: minmax(0, 1fr);
     min-height: 0;
@@ -338,31 +338,17 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     place-items: stretch;
 }
 
-.instant-quote__workflow[data-workflow-state="empty"]:has(> [data-workflow-preview-notices]) {
-    grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
-}
-
-.instant-quote__workflow[data-workflow-state="empty"] > [data-workflow-preview-notices] {
-    min-height: 0;
-    overflow: auto;
-}
-
-.instant-quote__workflow:not([data-workflow-state="empty"]) > [data-workflow-preview-notices] {
-    display: contents;
-}
-
-.instant-quote__workflow[data-workflow-state="empty"] [data-workflow-upload]:has(> [role="alert"]) {
+.instant-quote__workflow[data-workflow-state="empty"]:not(:has(> [data-workflow-parts-panel])) [data-workflow-upload]:has(> [role="alert"]) {
     grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
 }
 
-.instant-quote__workflow[data-workflow-state="empty"] [data-workflow-upload] > [role="alert"] {
+.instant-quote__workflow[data-workflow-state="empty"]:not(:has(> [data-workflow-parts-panel])) [data-workflow-upload] > [role="alert"] {
     min-height: 0;
     margin: 0;
     overflow: auto;
 }
 
-.instant-quote__workflow[data-workflow-state="empty"]:has(> [data-workflow-preview-notices]) .iq-empty-dropzone,
-.instant-quote__workflow[data-workflow-state="empty"] [data-workflow-upload]:has(> [role="alert"]) .iq-empty-dropzone {
+.instant-quote__workflow[data-workflow-state="empty"]:not(:has(> [data-workflow-parts-panel])) [data-workflow-upload]:has(> [role="alert"]) .iq-empty-dropzone {
     padding-block: 0;
 }
 
@@ -2046,6 +2032,18 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
 [data-material-selector] .material-card__heading { position: relative; min-height: 44px; align-items: center; padding-right: 2.75rem; }
 [data-material-selector] .material-card__heading strong { font-size: .8rem; overflow-wrap: anywhere; }
 [data-material-selector] .material-card__heading button { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 44px; min-width: 44px; height: 44px; margin: 0; padding: 0; }
+
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    [data-material-selector] [data-material-card-scroll] { min-height: 15rem; }
+}
+
+/* Portrait tablets keep the catalogue in the document's scroll path. */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+    [data-material-selector] [data-material-card-scroll] {
+        max-height: none;
+        overflow: visible;
+    }
+}
 
 .instant-quote__gltf-unit { display: grid; grid-column: 1 / -1; gap: .35rem; min-width: 0; }
 .instant-quote__gltf-unit select { min-height: 44px; max-width: 100%; }
