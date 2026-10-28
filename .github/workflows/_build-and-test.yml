@@ -308,7 +308,7 @@ jobs:
           dotnet test Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj
           --configuration Release --no-build --no-restore
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
-          --filter "FullyQualifiedName~BrowserFailureEvidenceTests|FullyQualifiedName~MaterialInitialNavigationDiagnosticsTests|FullyQualifiedName~MaterialInitialRequestStagesTests"
+          --filter "FullyQualifiedName~BrowserFailureEvidenceTests|FullyQualifiedName~MaterialInitialNavigationDiagnosticsTests|FullyQualifiedName~MaterialInitialRequestStagesTests|FullyQualifiedName~SummaryInitialRequestDiagnosticsTests"
           --logger trx --results-directory ./browser-failure-evidence-test-results
       - name: Verify current source integration browser and submission regressions
         run: |
