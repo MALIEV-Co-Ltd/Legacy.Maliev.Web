@@ -59,9 +59,10 @@ class Guards(unittest.TestCase):
 
     def test_corpus_and_immutable_image_required(self):
         receipt = {'status': 'accepted', 'sourceRevision': 'a' * 40,
-                   'assetCount': 22, 'fontCount': 12, 'imageId': 'sha256:' + 'b' * 64}
+                   'assetCount': 25, 'fontCount': 12, 'imageId': 'sha256:' + 'b' * 64}
         self.assertEqual(packaged.accepted_receipt(receipt, 'a' * 40), receipt)
-        for override in ({'assetCount': 21}, {'fontCount': 0}, {'imageId': 'mutable-tag'}):
+        for override in ({'assetCount': 21}, {'assetCount': 22}, {'assetCount': 24}, {'assetCount': 26},
+                         {'fontCount': 0}, {'imageId': 'mutable-tag'}):
             with self.assertRaises(ValueError):
                 packaged.accepted_receipt(dict(receipt, **override), 'a' * 40)
 
