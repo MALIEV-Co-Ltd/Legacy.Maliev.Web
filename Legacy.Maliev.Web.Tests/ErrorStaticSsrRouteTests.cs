@@ -40,8 +40,8 @@ public sealed class ErrorStaticSsrRouteTests : IClassFixture<TestingWebApplicati
     [Theory]
     [InlineData("en", 404, "404 — Page not found | MALIEV", "Page not found", "The page may have moved, or the address may be incorrect.")]
     [InlineData("th", 404, "404 — ไม่พบหน้าที่ต้องการ | MALIEV", "ไม่พบหน้าที่ต้องการ", "หน้านี้อาจถูกย้าย หรือลิงก์ไม่ถูกต้อง")]
-    [InlineData("en", 500, "Error | MALIEV", "Sorry. Something did not work properly.", "Please include this incident ID when contacting support.")]
-    [InlineData("th", 500, "ข้อผิดพลาด | MALIEV", "ขออภัย ระบบทำงานผิดพลาด", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ")]
+    [InlineData("en", 500, "Error | MALIEV", "Sorry. Something did not work properly.", "Error page preview")]
+    [InlineData("th", 500, "ข้อผิดพลาด | MALIEV", "ขออภัย ระบบทำงานผิดพลาด", "ตัวอย่างหน้าข้อผิดพลาด")]
     public async Task ErrorRoute_RendersLocalizedSafeStaticSsrAndPreservesResponseContract(
         string culture,
         int statusCode,
@@ -98,6 +98,9 @@ public sealed class ErrorStaticSsrRouteTests : IClassFixture<TestingWebApplicati
         Assert.DoesNotContain("_framework/", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("jquery", source, StringComparison.OrdinalIgnoreCase);
 
+        Assert.DoesNotContain(culture == "th"
+            ? "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ"
+            : "Please include this incident ID when contacting support.", source, StringComparison.Ordinal);
         Assert.DoesNotContain("id=\"incident-id\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("id=\"incident-occurred-at\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("mailto:support@maliev.com", source, StringComparison.Ordinal);

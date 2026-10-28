@@ -60,7 +60,10 @@ internal static class SyntheticPhysicalPricingTestData
                     "test-session", null, part.PartId, part.PhysicalAnalysisUpload!.FileId,
                     part.Geometry.Sha256, material.Key, part.Configuration.BuildPreference,
                     part.Configuration.Quantity, FdmRuntimeProfileCatalog.LoadEmbedded().ProfileVersion,
-                    part.Configuration.MaterialKey);
+                    part.Configuration.MaterialKey)
+                {
+                    GltfUnitPolicy = part.PhysicalAnalysisUpload!.GltfUnitPolicy,
+                };
                 evidence[(part.PartId, material.Key)] = new(
                     binding, physical, InstantQuotationBoundPhysicalAnalysisFailure.None,
                     Math.Abs(geometry.FootprintMm2 * geometry.HeightMm) / 1_000d);

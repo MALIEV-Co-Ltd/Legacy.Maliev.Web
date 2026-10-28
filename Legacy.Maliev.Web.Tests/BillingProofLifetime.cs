@@ -380,7 +380,7 @@ internal sealed class BillingProofLifetime : IAsyncDisposable
                 try { await host.CloseAsync(); } catch (Exception failure) { failures.Add("final-host:" + failure.GetType().Name); }
             if (failures.Count != 0) throw new BillingProofQuarantineException(failures) { Receipt = OwnershipReceipt() };
             foreach (var child in children.AsEnumerable().Reverse())
-                try { await child.CloseAsync(); } catch (Exception failure) { failures.Add("child:" + failure.GetType().Name); }
+                try { await child.CloseAsync(); } catch (Exception failure) { failures.Add("child:" + failure.GetType().Name + ":" + child.CleanupStage); }
             if (failures.Count != 0) throw new BillingProofQuarantineException(failures) { Receipt = OwnershipReceipt() };
             // Remove an action only after successful completion. Failed release stays owned for retry.
             while (dependencies.Count != 0)
@@ -776,11 +776,27 @@ internal sealed class BillingChildLease(IBillingChildProcess process)
     private bool readersClosed;
     private bool released;
     private Task? readerJoin;
-    internal object Receipt => new { dispatched, identityCaptured, exitVerified, noChildVerified, readersClosed, released, process = process.Receipt };
+    internal string CleanupStage { get; private set; } = "not-started";
+    internal object Receipt => new { dispatched, identityCaptured, exitVerified, noChildVerified, readersClosed, released, cleanupStage = CleanupStage, process = process.Receipt };
     internal bool HasExited => process.HasExited;
     internal int ExitCode => process.ExitCode;
     internal bool ReaderFailed => process.ReaderFailed;
     internal Task WaitForExitAsync() => process.WaitForExitAsync();
+    internal async Task<string> StartupFailureAsync(CancellationToken token)
+    {
+        const string suppressed = "Disposable service startup failed; credential-bearing output suppressed.";
+        if (!process.HasExited) return suppressed;
+        var startup = "NotObserved";
+        try
+        {
+            await process.JoinReadersAsync().WaitAsync(token);
+            if (process is BillingSystemChild child && child.StartupFailure != BillingStartupFailure.NotObserved)
+                startup = "StartupFailure/HostInitialization/" + child.StartupFailure;
+        }
+        catch (Exception) { startup = "ReadersUnsettled"; } // Preserve the original failed readiness assertion.
+        try { return $"Disposable service startup failed; exitCode={process.ExitCode}; startup={startup}; credential-bearing output suppressed."; }
+        catch (Exception) { return suppressed + " Exit metadata unavailable."; }
+    }
     internal void Start()
     {
         dispatched = true;
@@ -798,31 +814,54 @@ internal sealed class BillingChildLease(IBillingChildProcess process)
             if (dispatched && !identityCaptured)
             {
                 // Metadata acquisition may have failed after successful Start; recover only the original handle.
+                CleanupStage = "verify-no-live-child";
                 if (process.VerifyNoLiveChild()) { noChildVerified = process.StartRefused; exitVerified = !noChildVerified; }
-                else { process.CaptureIdentity(); identityCaptured = true; }
+                else { CleanupStage = "capture-identity"; process.CaptureIdentity(); identityCaptured = true; }
             }
             if (!exitVerified && !noChildVerified)
             {
+                CleanupStage = "observe-exit";
                 if (!process.HasExited)
                 {
+                    CleanupStage = "request-graceful-stop";
                     process.RequestGracefulStop();
+                    CleanupStage = "wait-graceful-exit";
                     try { await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(2)); }
                     catch (TimeoutException) { /* Exact retained process is still owned. */ }
-                    if (!process.HasExited) process.KillExact();
+                    CleanupStage = "observe-exit";
+                    if (!process.HasExited) { CleanupStage = "kill-exact"; process.KillExact(); }
+                    CleanupStage = "wait-exit";
                     await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
                 }
+                CleanupStage = "verify-exit";
                 if (!process.HasExited) throw new InvalidOperationException("Owned process exit remains unverified.");
                 exitVerified = true;
             }
+            CleanupStage = "join-readers";
             if (readerJoin is null || readerJoin.IsFaulted || readerJoin.IsCanceled)
                 readerJoin = process.JoinReadersAsync();
             await readerJoin.WaitAsync(TimeSpan.FromSeconds(5));
-            if (!readersClosed) { process.CloseReaders(); readersClosed = true; }
+            if (!readersClosed) { CleanupStage = "close-readers"; process.CloseReaders(); readersClosed = true; }
+            CleanupStage = "close-handle";
             process.CloseHandle();
             released = true;
+            CleanupStage = "released";
         }
         finally { cleanup.Release(); }
     }
+}
+
+internal enum BillingStartupFailure
+{
+    NotObserved,
+    IOException,
+    SocketException,
+    AddressInUseException,
+    OptionsValidationException,
+    InvalidOperationException,
+    NpgsqlException,
+    PostgresException,
+    OtherException,
 }
 
 internal sealed class BillingSystemChild(ProcessStartInfo start) : IBillingChildProcess
@@ -842,6 +881,8 @@ internal sealed class BillingSystemChild(ProcessStartInfo start) : IBillingChild
     private bool stdoutClosed;
     private bool stderrClosed;
     private bool startRefused;
+    private int startupFailure;
+    internal BillingStartupFailure StartupFailure => (BillingStartupFailure)Volatile.Read(ref startupFailure);
     public bool HasExited => process.HasExited;
     public int ExitCode => process.ExitCode;
     public void Start()
@@ -870,19 +911,66 @@ internal sealed class BillingSystemChild(ProcessStartInfo start) : IBillingChild
     public void StartReaders()
     {
         stdout = DrainAsync(process.StandardOutput);
-        stderr = DrainAsync(process.StandardError);
+        stderr = DrainAsync(process.StandardError, observeStartupFailure: true);
     }
-    private static async Task DrainAsync(StreamReader reader)
+    internal async Task DrainAsync(StreamReader reader, bool observeStartupFailure = false)
     {
         var buffer = new char[2048];
+        var line = observeStartupFailure ? new StringBuilder() : null;
+        var oversized = false;
         long count = 0;
+        void CompleteLine()
+        {
+            if (line is null) return;
+            if (!oversized)
+                Interlocked.CompareExchange(ref startupFailure, (int)ClassifyStartupFailure(line.ToString()), (int)BillingStartupFailure.NotObserved);
+            line.Clear();
+            oversized = false;
+        }
         while (true)
         {
             var read = await reader.ReadAsync(buffer.AsMemory());
-            if (read == 0) return;
+            if (read == 0) { CompleteLine(); return; }
             count += read;
             if (count > 16L * 1024 * 1024) throw new InvalidOperationException("Owned child output quota exceeded; raw output suppressed.");
+            if (line is null) continue;
+            for (var index = 0; index < read; index++)
+            {
+                if (buffer[index] == '\n') { CompleteLine(); continue; }
+                if (oversized) continue;
+                if (line.Length == 4096) { line.Clear(); oversized = true; continue; }
+                line.Append(buffer[index]);
+            }
         }
+    }
+    internal static BillingStartupFailure ClassifyStartupFailure(string line)
+    {
+        if (line.Length > 4096) return BillingStartupFailure.NotObserved;
+        try
+        {
+            using var document = JsonDocument.Parse(line, new JsonDocumentOptions { MaxDepth = 4 });
+            var value = document.RootElement;
+            if (value.ValueKind != JsonValueKind.Object
+                || !value.TryGetProperty("eventId", out var id) || id.ValueKind != JsonValueKind.Number || !id.TryGetInt32(out var number) || number != 5102
+                || !value.TryGetProperty("severity", out var severity) || severity.ValueKind != JsonValueKind.String || severity.GetString() != "CRITICAL"
+                || !value.TryGetProperty("logger", out var logger) || logger.ValueKind != JsonValueKind.String || logger.GetString() != "Maliev.Aspire.ServiceDefaults.Diagnostics.PrivateStartupBoundary"
+                || !value.TryGetProperty("EventName", out var name) || name.ValueKind != JsonValueKind.String || name.GetString() != "StartupFailure"
+                || !value.TryGetProperty("Operation", out var operation) || operation.ValueKind != JsonValueKind.String || operation.GetString() != "HostInitialization"
+                || !value.TryGetProperty("exceptionType", out var exception) || exception.ValueKind != JsonValueKind.String)
+                return BillingStartupFailure.NotObserved;
+            return exception.GetString() switch
+            {
+                "System.IO.IOException" => BillingStartupFailure.IOException,
+                "System.Net.Sockets.SocketException" => BillingStartupFailure.SocketException,
+                "Microsoft.AspNetCore.Connections.AddressInUseException" => BillingStartupFailure.AddressInUseException,
+                "Microsoft.Extensions.Options.OptionsValidationException" => BillingStartupFailure.OptionsValidationException,
+                "System.InvalidOperationException" => BillingStartupFailure.InvalidOperationException,
+                "Npgsql.NpgsqlException" => BillingStartupFailure.NpgsqlException,
+                "Npgsql.PostgresException" => BillingStartupFailure.PostgresException,
+                _ => BillingStartupFailure.OtherException,
+            };
+        }
+        catch (JsonException) { return BillingStartupFailure.NotObserved; }
     }
     public Task WaitForExitAsync() => exitWait ??= process.WaitForExitAsync();
     public void RequestGracefulStop() { CaptureIdentity(); process.CloseMainWindow(); }

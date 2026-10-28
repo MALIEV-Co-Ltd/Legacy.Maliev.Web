@@ -1,0 +1,7 @@
+@page
+@inject IStringLocalizer<MaterialsSelectionContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["Choosing materials for manufactured parts | MALIEV"];
+    ViewData["Description"] = MetadataLocalizer["A practical material selection worksheet covering loads, heat, chemicals, manufacturing route, finishing, tolerances, and evidence."];
+}
+<component type="typeof(MaterialsSelectionContent)" render-mode="Static" />

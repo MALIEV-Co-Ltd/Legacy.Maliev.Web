@@ -66,22 +66,34 @@ public sealed partial class KnowledgeThreeDimensionalPrintingStaticSsrRouteTests
                 "CareerDetailPage.razor",
                 "CareerIndexPage.razor",
                 "ChangeEmailConfirmationPage.razor",
+                "CncCuttingToolsPage.razor",
+                "CncFeedsAndSpeedsPage.razor",
+                "CncGeometryAndWorkholdingPage.razor",
+                "CncHolesAndTolerancesPage.razor",
                 "CncMachiningPage.razor",
+                "CncMachiningProcessesPage.razor",
                 "CncMachiningSpecificationPage.razor",
                 "ContactPage.razor",
                 "CustomManufacturingPage.razor",
                 "EmailConfirmationPage.razor",
                 "ErrorPage.razor",
                 "FinishingAndColorPage.razor",
+                "FinishingHeatTreatmentPage.razor",
+                "FinishingSurfaceFinishesPage.razor",
                 "ForgotPasswordPage.razor",
                 "GuidelinesPage.razor",
                 "HomePage.razor",
+                "InspectionMeasuringPartsPage.razor",
                 "InstantQuotationPage.razor",
                 "KnowledgeIndexPage.razor",
                 "LegalPage.razor",
                 "LineContactPage.razor",
                 "LoginPage.razor",
                 "LogoutPage.razor",
+                "ManufacturingProcessSelectionPage.razor",
+                "MaterialsEngineeringPlasticsPage.razor",
+                "MaterialsMetalsPage.razor",
+                "MaterialsSelectionPage.razor",
                 "MemberAccountIndexPage.razor",
                 "MemberAddressPage.razor",
                 "MemberChangeEmailPage.razor",
@@ -120,27 +132,27 @@ public sealed partial class KnowledgeThreeDimensionalPrintingStaticSsrRouteTests
         "3D printing specifications | MALIEV",
         "Process, material, orientation, wall thickness, and post-processing all influence strength, appearance, and cost.",
         "Prepare a model for 3D printing",
-        "3D printing preparation",
-        "Export clean geometry",
-        "Describe functional needs",
-        "Plan for the process",
+        "A printable model needs more than a clean appearance on screen. Geometry, material, build direction, mating clearances, and finishing determine whether the result suits its intended use. Use this guide to explain the requirements that should be reviewed before quotation.",
+        "Check geometry and scale",
+        "Choose around the application",
+        "Separate layer height from tolerance",
         "View 3D printing service")]
     [InlineData(
         "th",
         "ข้อแนะนำงานพิมพ์ 3 มิติ | MALIEV",
         "กระบวนการ วัสดุ ทิศทาง ความหนาผนัง และการตกแต่ง ล้วนมีผลต่อความแข็งแรง รูปลักษณ์ และราคา",
         "เตรียมโมเดลสำหรับพิมพ์ 3 มิติ",
-        "การเตรียมงานพิมพ์ 3 มิติ",
-        "ส่งออกรูปทรงที่สมบูรณ์",
-        "อธิบายการใช้งาน",
-        "ออกแบบให้เหมาะกับกระบวนการ",
+        "โมเดลที่พิมพ์ได้ต้องมีมากกว่ารูปลักษณ์ที่ดีบนหน้าจอ รูปทรง วัสดุ ทิศทางการพิมพ์ ระยะสวมประกอบ และการตกแต่งล้วนมีผลต่อการใช้งาน คู่มือนี้ช่วยระบุข้อกำหนดที่ควรประเมินก่อนเสนอราคา",
+        "ตรวจสอบรูปทรงและสเกล",
+        "เลือกโดยยึดการใช้งาน",
+        "แยกความสูงชั้นพิมพ์จากค่าความคลาดเคลื่อน",
         "ดูบริการพิมพ์ 3 มิติ")]
     public async Task ThreeDimensionalPrintingSpecificationRoute_RendersCompleteLocalizedAccessibleDocument(
         string culture,
         string title,
         string description,
         string heading,
-        string eyebrow,
+        string lead,
         string firstStep,
         string secondStep,
         string thirdStep,
@@ -158,12 +170,12 @@ public sealed partial class KnowledgeThreeDimensionalPrintingStaticSsrRouteTests
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
-        Assert.Contains($">{eyebrow}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{lead}<", source, StringComparison.Ordinal);
         Assert.Contains($">{firstStep}<", source, StringComparison.Ordinal);
         Assert.Contains($">{secondStep}<", source, StringComparison.Ordinal);
         Assert.Contains($">{thirdStep}<", source, StringComparison.Ordinal);
         Assert.Contains($">{serviceLink}<", source, StringComparison.Ordinal);
-        Assert.Equal(3, Regex.Matches(source, "<section><span>[123]</span>", RegexOptions.CultureInvariant).Count);
+        Assert.Equal(4, Regex.Matches(source, "<section\\b[^>]*class=\"docs-section\"", RegexOptions.CultureInvariant).Count);
         Assert.Contains("href=\"/services/3d-printing\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
@@ -182,13 +194,15 @@ public sealed partial class KnowledgeThreeDimensionalPrintingStaticSsrRouteTests
         Assert.Contains("aria-current=\"page\"", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-open", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-close", source, StringComparison.Ordinal);
-        Assert.Contains("event.key === 'Escape'", source, StringComparison.Ordinal);
-        Assert.Contains("openButton.focus()", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/knowledges/guidelines\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/knowledges/workflow\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/knowledges/specifications/cnc-machining\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/knowledges/specifications/3d-printing\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/knowledges/specifications/3d-scanning\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
+        Assert.Contains("event.key === 'Escape'", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
+        Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
+        Assert.Contains("openButton.focus()", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
+        Assert.Contains($"href=\"/knowledges/guidelines?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/workflow?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/specifications/cnc-machining?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/specifications/3d-printing?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/specifications/3d-scanning?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
         Assert.DoesNotContain("jquery", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("new WOW", source, StringComparison.Ordinal);

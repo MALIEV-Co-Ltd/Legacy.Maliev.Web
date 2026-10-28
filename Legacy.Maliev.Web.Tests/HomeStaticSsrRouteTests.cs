@@ -1,6 +1,9 @@
 using System.Net;
 using System.Text.RegularExpressions;
+using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -34,31 +37,39 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.Contains("Results.LocalRedirect", program, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"@RouteOwner\"", content, StringComparison.Ordinal);
         Assert.Contains("type=\"typeof(HomeContent)\"", fallback, StringComparison.Ordinal);
+        Assert.Contains("HomeHeroSelection.GetVariant(Model.HttpContext, HostEnvironment)", fallback, StringComparison.Ordinal);
+
+        Assert.Contains("aria-labelledby=\"landing-services-directory-title\"", content, StringComparison.Ordinal);
+        Assert.Contains("landing-service-directory-link landing-service-card--directory-link", content, StringComparison.Ordinal);
+        Assert.Contains("landing-service-directory-preview", content, StringComparison.Ordinal);
+        Assert.Contains("landing-service-directory-option", content, StringComparison.Ordinal);
+        Assert.Contains("Do you have 3D files or drawings?", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("service-directory-finder.png", content, StringComparison.Ordinal);
     }
 
     [Theory]
     [InlineData(
         "en",
-        "Custom Manufacturing Services | MALIEV",
-        "Custom CNC, 3D printing, 3D scanning, and design services for prototypes and production parts in Bangkok and Nonthaburi.",
-        "custom part manufacturing thailand, 3d printing thailand, 3d scanning thailand, 3d design thailand, silicone casting thailand, low volume injection molding thailand, cnc machining thailand",
-        "Precision. Speed. Reliability.",
-        "Manufacturing Services for Prototypes and Production Parts",
+        "Functional Prototypes & Reverse Engineering | MALIEV",
+        "Turn ideas and existing parts into CAD and functional prototypes with MALIEV in Nonthaburi, Thailand. 3D design, CNC machining, 3D printing, 3D scanning and suitable molding processes.",
+        "functional prototypes, reverse engineering Thailand, 3D design, CNC machining, 3D printing, 3D scanning, replacement parts",
+        "Custom parts.",
+        "From CAD to assembly.",
         "Our Services",
         "How It Works",
         "Why Choose MALIEV",
-        "Ready to bring your ideas to life?")]
+        "Have an idea, drawing or sample part?")]
     [InlineData(
         "th",
-        "รับผลิตชิ้นส่วนตามแบบ | MALIEV",
-        "รับผลิตชิ้นส่วนตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ 3D ในนนทบุรีและกรุงเทพ",
-        "รับผลิตชิ้นส่วนตามแบบ, รับผลิตชิ้นงานตามแบบ, รับปริ้น 3D, รับพิมพ์ 3 มิติ, รับสแกน 3D, รับออกแบบ 3D, หล่อซิลิโคน, ฉีดพลาสติกจำนวนน้อย, รับ CNC ตามแบบ",
-        "แม่นยำ รวดเร็ว เชื่อถือได้",
-        "รับผลิตชิ้นส่วนตามแบบ ตั้งแต่ต้นแบบจนถึงการผลิตจริง",
+        "พัฒนาต้นแบบและวิศวกรรมย้อนกลับ | MALIEV",
+        "จากไอเดียและชิ้นงานตัวอย่าง สู่แบบ CAD และต้นแบบที่ใช้งานได้ ด้วยงานออกแบบ 3 มิติ CNC, 3D Printing, 3D Scanning และการขึ้นรูปที่เหมาะกับงาน โดย MALIEV นนทบุรี",
+        "พัฒนาต้นแบบ, วิศวกรรมย้อนกลับ, ออกแบบ 3 มิติ, CNC, พิมพ์ 3 มิติ, สแกน 3 มิติ, ชิ้นส่วนทดแทน",
+        "ชิ้นส่วนสั่งผลิต",
+        "จาก CAD ถึงงานประกอบ",
         "บริการของเรา",
         "ขั้นตอนการสั่งงาน",
         "ทำไมต้องเลือก MALIEV",
-        "พร้อมเปลี่ยนไอเดียของคุณให้เป็นชิ้นงานจริงหรือยัง?")]
+        "มีไอเดีย แบบงาน หรือชิ้นงานตัวอย่าง?")]
     public async Task HomeRoute_RendersCompleteLocalizedSeoAndLandingContent(
         string culture,
         string title,
@@ -87,10 +98,10 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.Contains($">{process}<", source, StringComparison.Ordinal);
         Assert.Contains($">{reasons}<", source, StringComparison.Ordinal);
         Assert.Contains($">{finalCallToAction}<", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(culture == "en" ? "href=\"/services?culture=en\"" : "href=\"/services\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/Contact\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(culture == "th" ? "ค้นหาบริการที่เหมาะกับคุณ" : "Find the right service", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/InstantQuotation/3D-Printing?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"{(culture == "en" ? "/services?culture=en" : "/services")}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"href=\"/Contact?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(culture == "th" ? "ดูบริการทั้งหมด" : "View all services", source, StringComparison.Ordinal);
         Assert.Contains("landing-service-card--injection", source, StringComparison.Ordinal);
         Assert.Contains("pp-injection-molded-component.webp", source, StringComparison.Ordinal);
         Assert.Contains("width=\"1700\" height=\"925\" loading=\"lazy\" decoding=\"async\"", source, StringComparison.Ordinal);
@@ -105,14 +116,14 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.Contains(
             culture == "th"
                 ? "ผลิตชิ้นงานซิลิโคนจำนวนน้อยด้วยแม่พิมพ์ที่พิมพ์ 3 มิติ โดยตรวจสอบวัสดุและผิวงานให้เหมาะกับการใช้งาน"
-                : "with material and finish reviewed for the application.",
+                : "with the material and finish reviewed for the application.",
             source,
             StringComparison.Ordinal);
-        Assert.Contains("landing-hero-cnc.webp", source, StringComparison.Ordinal);
-        Assert.Contains("landing-hero-printing.webp", source, StringComparison.Ordinal);
-        Assert.Contains("landing-hero-scanning.webp", source, StringComparison.Ordinal);
-        Assert.Contains("width=\"1672\" height=\"941\" loading=\"eager\" fetchpriority=\"high\"", source, StringComparison.Ordinal);
-        Assert.Contains("rel=\"preload\" as=\"image\" href=\"/src/images/landing/landing-hero-cnc.webp\"", source, StringComparison.Ordinal);
+        Assert.Contains("profile-hybrid-gripper-cutout.webp", source, StringComparison.Ordinal);
+        Assert.Contains("camera-bracket-deployment.webp", source, StringComparison.Ordinal);
+        Assert.Contains("camera-bracket-production-v5.webp", source, StringComparison.Ordinal);
+        Assert.Contains("width=\"1200\" height=\"800\" fetchpriority=\"high\" loading=\"eager\"", source, StringComparison.Ordinal);
+        Assert.Contains("rel=\"preload\" as=\"image\" href=\"/src/images/landing/profile-hybrid-gripper-cutout.webp\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-website-structured-data\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
@@ -203,9 +214,9 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
     {
         var fallbackFactory = factory.WithWebHostBuilder(builder => builder.UseSetting("BlazorRouting:Home", "false"));
         using var client = CreateClient(fallbackFactory);
-        var source = await client.GetStringAsync("/?culture=en");
+        var source = WebUtility.HtmlDecode(await client.GetStringAsync("/?culture=en"));
 
-        Assert.Contains("<title>Custom Manufacturing Services | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains("<title>Functional Prototypes & Reverse Engineering | MALIEV</title>", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"home-content\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }
@@ -233,20 +244,46 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         var steps = Regex.Matches(ordered, "<li>[\\s\\S]*?</li>", RegexOptions.CultureInvariant).Cast<Match>().ToArray();
         Assert.Equal(4, steps.Length);
         string[] headings = culture == "th"
-            ? ["อัปโหลดไฟล์ CAD", "ตรวจสอบใบเสนอราคา", "ยืนยันคำสั่งซื้อ", "รับชิ้นงาน"]
-            : ["Upload CAD files", "Review quotation", "Confirm order", "Receive parts"];
+            ? ["ไอเดีย แบบงาน หรือชิ้นงานตัวอย่าง", "ออกแบบ 3 มิติ", "เลือกกระบวนการผลิต", "ผลิตและตรวจสอบ"]
+            : ["Ideas, drawings or samples", "3D design", "Choose the process", "Build and inspect"];
         string[] descriptions = culture == "th"
-            ? ["ส่งไฟล์ CAD และรายละเอียดโครงการผ่านระบบที่ปลอดภัยของเรา", "รับใบเสนอราคาพร้อมราคา ระยะเวลาผลิต และคำแนะนำจากวิศวกร", "ยืนยันใบเสนอราคา แล้วเราจะเริ่มผลิตชิ้นงานของคุณ", "ชิ้นงานผ่านการตรวจสอบคุณภาพและจัดส่งถึงคุณอย่างปลอดภัย"]
-            : ["Submit your CAD files and project details through our secure portal.", "Receive a detailed quote with price, lead time, and engineering feedback.", "Approve the quote and we will start manufacturing your parts.", "Parts are quality-checked and delivered safely to your doorstep."];
-        string[] icons = ["fas fa-upload", "far fa-file-alt", "far fa-check-circle", "fas fa-box"];
+            ? ["ส่งสิ่งที่คุณมี พร้อมการใช้งานของชิ้นงาน", "สร้างหรือปรับแบบ CAD จากไอเดียหรือชิ้นงานเดิม", "พิจารณาวัสดุ รูปทรง และจำนวนร่วมกัน", "ผลิตและตรวจสอบตามข้อกำหนดที่ตกลงร่วมกัน"]
+            : ["Share what you have and how the part will be used.", "Create or refine CAD from your idea or existing part.", "Review material, geometry and quantity together.", "Build and inspect against the agreed requirements."];
+        string[] photographs = ["sketch", "cad", "prototypes", "inspection"];
+        Assert.DoesNotContain("landing-step-icon", process, StringComparison.Ordinal);
+        Assert.DoesNotContain("camera-bracket", process, StringComparison.Ordinal);
         for (var index = 0; index < steps.Length; index++)
         {
             Assert.Contains($"<h3>{headings[index]}</h3>", steps[index].Value, StringComparison.Ordinal);
             Assert.Contains($"<p>{descriptions[index]}</p>", steps[index].Value, StringComparison.Ordinal);
-            Assert.Contains($"<div class=\"landing-step-icon\"><i class=\"{icons[index]}\" aria-hidden=\"true\"></i></div>", steps[index].Value, StringComparison.Ordinal);
+            Assert.Contains($"home-enclosure-{photographs[index]}.webp", steps[index].Value, StringComparison.Ordinal);
+            Assert.Contains("class=\"landing-step-photo\"", steps[index].Value, StringComparison.Ordinal);
+            Assert.Contains("width=\"1200\" height=\"800\" loading=\"lazy\" decoding=\"async\"", steps[index].Value, StringComparison.Ordinal);
         }
     }
 
+    [Theory]
+    [InlineData("HomeContent.resx", "3D Design", "CNC Machining", "3D design", "CNC machining")]
+    [InlineData("HomeContent.th.resx", "ออกแบบ 3 มิติ", "งาน CNC ตามแบบ", "ออกแบบ 3 มิติ", "กัด CNC")]
+    public void HomeResources_UseUniqueCaseInsensitiveKeysAndKeepSceneSpecificCopy(
+        string file, string serviceDesign, string serviceCnc, string processDesign, string heroCnc)
+    {
+        var path = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "Resources",
+            "Components", "Pages", "Home", file);
+        var root = System.Xml.Linq.XDocument.Load(path).Root;
+        Assert.NotNull(root);
+        var entries = root.Elements("data").ToArray();
+        Assert.NotEmpty(entries);
+        Assert.All(entries.GroupBy(entry => entry.Attribute("name")?.Value
+                ?? throw new InvalidDataException("A Home resource key is required."), StringComparer.OrdinalIgnoreCase),
+            group => Assert.Single(group));
+        string? Value(string key) => entries.Single(entry => (string?)entry.Attribute("name") == key)
+            .Element("value")?.Value;
+        Assert.Equal(serviceDesign, Value("3D Design"));
+        Assert.Equal(serviceCnc, Value("CNC Machining"));
+        Assert.Equal(processDesign, Value("Home.Process.DesignTitle"));
+        Assert.Equal(heroCnc, Value("Home.Hero.CncLabel"));
+    }
 
     [Theory]
     [InlineData("en", true, "/services?culture=en", "Manufacturing services | MALIEV")]
@@ -259,36 +296,118 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         string expectedHref,
         string expectedTitle)
     {
-        using var host = factory.WithWebHostBuilder(builder => builder.UseSetting("BlazorRouting:Home", active ? "true" : "false"));
+        await using var host = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:Home", active ? "true" : "false");
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<ICountryClient>();
+                services.AddSingleton<ICountryClient, HomeNavigationCountryClient>();
+                services.RemoveAll<IInstantQuotationSubmissionService>();
+                services.AddSingleton<IInstantQuotationSubmissionService, HomeNavigationUnusedSubmissionService>();
+            });
+        });
         using var client = CreateClient(host);
-        using var homeResponse = await client.GetAsync($"/?culture={culture}&tracking=excluded");
-        var home = WebUtility.HtmlDecode(await homeResponse.Content.ReadAsStringAsync());
-
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using var homeResponse = await client.GetAsync($"/?culture={culture}&tracking=excluded", deadline.Token);
+        var home = WebUtility.HtmlDecode(await homeResponse.Content.ReadAsStringAsync(deadline.Token));
         Assert.Equal(HttpStatusCode.OK, homeResponse.StatusCode);
         Assert.Contains($"<html lang=\"{culture}\"", home, StringComparison.Ordinal);
-        var anchors = HomeAnchorRegex().Matches(home).Cast<Match>().ToArray();
-        foreach (var anchorClass in new[]
-        {
-            "landing-button-secondary",
-            "landing-service-directory-link"
-        })
-        {
-            var anchor = Assert.Single(anchors, candidate =>
-                candidate.Groups["classes"].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .Contains(anchorClass, StringComparer.Ordinal));
-            var href = anchor.Groups["href"].Value;
-            Assert.Equal(expectedHref, href);
 
-            using var destination = await client.GetAsync(href);
-            var services = WebUtility.HtmlDecode(await destination.Content.ReadAsStringAsync());
-
+        var directory = Assert.Single(HomeAnchorRegex().Matches(home).Cast<Match>(), anchor =>
+            anchor.Groups["classes"].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Contains("landing-service-directory-link", StringComparer.Ordinal));
+        Assert.Equal(expectedHref, directory.Groups["href"].Value);
+        using (var destination = await client.GetAsync(directory.Groups["href"].Value, deadline.Token))
+        {
+            var services = WebUtility.HtmlDecode(await destination.Content.ReadAsStringAsync(deadline.Token));
             Assert.Equal(HttpStatusCode.OK, destination.StatusCode);
+            Assert.Equal("/services", destination.RequestMessage?.RequestUri?.AbsolutePath);
+            Assert.Equal(culture == "en" ? "?culture=en" : string.Empty, destination.RequestMessage?.RequestUri?.Query);
             Assert.Contains($"<html lang=\"{culture}\"", services, StringComparison.Ordinal);
             Assert.Contains($"<title>{expectedTitle}</title>", services, StringComparison.Ordinal);
             Assert.Equal(active, services.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
             Assert.Contains("class=\"maliev-page maliev-page-main services-index-page\"", services, StringComparison.Ordinal);
             Assert.Contains("data-migration-component=\"service-breadcrumb\"", services, StringComparison.Ordinal);
         }
+
+        // The accepted carousel replaces the old secondary Services CTA with scene-specific destinations.
+        var scenes = Regex.Matches(home,
+            "<section\\b(?=[^>]*\\bclass=\"home-hero-option hero-(?<scene>assembly|partnership|journey)\")[^>]*>(?<body>.*?)</section>",
+            RegexOptions.Singleline | RegexOptions.CultureInvariant).Cast<Match>().ToArray();
+        Assert.Equal(new[] { "assembly", "partnership", "journey" }, scenes.Select(scene => scene.Groups["scene"].Value));
+        foreach (var scene in scenes)
+        {
+            var paths = scene.Groups["scene"].Value == "assembly"
+                ? new[] { "/Contact", "/InstantQuotation/3D-Printing" }
+                : new[] { "/Contact", "/About" };
+            var anchors = HomeAnchorRegex().Matches(scene.Groups["body"].Value).Cast<Match>().ToArray();
+            Assert.Equal(paths.Select(path => $"{path}?culture={culture}"), anchors.Select(anchor => anchor.Groups["href"].Value));
+            foreach (var anchor in anchors)
+            {
+                var href = anchor.Groups["href"].Value;
+                var expectedPath = href[..href.IndexOf('?')];
+                var requiresRedirect = expectedPath is "/Contact" or "/About";
+                // CanonicalUrlPolicy preserves the historical quotation casing for its interactive bootstrap.
+                var canonicalPath = requiresRedirect ? expectedPath.ToLowerInvariant() : expectedPath;
+                using var emittedResponse = await client.GetAsync(href, deadline.Token);
+                if (requiresRedirect)
+                {
+                    Assert.Equal(HttpStatusCode.MovedPermanently, emittedResponse.StatusCode);
+                    var location = emittedResponse.Headers.Location;
+                    Assert.NotNull(location);
+                    Assert.False(location.IsAbsoluteUri);
+                    Assert.Equal($"{canonicalPath}?culture={culture}", location.OriginalString);
+                    Assert.Equal(client.BaseAddress!.GetLeftPart(UriPartial.Authority),
+                        new Uri(client.BaseAddress, location).GetLeftPart(UriPartial.Authority));
+                }
+                else
+                {
+                    Assert.Equal(HttpStatusCode.OK, emittedResponse.StatusCode);
+                    Assert.Null(emittedResponse.Headers.Location);
+                }
+                using var canonicalResponse = requiresRedirect
+                    ? await client.GetAsync(emittedResponse.Headers.Location!, deadline.Token) : null;
+                var destination = canonicalResponse ?? emittedResponse;
+                var page = WebUtility.HtmlDecode(await destination.Content.ReadAsStringAsync(deadline.Token));
+                Assert.Equal(HttpStatusCode.OK, destination.StatusCode);
+                Assert.Null(destination.Headers.Location);
+                Assert.Equal(canonicalPath, destination.RequestMessage?.RequestUri?.AbsolutePath);
+                Assert.Equal($"?culture={culture}", destination.RequestMessage?.RequestUri?.Query);
+                Assert.Contains($"<html lang=\"{culture}\"", page, StringComparison.Ordinal);
+                var title = expectedPath switch
+                {
+                    "/Contact" => active ? "Contact MALIEV | Manufacturing Services" : "Contact MALIEV",
+                    "/About" => culture == "th" ? "เกี่ยวกับ MALIEV | พัฒนาต้นแบบและวิศวกรรมย้อนกลับ" : "About MALIEV | Prototype Development & Reverse Engineering",
+                    _ => culture == "th" ? "ประเมินราคาพิมพ์ 3D ออนไลน์ | MALIEV" : "Instant 3D Printing Quote | MALIEV",
+                };
+                Assert.Contains($"<title>{title}</title>", page, StringComparison.Ordinal);
+                var identity = expectedPath switch
+                {
+                    "/Contact" => "id=\"contact-us\"",
+                    "/About" => "class=\"landing-main profile-about\"",
+                    _ => "data-migration-component=\"instant-quotation-three-dimensional-printing\"",
+                };
+                Assert.Contains(identity, page, StringComparison.Ordinal);
+            }
+        }
+    }
+
+    private sealed class HomeNavigationCountryClient : ICountryClient
+    {
+        public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new ServiceResponse<IReadOnlyList<Country>>(
+                [new Country(764, "Thailand", "Asia", "66", "TH", "THA", null, null)], true));
+    }
+
+    private sealed class HomeNavigationUnusedSubmissionService : IInstantQuotationSubmissionService
+    {
+        public Task<InstantQuotationSubmissionResult> SubmitAsync(
+            string sessionId,
+            string? ownerIdentity,
+            InstantQuotationCustomerSubmission customer,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Following a Home navigation GET must not submit an instant quotation.");
     }
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) => sourceFactory.CreateClient(

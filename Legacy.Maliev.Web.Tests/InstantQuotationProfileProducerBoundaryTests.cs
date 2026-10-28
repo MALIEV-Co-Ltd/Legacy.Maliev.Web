@@ -31,7 +31,7 @@ using Testcontainers.Redis;
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Actual separately pinned CustomerService Program, normal RS256 auth, disposable PG/Redis and Web HTTP.</summary>
-public sealed class InstantQuotationProfileProducerBoundaryTests
+public sealed partial class InstantQuotationProfileProducerBoundaryTests
 {
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, System.Collections.Concurrent.ConcurrentQueue<string>> ChildErrors = new();
     [Fact]
@@ -261,6 +261,11 @@ public sealed class InstantQuotationProfileProducerBoundaryTests
             Assert.Equal(0, quotation.Count);
             await Sql(connection, "ALTER TABLE \"UnavailableProfileReceipt\" RENAME TO \"QuotationProfileCompletionOperation\"");
 
+            using var playwright = await Playwright.CreateAsync();
+            await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
+            await Source292ProfileFailureKeepsProtectedQuantityPricesAsync(
+                producerOrigin, authOrigin, web.OwnerSessions.Token, connection, redisConnection, browser);
+
             // Producer loses readiness after the durable quotation response, before profile POST.
             quotation.RemoveReadinessAfterPersist = true;
             using var partial = await browserHost.PostAsync("/InstantQuotation/3D-Printing?handler=SubmitRequest", Form(token));
@@ -296,8 +301,6 @@ public sealed class InstantQuotationProfileProducerBoundaryTests
             Assert.Contains("Distinct shipping", ownerAfter, StringComparison.Ordinal);
             Assert.DoesNotContain("forged", ownerAfter, StringComparison.Ordinal);
 
-            using var playwright = await Playwright.CreateAsync();
-            await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
             foreach (var variant in new[] { (320, "en", ColorScheme.Light), (390, "th", ColorScheme.Dark), (820, "th", ColorScheme.Light), (1280, "en", ColorScheme.Dark) })
             {
                 tempData.ShowCustomerForm();
@@ -421,21 +424,26 @@ public sealed class InstantQuotationProfileProducerBoundaryTests
     {
         private readonly HttpMessageInvoker upstream = new(new SocketsHttpHandler());
         public List<Post> Posts { get; } = [];
+        public List<HttpStatusCode> PostStatuses { get; } = [];
         public HttpClient CreateClient(string name) => new(this, false) { BaseAddress = name == "auth" ? authOrigin : origin };
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             if (request.Method == HttpMethod.Post) Posts.Add(new(request.Headers.GetValues("Idempotency-Key").Single(), request.Headers.IfMatch.Single().ToString(), await request.Content!.ReadAsStringAsync(cancellationToken)));
-            return await upstream.SendAsync(request, cancellationToken);
+            var response = await upstream.SendAsync(request, cancellationToken);
+            if (request.Method == HttpMethod.Post) PostStatuses.Add(response.StatusCode);
+            return response;
         }
         protected override void Dispose(bool disposing) { if (disposing) upstream.Dispose(); base.Dispose(disposing); }
     }
     private sealed class Quotes(string connection) : IQuotationClient
     {
         public int Count { get; private set; }
+        public List<QuotationRequestSubmission> Submissions { get; } = [];
         public bool RemoveReadinessAfterPersist { get; set; }
         public async Task<QuotationRequestResult> CreateRequestAsync(QuotationRequestSubmission submission, string idempotencyKey, CancellationToken cancellationToken)
         {
             Count++;
+            Submissions.Add(submission);
             Assert.Equal("Owner", submission.FirstName);
             Assert.Equal("current@example.test", submission.Email);
             Assert.Equal("0115562011815 (สาขาที่ 00003)", submission.TaxIdentification);
@@ -451,7 +459,8 @@ public sealed class InstantQuotationProfileProducerBoundaryTests
         public IDictionary<string, object> LoadTempData(HttpContext context) { Loads++; return new Dictionary<string, object>(Values); }
         public void SaveTempData(HttpContext context, IDictionary<string, object> values) => Values = new(values);
     }
-    private sealed class ProfileWebFactory(Wire wire, string ownerToken, Quotes quotation, TempData tempData, IConnectionMultiplexer redis)
+    private sealed class ProfileWebFactory(Wire wire, string ownerToken, Quotes quotation, TempData tempData, IConnectionMultiplexer redis,
+        Action<IServiceCollection>? configureSource292 = null)
         : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
     {
         public Sessions OwnerSessions { get; } = new(ownerToken);
@@ -476,13 +485,17 @@ public sealed class InstantQuotationProfileProducerBoundaryTests
                     profileCompletionClient: provider.GetRequiredService<IInstantQuotationProfileCompletionClient>()));
                 services.AddAuthentication(options => options.DefaultAuthenticateScheme = "ProfileFixture")
                     .AddScheme<AuthenticationSchemeOptions, OwnerAuthentication>("ProfileFixture", _ => { });
+                configureSource292?.Invoke(services);
             });
         }
     }
     private sealed class OwnerAuthentication(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
         : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
     {
-        protected override Task<AuthenticateResult> HandleAuthenticateAsync() => Task.FromResult(Request.Headers["X-Profile-Test-Owner"] == "1"
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync() => Task.FromResult(
+            Request.Headers["X-Profile-Test-Owner"] == "1"
+            || Context.RequestServices.GetService<Source292CircuitOwnerProof>()?.Matches(
+                Request.Cookies[Source292CircuitOwnerProof.CookieName]) is true
             ? AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(new ClaimsIdentity([
                 new Claim(ClaimTypes.NameIdentifier, "customer:1"), new Claim("legacy_database_id", "1"), new Claim("identity_kind", "customer"),
                 new Claim(ClaimTypes.Email, "owner@example.test")], "ProfileFixture")), "ProfileFixture")) : AuthenticateResult.NoResult());

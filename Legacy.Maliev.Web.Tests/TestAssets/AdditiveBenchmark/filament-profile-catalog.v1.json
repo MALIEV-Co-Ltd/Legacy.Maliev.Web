@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "catalogVersion": "2026-09-19.2",
+  "catalogVersion": "2026-10-19.1",
   "slicer": "Bambu Studio",
   "slicerVersion": "02.08.02.61",
   "machineProfileId": "Bambu Lab X1 Carbon 0.4 nozzle",
@@ -118,14 +118,14 @@
     },
     {
       "materialKey": "HIPS",
-      "preferredVendor": "eSUN_or_Polymaker",
-      "profileId": "Generic HIPS @BBL X1C",
-      "sourceAuthority": "bambu_official_bundle_fallback",
-      "resolvedSha256": "34C1AE92E8A265F4F884EB9F71E4F2F5B974D1D0719635B93F38311F4753EC22",
+      "preferredVendor": "eSUN",
+      "profileId": "eSUN HIPS White @Bambu Lab X1 Carbon 0.4 nozzle",
+      "sourceAuthority": "operator_local_custom",
+      "resolvedSha256": "A0F19BF4EE3B395302A7AACF19060601DAEB4F0E67E06932A7789D03508F6464",
       "exactMaterialMatch": true,
       "operatorApproved": true,
       "automationEligible": false,
-      "blockers": ["isolated_worker_not_active", "vendor_profile_substitution"]
+      "blockers": ["isolated_worker_not_active"]
     },
     {
       "materialKey": "PC",

@@ -19,6 +19,8 @@ internal sealed record InstantQuotationAdmittedMeshResult(
     string? UploadSha256,
     InstantQuotationAdmittedMeshFailure Failure)
 {
+    internal InstantQuotationGltfUnitPolicy GltfUnitPolicy { get; init; } = InstantQuotationGltfUnitPolicy.Legacy;
+
     internal bool IsReady => Mesh is not null && Failure == InstantQuotationAdmittedMeshFailure.None;
 
     internal static InstantQuotationAdmittedMeshResult Unavailable(InstantQuotationAdmittedMeshFailure failure) =>
@@ -32,6 +34,14 @@ internal sealed record InstantQuotationAdmittedMeshResult(
 internal sealed class InstantQuotationAdmittedMeshService(
     IInstantQuotationPhysicalAnalysisInputReader inputReader)
 {
+    internal static bool IsSupportedFileName(string? fileName) =>
+        Path.GetExtension(fileName) is { } extension
+        && (extension.Equals(".stl", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".obj", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".3mf", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".glb", StringComparison.OrdinalIgnoreCase)
+            || extension.Equals(".gltf", StringComparison.OrdinalIgnoreCase));
+
     internal async Task<InstantQuotationAdmittedMeshResult> ReadAsync(
         string sessionId,
         string? ownerIdentity,
@@ -69,17 +79,28 @@ internal sealed class InstantQuotationAdmittedMeshService(
             return InstantQuotationAdmittedMeshResult.Unavailable(InstantQuotationAdmittedMeshFailure.UploadChanged);
         }
 
-        if (!string.Equals(Path.GetExtension(input.FileName), ".stl", StringComparison.OrdinalIgnoreCase))
+        if (!IsSupportedFileName(input.FileName))
         {
             return InstantQuotationAdmittedMeshResult.Unavailable(InstantQuotationAdmittedMeshFailure.UnsupportedFormat);
         }
 
         try
         {
-            MeshInput parsed = AdmittedStlMeshReader.Read(input.Content!, cancellationToken);
+            string? extension = Path.GetExtension(input.FileName);
+            MeshInput parsed = string.Equals(extension, ".glb", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(extension, ".gltf", StringComparison.OrdinalIgnoreCase)
+                ? AdmittedGltfMeshReader.Read(input.Content!, cancellationToken, input.GltfUnitPolicy)
+                : string.Equals(extension, ".3mf", StringComparison.OrdinalIgnoreCase)
+                    ? AdmittedThreeMfMeshReader.Read(input.Content!, cancellationToken)
+                    : string.Equals(extension, ".obj", StringComparison.OrdinalIgnoreCase)
+                        ? AdmittedObjMeshReader.Read(input.Content!, cancellationToken)
+                        : AdmittedStlMeshReader.Read(input.Content!, cancellationToken);
             NormalizedMesh mesh = MeshNormalizer.Normalize(
                 parsed, new GeometryTolerance(0.001, 0.02), cancellationToken);
-            return new InstantQuotationAdmittedMeshResult(mesh, expectedSha256, InstantQuotationAdmittedMeshFailure.None);
+            return new InstantQuotationAdmittedMeshResult(mesh, expectedSha256, InstantQuotationAdmittedMeshFailure.None)
+            {
+                GltfUnitPolicy = input.GltfUnitPolicy,
+            };
         }
         catch (Exception exception) when (exception is FormatException or DecoderFallbackException or SimulationGeometryException)
         {

@@ -5,3 +5,6 @@ Legacy.Maliev.Web.Application/Pricing/Profiles/Resolved/*.json -text whitespace=
 Legacy.Maliev.Web.Application/Pricing/Profiles/Sources/*.json -text whitespace=cr-at-eol
 
 scripts/sealed_source_capsule.py -text whitespace=cr-at-eol
+
+# Preserve company SVG source bytes; custody does not activate public claims.
+Legacy.Maliev.Web/wwwroot/src/images/customers/*.svg binary

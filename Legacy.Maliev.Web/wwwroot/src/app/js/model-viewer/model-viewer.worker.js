@@ -864,7 +864,7 @@ function RunParseJob(data) {
             var bytes = new Uint8Array(data.buffer);
             var result = (extension === 'igs' || extension === 'iges')
                 ? occt.ReadIgesFile(bytes, null)
-                : occt.ReadStepFile(bytes, null);
+                : occt.ReadStepFile(bytes, data.analysisProfile === 'additive' ? { linearDeflection: 0.02 } : null);
             if (!result || !result.success) {
                 throw new Error('Unable to tessellate this CAD file.');
             }

@@ -128,7 +128,24 @@
         }
         var totalArea = triangles.reduce(function (sum, triangle) { return sum + triangle.area; }, 0);
         var selected = [];
-        var selectedSet = new Set();
+        // Path-compressed neighbours skip already selected triangles without rescanning
+        // dense runs when a large face owns many area quantiles. The end slots are sentinels.
+        var nextAvailable = new Int32Array(triangles.length + 2);
+        var previousAvailable = new Int32Array(triangles.length + 2);
+        for (var slot = 0; slot < nextAvailable.length; slot += 1) {
+            nextAvailable[slot] = slot;
+            previousAvailable[slot] = slot;
+        }
+        function findAvailable(links, start) {
+            var root = start;
+            while (links[root] !== root) { root = links[root]; }
+            while (links[start] !== start) {
+                var next = links[start];
+                links[start] = root;
+                start = next;
+            }
+            return root;
+        }
         var cursor = 0;
         var cumulative = triangles[0].area;
         for (var sample = 0; sample < maximum; sample += 1) {
@@ -137,20 +154,19 @@
                 cursor += 1;
                 cumulative += triangles[cursor].area;
             }
-            var chosen = cursor;
-            while (chosen < triangles.length && selectedSet.has(chosen)) { chosen += 1; }
-            if (chosen >= triangles.length) {
-                chosen = cursor - 1;
-                while (chosen >= 0 && selectedSet.has(chosen)) { chosen -= 1; }
+            var chosen = findAvailable(nextAvailable, cursor + 1);
+            if (chosen === triangles.length + 1) {
+                chosen = findAvailable(previousAvailable, cursor);
             }
-            if (chosen >= 0 && !selectedSet.has(chosen)) {
-                selectedSet.add(chosen);
-                selected.push(chosen);
+            if (chosen > 0) {
+                selected.push(chosen - 1);
+                nextAvailable[chosen] = findAvailable(nextAvailable, chosen + 1);
+                previousAvailable[chosen] = findAvailable(previousAvailable, chosen - 1);
             }
         }
         if (selected.length < maximum) {
             for (var index = 0; index < triangles.length && selected.length < maximum; index += 1) {
-                if (!selectedSet.has(index)) { selectedSet.add(index); selected.push(index); }
+                if (nextAvailable[index + 1] === index + 1) { selected.push(index); }
             }
         }
         selected.sort(function (left, right) { return left - right; });

@@ -39,14 +39,14 @@ public sealed partial class KnowledgeGuidelinesStaticSsrRouteTests : IClassFixtu
         "Project guidelines | MALIEV",
         "Information to include when requesting CNC machining, 3D printing, or 3D scanning services.",
         "Quotation request guidelines",
-        "Send usable files",
+        "Send one clear revision",
         "View NDA information")]
     [InlineData(
         "th",
         "แนวทางเตรียมโปรเจกต์ | MALIEV",
         "ข้อมูลที่ควรส่งเมื่อขอบริการ CNC งานพิมพ์ 3 มิติ หรืองานสแกน 3 มิติ",
         "แนวทางขอใบเสนอราคา",
-        "ส่งไฟล์ที่ใช้งานได้",
+        "ส่งไฟล์รุ่นแก้ไขที่ชัดเจน",
         "ดูข้อมูล NDA")]
     public async Task GuidelinesRoute_RendersCompleteLocalizedAccessibleStaticDocument(
         string culture,
@@ -86,7 +86,8 @@ public sealed partial class KnowledgeGuidelinesStaticSsrRouteTests : IClassFixtu
         Assert.Contains("aria-current=\"page\"", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-open", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-close", source, StringComparison.Ordinal);
-        Assert.Contains("event.key === 'Escape'", source, StringComparison.Ordinal);
+        Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
+        Assert.Contains("event.key === 'Escape'", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
         Assert.DoesNotContain("jquery", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("wow.js", source, StringComparison.OrdinalIgnoreCase);
