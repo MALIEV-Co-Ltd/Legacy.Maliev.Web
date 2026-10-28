@@ -13,6 +13,9 @@ public sealed record PublicDocumentLinksDisplayModel(
     string EnglishUrl,
     string ThaiUrl)
 {
+    /// <summary>Gets whether the document belongs to the public Knowledge area.</summary>
+    public bool IsKnowledgeDocument { get; init; }
+
     /// <summary>
     /// Builds localized document links, honoring the culture query for private account routes.
     /// </summary>
@@ -32,6 +35,9 @@ public sealed record PublicDocumentLinksDisplayModel(
         return new PublicDocumentLinksDisplayModel(
             CanonicalUrlPolicy.GetLocalizedUrl(path, culture),
             CanonicalUrlPolicy.GetLocalizedUrl(path, "en"),
-            CanonicalUrlPolicy.GetLocalizedUrl(path, "th"));
+            CanonicalUrlPolicy.GetLocalizedUrl(path, "th"))
+        {
+            IsKnowledgeDocument = path.StartsWithSegments("/knowledges", StringComparison.OrdinalIgnoreCase)
+        };
     }
 }
