@@ -16,6 +16,16 @@ SOURCE = 'Legacy.Maliev.Web.Tests/BillingProofLifetimeTests.cs'
 ACCEPTED = 'a25cf00409b9df2c7164c24f0a399b0752242e2d'
 FROZEN = '725e0cad317d8ff7b8dc73d752737f9793c77ac5'
 NS = 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'
+# Observed in accepted a25 run40229126048/attempt2 artifact12616171322, full TRX
+# SHA256 936257b514216bfc78652bedff911ba4532ccbfd88504309febbf85c0168bf60.
+# Its class blob da3b7fdb2f6e8892e6ac9019b188fa5dcba7d34a equals this candidate.
+# Preserve these two exact native display spellings, not a general truncation rule.
+OBSERVED_NATIVE_NAMES = {
+    'StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Microsoft.AspNetCore.Connections.AddressInUseException", expected: "AddressInUseException")':
+        'StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Microsoft.AspNetCore.Connections.AddressInUseExcep"\u00b7\u00b7\u00b7, expected: "AddressInUseException")',
+    'StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Microsoft.Extensions.Options.OptionsValidationException", expected: "OptionsValidationException")':
+        'StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Microsoft.Extensions.Options.OptionsValidationExce"\u00b7\u00b7\u00b7, expected: "OptionsValidationException")',
+}
 
 
 def validator(workflow):
@@ -52,6 +62,12 @@ def accepted_names():
             names.add(prefix + '(' + ', '.join(fields) + ')')
     if len(names) != 50:
         raise AssertionError('Exact accepted source must define fifty lifecycle rows')
+    prefix = 'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.'
+    for semantic, observed in OBSERVED_NATIVE_NAMES.items():
+        if prefix + semantic not in names:
+            raise AssertionError('Observed display identity must bind the full accepted source arguments')
+        names.remove(prefix + semantic)
+        names.add(prefix + observed)
     return names
 
 
@@ -112,6 +128,21 @@ class LifecycleValidatorControls(unittest.TestCase):
         names = sorted(self.names)
         names[-1] = 'Foreign.Case'
         self.assertNotEqual(self.run_validator(names).returncode, 0)
+
+    def test_reject_unobserved_expanded_display_names(self):
+        prefix = 'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.'
+        for semantic, observed in OBSERVED_NATIVE_NAMES.items():
+            with self.subTest(semantic=semantic):
+                names = self.names - {prefix + observed} | {prefix + semantic}
+                self.assertNotEqual(self.run_validator(sorted(names)).returncode, 0)
+
+    def test_reject_mutated_observed_native_abbreviation(self):
+        prefix = 'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.'
+        for observed in OBSERVED_NATIVE_NAMES.values():
+            for mutation in [observed.replace('\u00b7\u00b7\u00b7', '...'), observed.replace('\u00b7\u00b7\u00b7', '\u2026')]:
+                with self.subTest(mutation=mutation):
+                    names = self.names - {prefix + observed} | {prefix + mutation}
+                    self.assertNotEqual(self.run_validator(sorted(names)).returncode, 0)
 
     def test_reject_failed_or_skipped_row(self):
         for outcome in ['Failed', 'NotExecuted']:
