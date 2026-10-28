@@ -10,10 +10,10 @@ import xml.etree.ElementTree as ET
 
 NS = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
 PREFIX = 'Legacy.Maliev.Web.Tests.MemberCompanyCatalogPersistenceTests.CompanyUpdate_RealAdapter_NormalSave_ApiReadbackAndReload'
-# PR527 changed billing attempt archives, not OwnershipReceipt() used by this lane
-# (which constructs the owner with proofCulture:null). Qualify only that exact successor.
-HELPER_REVISION = '4bcf40db748daa1c4fb4db0fba81e8a039f94627'
-HELPER_SHA256 = '096be55636a60184c452ab0c85a562d0b4b0926e310e95c0a6cf841f00bfccd4'
+# Accepted PR723 adds bounded startup diagnostics and the exact child cleanup stage.
+# Keep all ownership checks and admit only its terminal released receipt.
+HELPER_REVISION = 'a25cf00409b9df2c7164c24f0a399b0752242e2d'
+HELPER_SHA256 = '680ff227f0e4e395c44f81f40e69c845d015b637661f6e68c8c5b8828dfba14b'
 
 def require(value, message):
     if not value:
@@ -27,7 +27,7 @@ def original_run(value):
 
 def helper_source(path):
     data = path.read_bytes()
-    require(hashlib.sha256(data).hexdigest() == HELPER_SHA256, 'Exact PR527 lifetime receipt successor source required')
+    require(hashlib.sha256(data).hexdigest() == HELPER_SHA256, 'Exact PR723 lifetime receipt successor source required')
     return HELPER_SHA256
 
 def rows(path):
@@ -100,8 +100,8 @@ def cleanup(value):
     owner_expiry = timestamp(value['expiresUtc'])
     require(value['policy'] == 'Same-owner 1800-second expiry task closes admission, frontends and actual case work before dependent cleanup; unresolved ownership is quarantined, never accepted as release.', 'Original lifetime policy required')
     require(len(value.get('hosts',[])) == 11 and all(set(row) == {'startupComplete','disposal'} and row['startupComplete'] is True and row['disposal'] == 'RanToCompletion' for row in value['hosts']), 'Exactly all eleven admitted provider/Web/browser/HTTP hosts must settle')
-    child_keys = {'dispatched','identityCaptured','exitVerified','noChildVerified','readersClosed','released','process'}
-    require(len(value.get('children',[])) == 3 and all(set(row) == child_keys and all(row.get(flag) is True for flag in ['dispatched','identityCaptured','exitVerified','readersClosed','released']) and row['noChildVerified'] is False for row in value['children']), 'Exactly three dispatched original seed/Customer/Catalog children must settle')
+    child_keys = {'dispatched','identityCaptured','exitVerified','noChildVerified','readersClosed','released','cleanupStage','process'}
+    require(len(value.get('children',[])) == 3 and all(set(row) == child_keys and all(row.get(flag) is True for flag in ['dispatched','identityCaptured','exitVerified','readersClosed','released']) and row['noChildVerified'] is False and row['cleanupStage'] == 'released' for row in value['children']), 'Exactly three dispatched original seed/Customer/Catalog children must settle')
     seen_children = set()
     for child in value['children']:
         process = child['process']
