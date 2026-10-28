@@ -1,6 +1,6 @@
 {
-  "acceptedCommit": "2c7562fc8234c08f2f6bfc5556765ebb5cc4ef5d",
-  "assetTree": "8ed927a3772af7c9730597e1b51b92c1320802c7",
+  "acceptedCommit": "a01c586e3355d9e451b7aa5aa95c9347d82a2014",
+  "assetTree": "72d3d8ebfdfe6e1420baaf0f32b106934f869d34",
   "assets": {
     "Legacy.Maliev.Web/wwwroot/dist/app.min.js": [
       "100644",
@@ -84,7 +84,7 @@
     ],
     "Legacy.Maliev.Web/wwwroot/dist/instant-quotation-workflow.mjs": [
       "100644",
-      "0aa205c438de80e541ecdb0be5e41573c559bd77"
+      "b8afb53e98fb45b4446822383ac768d80c4431f0"
     ],
     "Legacy.Maliev.Web/wwwroot/dist/route-about.css": [
       "100644",
@@ -120,7 +120,7 @@
     ],
     "Legacy.Maliev.Web/wwwroot/dist/route-instant-quotation.css": [
       "100644",
-      "50c4dc1b30f53711757b83c78d52493cc3922b8c"
+      "d97d3c1562109cbd3c46f8e8a71349954101136b"
     ],
     "Legacy.Maliev.Web/wwwroot/dist/route-instant-quotation.js": [
       "100644",

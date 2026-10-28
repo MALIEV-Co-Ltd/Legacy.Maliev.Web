@@ -67,12 +67,15 @@ class AssetGuardControls(unittest.TestCase):
             with self.assertRaises(ValueError): guard.verify(self.baseline, self.accepted, provenance)
 
     def test_current_contract_requires_exact_complete_accepted_snapshot(self):
+        self.assertEqual('a01c586e3355d9e451b7aa5aa95c9347d82a2014', guard.CURRENT_COMMIT)
+        self.assertEqual('72d3d8ebfdfe6e1420baaf0f32b106934f869d34', guard.CURRENT_TREE)
         current = guard.current_contract()
         self.assertEqual(43, len(current))
         self.assertEqual(current, guard.tree(guard.CURRENT_COMMIT))
         self.assertEqual(guard.CURRENT_TREE, guard.tree_identity(guard.CURRENT_COMMIT))
         guard.verify_current(current, current, guard.CURRENT_TREE)
-        for obsolete in (self.baseline, self.accepted, {}):
+        for obsolete in (self.baseline, self.accepted,
+                         guard.tree('2c7562fc8234c08f2f6bfc5556765ebb5cc4ef5d'), {}):
             with self.subTest(obsolete=len(obsolete)), self.assertRaises(ValueError):
                 guard.verify_current(obsolete, current, guard.CURRENT_TREE)
 

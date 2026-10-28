@@ -71,6 +71,83 @@ function harness(
   };
 }
 
+test('empty owner uses original viewport branches and owns coalesced resize and replacement cleanup', () => {
+  const listeners = new Map();
+  const viewportListeners = new Map();
+  const frames = new Map();
+  let frameId = 0;
+  let overflowY = 'auto';
+  let flexDirection = 'row';
+  let top = 73.6;
+  const view = {
+    innerHeight: 900,
+    visualViewport: {
+      height: 844,
+      addEventListener: (key, fn) => viewportListeners.set(key, fn),
+      removeEventListener: (key, fn) => { if (viewportListeners.get(key) === fn) viewportListeners.delete(key); },
+    },
+    getComputedStyle: element => element === document.body ? { overflowY } : { display: 'grid', flexDirection },
+    addEventListener: (key, fn) => listeners.set(key, fn),
+    removeEventListener: (key, fn) => { if (listeners.get(key) === fn) listeners.delete(key); },
+    requestAnimationFrame: fn => { frames.set(++frameId, fn); return frameId; },
+    cancelAnimationFrame: id => frames.delete(id),
+  };
+  const document = { defaultView: view, body: {} };
+  const makeOwner = () => {
+    const properties = new Map();
+    const events = new Map();
+    return {
+      ownerDocument: document,
+      getBoundingClientRect: () => ({ top }),
+      querySelector: () => null,
+      addEventListener: (key, fn) => events.set(key, fn),
+      removeEventListener: (key, fn) => { if (events.get(key) === fn) events.delete(key); },
+      style: { setProperty: (key, value) => properties.set(key, value), removeProperty: key => properties.delete(key) },
+      properties,
+      events,
+    };
+  };
+  const makeInput = owner => ({ dataset: {}, closest: selector => selector === '.instant-quote__workflow' ? owner : null, addEventListener() {}, removeEventListener() {} });
+  const { interop } = harness();
+  const owner = makeOwner();
+  const input = makeInput(owner);
+  const height = () => owner.properties.get('--iq-empty-viewport-height');
+  interop.bindInput(input);
+  assert.equal(height(), '770px');
+  assert.deepEqual([...owner.events.keys()], ['dragover', 'drop']);
+  view.visualViewport.height = 280;
+  overflowY = 'hidden';
+  interop.bindInput(input);
+  assert.equal(height(), '420px');
+  flexDirection = 'column';
+  interop.bindInput(input);
+  assert.equal(height(), '240px');
+  top = -20;
+  view.visualViewport.height = 0;
+  listeners.get('resize')();
+  listeners.get('orientationchange')();
+  viewportListeners.get('resize')();
+  assert.equal(frames.size, 1);
+  const [id, callback] = frames.entries().next().value;
+  frames.delete(id);
+  callback();
+  assert.equal(height(), '900px');
+  listeners.get('resize')();
+  const next = makeOwner();
+  interop.bindInput(makeInput(next));
+  assert.equal(owner.properties.size, 0);
+  assert.equal(owner.events.size, 0);
+  assert.equal(frames.size, 0);
+  assert.equal(listeners.size, 2);
+  listeners.get('resize')();
+  interop.dispose();
+  assert.equal(next.properties.size, 0);
+  assert.equal(next.events.size, 0);
+  assert.equal(frames.size, 0);
+  assert.equal(listeners.size, 0);
+  assert.equal(viewportListeners.size, 0);
+});
+
 test('supports the exact nine standalone quotation extensions', () => {
   assert.deepEqual(supportedPreviewExtensions, [
     'stl', 'obj', '3mf', 'glb', 'gltf', 'stp', 'step', 'igs', 'iges',
