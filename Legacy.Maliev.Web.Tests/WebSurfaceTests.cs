@@ -1722,6 +1722,59 @@ public sealed class WebSurfaceTests : IDisposable
     }
 
     [Theory]
+    [InlineData(false, false, "en")]
+    [InlineData(false, true, "en")]
+    [InlineData(true, false, "en")]
+    [InlineData(true, true, "en")]
+    [InlineData(false, false, "th")]
+    [InlineData(false, true, "th")]
+    [InlineData(true, false, "th")]
+    [InlineData(true, true, "th")]
+    public async Task MemberPasswordNavigation_PreservesPasswordCapabilityAcrossRenderers(
+        bool hasPassword, bool retained, string culture)
+    {
+        await using var host = configuredFactory.WithWebHostBuilder(
+            builder => builder.UseSetting("BlazorRouting:MemberOverview", (!retained).ToString()));
+        using var member = host.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = new Uri("https://localhost"),
+        });
+        var loginHtml = await member.GetStringAsync("/account/login");
+        var token = Regex.Match(loginHtml, "name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"", RegexOptions.CultureInvariant);
+        Assert.True(token.Success);
+        using var login = await member.PostAsync("/account/login?handler=Login", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = WebUtility.HtmlDecode(token.Groups[1].Value),
+            ["Email"] = "customer@example.com",
+            ["Password"] = hasPassword ? "correct-password" : "passwordless-federated-session",
+            ["RememberMe"] = "false",
+        }));
+        Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
+
+        using var response = await member.GetAsync($"/member?culture={culture}");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(!retained, html.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var navigation = Assert.Single(Regex.Matches(html,
+            "<aside\\b[^>]*\\bid=\"member-navigation\"[^>]*>[\\s\\S]*?</aside>", RegexOptions.CultureInvariant).Cast<Match>());
+        var links = Regex.Matches(navigation.Value, "<a\\b[^>]*href=\"(?<href>[^\"]+)\"[^>]*>", RegexOptions.CultureInvariant)
+            .Cast<Match>()
+            .Select(link => new Uri(member.BaseAddress!, link.Groups["href"].Value).AbsolutePath)
+            .ToArray();
+        var expected = hasPassword ? "/Member/Account/Manage/ChangePassword" : "/Member/Account/Manage/CreatePassword";
+        var excluded = hasPassword ? "/Member/Account/Manage/CreatePassword" : "/Member/Account/Manage/ChangePassword";
+        Assert.Single(links, path => string.Equals(path, expected, StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(links, path => string.Equals(path, excluded, StringComparison.OrdinalIgnoreCase));
+        var label = culture == "th"
+            ? hasPassword ? "เปลี่ยนรหัสผ่าน" : "สร้างรหัสผ่าน"
+            : hasPassword ? "Change password" : "Create password";
+        Assert.Contains($"<span>{label}</span>", navigation.Value, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-access-token", navigation.Value, StringComparison.Ordinal);
+        Assert.DoesNotContain("sensitive-refresh-token", navigation.Value, StringComparison.Ordinal);
+    }
+
+    [Theory]
     [InlineData("en", "Customer account", "Profile", "Personal information", "Save profile")]
     [InlineData("th", "บัญชีลูกค้า", "ข้อมูลส่วนตัว", "ข้อมูลส่วนบุคคล", "บันทึกข้อมูลส่วนตัว")]
     public async Task MemberProfile_RendersLocalizedStaticSsrFieldsInsideOwnedAntiforgeryForm(
