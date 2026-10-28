@@ -2256,6 +2256,300 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
     }
 
     [Theory]
+    [InlineData("en", 375, 844, 844, 375)]
+    [InlineData("th", 375, 844, 844, 375)]
+    [InlineData("en", 820, 800, 1024, 900)]
+    [InlineData("th", 820, 800, 1024, 900)]
+    [InlineData("en", 1440, 780, 1440, 1000)]
+    [InlineData("th", 1440, 780, 1440, 1000)]
+    [InlineData("en", 1440, 1000, 1440, 780)]
+    [InlineData("th", 1440, 1000, 1440, 780)]
+    [InlineData("en", 375, 280, 375, 500)]
+    [InlineData("th", 375, 280, 375, 500)]
+    public async Task EmptyWorkflow_FitsMeasuredViewportWithinOriginalMinimums(
+        string culture, int width, int height, int resizedWidth, int resizedHeight)
+    {
+        var upload = new HashCheckingUploadClient();
+        var pricing = new CountingPricingService();
+        await using var factory = new RealUploadTestingWebApplicationFactory(
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+        var port = ReserveFreePort();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        var quoteUrl = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
+        factory.UseKestrel(port);
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            BaseAddress = origin,
+        });
+        using var readiness = await client.GetAsync(quoteUrl);
+        Assert.Equal(HttpStatusCode.OK, readiness.StatusCode);
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
+        await using var context = await browser.NewContextAsync(new()
+        {
+            ViewportSize = new() { Width = width, Height = height },
+        });
+        await using var page = await context.NewPageAsync();
+        await page.GotoAsync(quoteUrl, new() { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 30_000 });
+        var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
+        if (await consent.CountAsync() > 0) await consent.ClickAsync();
+        await using var sceneReady = await page.WaitForFunctionAsync(
+            "() => document.querySelector('[data-empty-scene]')?.dataset.cubeReady === 'true' && document.querySelector('[data-empty-scene]')?.dataset.hexReady === 'true'",
+            null, new() { Timeout = 30_000 });
+
+        async Task CheckGeometryAsync(string phase, int viewportWidth, int viewportHeight)
+        {
+            const string readGeometry = """
+                () => {
+                  const one = selector => {
+                    const nodes = document.querySelectorAll(selector);
+                    if (nodes.length !== 1) throw new Error('Expected one empty geometry owner.');
+                    return nodes[0];
+                  };
+                  const bounds = node => {
+                    const r = node.getBoundingClientRect();
+                    return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, height: r.height };
+                  };
+                  const workflow = one('.instant-quote__workflow[data-workflow-state="empty"]');
+                  return {
+                    viewportHeight: visualViewport?.height || innerHeight, viewportWidth: innerWidth, layoutHeight: innerHeight,
+                    header: bounds(one('[data-migration-component="public-navigation"]')),
+                    workflow: bounds(workflow), unit: bounds(one('.instant-quote__workflow > .instant-quote__gltf-unit')),
+                    upload: bounds(one('.instant-quote__workflow > [data-workflow-upload]')),
+                    label: bounds(one('label[for="instant-quote-files"].iq-empty-dropzone')),
+                    overflowY: getComputedStyle(document.body).overflowY,
+                    display: getComputedStyle(workflow).display, direction: getComputedStyle(workflow).flexDirection,
+                    scrollX, scrollY, documentWidth: document.documentElement.scrollWidth
+                  };
+                }
+                """;
+            try
+            {
+                await using var fontsReady = await page.WaitForFunctionAsync(
+                    "() => document.fonts.status === 'loaded'", null, new() { Timeout = 30_000 });
+                var stableOriginalBounds = "() => { const read = (" + readGeometry + "); let previous; return () => {" + """
+                    const last = read(), first = previous;
+                    previous = last;
+                    let floor = 240;
+                    if (last.overflowY === 'hidden') {
+                      if (last.direction !== 'column') floor = 420;
+                    }
+                    const remainder = Math.floor(last.viewportHeight - Math.max(0, last.workflow.top));
+                    const expected = Math.max(floor, remainder), owner = last.workflow;
+                    const valid = Math.abs(owner.height - expected) <= 1
+                      && Math.abs(owner.bottom - owner.top - expected) <= 1
+                      && owner.top >= last.header.bottom - 1 && last.unit.top >= owner.top - 1
+                      && last.label.top >= last.unit.bottom - 1 && last.label.height > 0
+                      && last.documentWidth <= last.viewportWidth + 1
+                      && (remainder < floor || (last.upload.bottom <= owner.bottom + 1
+                        && last.label.bottom <= owner.bottom + 1 && owner.bottom <= last.viewportHeight + 1));
+                    const stable = first && ['header', 'workflow', 'unit', 'upload', 'label'].every(key =>
+                      ['top', 'bottom', 'height', 'left', 'right'].every(field =>
+                        Math.abs(first[key][field] - last[key][field]) <= 1));
+                    return valid && stable && Math.abs(first.viewportHeight - last.viewportHeight) <= 1 ? last : false;
+                    }; }
+                    """;
+                await using var readStableBounds = await page.EvaluateHandleAsync(stableOriginalBounds);
+                await using var settled = await page.WaitForFunctionAsync(
+                    "read => read()", readStableBounds, new() { Timeout = 30_000 });
+                var observed = await settled.JsonValueAsync<JsonElement>();
+                output.WriteLine(JsonSerializer.Serialize(new { Culture = culture, Width = viewportWidth, Height = viewportHeight, Phase = phase, Geometry = observed }));
+                Assert.Equal(viewportWidth, observed.GetProperty("viewportWidth").GetInt32());
+                Assert.Equal(viewportHeight, observed.GetProperty("layoutHeight").GetInt32());
+                var owner = observed.GetProperty("workflow");
+                var ownerTop = owner.GetProperty("top").GetDouble();
+                var floor = 240d;
+                if (observed.GetProperty("overflowY").GetString() == "hidden")
+                {
+                    // Source selects fixed/stacked branches from body overflow and flex direction.
+                    if (observed.GetProperty("direction").GetString() != "column") floor = 420;
+                }
+                var remainder = Math.Floor(observed.GetProperty("viewportHeight").GetDouble() - Math.Max(0, ownerTop));
+                var expected = Math.Max(floor, remainder);
+                Assert.InRange(owner.GetProperty("height").GetDouble(), expected - 1, expected + 1);
+                var ownerBottom = owner.GetProperty("bottom").GetDouble();
+                Assert.InRange(ownerBottom, ownerTop + expected - 1, ownerTop + expected + 1);
+                Assert.True(ownerTop >= observed.GetProperty("header").GetProperty("bottom").GetDouble() - 1);
+                var unit = observed.GetProperty("unit");
+                var label = observed.GetProperty("label");
+                Assert.True(unit.GetProperty("top").GetDouble() >= ownerTop - 1);
+                Assert.True(label.GetProperty("top").GetDouble() >= unit.GetProperty("bottom").GetDouble() - 1);
+                if (remainder >= floor)
+                {
+                    Assert.True(observed.GetProperty("upload").GetProperty("bottom").GetDouble() <= ownerBottom + 1);
+                    Assert.True(label.GetProperty("bottom").GetDouble() <= ownerBottom + 1);
+                    Assert.True(ownerBottom <= observed.GetProperty("viewportHeight").GetDouble() + 1);
+                }
+                Assert.True(label.GetProperty("height").GetDouble() > 0);
+                Assert.True(observed.GetProperty("documentWidth").GetDouble() <= observed.GetProperty("viewportWidth").GetDouble() + 1);
+            }
+            catch (Exception)
+            {
+                try
+                {
+                    var observed = await page.EvaluateAsync<JsonElement>(readGeometry).WaitAsync(TimeSpan.FromSeconds(30));
+                    output.WriteLine(JsonSerializer.Serialize(new { Culture = culture, Width = viewportWidth, Height = viewportHeight, Phase = phase, Geometry = observed }));
+                }
+                catch (Exception) { try { output.WriteLine("Public empty viewport numeric evidence was not captured."); } catch (Exception) { } }
+                throw;
+            }
+            finally
+            {
+                // This class has no shared browser fixture; the same owned page serves both phases.
+                // Each phase has one public-empty PNG slot, using the existing collector root.
+                try
+                {
+                    if (Environment.GetEnvironmentVariable("MALIEV_BROWSER_EVIDENCE_DIR") is not { Length: > 0 } directory)
+                    {
+                        output.WriteLine("Public empty viewport PNG NOT CAPTURED: evidence root is unset.");
+                    }
+                    else
+                    {
+                        var root = Path.GetFullPath(directory);
+                        var name = $"web639-empty-viewport-{culture}-{viewportWidth}x{viewportHeight}-{phase}.png";
+                        var path = Path.GetFullPath(Path.Combine(root, name));
+                        if (!path.StartsWith(root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                            + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                            throw new InvalidOperationException("The public PNG path is outside its evidence root.");
+                        var png = await page.ScreenshotAsync(new()
+                        {
+                            FullPage = false,
+                            Timeout = 30_000,
+                        });
+                        if (png.Length <= 0 || png.Length > 16 * 1024 * 1024)
+                            throw new InvalidOperationException("The public PNG exceeds this test artifact safety cap.");
+                        Directory.CreateDirectory(root);
+                        using var writeDeadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                        await using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write,
+                            FileShare.None, 4096, useAsync: true);
+                        await stream.WriteAsync(png, writeDeadline.Token);
+                    }
+                }
+                catch (Exception) { try { output.WriteLine("Public empty viewport PNG NOT CAPTURED: bounded capture unavailable."); } catch (Exception) { } }
+            }
+        }
+
+        // Geometry and both PNG slots precede focus, which may legitimately scroll a minimum-bound viewport.
+        await CheckGeometryAsync("initial", width, height);
+        await page.SetViewportSizeAsync(resizedWidth, resizedHeight);
+        await CheckGeometryAsync("resized", resizedWidth, resizedHeight);
+        var input = page.Locator("#instant-quote-files");
+        var unitInput = page.Locator("[data-workflow-gltf-unit]");
+        var label = page.Locator("label[for='instant-quote-files'].iq-empty-dropzone");
+        Assert.Equal(1, await input.CountAsync());
+        Assert.True(await input.IsEnabledAsync());
+        Assert.True(await unitInput.IsVisibleAsync());
+        Assert.True(await unitInput.IsEnabledAsync());
+        Assert.Equal("instant-quote-files", await label.GetAttributeAsync("for"));
+        await input.FocusAsync();
+        Assert.True(await input.EvaluateAsync<bool>("element => document.activeElement === element"));
+        // Test the visible intersection, not an offscreen centre when the original240floor binds.
+        Assert.True(await label.EvaluateAsync<bool>("""
+            element => {
+              const r = element.getBoundingClientRect();
+              const left = Math.max(0, r.left), right = Math.min(innerWidth, r.right);
+              const top = Math.max(0, r.top), bottom = Math.min(visualViewport?.height || innerHeight, r.bottom);
+              return right > left && bottom > top
+                && element.contains(document.elementFromPoint((left + right) / 2, (top + bottom) / 2));
+            }
+            """));
+        if (height == 280)
+        {
+            await page.Keyboard.PressAsync("Control+Home");
+            await page.SetViewportSizeAsync(width, height);
+            await using var restoredGeometry = await page.EvaluateHandleAsync("""
+                () => {
+                  let previous;
+                  return () => {
+                    const owner = document.querySelector('.instant-quote__workflow[data-workflow-state="empty"]');
+                    const nodes = [owner, owner?.querySelector('.instant-quote__gltf-unit'), owner?.querySelector('.iq-empty-dropzone')];
+                    if (nodes.some(node => !node)) return false;
+                    const current = nodes.map(node => node.getBoundingClientRect());
+                    const [workflow, unit, label] = current;
+                    const stable = previous && current.every((bounds, index) =>
+                      ['top', 'bottom', 'height', 'left', 'right'].every(key => Math.abs(bounds[key] - previous[index][key]) <= 1));
+                    previous = current;
+                    const header = document.querySelector('[data-migration-component="public-navigation"]').getBoundingClientRect();
+                    return stable && innerWidth === 375 && innerHeight === 280
+                      && Math.abs(workflow.height - 240) <= 1 && workflow.top >= header.bottom - 1
+                      && unit.top >= workflow.top - 1 && label.top >= unit.bottom - 1
+                      && label.height > 0 && label.bottom <= workflow.bottom + 1;
+                  };
+                }
+                """);
+            await using var restored = await page.WaitForFunctionAsync("read => read()", restoredGeometry, new() { Timeout = 30_000 });
+            await page.Locator("#instant-quote-files").FocusAsync();
+            await page.Keyboard.PressAsync("Tab");
+            var scrollingLabel = page.Locator("label[for='instant-quote-files'].iq-empty-dropzone");
+            Assert.True(await scrollingLabel.EvaluateAsync<bool>("element => document.activeElement === element && element.scrollHeight > element.clientHeight"));
+            await page.Keyboard.PressAsync("End");
+            await using var scrolledToEnd = await page.WaitForFunctionAsync("() => { const label = document.querySelector('.iq-empty-dropzone'); return label.scrollTop > 0 && label.scrollTop + label.clientHeight >= label.scrollHeight - 1; }", null, new() { Timeout = 30_000 });
+            await page.Keyboard.PressAsync("Home");
+            await using var scrolledToStart = await page.WaitForFunctionAsync("() => document.querySelector('.iq-empty-dropzone').scrollTop <= 1", null, new() { Timeout = 30_000 });
+            string? temporaryFile = null;
+            try
+            {
+                await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+                {
+                    Name = "drawing.pdf",
+                    MimeType = "application/pdf",
+                    Buffer = System.Text.Encoding.UTF8.GetBytes("%PDF-1.7 unsupported model"),
+                });
+                var rejected = page.Locator("[data-workflow-failed-preview]");
+                await Assertions.Expect(page.Locator("[data-workflow-file-error]")).ToBeVisibleAsync();
+                await Assertions.Expect(rejected).ToHaveCountAsync(1);
+                var remove = rejected.Locator("[data-workflow-remove-failed]");
+                await remove.FocusAsync();
+                await remove.PressAsync("Enter");
+                await Assertions.Expect(rejected).ToHaveCountAsync(0);
+                await page.Keyboard.PressAsync("Control+Home");
+
+                temporaryFile = Path.Combine(Path.GetTempPath(), $"maliev-empty-selection-{Guid.NewGuid():N}.stl");
+                using (var file = new FileStream(temporaryFile, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    file.SetLength(InstantQuotationWorkflowCoordinator.MaximumFileSize + 1);
+                await page.SetInputFilesAsync("#instant-quote-files", temporaryFile);
+                var alert = page.Locator("[data-workflow-upload] > [role='alert']");
+                await Assertions.Expect(alert).ToBeVisibleAsync();
+                await AssertEmptyErrorReachableAsync(alert);
+            }
+            finally
+            {
+                if (temporaryFile is not null)
+                {
+                    File.Delete(temporaryFile);
+                    Assert.False(File.Exists(temporaryFile));
+                }
+            }
+        }
+        Assert.Equal(0, upload.StartedUploads);
+        Assert.Equal(0, upload.VerifiedUploads);
+
+        async Task AssertEmptyErrorReachableAsync(ILocator notice)
+        {
+            Assert.True(await notice.EvaluateAsync<bool>("""
+                element => {
+                  const owner = element.closest('.instant-quote__workflow');
+                  const bounds = owner.getBoundingClientRect();
+                  const minimum = getComputedStyle(document.body).overflowY === 'hidden'
+                    && getComputedStyle(owner).flexDirection !== 'column' ? 420 : 240;
+                  const expected = Math.max(minimum, Math.floor((visualViewport?.height || innerHeight) - Math.max(0, bounds.top)));
+                  return Math.abs(bounds.height - expected) <= 1
+                    && [element, owner.querySelector('[data-workflow-gltf-unit]'), owner.querySelector('.iq-empty-dropzone')]
+                      .every(node => { const r = node.getBoundingClientRect(); return r.height > 0 && r.top >= bounds.top - 1 && r.bottom <= bounds.bottom + 1; });
+                }
+                """));
+            await input.FocusAsync();
+            await page.Keyboard.PressAsync("Tab");
+            if (await page.Locator("[data-workflow-upload] > [role='alert']").CountAsync() > 0)
+                await page.Keyboard.PressAsync("Tab");
+            Assert.True(await label.EvaluateAsync<bool>("element => document.activeElement === element && element.scrollHeight > element.clientHeight"));
+            await page.Keyboard.PressAsync("End");
+            await using var reachedEnd = await page.WaitForFunctionAsync("() => { const label = document.querySelector('.iq-empty-dropzone'); return label.scrollTop > 0 && label.scrollTop + label.clientHeight >= label.scrollHeight - 1; }", null, new() { Timeout = 30_000 });
+        }
+    }
+
+    [Theory]
     [InlineData("en", false)]
     [InlineData("th", false)]
     [InlineData("en", true)]
@@ -3681,10 +3975,10 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         await singleColor.SelectOptionAsync("White");
         await MaterialCardBrowserActions.SelectAsync(page, "PETG");
         await page.WaitForFunctionAsync(
-            "id => document.querySelector('#color-' + id)?.value === 'White' && !document.querySelector('[data-pricing-loading-status]')",
+            "id => document.querySelector('#color-' + id)?.value === 'Any' && !document.querySelector('[data-pricing-loading-status]')",
             singleId.ToString(), new PageWaitForFunctionOptions { Timeout = 60_000 });
-        Assert.Equal("White", await singleColor.InputValueAsync());
-        // A compatible named color survives; an unsupported custom color uses the source default.
+        Assert.Equal("Any", await singleColor.InputValueAsync());
+        // Material changes reset compatible named colors and unsupported custom colors to the source default.
         await MaterialCardBrowserActions.SelectAsync(page, "PLA");
         await page.Locator("[data-workflow-material-picker] input[type='color']").EvaluateAsync(
             "input => { input.value = '#123abc'; input.dispatchEvent(new Event('change', { bubbles: true })); }");

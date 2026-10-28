@@ -21,8 +21,8 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationResinPresentationTests
 {
     [Theory]
-    [InlineData("en", "White", "PETG", 1, "White")]
-    [InlineData("th", "White", "PETG", 1, "White")]
+    [InlineData("en", "White", "PETG", 1, "Any")]
+    [InlineData("th", "White", "PETG", 1, "Any")]
     [InlineData("en", "Pink", "PA-CF", 1, "Black")]
     [InlineData("th", "Pink", "PA-CF", 1, "Black")]
     [InlineData("en", "Any", "PETG", 2, "Any")]
@@ -2305,6 +2305,117 @@ public sealed class InstantQuotationResinPresentationTests
                 admitRelease.TrySetResult();
                 await uploading.WaitAsync(lease.Token);
                 Assert.Equal("PETG", Assert.Single(coordinator.Parts).Configuration.MaterialKey);
+            }
+            catch (Exception exception) { primary = exception; throw; }
+            finally
+            {
+                claimRelease.TrySetResult(claim);
+                admitRelease.TrySetResult();
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
+                        uploading, () => lease.Cancel(), () => { claimRelease.TrySetResult(claim); admitRelease.TrySetResult(); },
+                        lease.Token, null, receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
+                        expectedTerminalFailure: false, taskKind: "selector-admission-handoff"));
+            }
+        });
+    }
+    /// <summary>Checks source material defaults before a synthetic admission; this is not browser or manufacturing proof.</summary>
+    [Fact]
+    public async Task PendingMaterialSelection_UsesTargetDefaultAcrossAdmission()
+    {
+        using var culture = new CultureScope("en");
+        var store = new SessionStore();
+        await using var coordinator = new InstantQuotationWorkflowCoordinator(
+            store, new SyntheticUploadClient(), new InstantQuotationPricingService(), null,
+            authoritativePricingService: SyntheticAuthoritativePricingTestService.Instance);
+        await coordinator.InitializeAsync("presentation-session", default);
+        var activator = new CapturingActivator(coordinator);
+        using var services = Services(activator, new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        using var lease = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var claimEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var claimRelease = new TaskCompletionSource<InstantQuotationGeometryClaim>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var admitEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var admitRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        const string previewKey = "pending-default-preview";
+        var claim = new InstantQuotationGeometryClaim(1, new string('a', 64), 10, 10, 10, 1000, 600,
+            Enumerable.Repeat(100d, 64).ToArray(), Enumerable.Repeat(40d, 64).ToArray(),
+            12, 1, true, false, false, 1);
+        await using var preview = new ControlledPreviewReference(async (name, _) =>
+        {
+            if (name == "beginSelection") return new[] { previewKey };
+            if (name == "getGeometryClaim")
+            {
+                claimEntered.TrySetResult();
+                return await claimRelease.Task.WaitAsync(lease.Token);
+            }
+            if (name == "admit")
+            {
+                admitEntered.TrySetResult();
+                await admitRelease.Task.WaitAsync(lease.Token);
+            }
+            return null;
+        });
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var root = await renderer.RenderComponentAsync<InstantQuotationWorkflow>(ParameterView.Empty);
+            var component = Assert.IsType<InstantQuotationWorkflow>(activator.Workflow);
+            typeof(InstantQuotationWorkflow).GetField("previewInterop", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(component, preview);
+            typeof(InstantQuotationWorkflow).GetField("fileInput", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .SetValue(component, new InputFile());
+            var uploading = (Task)typeof(InstantQuotationWorkflow)
+                .GetMethod("UploadFilesAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(component, [new InputFileChangeEventArgs([new SyntheticBrowserFile()])])!;
+            Exception? primary = null;
+            try
+            {
+                await claimEntered.Task.WaitAsync(lease.Token);
+                Assert.Empty(coordinator.Parts);
+                var pendingSelector = Assert.Single(activator.MaterialSelectors);
+                var retainedCallback = pendingSelector.SelectionChanged;
+                Assert.True(retainedCallback.HasDelegate);
+                Assert.Contains("data-workflow-local-settings", root.ToHtmlString(), StringComparison.Ordinal);
+                Assert.Equal("PLA", pendingSelector.SelectedMaterialKey);
+                Assert.Matches("<select\\b(?=[^>]*id=\"pending-color-" + previewKey + "\")(?=[^>]*value=\"Black\")[^>]*>", root.ToHtmlString());
+                await retainedCallback.InvokeAsync("PETG");
+                Assert.Equal("PETG", pendingSelector.SelectedMaterialKey);
+                Assert.Matches("<select\\b(?=[^>]*id=\"pending-color-" + previewKey + "\")(?=[^>]*value=\"Any\")[^>]*>", root.ToHtmlString());
+                Assert.Empty(coordinator.Parts);
+                Assert.False(coordinator.HasCompleteAuthoritativeQuote);
+                Assert.Null((await store.GetAsync("presentation-session", null, lease.Token))!.QuoteAuthorization);
+                claimRelease.TrySetResult(claim);
+                await admitEntered.Task.WaitAsync(lease.Token);
+                // Flush the real state transition, without waiting for preview interop completion.
+                typeof(ComponentBase).GetMethod("StateHasChanged", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .Invoke(component, null);
+                var part = Assert.Single(coordinator.Parts);
+                var expectedConfiguration = new InstantQuotationPartConfiguration("PETG", "Any", 1, BuildPreference.Standard);
+                Assert.Equal(expectedConfiguration, part.Configuration);
+                Assert.DoesNotContain("data-workflow-local-settings", root.ToHtmlString(), StringComparison.Ordinal);
+                Assert.Same(pendingSelector, activator.MaterialSelectors.Last());
+                Assert.Single(activator.MaterialSelectors);
+                Assert.Equal("PETG", Assert.Single(coordinator.Parts).Configuration.MaterialKey);
+                var stored = Assert.IsType<InstantQuotationSessionState>(
+                    await store.GetAsync("presentation-session", null, lease.Token));
+                var saved = Assert.Single(stored.Parts);
+                Assert.Equal(part.PartId, saved.PartId);
+                Assert.Equal(part.Configuration, saved.Configuration);
+                var line = Assert.Single(Assert.IsType<InstantQuotationOrderQuote>(coordinator.OrderQuote).Parts);
+                Assert.Equal(part.PartId, line.PartId);
+                Assert.Equal(expectedConfiguration.MaterialKey, line.MaterialKey);
+                Assert.Equal(expectedConfiguration.Color, line.Color);
+                Assert.Equal(expectedConfiguration.Quantity, line.Quantity);
+                Assert.Equal(expectedConfiguration.BuildPreference, line.BuildPreference);
+                Assert.NotNull(line.PhysicalReceipt);
+                Assert.Equal("PETG", line.PhysicalReceipt.MaterialKey);
+                var html = root.ToHtmlString();
+                var petg = Assert.Single(Regex.Matches(html, "<div\\b[^>]*role=\"radio\"[^>]*data-material-key=\"PETG\"[^>]*>").Cast<Match>());
+                Assert.Contains("aria-checked=\"true\"", petg.Value, StringComparison.Ordinal);
+                admitRelease.TrySetResult();
+                await uploading.WaitAsync(lease.Token);
+                Assert.Equal(part.PartId, Assert.Single(coordinator.Parts).PartId);
+                Assert.Equal(part.Configuration, Assert.Single(coordinator.Parts).Configuration);
             }
             catch (Exception exception) { primary = exception; throw; }
             finally

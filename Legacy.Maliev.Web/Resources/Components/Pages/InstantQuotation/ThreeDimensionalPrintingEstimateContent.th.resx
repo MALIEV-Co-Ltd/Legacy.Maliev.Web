@@ -681,6 +681,7 @@
     <value>วัสดุอื่น ๆ</value>
   </data>
   <data name="Up to {0} MB per file" xml:space="preserve"><value>สูงสุด {0} MB ต่อไฟล์</value></data>
+  <data name="Up to {0} MB per file · add multiple parts" xml:space="preserve"><value>สูงสุด {0} MB ต่อไฟล์ · เพิ่มได้หลายชิ้น</value></data>
   <data name="Manufacturing warnings may affect the final result of this part." xml:space="preserve">
     <value>มีข้อควรระวังด้านการผลิต อาจส่งผลต่อผลลัพธ์สุดท้ายของชิ้นงาน</value>
   </data>
