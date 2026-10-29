@@ -318,6 +318,206 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
         Assert.Empty(client.IdentityPasswords);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Fulfill_LeaseLostAfterAcknowledgedCompensation_DoesNotDeleteAnotherResource(bool anotherOrder)
+    {
+        var checkpoint = FilesLinkedCheckpoint() with
+        {
+            Status = InstantQuotationSubmissionCheckpointStatus.OrdersProvisioning,
+            CustomerId = 71,
+            CustomerCreated = true,
+            OrderIds = anotherOrder ? [901, 902] : [902],
+            CompensationRequired = true,
+        };
+        var lease = new RecordingLease(checkpoint);
+        var client = new RecordingClient
+        {
+            AfterOrderCompensation = () => lease.FailNextRenewal = true,
+        };
+        var coordinator = new InstantQuotationFulfillmentCoordinator(client);
+
+        var result = await coordinator.FulfillAsync(
+            Session(Part(1)), Quote(Part(1)), null, Customer(), lease, checkpoint, CancellationToken.None);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, result.Outcome);
+        Assert.Equal(InstantQuotationProblemCategory.Unexpected, result.ProblemCategory);
+        Assert.Equal([902], client.CompensatedOrderIds);
+        Assert.Empty(client.CompensatedCustomerIds);
+        Assert.Same(checkpoint, lease.Checkpoint);
+        Assert.Empty(lease.Writes);
+        Assert.Empty(client.CustomerCalls);
+        Assert.Empty(client.OrderPartIndexes);
+        Assert.Empty(client.IdentityPasswords);
+        Assert.Empty(client.QuotationNotifications);
+    }
+
+    [Theory]
+    [InlineData("order-status", true)]
+    [InlineData("order-status", false)]
+    [InlineData("order-file-link", true)]
+    [InlineData("order-file-link", false)]
+    public async Task Fulfill_DefiniteOwnedHttpRejection_RecordsFailureBeforeFencedCompensation(string stage, bool acknowledged)
+    {
+        var checkpoint = FilesLinkedCheckpoint() with
+        {
+            Status = InstantQuotationSubmissionCheckpointStatus.CustomerProvisioned,
+            CustomerId = 71,
+            CustomerCreated = true,
+        };
+        var lease = new RecordingLease(checkpoint);
+        var client = new RecordingClient { RejectedHttpStage = stage, CompensationSucceeds = acknowledged };
+
+        var result = await new InstantQuotationFulfillmentCoordinator(client).FulfillAsync(
+            Session(Part(1)), Quote(Part(1)), null, Customer(), lease, checkpoint, CancellationToken.None);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, result.Outcome);
+        Assert.Equal(417, result.RequestReference);
+        var failure = Assert.IsType<InstantQuotationFulfillmentFailure>(result.FulfillmentFailure);
+        Assert.Equal(stage, failure.Stage);
+        Assert.Equal("InstantQuotationDefiniteFailureException", failure.ExceptionType);
+        Assert.Equal(acknowledged, failure.RetrySafe);
+        Assert.Equal(1, failure.OrderCount);
+        Assert.True(failure.CustomerCommitted);
+        Assert.Equal([901], client.CompensatedOrderIds);
+        if (acknowledged)
+        {
+            Assert.Equal([71], client.CompensatedCustomerIds);
+            Assert.Null(lease.Checkpoint.CustomerId);
+            Assert.Equal(InstantQuotationSubmissionCheckpointStatus.FilesLinked, lease.Checkpoint.Status);
+        }
+        else
+        {
+            Assert.Empty(client.CompensatedCustomerIds);
+            Assert.Equal([901], lease.Checkpoint.OrderIds);
+            Assert.True(lease.Checkpoint.CompensationRequired);
+        }
+        Assert.Empty(client.IdentityPasswords);
+        Assert.Empty(client.QuotationNotifications);
+    }
+
+    [Theory]
+    [InlineData("customer", "customer-provisioning", 0, false)]
+    [InlineData("identity", "customer-provisioning", 1, true)]
+    [InlineData("welcome-prepare", "welcome-email", 1, true)]
+    [InlineData("welcome-send", "welcome-email", 1, true)]
+    public async Task Fulfill_ActualBoundaryException_CapturesTypeAndPreCleanupFacts(
+        string boundary, string expectedStage, int expectedOrders, bool expectedCustomer)
+    {
+        var checkpoint = FilesLinkedCheckpoint();
+        var lease = new RecordingLease(checkpoint);
+        var client = new RecordingClient { ThrowAtBoundary = boundary };
+
+        var result = await new InstantQuotationFulfillmentCoordinator(client).FulfillAsync(
+            Session(Part(1)), Quote(Part(1)), null, Customer(), lease, checkpoint, CancellationToken.None);
+
+        var failure = Assert.IsType<InstantQuotationFulfillmentFailure>(result.FulfillmentFailure);
+        Assert.Equal(expectedStage, failure.Stage);
+        Assert.Equal(nameof(PrivateBoundaryException), failure.ExceptionType);
+        Assert.Equal(expectedOrders, failure.OrderCount);
+        Assert.Equal(expectedCustomer, failure.CustomerCommitted);
+        Assert.False(failure.RetrySafe);
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, result.Outcome);
+        Assert.Empty(client.CompensatedOrderIds);
+        Assert.Empty(client.CompensatedCustomerIds);
+        Assert.DoesNotContain("private-payload-sentinel", System.Text.Json.JsonSerializer.Serialize(result), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("throw")]
+    [InlineData("final-cas")]
+    public async Task Fulfill_UncertainCleanup_PreservesKnownGraphAndNeverClaimsRetrySafe(string uncertainty)
+    {
+        var checkpoint = FilesLinkedCheckpoint() with
+        {
+            Status = InstantQuotationSubmissionCheckpointStatus.CustomerProvisioned,
+            CustomerId = 71,
+            CustomerCreated = true,
+        };
+        var lease = new RecordingLease(checkpoint) { FailRollback = uncertainty == "final-cas" };
+        var client = new RecordingClient { RejectedHttpStage = "order-status", ThrowOnCompensation = uncertainty == "throw" };
+
+        var result = await new InstantQuotationFulfillmentCoordinator(client).FulfillAsync(
+            Session(Part(1)), Quote(Part(1)), null, Customer(), lease, checkpoint, CancellationToken.None);
+
+        var failure = Assert.IsType<InstantQuotationFulfillmentFailure>(result.FulfillmentFailure);
+        Assert.False(failure.RetrySafe);
+        Assert.True(failure.CustomerCommitted);
+        Assert.Equal(1, failure.OrderCount);
+        Assert.Equal([901], lease.Checkpoint.OrderIds);
+        Assert.True(lease.Checkpoint.CompensationRequired);
+        Assert.Equal(71, lease.Checkpoint.CustomerId);
+        Assert.Equal(InstantQuotationSubmissionCheckpointStatus.OrdersProvisioning, lease.Checkpoint.Status);
+        Assert.Empty(client.IdentityPasswords);
+    }
+
+    [Fact]
+    public async Task Fulfill_DefiniteRejection_ReusedCustomerIsNeverDeleted_AndCommittedSnapshotSurvivesCleanup()
+    {
+        var checkpoint = FilesLinkedCheckpoint() with
+        {
+            Status = InstantQuotationSubmissionCheckpointStatus.CustomerProvisioned,
+            CustomerId = 71,
+            CustomerCreated = false,
+        };
+        var lease = new RecordingLease(checkpoint);
+        var client = new RecordingClient { RejectedHttpStage = "order-file-link" };
+
+        var result = await new InstantQuotationFulfillmentCoordinator(client).FulfillAsync(
+            Session(Part(1)), Quote(Part(1)), "customer:71", Customer(), lease, checkpoint, CancellationToken.None);
+
+        var failure = Assert.IsType<InstantQuotationFulfillmentFailure>(result.FulfillmentFailure);
+        Assert.True(failure.CustomerCommitted);
+        Assert.True(failure.RetrySafe);
+        Assert.Equal(1, failure.OrderCount);
+        Assert.Equal([901], client.CompensatedOrderIds);
+        Assert.Empty(client.CompensatedCustomerIds);
+        Assert.Null(lease.Checkpoint.CustomerId);
+        Assert.False(lease.Checkpoint.CompensationRequired);
+    }
+
+    [Fact]
+    public async Task Fulfill_CallerCancellationAfterAcknowledgedDelete_StopsBeforeNextDeleteOrCheckpointWrite()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var checkpoint = FilesLinkedCheckpoint() with
+        {
+            Status = InstantQuotationSubmissionCheckpointStatus.OrdersProvisioning,
+            CustomerId = 71,
+            CustomerCreated = true,
+            OrderIds = [901, 902],
+            CompensationRequired = true,
+        };
+        var lease = new RecordingLease(checkpoint);
+        var client = new RecordingClient { AfterOrderCompensation = cancellation.Cancel };
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => new InstantQuotationFulfillmentCoordinator(client).FulfillAsync(
+            Session(Part(1)), Quote(Part(1)), null, Customer(), lease, checkpoint, cancellation.Token));
+
+        Assert.Equal([902], client.CompensatedOrderIds);
+        Assert.Empty(client.CompensatedCustomerIds);
+        Assert.Same(checkpoint, lease.Checkpoint);
+        Assert.Empty(lease.Writes);
+    }
+
+    [Fact]
+    public async Task Fulfill_QuotationNotificationFailure_IsNotRelabeledAsOriginalWelcomeFailure()
+    {
+        var checkpoint = FilesLinkedCheckpoint();
+        var client = new RecordingClient { FailedQuotationRecipient = "customer@example.test" };
+
+        var result = await new InstantQuotationFulfillmentCoordinator(client).FulfillAsync(
+            Session(Part(1)), Quote(Part(1)), null, Customer(), new RecordingLease(checkpoint), checkpoint, CancellationToken.None);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, result.Outcome);
+        Assert.Null(result.FulfillmentFailure);
+        Assert.Empty(client.CompensatedOrderIds);
+        Assert.Empty(client.CompensatedCustomerIds);
+    }
+
+    private sealed class PrivateBoundaryException() : Exception("private-payload-sentinel");
+
     private static InstantQuotationSubmissionCheckpoint FilesLinkedCheckpoint()
     {
         var parts = new[] { Part(1), Part(2, "bbbbbbbb-cccc-dddd-eeee-ffffffffffff") };
@@ -395,9 +595,11 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
         public bool FailNextRenewal { get; set; }
         public bool FailNotificationFreeze { get; set; }
         public bool FailNotificationSendCheckpoint { get; set; }
+        public bool FailRollback { get; init; }
 
         public Task<bool> RenewAsync(CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var result = !FailNextRenewal;
             FailNextRenewal = false;
             return Task.FromResult(result);
@@ -411,6 +613,8 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
             InstantQuotationSubmissionCheckpointStatus? expectedPriorStatus,
             CancellationToken cancellationToken)
         {
+            if (FailRollback && value.Status == InstantQuotationSubmissionCheckpointStatus.FilesLinked)
+                return Task.FromResult(false);
             if (Checkpoint.Status != expectedPriorStatus
                 || (FailNotificationFreeze && value.QuotationNotifications is not null && Checkpoint.QuotationNotifications is null))
             {
@@ -440,6 +644,10 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
         public int? UnavailableOrderPartIndex { get; set; }
         public int? UnexpectedOrderPartIndex { get; set; }
         public bool CompensationSucceeds { get; set; } = true;
+        public bool ThrowOnCompensation { get; init; }
+        public string? ThrowAtBoundary { get; init; }
+        public string? RejectedHttpStage { get; init; }
+        public Action? AfterOrderCompensation { get; init; }
         public List<int> CompensatedOrderIds { get; } = [];
         public List<int> CompensatedCustomerIds { get; } = [];
         public bool QuotationPreparationAvailable { get; set; } = true;
@@ -473,6 +681,7 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
             InstantQuotationCustomerSubmission customer,
             CancellationToken cancellationToken)
         {
+            if (ThrowAtBoundary == "customer") throw new PrivateBoundaryException();
             CustomerCalls.Add(ownerIdentity);
             return Task.FromResult(new InstantQuotationCustomerProvisionResult(71, true, true, true));
         }
@@ -483,6 +692,7 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
             string temporaryPassword,
             CancellationToken cancellationToken)
         {
+            if (ThrowAtBoundary == "identity") throw new PrivateBoundaryException();
             IdentityPasswords.Add(temporaryPassword);
             return Task.FromResult(new InstantQuotationIdentityProvisionResult(
                 IdentityServiceAvailable,
@@ -502,6 +712,14 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
             CancellationToken cancellationToken)
         {
             OrderPartIndexes.Add(partIndex);
+            if (RejectedHttpStage is { } rejectedStage)
+                return Task.FromResult(new InstantQuotationOrderProvisionResult(901 + partIndex, false, false, true, false)
+                {
+                    FailureStage = rejectedStage,
+                    FailureExceptionType = "InstantQuotationDefiniteFailureException",
+                    FailureStatusCode = 500,
+                    DefiniteHttpRejection = true,
+                });
             return Task.FromResult(UnavailableOrderPartIndex == partIndex
                 ? new InstantQuotationOrderProvisionResult(null, false, false, true, false)
                 : UnexpectedOrderPartIndex == partIndex
@@ -511,7 +729,9 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
 
         public Task<bool> CompensateOrderAsync(int orderId, CancellationToken cancellationToken)
         {
+            if (ThrowOnCompensation) throw new PrivateBoundaryException();
             CompensatedOrderIds.Add(orderId);
+            AfterOrderCompensation?.Invoke();
             return Task.FromResult(CompensationSucceeds);
         }
 
@@ -528,6 +748,7 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
             Guid operationId,
             CancellationToken cancellationToken)
         {
+            if (ThrowAtBoundary == "welcome-send") throw new PrivateBoundaryException();
             WelcomeOperationIds.Add(operationId);
             SentConfirmationTokens.Add(confirmationToken);
             return Task.FromResult(new NotificationResult(
@@ -540,6 +761,7 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
             InstantQuotationCustomerSubmission customer,
             CancellationToken cancellationToken)
         {
+            if (ThrowAtBoundary == "welcome-prepare") throw new PrivateBoundaryException();
             WelcomePreparationTokens.Add("confirmation-token");
             return Task.FromResult(new InstantQuotationWelcomePreparationResult(
                 "confirmation-token",

@@ -96,7 +96,7 @@ internal sealed class CustomerOrderCatalogClient(
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
             logger.LogWarning("Catalog services were unavailable while loading a member order form.");
-            return new(null, false, true);
+            return new(null, false, true) { FailureExceptionType = exception.GetType().Name };
         }
     }
 
@@ -146,7 +146,7 @@ internal sealed class CustomerOrderCatalogClient(
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
             logger.LogWarning("Catalog service was unavailable while loading material options.");
-            return new(null, false, true);
+            return new(null, false, true) { FailureExceptionType = exception.GetType().Name };
         }
     }
 
@@ -182,7 +182,7 @@ internal sealed class CustomerOrderCatalogClient(
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
             logger.LogWarning("Catalog service was unavailable while resolving a currency.");
-            return new(null, false);
+            return new(null, false) { FailureExceptionType = exception.GetType().Name };
         }
     }
 

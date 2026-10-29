@@ -82,7 +82,20 @@ public sealed record CustomerOrderOperationResult(
     bool Succeeded,
     bool ServiceAvailable,
     bool Authorized,
-    bool Conflict);
+    bool Conflict)
+{
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? FailureExceptionType { get; init; }
+
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public int? FailureStatusCode { get; init; }
+
+    /// <summary>Gets whether the actual status/file mutation returned a rejected HTTP response.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool DefiniteHttpRejection { get; init; }
+}
 
 public interface ICustomerOrderClient
 {

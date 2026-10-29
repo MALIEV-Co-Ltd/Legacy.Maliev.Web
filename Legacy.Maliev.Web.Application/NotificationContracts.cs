@@ -19,7 +19,12 @@ public sealed record EmailNotification(
 public sealed record NotificationResult(
     bool Sent,
     bool ServiceAvailable,
-    bool Authorized);
+    bool Authorized)
+{
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? FailureExceptionType { get; init; }
+}
 
 public interface INotificationClient
 {

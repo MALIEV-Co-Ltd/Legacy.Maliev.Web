@@ -668,6 +668,116 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
         Assert.DoesNotContain("Selectors.Clear", routeConvention, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData("customer-provisioning", false)]
+    [InlineData("order-creation", false)]
+    [InlineData("order-status", false)]
+    [InlineData("order-file-link", true)]
+    [InlineData("welcome-email", false)]
+    public async Task ControlledFulfillmentFailure_EmitsOriginalScalarEvent_AndRemainsTerminal(string stage, bool retrySafe)
+    {
+        var submission = new InstantQuotationSubmissionResult(
+            InstantQuotationSubmissionOutcome.Partial, 731, InstantQuotationProblemCategory.DependencyUnavailable)
+        { FulfillmentFailure = new(stage, "HttpRequestException", retrySafe, 2, true) };
+        var service = new RecordingSubmissionService(submission);
+        var logger = new CapturingSubmissionLogger();
+        var page = CreatePage(service, [new(InstantQuotationSessionIdentityClaim.Type, new string('a', 64))],
+            logger: logger);
+        page.Request.Headers.Accept = "application/json";
+
+        var response = Assert.IsType<JsonResult>(await page.OnPostSubmitRequestAsync(CancellationToken.None));
+
+        using var payload = JsonDocument.Parse(JsonSerializer.Serialize(response.Value));
+        Assert.Equal(["outcome", "redirectUrl"], payload.RootElement.EnumerateObject().Select(property => property.Name));
+        Assert.Equal("terminal", payload.RootElement.GetProperty("outcome").GetString());
+        Assert.Equal("/InstantQuotation/3D-Printing", payload.RootElement.GetProperty("redirectUrl").GetString());
+        Assert.Single(service.Calls);
+        var entry = Assert.Single(logger.Entries);
+        Assert.Equal(LogLevel.Error, entry.Level);
+        Assert.Equal(0, entry.EventId.Id);
+        Assert.Null(entry.Exception);
+        Assert.Equal(
+            ["RequestId", "Stage", "ExceptionType", "RetrySafe", "OrderCount", "CustomerCommitted", "{OriginalFormat}"],
+            entry.State.Select(item => item.Key));
+        Assert.Equal(731, entry.State[0].Value);
+        Assert.Equal(stage, entry.State[1].Value);
+        Assert.Equal("HttpRequestException", entry.State[2].Value);
+        Assert.Equal(retrySafe, entry.State[3].Value);
+        Assert.Equal(2, entry.State[4].Value);
+        Assert.Equal(true, entry.State[5].Value);
+        Assert.Equal(
+            "InstantQuotationFulfillmentFailed request {RequestId} stage {Stage} exceptionType {ExceptionType} retrySafe {RetrySafe} orderCount {OrderCount} customerCommitted {CustomerCommitted}.",
+            entry.State[6].Value);
+        Assert.DoesNotContain("ada@example.com", entry.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Lovelace", entry.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("FulfillmentFailure", JsonSerializer.Serialize(submission), StringComparison.Ordinal);
+        var (outcome, reference, category, transaction, journey) = submission;
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, outcome);
+        Assert.Equal(731, reference);
+        Assert.Equal(InstantQuotationProblemCategory.DependencyUnavailable, category);
+        Assert.Null(transaction);
+        Assert.Null(journey);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DiagnosticSinkFailure_CannotReplaceDurableTerminalResult(bool throwingSink)
+    {
+        var submission = new InstantQuotationSubmissionResult(
+            InstantQuotationSubmissionOutcome.Partial, 732, InstantQuotationProblemCategory.Unexpected)
+        { FulfillmentFailure = new("order-status", null, true, 1, true) };
+        var service = new RecordingSubmissionService(submission);
+        var logger = new CapturingSubmissionLogger { ThrowOnLog = throwingSink };
+        var page = CreatePage(service, [new(InstantQuotationSessionIdentityClaim.Type, new string('a', 64))],
+            logger: logger);
+        page.Request.Headers.Accept = "application/json";
+
+        var response = Assert.IsType<JsonResult>(await page.OnPostSubmitRequestAsync(CancellationToken.None));
+
+        using var payload = JsonDocument.Parse(JsonSerializer.Serialize(response.Value));
+        Assert.Equal("terminal", payload.RootElement.GetProperty("outcome").GetString());
+        Assert.Single(service.Calls);
+        Assert.Equal(732, page.TempData[ThreeDimensionalPrinting.RequestReferenceTempDataKey]);
+        if (!throwingSink)
+        {
+            var entry = Assert.Single(logger.Entries);
+            Assert.Null(entry.State[2].Value);
+            Assert.Contains("exceptionType (null)", entry.Message, StringComparison.Ordinal);
+            Assert.Null(entry.Exception);
+        }
+    }
+
+    [Fact]
+    public async Task CompletedSubmission_HasNoFulfillmentFailureEvent()
+    {
+        var logger = new CapturingSubmissionLogger();
+        var page = CreatePage(new RecordingSubmissionService(Completed(733)),
+            [new(InstantQuotationSessionIdentityClaim.Type, new string('a', 64))], logger: logger);
+
+        Assert.IsType<LocalRedirectResult>(await page.OnPostSubmitRequestAsync(CancellationToken.None));
+
+        Assert.Empty(logger.Entries);
+    }
+
+    private sealed class CapturingSubmissionLogger : ILogger<ThreeDimensionalPrinting>
+    {
+        public bool ThrowOnLog { get; init; }
+        public List<(LogLevel Level, EventId EventId, Exception? Exception,
+            KeyValuePair<string, object?>[] State, string Message)> Entries
+        { get; } = [];
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+            Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (ThrowOnLog) throw new InvalidOperationException("diagnostic-sink-private-sentinel");
+            Entries.Add((logLevel, eventId, exception,
+                Assert.IsAssignableFrom<IEnumerable<KeyValuePair<string, object?>>>(state).ToArray(),
+                formatter(state, exception)));
+        }
+    }
+
     private const string SubmitRoute = "/InstantQuotation/3D-Printing?handler=SubmitRequest";
 
     private static WebApplicationFactory<Program> CreateFactory(
@@ -764,14 +874,15 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
     private static ThreeDimensionalPrinting CreatePage(
         IInstantQuotationSubmissionService service,
         IReadOnlyList<Claim> claims,
-        string? authenticationType = null)
+        string? authenticationType = null,
+        ILogger<ThreeDimensionalPrinting>? logger = null)
     {
         var context = new DefaultHttpContext
         {
             User = new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType)),
         };
         var tempData = new RecordingTempDataProvider();
-        return new ThreeDimensionalPrinting(service, NullLogger<ThreeDimensionalPrinting>.Instance)
+        return new ThreeDimensionalPrinting(service, logger ?? NullLogger<ThreeDimensionalPrinting>.Instance)
         {
             PageContext = new PageContext { HttpContext = context },
             TempData = new TempDataDictionary(context, tempData),
@@ -780,6 +891,12 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
             Email = "ada@example.com",
             Telephone = "+66 80 000 0000",
             Country = "TH",
+            Mobile = "089-000-0000",
+            BillingStreet1 = "1 Billing Road",
+            BillingCity = "Bangkok",
+            BillingProvince = "Bangkok",
+            BillingPostalCode = "10110",
+            ShipToBillingAddress = true,
         };
     }
 

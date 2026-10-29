@@ -162,10 +162,92 @@ public sealed class CustomerOrderSubmissionTransportTests
         Assert.Equal("orderstatuses/histories/731/new", request.Path);
     }
 
+    [Theory]
+    [InlineData(false, 400)]
+    [InlineData(true, 400)]
+    [InlineData(false, 500)]
+    [InlineData(true, 500)]
+    [InlineData(false, 403)]
+    [InlineData(true, 403)]
+    [InlineData(false, 409)]
+    [InlineData(true, 409)]
+    public async Task StatusAndFileRejection_RetainObservedResponseWithoutChangingOperationWire(bool file, int status)
+    {
+        var owned = new List<HttpClient>();
+        var handler = new RecordingHandler(request => request.Method == HttpMethod.Get
+            ? Json(HttpStatusCode.OK, "{\"order\":{\"id\":731,\"customerId\":42},\"files\":[]}")
+            : new HttpResponseMessage((HttpStatusCode)status));
+        try
+        {
+            var transport = CreateTransport(orders: handler, ownedClients: owned);
+            var result = file
+                ? await transport.LinkAsync(42, 731, new("private-bucket-sentinel", "private-object-sentinel"), default)
+                : await transport.AddNewStatusAsync(731, "source-status", default);
+            Assert.False(result.Succeeded);
+            Assert.Equal(status < 500, result.ServiceAvailable);
+            Assert.Equal(status != 403, result.Authorized);
+            Assert.Equal(status == 409, result.Conflict);
+            Assert.True(result.DefiniteHttpRejection);
+            Assert.Equal(status, result.FailureStatusCode);
+            Assert.Null(result.FailureExceptionType);
+            var (succeeded, available, authorized, conflict) = result;
+            Assert.Equal((false, status < 500, status != 403, status == 409), (succeeded, available, authorized, conflict));
+            using var json = JsonDocument.Parse(JsonSerializer.Serialize(result));
+            Assert.Equal(new[] { "Succeeded", "ServiceAvailable", "Authorized", "Conflict" },
+                json.RootElement.EnumerateObject().Select(property => property.Name));
+        }
+        finally { foreach (var client in owned) client.Dispose(); }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NativeTransportFailure_IsNotDefiniteResponse_AndRetainsOnlyActualType(bool file)
+    {
+        var owned = new List<HttpClient>();
+        var expected = new HttpRequestException("private-message-sentinel");
+        var handler = new RecordingHandler(request => request.Method == HttpMethod.Get
+            ? Json(HttpStatusCode.OK, "{\"order\":{\"id\":731,\"customerId\":42},\"files\":[]}")
+            : throw expected);
+        try
+        {
+            var transport = CreateTransport(orders: handler, ownedClients: owned);
+            var result = file
+                ? await transport.LinkAsync(42, 731, new("private-bucket-sentinel", "private-object-sentinel"), default)
+                : await transport.AddNewStatusAsync(731, "source-status", default);
+            Assert.False(result.ServiceAvailable);
+            Assert.False(result.DefiniteHttpRejection);
+            Assert.Null(result.FailureStatusCode);
+            Assert.Equal(expected.GetType().Name, result.FailureExceptionType);
+            Assert.DoesNotContain("private-", JsonSerializer.Serialize(result), StringComparison.Ordinal);
+        }
+        finally { foreach (var client in owned) client.Dispose(); }
+    }
+
+    [Fact]
+    public async Task OwnershipReadRejection_IsNotARejectedFileMutation()
+    {
+        var owned = new List<HttpClient>();
+        var handler = new RecordingHandler(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        try
+        {
+            var result = await CreateTransport(orders: handler, ownedClients: owned)
+                .LinkAsync(42, 731, new("private-bucket-sentinel", "private-object-sentinel"), default);
+            Assert.False(result.ServiceAvailable);
+            Assert.False(result.DefiniteHttpRejection);
+            Assert.Equal(500, result.FailureStatusCode);
+            Assert.Null(result.FailureExceptionType);
+            Assert.Single(handler.Requests);
+            Assert.Equal(HttpMethod.Get, handler.Requests[0].Method);
+        }
+        finally { foreach (var client in owned) client.Dispose(); }
+    }
+
     private static CustomerOrderSubmissionTransport CreateTransport(
         RecordingHandler? orders = null,
         RecordingHandler? files = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        List<HttpClient>? ownedClients = null)
     {
         orders ??= new RecordingHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
         files ??= new RecordingHandler(_ => new HttpResponseMessage(HttpStatusCode.OK));
@@ -174,6 +256,7 @@ public sealed class CustomerOrderSubmissionTransportTests
             ["orders"] = new(orders) { BaseAddress = new Uri("https://orders.test/") },
             ["files"] = new(files) { BaseAddress = new Uri("https://files.test/") },
         };
+        ownedClients?.AddRange(clients.Values);
         var constructor = typeof(CustomerOrderSubmissionTransport).GetConstructors(
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Single();
         return (CustomerOrderSubmissionTransport)constructor.Invoke([

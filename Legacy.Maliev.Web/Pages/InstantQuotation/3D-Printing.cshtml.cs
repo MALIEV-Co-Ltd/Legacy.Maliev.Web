@@ -368,6 +368,20 @@ public sealed class ThreeDimensionalPrinting : PageModel
         if (prepared?.TerminalResult is not null && result.RequestReference is null)
             result = prepared.TerminalResult;
 
+        if (result.RequestReference is int requestId && result.FulfillmentFailure is { } failure)
+        {
+            try
+            {
+                logger?.LogError(
+                    "InstantQuotationFulfillmentFailed request {RequestId} stage {Stage} exceptionType {ExceptionType} retrySafe {RetrySafe} orderCount {OrderCount} customerCommitted {CustomerCommitted}.",
+                    requestId, failure.Stage, failure.ExceptionType, failure.RetrySafe, failure.OrderCount, failure.CustomerCommitted);
+            }
+            catch (Exception)
+            {
+                // A diagnostic sink must not replace the durable submission result.
+            }
+        }
+
         // Only validation is known to have failed before a request could be created.
         // A downstream timeout can hide a persisted request, so it is never a safe retry.
         if (wantsJson && result.Outcome == InstantQuotationSubmissionOutcome.Rejected
