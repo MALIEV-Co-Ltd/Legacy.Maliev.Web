@@ -1,5 +1,6 @@
 """Offline guards; no image, SDK, provider, or container processes are started."""
 import importlib.util
+import fnmatch
 from pathlib import Path
 import sys
 import unittest
@@ -50,6 +51,26 @@ class Guards(unittest.TestCase):
         workflow = yaml.safe_load((path.parents[1] / '.github/workflows/web-packaged-image.yml').read_text())
         events = workflow.get('on', workflow.get(True))
         self.assertIn('tests/fx-joined/candidate-graph.json', events['pull_request']['paths'])
+
+    def test_packaged_dist_changes_require_fresh_actual_image_proof(self):
+        import yaml
+        workflow = yaml.safe_load((path.parents[1] / '.github/workflows/web-packaged-image.yml').read_text())
+        events = workflow.get('on', workflow.get(True))
+        patterns = events['pull_request']['paths']
+        self.assertIn('Legacy.Maliev.Web/wwwroot/dist/**', patterns)
+        viewer = 'Legacy.Maliev.Web/wwwroot/dist/instant-quotation-viewer.mjs'
+        self.assertTrue((path.parents[1] / viewer).is_file())
+        self.assertTrue(any(fnmatch.fnmatchcase(viewer, pattern) for pattern in patterns))
+
+    def test_reviewed_candidate_asset_witness_requires_fresh_actual_image_proof(self):
+        import yaml
+        workflow = yaml.safe_load((path.parents[1] / '.github/workflows/web-packaged-image.yml').read_text())
+        events = workflow.get('on', workflow.get(True))
+        patterns = events['pull_request']['paths']
+        self.assertIn('tests/fx-joined/reviewed-candidate-*-assets.json', patterns)
+        fixture = 'tests/fx-joined/reviewed-candidate-printing758-assets.json'
+        self.assertTrue((path.parents[1] / fixture).is_file())
+        self.assertTrue(any(fnmatch.fnmatchcase(fixture, pattern) for pattern in patterns))
 
     def test_scratch_missing_revision_and_not_applicable_receipts_refused(self):
         for receipt in ({}, {'status': 'not-applicable'},
