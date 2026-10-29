@@ -896,18 +896,26 @@ internal sealed class BillingSystemChild(ProcessStartInfo start) : IBillingChild
         _ = process.SafeHandle; // Retain exact process handle before later metadata/reader failures.
         var actualPid = process.Id;
         var actualBirth = process.StartTime.ToUniversalTime();
-        var actualExecutable = process.MainModule?.FileName ?? throw new InvalidOperationException("Owned executable identity unavailable.");
+        var actualExecutable = ExecutablePath(process) ?? throw new InvalidOperationException("Owned executable identity unavailable.");
         if (pid != 0 && (pid != actualPid || birth != actualBirth || !string.Equals(executable, actualExecutable, StringComparison.Ordinal)))
             throw new InvalidOperationException("Owned process identity changed; mutation refused.");
         if (!process.HasExited)
         {
             using var current = Process.GetProcessById(actualPid);
             if (current.StartTime.ToUniversalTime() != actualBirth
-                || !string.Equals(current.MainModule?.FileName, actualExecutable, StringComparison.Ordinal))
+                || !string.Equals(ExecutablePath(current), actualExecutable, StringComparison.Ordinal))
                 throw new InvalidOperationException("Current PID birth/executable differs from original owned process; mutation refused.");
         }
         pid = actualPid; birth = actualBirth; executable = actualExecutable;
     }
+    // Linux module enumeration can cache an empty snapshot; read the kernel's actual executable link.
+    private static string? ExecutablePath(Process owned)
+    {
+        if (!OperatingSystem.IsLinux()) return owned.MainModule?.FileName;
+        if (owned.HasExited) return null;
+        return new FileInfo($"/proc/{owned.Id}/exe").LinkTarget;
+    }
+
     public void StartReaders()
     {
         stdout = DrainAsync(process.StandardOutput);

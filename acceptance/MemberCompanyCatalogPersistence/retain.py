@@ -10,10 +10,10 @@ import xml.etree.ElementTree as ET
 
 NS = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
 PREFIX = 'Legacy.Maliev.Web.Tests.MemberCompanyCatalogPersistenceTests.CompanyUpdate_RealAdapter_NormalSave_ApiReadbackAndReload'
-# Accepted PR723 adds bounded startup diagnostics and the exact child cleanup stage.
+# Reviewed candidate009 preserves cleanup fences and reads the Linux kernel executable identity.
 # Keep all ownership checks and admit only its terminal released receipt.
-HELPER_REVISION = 'a25cf00409b9df2c7164c24f0a399b0752242e2d'
-HELPER_SHA256 = '680ff227f0e4e395c44f81f40e69c845d015b637661f6e68c8c5b8828dfba14b'
+HELPER_REVISION = '0098851dc8d35a22b73b656a16a43b3123add841'
+HELPER_SHA256 = 'b4336266db369ff8d4f3dee4266a1163b25537da9d67572b8ac16adb8bfa7299'
 
 def require(value, message):
     if not value:
