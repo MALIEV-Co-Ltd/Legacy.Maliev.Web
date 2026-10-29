@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -6,8 +7,10 @@ using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
 using Xunit.Abstractions;
 
@@ -63,7 +66,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             var petg = scroller.Locator("[data-material-key='PETG']");
             await petg.TapAsync();
             await Assertions.Expect(petg).ToHaveAttributeAsync("aria-checked", "true");
-            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
             await Assertions.Expect(review).ToBeEnabledAsync();
             await Assertions.Expect(petg.Locator("[data-material-card-price]"))
                 .ToHaveAttributeAsync("data-price-status", "completed");
@@ -296,7 +299,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 MimeType = "model/gltf-binary",
                 Buffer = bytes,
             };
-            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
             await page.Locator("[data-workflow-gltf-unit]").SelectOptionAsync("millimetres");
             await page.SetInputFilesAsync("#instant-quote-files", Copy(1));
             await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 90000 });
@@ -486,7 +489,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 MimeType = "model/stl",
                 Buffer = bytes,
             });
-            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
             await Assertions.Expect(review).ToBeEnabledAsync();
             var partId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
             await upload.AssertAdmittedMeshMatchesBrowserUploadAsync(partId);
@@ -553,6 +556,34 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         }
     }
 
+    [Fact]
+    public void MobileFailureProbe_RetainsOnlyFixedMetadataWithoutFormattingAndCapsRecords()
+    {
+        using var probe = new MobileFailureCallSiteProbe();
+        var logger = probe.CreateLogger("private-category-sentinel");
+        var exception = new Microsoft.JSInterop.JSException("private-message-sentinel");
+        System.Runtime.ExceptionServices.ExceptionDispatchInfo.SetRemoteStackTrace(exception, "private-stack-sentinel");
+        exception.Data["private-data-sentinel"] = "private-data-value-sentinel";
+        Assert.Contains("private-stack-sentinel", exception.StackTrace!, StringComparison.Ordinal);
+        var formatted = false;
+        for (var index = 0; index < 20; index++)
+            logger.Log(LogLevel.Warning, new EventId(1), "private-state-sentinel", exception,
+                (_, _) => { formatted = true; throw new InvalidOperationException("Formatter must not be called."); });
+        Assert.False(formatted);
+        var records = probe.Snapshot();
+        Assert.Equal(16, records.Length);
+        Assert.All(records, record =>
+        {
+            Assert.Equal("other", record.CallSite);
+            Assert.True(record.JavaScript);
+            Assert.False(record.Disconnected || record.InvalidOperation || record.Cancelled);
+        });
+        var serialized = JsonSerializer.Serialize(records);
+        foreach (var sentinel in new[] { "private-category-sentinel", "private-message-sentinel", "private-stack-sentinel",
+            "private-state-sentinel", "private-data-sentinel", "private-data-value-sentinel" })
+            Assert.DoesNotContain(sentinel, serialized, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("desktop", "model/x.stl-ascii")]
     [InlineData("iphone", "application/sla")]
@@ -563,8 +594,9 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         const string expectedTypes = ".stl,.obj,.3mf,.glb,.gltf,.stp,.step,.igs,.iges,model/stl,application/sla,application/vnd.ms-pki.stl,model/x.stl-binary,model/x.stl-ascii,model/obj,model/3mf,model/gltf-binary,model/gltf+json,model/step,model/iges";
         var upload = new HashCheckingUploadClient();
         var pricing = new CountingPricingService();
+        var failureCallSites = new MobileFailureCallSiteProbe();
         await using var factory = new RealUploadTestingWebApplicationFactory(
-            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing);
+            BrowserHostIdentityVerifier.SourceProjectDirectory(), upload, pricing, mobileFailureProbe: failureCallSites);
         var port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
         var quoteUrl = new Uri(origin, "/instantquotation/3d-printing?culture=en").ToString();
@@ -668,7 +700,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 new LocatorFilterOptions { HasText = "drawing.pdf" });
             await Microsoft.Playwright.Assertions.Expect(rejectedPdf).ToHaveCountAsync(1);
             await Microsoft.Playwright.Assertions.Expect(page.Locator(
-                "[data-workflow-configuration] .instant-quote__configuration-actions button")).ToBeDisabledAsync();
+                "[data-workflow-configuration] .instant-quote__configuration-actions > button")).ToBeDisabledAsync();
             await rejectedPdf.GetByRole(AriaRole.Button, new LocatorGetByRoleOptions
             {
                 Name = "Remove drawing.pdf",
@@ -678,7 +710,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             await page.WaitForFunctionAsync(
                 """
                 () => document.querySelectorAll('[data-workflow-parts] > [data-workflow-part]').length === 1
-                  && document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)') !== null
+                  && document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions > button:not(:disabled)') !== null
                   && document.querySelector('.instant-quote__workflow')?.getAttribute('aria-busy') === 'false'
                 """,
                 null, new PageWaitForFunctionOptions { Timeout = 60_000 });
@@ -694,7 +726,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                     parts:Math.min(document.querySelectorAll("[data-workflow-parts] > [data-workflow-part]").length,32),
                     uploadRows:Math.min(document.querySelectorAll("[data-workflow-upload-item]").length,32),
                     progress:zone?.getAttribute("aria-busy") === "true",
-                    configurationEnabled:document.querySelector("[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)") !== null,
+                    configurationEnabled:document.querySelector("[data-workflow-configuration] .instant-quote__configuration-actions > button:not(:disabled)") !== null,
                     isRepricing:!!document.querySelector("[data-pricing-loading-status]"),
                     errorVisible:document.querySelector("#blazor-error-ui")?.style.display === "block"
                   });
@@ -703,6 +735,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             try
             {
                 output.WriteLine($"[mobile-upload-services] started={Math.Min(upload.StartedUploads, 32)}; verified={Math.Min(upload.VerifiedUploads, 32)}; validationRejected={Math.Min(upload.ValidationRejectedUploads, 32)}");
+                output.WriteLine("[mobile-upload-call-sites] " + JsonSerializer.Serialize(failureCallSites.Snapshot()));
             }
             catch { /* Secondary evidence must preserve the original upload admission failure. */ }
             throw;
@@ -727,7 +760,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         Assert.NotNull(session.QuoteAuthorization);
         Assert.Contains(session.PhysicalReceipts!, receipt => receipt.PartId == partId
             && receipt.UploadSha256 == expectedDigest && receipt.MotionSeconds > 0);
-        await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button").ClickAsync();
+        await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button").ClickAsync();
         await Microsoft.Playwright.Assertions.Expect(page.Locator("[data-workflow-review-part]")).ToHaveCountAsync(1);
         Assert.Contains("mobile-picker.stl",
             await page.Locator("[data-workflow-review-part]").InnerTextAsync(), StringComparison.Ordinal);
@@ -846,12 +879,12 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             await page.Locator("[data-physical-analysis-result='ready']")
                 .WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden });
             Assert.Equal(0, await page.Locator("[data-physical-analysis-result='ready']").CountAsync());
-            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
             await review.WaitForAsync();
             try
             {
                 await page.WaitForFunctionAsync(
-                    "() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')",
+                    "() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions > button:not(:disabled)')",
                     null,
                     new PageWaitForFunctionOptions { Timeout = 10000 });
             }
@@ -860,7 +893,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 var state = await page.EvaluateAsync<string>("""
                     () => JSON.stringify({
                       workflow: document.querySelector('.instant-quote__workflow')?.dataset.workflowState,
-                      review: document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button')?.outerHTML,
+                      review: document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions > button')?.outerHTML,
                       status: document.querySelector('#instant-quote-status')?.textContent,
                       alert: document.querySelector('[role=alert]')?.textContent,
                       pricingStatus: document.querySelector('[data-pricing-loading-status]')?.textContent,
@@ -1155,7 +1188,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             {
                 await page.WaitForFunctionAsync(
                     """
-                    () => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')
+                    () => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions > button:not(:disabled)')
                     """,
                     null,
                     new PageWaitForFunctionOptions { Timeout = 90000 });
@@ -1167,7 +1200,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                         workflow: document.querySelector('.instant-quote__workflow')?.dataset.workflowState,
                         parts: document.querySelectorAll('[data-workflow-part]').length,
                         pendingUploads: document.querySelectorAll('[data-workflow-upload-item]').length,
-                        reviewEnabled: !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)'),
+                        reviewEnabled: !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions > button:not(:disabled)'),
                         status: document.querySelector('#instant-quote-status')?.textContent,
                         alert: document.querySelector('[role=alert]')?.textContent
                     })
@@ -1178,7 +1211,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             }
             Assert.Equal(9, upload.VerifiedUploads);
 
-            await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button").ClickAsync();
+            await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button").ClickAsync();
             await page.WaitForFunctionAsync(
                 """
                 () => {
@@ -1348,8 +1381,8 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
 
 
             await MaterialCardBrowserActions.SelectAsync(page, "ABS");
-            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
-            await page.WaitForFunctionAsync("() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')");
+            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
+            await page.WaitForFunctionAsync("() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions > button:not(:disabled)')");
 
             var toggle = page.Locator(".instant-quote__thickness-toggle");
             await page.WaitForFunctionAsync("() => !!document.querySelector('.instant-quote__thickness-toggle:not(:disabled)')");
@@ -1414,7 +1447,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                     var rendered = await page.EvaluateAsync<string>("""
                         limits => JSON.stringify({
                             materialMatched: document.querySelector('[data-workflow-configuration] [data-material-selector] [aria-checked="true"]')?.dataset.materialKey === 'M68',
-                            reviewEnabled: !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)'),
+                            reviewEnabled: !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions > button:not(:disabled)'),
                             pricingLoading: !!document.querySelector('[data-pricing-loading-status]'),
                             thinWallPresent: !!document.querySelector('[data-dfm-code=thin-wall]'),
                             thicknessAvailable: !!document.querySelector('.instant-quote__thickness-toggle:not(:disabled)'),
@@ -1435,7 +1468,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             Assert.DoesNotContain("needs-attention", await toggle.GetAttributeAsync("class"), StringComparison.Ordinal);
             Assert.Equal(1, upload.VerifiedUploads);
 
-            await page.WaitForFunctionAsync("() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')");
+            await page.WaitForFunctionAsync("() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions > button:not(:disabled)')");
             var resinPrice = await total.InnerTextAsync();
             await review.ClickAsync();
             await page.Locator("[data-workflow-review-content]").WaitForAsync();
@@ -1642,7 +1675,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             """);
         var failed = page.Locator("[data-workflow-failed-preview]");
         await Assertions.Expect(failed).ToContainTextAsync("unreadable.stl");
-        var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+        var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
         await Assertions.Expect(review).ToBeDisabledAsync();
         Assert.Equal(7, upload.VerifiedUploads);
         Assert.Equal(7, upload.StartedUploads);
@@ -1725,7 +1758,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 null, new() { Timeout = 90000 });
             upload.BeforeUpload = null;
             await MaterialCardBrowserActions.SelectAsync(page, "PETG");
-            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
             await Assertions.Expect(review).ToBeEnabledAsync();
             var store = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
             var saved = await store.GetAsync(upload.SessionId, upload.OwnerIdentity, default);
@@ -1845,7 +1878,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         });
         await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-workflow-part]').length === 1 && !document.querySelector('#instant-quote-files').disabled");
         await MaterialCardBrowserActions.SelectAsync(page, "PETG");
-        var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+        var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
         await Assertions.Expect(review).ToBeEnabledAsync();
         var partId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
         await upload.AssertAdmittedMeshMatchesBrowserUploadAsync(partId);
@@ -2177,13 +2210,13 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 Assert.NotNull(state.QuoteAuthorization);
             }
             await page.WaitForFunctionAsync(
-                "() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)')",
+                "() => !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions > button:not(:disabled)')",
                 null, new PageWaitForFunctionOptions { Timeout = 90000 });
             failureEvidence.Stage("Review");
             failureEvidence.AwaitBoundary("review", false);
             try
             {
-                await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button").ClickAsync();
+                await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button").ClickAsync();
                 await page.WaitForFunctionAsync(
                     """
                     count => {
@@ -2965,7 +2998,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                         addSticky: !!add && getComputedStyle(add).position === 'sticky',
                         parts: count('[data-workflow-part]'), failed: count('[data-workflow-failed-preview]'),
                         pending: count('[data-workflow-pending-parse]'), uploadErrors: count('[data-upload-error]'),
-                        reviewEnabled: !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button:not(:disabled)'),
+                        reviewEnabled: !!document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions > button:not(:disabled)'),
                         progress: zone?.getAttribute('aria-busy') === 'true', repricing: !!document.querySelector('[data-pricing-loading-status]'),
                         inputReady: typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'number'
                     });
@@ -3147,7 +3180,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var price) && price > 0,
                 "The recovered part must retain a positive server-derived displayed unit price.");
 
-            await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button").ClickAsync();
+            await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button").ClickAsync();
             var reviewPart = page.Locator($"[data-workflow-review-part][data-review-part-id='{recoveryId}']");
             var details = reviewPart.Locator("[data-review-part-details]");
             await details.Locator("summary").ClickAsync();
@@ -3324,13 +3357,13 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             {
                 await page.WaitForFunctionAsync("""
                     () => document.querySelectorAll('[data-workflow-part]').length === 9
-                      && document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button')?.disabled === false
+                      && document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions > button')?.disabled === false
                       && !document.querySelector('[data-workflow-pending-parse], [data-pricing-loading-status]')
                     """, null, new() { Timeout = 240000 });
             }
             catch (TimeoutException error) { batchTimeout = error; }
             await Assertions.Expect(page.Locator("[data-workflow-part]")).ToHaveCountAsync(9);
-            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
             await Assertions.Expect(review).ToBeEnabledAsync();
             await Assertions.Expect(page.Locator("[data-workflow-failed-preview], [data-workflow-upload-item][data-upload-error]"))
                 .ToHaveCountAsync(0);
@@ -3417,7 +3450,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                           document.querySelectorAll('[data-workflow-pending-parse]').length,
                           document.querySelectorAll('[data-workflow-failed-preview], [data-workflow-upload-item][data-upload-error]').length,
                           document.querySelectorAll('[data-pricing-loading-status]').length,
-                          document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button')?.disabled === false ? 1 : 0
+                          document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions > button')?.disabled === false ? 1 : 0
                         ]
                         """);
                     var receipts = state?.PhysicalReceipts;
@@ -3503,7 +3536,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             }));
             await Assertions.Expect(page.Locator("[data-workflow-part]")).ToHaveCountAsync(partCount,
                 new() { Timeout = 90000 });
-            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
             await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 90000 });
             await page.WaitForFunctionAsync("""
                 () => !document.querySelector('[data-pricing-loading-status]')
@@ -3971,7 +4004,13 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         var singleId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
         var singleColor = page.Locator($"#color-{singleId}");
         await Assertions.Expect(page.Locator("[data-workflow-summary-configuration]")).ToHaveTextAsync("PLA 1×");
-        Assert.Equal("Black", await singleColor.InputValueAsync());
+        Assert.Equal("Any", await singleColor.InputValueAsync());
+        // Fresh source defaults must reach review without touching configuration first.
+        await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button")
+            .ClickAsync();
+        await Assertions.Expect(page.Locator($"#review-color-{singleId}")).ToHaveValueAsync("Any");
+        await page.Locator("[data-review-back]").ClickAsync();
+        await singleColor.WaitForAsync();
         await singleColor.SelectOptionAsync("White");
         await MaterialCardBrowserActions.SelectAsync(page, "PETG");
         await page.WaitForFunctionAsync(
@@ -4046,6 +4085,11 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         Assert.Equal(2, multi.Geometry.BodyCount);
         Assert.Equal("Any", multi.Configuration.Color);
         var multiId = multi.PartId;
+        await page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button")
+            .ClickAsync();
+        await Assertions.Expect(page.Locator($"#review-color-{multiId}")).ToHaveValueAsync("Any");
+        Assert.True(await page.Locator($"#review-color-{multiId}").IsDisabledAsync());
+        await page.Locator("[data-review-back]").ClickAsync();
         await page.Locator($"[data-workflow-part][data-part-id='{multiId}'] button[aria-pressed]").ClickAsync();
         var multiColor = page.Locator($"#color-{multiId}");
         await multiColor.WaitForAsync();
@@ -4087,7 +4131,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         Assert.NotEqual("—", singleStripPrice);
         Assert.NotEqual("—", multiStripPrice);
         Assert.Equal(await configuredUnitPrice.InnerTextAsync(), multiStripPrice);
-        var reviewButton = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+        var reviewButton = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
         await reviewButton.ClickAsync(new LocatorClickOptions { Timeout = 60_000 });
         var singleReview = page.Locator($"[data-review-part-id='{singleId}'][data-workflow-review-part]");
         var multiReview = page.Locator($"[data-review-part-id='{multiId}'][data-workflow-review-part]");
@@ -4534,7 +4578,8 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         CountingPricingService pricing,
         MaterialCompletionObservation? observation = null,
         SupersededPetgPricing? obsolete = null,
-        BatchEstimateGate? batchEstimates = null) : TestingWebApplicationFactory(contentRoot)
+        BatchEstimateGate? batchEstimates = null,
+        MobileFailureCallSiteProbe? mobileFailureProbe = null) : TestingWebApplicationFactory(contentRoot)
     {
         internal System.Collections.Concurrent.ConcurrentQueue<string> ExceptionKinds { get; } = new();
 
@@ -4556,6 +4601,70 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 obsolete?.Decorate(services);
                 batchEstimates?.Decorate(services);
             });
+            if (mobileFailureProbe is not null)
+                builder.ConfigureTestServices(services => services.AddSingleton<ILoggerProvider>(mobileFailureProbe));
+        }
+    }
+
+    private sealed record MobileFailureCallSite(string CallSite, bool JavaScript, bool Disconnected,
+        bool InvalidOperation, bool Cancelled);
+
+    private sealed class MobileFailureCallSiteProbe : ILoggerProvider
+    {
+        private readonly Queue<MobileFailureCallSite> records = new();
+        public ILogger CreateLogger(string categoryName) => new ProbeLogger(this);
+        public void Dispose() { }
+        public MobileFailureCallSite[] Snapshot() { lock (records) return records.ToArray(); }
+
+        private void Record(Exception exception)
+        {
+            lock (records)
+            {
+                if (records.Count >= 16) return;
+                var site = "other";
+                var javaScript = false;
+                var disconnected = false;
+                var invalidOperation = false;
+                var cancelled = false;
+                var depth = 0;
+                for (Exception? current = exception; current is not null && depth++ < 4; current = current.InnerException)
+                {
+                    javaScript |= current is Microsoft.JSInterop.JSException;
+                    disconnected |= current is Microsoft.JSInterop.JSDisconnectedException;
+                    invalidOperation |= current is InvalidOperationException;
+                    cancelled |= current is OperationCanceledException;
+                    foreach (var frame in (new StackTrace(current, false).GetFrames() ?? []).Take(32))
+                    {
+                        var method = frame.GetMethod();
+                        var owner = method?.DeclaringType;
+                        if (owner != typeof(InstantQuotationWorkflow) && owner?.DeclaringType != typeof(InstantQuotationWorkflow)) continue;
+                        var name = owner == typeof(InstantQuotationWorkflow) ? method!.Name : owner!.Name;
+                        if (Matches(name, "BindConsultationDropdownAsync")) site = "consultation-bind";
+                        else if (site != "consultation-bind" && Matches(name, "ReadGeometryClaimAsync")) site = "geometry";
+                        else if (site == "other" && new[] { "UploadFilesAsync", "BeginPreviewSelectionAsync",
+                            "InitializePreviewInteropAsync", "EnsurePreviewInteropAsync", "EnsurePreviewInputBoundAsync",
+                            "InvokePreviewAsync" }.Any(expected => Matches(name, expected)))
+                            site = "preview-input";
+                    }
+                }
+                records.Enqueue(new(site, javaScript, disconnected, invalidOperation, cancelled));
+            }
+        }
+
+        private static bool Matches(string name, string expected) => name == expected
+            || name.StartsWith("<" + expected + ">", StringComparison.Ordinal);
+
+        private sealed class ProbeLogger(MobileFailureCallSiteProbe probe) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+            public bool IsEnabled(LogLevel level) => level >= LogLevel.Warning;
+            public void Log<TState>(LogLevel level, EventId eventId, TState state, Exception? exception,
+                Func<TState, Exception?, string> formatter)
+            {
+                if (!IsEnabled(level) || exception is null) return;
+                try { probe.Record(exception); }
+                catch { /* Diagnostics must not replace the original circuit failure. */ }
+            }
         }
     }
 

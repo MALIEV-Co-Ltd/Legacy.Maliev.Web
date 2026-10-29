@@ -50,7 +50,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
             }));
             await Assertions.Expect(page.Locator("[data-workflow-part]")).ToHaveCountAsync(partCount,
                 new() { Timeout = 90000 });
-            await Assertions.Expect(page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button"))
+            await Assertions.Expect(page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button"))
                 .ToBeEnabledAsync(new() { Timeout = 90000 });
             await page.WaitForFunctionAsync("""
                 () => !document.querySelector('[data-pricing-loading-status]')

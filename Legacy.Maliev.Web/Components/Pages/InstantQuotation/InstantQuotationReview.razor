@@ -67,7 +67,7 @@
                                 @onchange="args => OnColorChanged.InvokeAsync((part.PartId, args.Value?.ToString() ?? part.Configuration.Color))">
                             @foreach (var color in ColorsForPart(part))
                             {
-                                <option value="@color">@Localizer[color]</option>
+                                <option value="@color">@Localizer[color == "Any" ? "No preference" : color]</option>
                             }
                         </select>
                         @if (part.Geometry.BodyCount <= 1 && part.Configuration.MaterialKey == "PLA")
@@ -258,28 +258,28 @@
 
         if (geometry.NonWatertight)
         {
-            warnings.Add(Localizer["Non-watertight mesh"]);
+            warnings.Add(Localizer["Non-watertight mesh"].Value + " · " + Localizer["May cause printing issues"].Value);
         }
 
         if (geometry.NonManifold)
         {
-            warnings.Add(Localizer["Non-manifold edges"]);
+            warnings.Add(Localizer["Non-manifold edges"].Value + " · " + Localizer["Check model integrity"].Value);
         }
 
         if (geometry.BodyCount > 1)
         {
-            warnings.Add(Localizer["Multi-body mesh ({0} bodies)", geometry.BodyCount]);
+            warnings.Add(Localizer["Multi-body mesh"].Value + " · " + Localizer["Check for unintended merged bodies ({0} bodies)", geometry.BodyCount].Value + " · " + Localizer["Multi-body mesh ({0} bodies)", geometry.BodyCount].Value);
         }
 
         var maximumDimension = Math.Max(geometry.DimensionXmm, Math.Max(geometry.DimensionYmm, geometry.DimensionZmm));
         if (maximumDimension is > 0 and < 3)
         {
-            warnings.Add(Localizer["A dimension is below 3 mm."]);
+            warnings.Add(Localizer["Unusually small dimensions"].Value + " · " + Localizer["May be difficult to print or handle reliably"].Value + " · " + Localizer["A dimension is below 3 mm."].Value);
         }
 
         if (maximumDimension > 350)
         {
-            warnings.Add(Localizer["A dimension exceeds 350 mm."]);
+            warnings.Add(Localizer["Unusually large dimensions"].Value + " · " + Localizer["May exceed our standard build volume and require splitting"].Value + " · " + Localizer["A dimension exceeds 350 mm."].Value);
         }
 
         warnings.AddRange(ThicknessWarnings(part.PartId));

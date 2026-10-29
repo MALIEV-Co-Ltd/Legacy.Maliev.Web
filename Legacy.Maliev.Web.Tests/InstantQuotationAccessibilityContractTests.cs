@@ -100,9 +100,17 @@ public sealed class InstantQuotationAccessibilityContractTests
         Assert.Contains("aria-checked=\"@selected.ToString().ToLowerInvariant()\"", selector, StringComparison.Ordinal);
         Assert.Contains("tabindex=\"@(selected ? 0 : -1)\"", selector, StringComparison.Ordinal);
         Assert.Contains("SelectionChanged.InvokeAsync(material.Key)", selector, StringComparison.Ordinal);
-        Assert.Contains("<option value=\"@color\">@Localizer[color]</option>", workflow, StringComparison.Ordinal);
+        const string colorOption = "<option value=\"@color\">@Localizer[color == \"Any\" ? \"No preference\" : color]</option>";
+        Assert.Contains(colorOption, workflow, StringComparison.Ordinal);
+        Assert.Equal(3, workflow.Split('\n').Count(line => line.Contains(colorOption, StringComparison.Ordinal)));
         Assert.Contains("<option value=\"@material.Key\">@Localizer[material.DisplayName]</option>", review, StringComparison.Ordinal);
-        Assert.Contains("<option value=\"@color\">@Localizer[color]</option>", review, StringComparison.Ordinal);
+        Assert.Contains(colorOption, review, StringComparison.Ordinal);
+        Assert.Single(review.Split('\n'), line => line.Contains(colorOption, StringComparison.Ordinal));
+        var resource = XDocument.Load(Path.Combine(
+            FindRepositoryRoot(), "Legacy.Maliev.Web", "Resources", "Components", "Pages", "InstantQuotation",
+            "ThreeDimensionalPrintingEstimateContent.th.resx"));
+        Assert.Equal("ไม่ระบุสี", Assert.Single(resource.Descendants("data"),
+            element => (string?)element.Attribute("name") == "No preference").Element("value")?.Value);
         Assert.Contains("value=\"@country.Name\"", customer, StringComparison.Ordinal);
         Assert.Contains("@country.DisplayName", customer, StringComparison.Ordinal);
     }

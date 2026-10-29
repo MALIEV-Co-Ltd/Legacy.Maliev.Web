@@ -1,4 +1,7 @@
-"""Preserve frozen FX assets, admitting only exact protected-main PR500/507 deltas."""
+"""Require the exact current accepted FX assets; retain frozen historical controls."""
+import hashlib
+import json
+from pathlib import Path
 import subprocess
 
 BASELINE = '224bcde1d1fc7e915f4d0d0de9b3863bcae4fcff'
@@ -8,6 +11,31 @@ ACCEPTED = {
     ROOT+'/site.min.css': ('0c666dc5e6ccb728dc9d5c264edadcae37ac9ed4', '2a5e800062834c8874fa1622df740126de21a35b', '5faedcf470b65edd2b3fcefe5e296da0007bcb22'),
     ROOT+'/route-instant-quotation.css': ('c99b6a0251622681206d76bbce3cfd11621fce8c', '2295704db8f9ca14d5f4bc8fc2e3a72af8030209', 'be467d3a4702881a27db78f3ead8d0cb187e908e'),
 }
+CURRENT_COMMIT = 'a01c586e3355d9e451b7aa5aa95c9347d82a2014'
+CURRENT_TREE = '72d3d8ebfdfe6e1420baaf0f32b106934f869d34'
+CURRENT_FIXTURE_SHA256 = '891af1aeffe157c624e3621c269628585c5f9a6ce165596b33d66f2c96ac3c0d'
+
+
+def current_contract():
+    content = (Path(__file__).resolve().parents[1]/'tests/fx-joined/current-accepted-assets.json').read_bytes()
+    if hashlib.sha256(content).hexdigest() != CURRENT_FIXTURE_SHA256:
+        raise ValueError('Current accepted asset fixture identity mismatch')
+    contract = json.loads(content)
+    if contract['acceptedCommit'] != CURRENT_COMMIT or contract['assetTree'] != CURRENT_TREE:
+        raise ValueError('Current accepted asset provenance mismatch')
+    return {path: tuple(entry) for path, entry in contract['assets'].items()}
+
+
+def tree_identity(revision):
+    return subprocess.check_output(['git', 'rev-parse', revision+':'+ROOT], timeout=30).decode('ascii').strip()
+
+
+def verify_current(candidate, provenance, provenance_tree):
+    expected = current_contract()
+    if provenance_tree != CURRENT_TREE or provenance != expected:
+        raise ValueError('Current accepted committed asset provenance mismatch')
+    if candidate != expected:
+        raise ValueError('Complete exact current asset paths, modes and blobs required')
 
 
 def tree(revision):
@@ -43,10 +71,10 @@ def verify(baseline, candidate, provenance):
 
 
 def main():
-    verify(tree(BASELINE), tree('HEAD'), {revision: tree(revision) for _, _, revision in ACCEPTED.values()})
+    verify_current(tree('HEAD'), tree(CURRENT_COMMIT), tree_identity(CURRENT_COMMIT))
     # Also refuse tracked working changes: the native host must consume committed assets.
     subprocess.run(['git', 'diff', '--exit-code', 'HEAD', '--', ROOT], check=True, timeout=30)
-    print('Frozen FX asset tree verified; only exact PR500/507 content deltas admitted')
+    print('Current accepted FX asset tree verified; all 43 exact committed assets required')
 
 
 if __name__ == '__main__':
