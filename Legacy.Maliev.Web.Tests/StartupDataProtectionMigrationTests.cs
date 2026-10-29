@@ -1,4 +1,5 @@
 using System.Net;
+using System.Runtime.ExceptionServices;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -303,18 +304,13 @@ public sealed class StartupDataProtectionMigrationFixture : IAsyncLifetime
         : TestingWebApplicationFactory
     {
         private readonly OwnedWebSurfaceResources nativeResources = new();
+        private readonly StartupRedisCacheDisposal cacheDisposal = new();
         private IConnectionMultiplexer? ownedRedis;
         private X509Certificate2? ownedCertificate;
 
         public override async ValueTask DisposeAsync()
         {
-            try { await base.DisposeAsync(); }
-            catch (Exception original)
-            {
-                nativeResources.ReleasePreserving(original);
-                throw;
-            }
-            nativeResources.Dispose();
+            await cacheDisposal.ReleaseAsync(() => base.DisposeAsync(), nativeResources);
             Assert.False(ownedRedis?.IsConnected ?? false);
             if (ownedCertificate is not null) Assert.Equal(IntPtr.Zero, ownedCertificate.Handle);
         }
@@ -337,7 +333,112 @@ public sealed class StartupDataProtectionMigrationFixture : IAsyncLifetime
                     descriptor => descriptor.ServiceType == typeof(X509Certificate2)).ImplementationInstance));
                 ownedRedis = nativeResources.Own(Assert.IsAssignableFrom<IConnectionMultiplexer>(Assert.Single(services,
                     descriptor => descriptor.ServiceType == typeof(IConnectionMultiplexer)).ImplementationInstance));
+                cacheDisposal.Register(services);
             });
         }
+    }
+}
+
+internal sealed class StartupRedisCacheDisposal
+{
+    private readonly object sync = new();
+    private readonly List<Witness> captured = [];
+    private bool sealedRegistry;
+    private int lateCaptureCount;
+    private Task? release;
+
+    internal int CapturedCount { get { lock (sync) return captured.Count; } }
+    internal int LateCaptureCount { get { lock (sync) return lateCaptureCount; } }
+    internal bool AllCapturedCompleted
+    {
+        get { lock (sync) return lateCaptureCount == 0 && captured.Count > 0 && captured.All(witness => witness.Completion.IsCompleted); }
+    }
+
+    internal void Register(IServiceCollection services)
+    {
+        lock (sync)
+            if (sealedRegistry) throw new InvalidOperationException("Startup Redis cleanup registry is already sealed.");
+        var registrations = services.Where(descriptor => descriptor.ServiceType == typeof(IConfigureOptions<RedisCacheOptions>)).ToArray();
+        if (registrations.Length != 1 || registrations[0].IsKeyedService || registrations[0].Lifetime != ServiceLifetime.Singleton
+            || registrations[0].ImplementationInstance?.GetType() != typeof(ConfigureNamedOptions<RedisCacheOptions>)
+            || services.Any(descriptor => descriptor.ServiceType == typeof(Witness)))
+            throw new InvalidOperationException("Startup Redis proof requires the original unique singleton options instance.");
+
+        var registration = registrations[0];
+        var configuration = (ConfigureNamedOptions<RedisCacheOptions>)registration.ImplementationInstance!;
+        if (configuration.Name != Options.DefaultName)
+            throw new InvalidOperationException("Startup Redis proof requires the original default-named options instance.");
+
+        services.AddSingleton(_ =>
+        {
+            var witness = new Witness();
+            lock (sync)
+            {
+                if (sealedRegistry)
+                {
+                    lateCaptureCount++;
+                    throw new InvalidOperationException("Startup Redis cleanup cannot accept a late provider witness.");
+                }
+                captured.Add(witness);
+            }
+            return witness;
+        });
+        // RedisCache reads these options before DI captures the completed cache instance.
+        // Reverse DI disposal therefore signals this provider's witness after cache cleanup.
+        services[services.IndexOf(registration)] = ServiceDescriptor.Describe(registration.ServiceType, provider =>
+        {
+            _ = provider.GetRequiredService<Witness>();
+            return configuration;
+        }, registration.Lifetime);
+    }
+
+    internal async Task JoinAsync()
+    {
+        Task[] completions;
+        lock (sync)
+        {
+            sealedRegistry = true;
+            completions = captured.Select(witness => witness.Completion).ToArray();
+        }
+        if (completions.Length != 0)
+            await Task.WhenAll(completions).WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    internal ValueTask ReleaseAsync(Func<ValueTask> disposeHost, OwnedWebSurfaceResources resources)
+    {
+        lock (sync) return new ValueTask(release ??= ReleaseCoreAsync(disposeHost, resources));
+    }
+
+    private async Task ReleaseCoreAsync(Func<ValueTask> disposeHost, OwnedWebSurfaceResources resources)
+    {
+        Exception? primary = null;
+        var cleanupFailures = new List<Exception>();
+        try { await disposeHost(); }
+        catch (Exception failure) { primary = failure; }
+        try { await JoinAsync(); }
+        catch (Exception failure)
+        {
+            if (primary is null) primary = failure;
+            else cleanupFailures.Add(failure);
+        }
+        try { resources.Dispose(); }
+        catch (Exception failure)
+        {
+            if (primary is null) primary = failure;
+            else if (failure is AggregateException aggregate) cleanupFailures.AddRange(aggregate.Flatten().InnerExceptions);
+            else cleanupFailures.Add(failure);
+        }
+        if (primary is not null)
+        {
+            OwnedWebSurfaceResources.RecordFailureTypes(primary, cleanupFailures);
+            ExceptionDispatchInfo.Capture(primary).Throw();
+        }
+    }
+
+    private sealed class Witness : IDisposable
+    {
+        private readonly TaskCompletionSource completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal Task Completion => completion.Task;
+        public void Dispose() => completion.TrySetResult();
     }
 }
