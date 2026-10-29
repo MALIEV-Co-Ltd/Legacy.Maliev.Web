@@ -13,6 +13,7 @@ namespace Legacy.Maliev.Web.Tests;
 // This proves real Razor/circuit layout, not FileService admission or commercial pricing.
 public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper output)
 {
+    internal const string UnexpectedConsoleErrorSentinel = "synthetic-unexpected-sidebar-console-error";
     private static int ReserveFreePort() => BrowserTestServerPort.Reserve();
 
     [Theory]
@@ -43,11 +44,16 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         await RunPartsRailAsync(culture, 1280, 720, expectCompact: true);
     }
 
-    private async Task RunPartsRailAsync(string culture, int width, int height, bool expectCompact = false)
+    internal Task RunUnexpectedConsoleErrorControlAsync() =>
+        RunPartsRailAsync("en", 1280, 800, injectUnexpectedConsoleError: true);
+
+    private async Task RunPartsRailAsync(string culture, int width, int height, bool expectCompact = false,
+        bool injectUnexpectedConsoleError = false)
     {
         await using var factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
         var port = ReserveFreePort();
         var evidencePrefix = height == 800 ? $"sidebar-{culture}-{width}" : $"sidebar-{culture}-{width}-h{height}";
+        if (injectUnexpectedConsoleError) evidencePrefix += "-unexpected-console-control";
         var origin = new Uri($"http://127.0.0.1:{port}");
         factory.UseKestrel(port);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
@@ -56,6 +62,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         await using var context = await browser.NewContextAsync(new()
         { ViewportSize = new() { Width = width, Height = height }, HasTouch = width <= 375 });
         await using var page = await context.NewPageAsync();
+        await OptionalPrintingDriverFixture.UseUnavailableDriverAsync(page);
         await using var failureEvidence = new BrowserFailureEvidence(page,
             metadata => output.WriteLine("[sidebar-evidence-cleanup] " + metadata));
         failureEvidence.Stage("Navigation");
@@ -496,6 +503,25 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         if (!string.IsNullOrWhiteSpace(directory))
             await page.ScreenshotAsync(new() { Path = Path.Combine(directory, $"{evidencePrefix}-customer.png"), FullPage = true });
         failureEvidence.AwaitBoundary("customer-input", true);
+        if (injectUnexpectedConsoleError)
+        {
+            var observed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            EventHandler<IConsoleMessage> onUnexpectedConsole = (_, message) =>
+            {
+                if (message.Type == "error" && message.Text == UnexpectedConsoleErrorSentinel)
+                    observed.TrySetResult(true);
+            };
+            page.Console += onUnexpectedConsole;
+            try
+            {
+                await page.EvaluateAsync("message => console.error(message)", UnexpectedConsoleErrorSentinel);
+                await observed.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            }
+            finally
+            {
+                page.Console -= onUnexpectedConsole;
+            }
+        }
         try
         {
             Assert.Empty(errors);
@@ -514,5 +540,21 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
                 """), metadata => output.WriteLine("[sidebar-failure] " + metadata));
             throw;
         }
+    }
+}
+
+/// <summary>Proves optional driver isolation preserves the real sidebar console-error gate.</summary>
+public sealed class InstantQuotationSidebarConsoleIsolationTests(ITestOutputHelper output)
+{
+    /// <summary>Requires an unexpected application console error to fail the unchanged full sidebar assertion.</summary>
+    /// <returns>A task that completes after the real sidebar failure is observed and all case resources are released.</returns>
+    [Fact]
+    public async Task UnexpectedApplicationConsoleError_StillFailsTheOriginalSidebarAssertion()
+    {
+        var failure = await Record.ExceptionAsync(() =>
+            new InstantQuotationSidebarLayoutBrowserTests(output).RunUnexpectedConsoleErrorControlAsync());
+        var expected = Assert.IsType<Xunit.Sdk.EmptyException>(failure);
+        Assert.Contains(InstantQuotationSidebarLayoutBrowserTests.UnexpectedConsoleErrorSentinel,
+            expected.Message, StringComparison.Ordinal);
     }
 }

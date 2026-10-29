@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createPrintingSpaceMouse } from './printing-spacemouse.mjs';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
@@ -627,6 +628,8 @@ export function createThreeModelViewer(canvas) {
   const controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
   let frame = 0;
+  let activeModel = null;
+  let spaceMouse = null;
   const resize = createCanvasResizeController({
     renderer,
     camera,
@@ -636,8 +639,8 @@ export function createThreeModelViewer(canvas) {
   });
 
   const adapter = {
-    show(object) { scene.add(object); object.visible = true; },
-    hide(object) { object.visible = false; scene.remove(object); },
+    show(object) { scene.add(object); object.visible = true; activeModel = object; },
+    hide(object) { object.visible = false; scene.remove(object); if (activeModel === object) activeModel = null; },
     getCameraState() {
       return { position: camera.position.toArray(), target: controls.target.toArray() };
     },
@@ -683,9 +686,13 @@ export function createThreeModelViewer(canvas) {
     disposeControls() { controls.dispose(); },
     disposeRenderer() { renderer.dispose(); },
     loseContext() { renderer.forceContextLoss(); },
-    cancelAnimation() { cancelAnimationFrame(frame); },
+    cancelAnimation() { spaceMouse?.dispose(); spaceMouse = null; cancelAnimationFrame(frame); },
   };
   const viewer = createModelViewer({ adapter, eventTarget: canvas });
+  spaceMouse = createPrintingSpaceMouse({
+    THREE, canvas, camera, controls, getModelObject: () => activeModel,
+    fitView: () => viewer.fit(), resetView: () => viewer.reset(),
+  });
 
   function render() {
     resize.sync();

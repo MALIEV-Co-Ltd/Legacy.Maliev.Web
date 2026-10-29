@@ -509,6 +509,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                 fixture.context = await fixture.browser.NewContextAsync(new()
                 { ViewportSize = new() { Width = width, Height = 800 }, ColorScheme = ColorScheme.Light, ReducedMotion = motion });
                 fixture.Page = await fixture.context.NewPageAsync();
+                await OptionalPrintingDriverFixture.UseUnavailableDriverAsync(fixture.Page);
                 fixture.Page.PageError += (_, _) => Interlocked.Increment(ref fixture.pageErrors);
                 fixture.Page.Console += (_, message) => { if (message.Type == "error") Interlocked.Increment(ref fixture.consoleErrors); };
                 var url = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();

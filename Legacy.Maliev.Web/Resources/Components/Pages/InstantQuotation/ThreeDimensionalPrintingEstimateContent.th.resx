@@ -755,6 +755,9 @@
   <data name="3d print, 3d printing company, 3d printing model, 3d printing online, 3d printing service, 3d printing services, 3d printing website, 3d printing, online 3d printing, instant pricing, instant quotation" xml:space="preserve">
     <value>พิมพ์ 3d, พิมพ์ 3 มิติ, พิมพ์ 3 มิติ, พิมพ์ 3d, รับพิมพ์ 3 มิติ, รับพิมพ์ 3d, ประเมินราคาทันที, instant pricing</value>
   </data>
+  <data name="SpaceMouse help" xml:space="preserve">
+    <value>การใช้งาน SpaceMouse</value>
+  </data>
   <data name="No preference" xml:space="preserve"><value>ไม่ระบุสี</value></data>
   <data name="May cause printing issues" xml:space="preserve"><value>อาจส่งผลให้พิมพ์ผิดพลาด</value></data>
   <data name="Check model integrity" xml:space="preserve"><value>ตรวจสอบความสมบูรณ์ของโมเดล</value></data>
