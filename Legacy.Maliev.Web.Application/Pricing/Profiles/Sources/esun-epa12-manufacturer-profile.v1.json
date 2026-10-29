@@ -1,0 +1,24 @@
+{
+  "schemaVersion": "1.0",
+  "materialKey": "PA12",
+  "profileId": "PA12 — eSUN ePA12",
+  "sourceAuthority": "manufacturer_spec_conservative",
+  "manufacturerProductUrl": "https://www.esun3d.com/epa12-product/",
+  "manufacturerTechnicalDataUrl": "https://www.esun3d.com/uploads/eSUN_ePA12-Filament_TDS_V4.01.pdf",
+  "manufacturerSettings": {
+    "densityGramsPerCm3": 1.012,
+    "nozzleTemperatureCelsius": "260-290",
+    "bedTemperatureCelsius": "70-90",
+    "coolingFanPercent": 0,
+    "maximumPrintSpeedMmPerSecond": 150,
+    "dryingTemperatureCelsius": 70,
+    "minimumDryingHours": 12,
+    "enclosureRequired": true
+  },
+  "approvedConservativeRuntimeSettings": {
+    "maximumVolumetricFlowMm3PerSecond": 8,
+    "minimumLayerTimeSeconds": 8,
+    "minimumCoolingSpeedMmPerSecond": 10
+  },
+  "approvalNote": "The manufacturer does not publish a plain ePA12 X1C preset. MALIEV therefore uses the exact ePA12 material properties with conservative engineering-filament motion limits for automatic estimating. Production slicing remains authoritative."
+}
