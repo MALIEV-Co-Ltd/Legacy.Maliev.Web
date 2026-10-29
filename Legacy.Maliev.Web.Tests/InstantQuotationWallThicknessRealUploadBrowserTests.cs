@@ -453,22 +453,94 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         await page.AddInitScriptAsync("""
             (() => {
               const original = File.prototype.arrayBuffer;
+              const fileDescriptor = Object.getOwnPropertyDescriptor(File.prototype, 'arrayBuffer');
+              const subtle = globalThis.crypto.subtle;
+              const originalDigest = subtle.digest;
+              const digestDescriptor = Object.getOwnPropertyDescriptor(subtle, 'digest');
+              let digestOwner = subtle;
+              let resolvedDigestDescriptor;
+              while (digestOwner && !resolvedDigestDescriptor) {
+                resolvedDigestDescriptor = Object.getOwnPropertyDescriptor(digestOwner, 'digest');
+                digestOwner = Object.getPrototypeOf(digestOwner);
+              }
+              if (typeof originalDigest !== 'function' || !resolvedDigestDescriptor
+                  || resolvedDigestDescriptor.value !== originalDigest || !resolvedDigestDescriptor.writable
+                  || (digestDescriptor ? !digestDescriptor.configurable : !Object.isExtensible(subtle)))
+                throw new Error('Owned parser digest observation cannot safely replace this method.');
+              const healthyBuffers = new WeakSet();
               let release;
               let reject;
               const gate = new Promise((resolve, fail) => { release = resolve; reject = fail; });
               gate.catch(() => {});
-              const state = { entered: 0, completed: 0 };
+              const state = { entered: 0, completed: 0, healthyEntered: 0, healthyCompleted: 0, healthyFailed: 0,
+                healthyDigestEntered: 0, healthyDigestCompleted: 0, healthyDigestFailed: 0 };
               let timeout = null;
               state.release = () => { clearTimeout(timeout); release(); };
-              state.restore = () => { state.release(); File.prototype.arrayBuffer = original; };
-              File.prototype.arrayBuffer = async function () {
+              state.restore = () => {
+                const failures = [];
+                for (const restore of [
+                  () => state.release(),
+                  () => {
+                    if (fileDescriptor) Object.defineProperty(File.prototype, 'arrayBuffer', fileDescriptor);
+                    else if (!Reflect.deleteProperty(File.prototype, 'arrayBuffer')) throw new Error('Owned file read restoration failed.');
+                    if (File.prototype.arrayBuffer !== original) throw new Error('Owned file read identity was not restored.');
+                  },
+                  () => {
+                    if (digestDescriptor) Object.defineProperty(subtle, 'digest', digestDescriptor);
+                    else if (!Reflect.deleteProperty(subtle, 'digest')) throw new Error('Owned digest restoration failed.');
+                    if (subtle.digest !== originalDigest) throw new Error('Owned digest identity was not restored.');
+                  }
+                ]) {
+                  try { restore(); } catch (error) { failures.push(error); }
+                }
+                if (failures.length) throw failures[0];
+              };
+              const digestOverride = {
+                configurable: true, enumerable: resolvedDigestDescriptor.enumerable, writable: true,
+                value: function (...args) {
+                  if (!healthyBuffers.has(args[1])) return Reflect.apply(originalDigest, this, args);
+                  state.healthyDigestEntered = Math.min(32, state.healthyDigestEntered + 1);
+                  let result;
+                  try { result = Reflect.apply(originalDigest, this, args); }
+                  catch (error) {
+                    state.healthyDigestFailed = Math.min(32, state.healthyDigestFailed + 1);
+                    throw error;
+                  }
+                  result.then(
+                    () => { state.healthyDigestCompleted = Math.min(32, state.healthyDigestCompleted + 1); },
+                    () => { state.healthyDigestFailed = Math.min(32, state.healthyDigestFailed + 1); });
+                  return result;
+                }
+              };
+              const observedArrayBuffer = async function () {
+                if (this.name === 'healthy-protected.stl') {
+                  state.healthyEntered = Math.min(32, state.healthyEntered + 1);
+                  try {
+                    const buffer = await original.call(this);
+                    if (buffer instanceof ArrayBuffer) healthyBuffers.add(buffer);
+                    state.healthyCompleted = Math.min(32, state.healthyCompleted + 1);
+                    return buffer;
+                  } catch (error) {
+                    state.healthyFailed = Math.min(32, state.healthyFailed + 1);
+                    throw error;
+                  }
+                }
                 if (this.name !== 'pending-local-parse.stl') return original.call(this);
                 state.entered++;
                 timeout ??= setTimeout(() => reject(new Error('Controlled parser lease expired.')), 30000);
                 try { await gate; return await original.call(this); }
                 finally { state.completed++; }
               };
-              window.__pendingLocalParser = state;
+              try {
+                Object.defineProperty(subtle, 'digest', digestOverride);
+                File.prototype.arrayBuffer = observedArrayBuffer;
+                if (subtle.digest !== digestOverride.value || File.prototype.arrayBuffer !== observedArrayBuffer)
+                  throw new Error('Owned parser observation was not installed.');
+                window.__pendingLocalParser = state;
+              } catch (error) {
+                try { state.restore(); } catch { /* Context disposal remains the owner if restoration itself fails. */ }
+                throw error;
+              }
             })();
             """);
         Exception? primary = null;
@@ -491,6 +563,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             });
             var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
             await Assertions.Expect(review).ToBeEnabledAsync();
+            await WritePendingParserReadEvidenceAsync(page, healthyReady: true);
             var partId = Guid.Parse((await page.Locator("[data-workflow-part]").GetAttributeAsync("data-part-id"))!);
             await upload.AssertAdmittedMeshMatchesBrowserUploadAsync(partId);
             var store = factory.Services.GetRequiredService<IInstantQuotationSessionStore>();
@@ -539,7 +612,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
         catch (Exception exception)
         {
             primary = exception;
-            await ObserveRealUploadFailureAsync(exception, failureEvidence, page, factory, upload);
+            await ObserveRealUploadFailureAsync(exception, failureEvidence, page, factory, upload, observePendingParserReads: true);
             throw;
         }
         finally
@@ -2968,7 +3041,8 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
     }
 
     private async Task ObserveRealUploadFailureAsync(Exception original, BrowserFailureEvidence evidence,
-        IPage page, RealUploadTestingWebApplicationFactory factory, HashCheckingUploadClient upload)
+        IPage page, RealUploadTestingWebApplicationFactory factory, HashCheckingUploadClient upload,
+        bool observePendingParserReads = false)
     {
         await evidence.AttachAsync(original, async () =>
         {
@@ -3006,6 +3080,14 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 """);
             if (rendered.Length > 4096) throw new FormatException();
             output.WriteLine("[real-upload-geometry] " + rendered);
+            if (observePendingParserReads)
+            {
+                try
+                {
+                    await WritePendingParserReadEvidenceAsync(page, healthyReady: false);
+                }
+                catch { /* Secondary fixed-field evidence must preserve the original browser failure. */ }
+            }
             using var document = JsonDocument.Parse(rendered);
             var state = document.RootElement.GetProperty("workflow").GetString();
             try
@@ -3028,6 +3110,28 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
             catch { /* Secondary service observation must preserve the browser failure. */ }
             return JsonSerializer.Serialize(new { workflow = state });
         }, metadata => output.WriteLine("[real-upload-failure] " + metadata));
+    }
+
+    private async Task WritePendingParserReadEvidenceAsync(IPage page, bool healthyReady)
+    {
+        var parserReads = await page.EvaluateAsync<string>("""
+            () => {
+              const state = window.__pendingLocalParser;
+              return JSON.stringify({
+                present: state !== null && typeof state === 'object',
+                healthyEntered: state?.healthyEntered ?? 0,
+                healthyCompleted: state?.healthyCompleted ?? 0,
+                healthyFailed: state?.healthyFailed ?? 0,
+                pendingEntered: state?.entered ?? 0,
+                pendingCompleted: state?.completed ?? 0,
+                healthyDigestEntered: state?.healthyDigestEntered ?? 0,
+                healthyDigestCompleted: state?.healthyDigestCompleted ?? 0,
+                healthyDigestFailed: state?.healthyDigestFailed ?? 0
+              });
+            }
+            """);
+        output.WriteLine((healthyReady ? "[real-upload-parser-reads healthy-ready] " : "[real-upload-parser-reads failure] ")
+            + JsonSerializer.Serialize(PendingLocalParserReadEvidence.Parse(parserReads)));
     }
 
     // Network quiet and SSR markup do not prove that this DOM input has a live .NET change binding.
