@@ -117,6 +117,13 @@
                                 <dd data-review-build-preference-detail>@Localizer["Smooth, highly detailed appearance for resin-suitable parts · suitability is confirmed during review"]</dd>
                             </div>
                         }
+                        else if (PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey)?.Process is PrintProcess.Fdm)
+                        {
+                            <div>
+                                <dt>@Localizer["Build preference"]</dt>
+                                <dd data-review-fdm-preference-detail>@FdmBuildPreferenceDetail(part.Configuration.BuildPreference)</dd>
+                            </div>
+                        }
                     </dl>
                     @if (warnings.Count > 0)
                     {
@@ -234,6 +241,13 @@
     }
 
     private static string Money(double? amount) => amount is null ? "—" : $"฿{amount.Value:N2}";
+
+    private string FdmBuildPreferenceDetail(BuildPreference preference) => preference switch
+    {
+        BuildPreference.Quality => Localizer["Finer detail and a smoother appearance · takes longer and costs more"].Value,
+        BuildPreference.Strength => Localizer["Greater structural strength · material and load direction still require engineering review"].Value,
+        _ => Localizer["Balanced finish, durability, lead time, and price for everyday use"].Value,
+    };
 
     private static string Measurement(double amount) => amount.ToString("N2", System.Globalization.CultureInfo.CurrentCulture);
 

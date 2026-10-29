@@ -235,6 +235,62 @@ public sealed class InstantQuotationResinPresentationTests
     }
 
     [Theory]
+    [InlineData("en", "PLA", BuildPreference.Quality, "Finer detail and a smoother appearance · takes longer and costs more")]
+    [InlineData("th", "PLA", BuildPreference.Quality, "เน้นรายละเอียดที่คมชัดและผิวที่เรียบขึ้น · ใช้เวลาผลิตและมีค่าใช้จ่ายมากขึ้น")]
+    [InlineData("en", "PLA", BuildPreference.Standard, "Balanced finish, durability, lead time, and price for everyday use")]
+    [InlineData("th", "PLA", BuildPreference.Standard, "สมดุลด้านผิวชิ้นงาน ความทนทาน ระยะเวลา และราคา สำหรับการใช้งานทั่วไป")]
+    [InlineData("en", "PLA", BuildPreference.Strength, "Greater structural strength · material and load direction still require engineering review")]
+    [InlineData("th", "PLA", BuildPreference.Strength, "เพิ่มความแข็งแรงของโครงสร้าง · วัสดุและทิศทางรับแรงยังต้องให้วิศวกรตรวจสอบ")]
+    [InlineData("en", "M68", BuildPreference.Standard, null)]
+    [InlineData("th", "M68", BuildPreference.Standard, null)]
+    public async Task Review_UsesFinalFdmPreferenceCopyWithoutTechnicalPromises(
+        string culture, string material, BuildPreference preference, string? expectedDetail)
+    {
+        using var cultures = new CultureScope(culture);
+        var part = Part(material, preference);
+        var viewModel = new InstantQuotationWorkflowPartViewModel(
+            part.PartId, Guid.NewGuid(), part.DisplayFileName, part.Geometry, part.Configuration, null);
+        using var services = Services(new CapturingActivator(), new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        var html = await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var parameters = ParameterView.FromDictionary(new Dictionary<string, object?>
+            {
+                [nameof(InstantQuotationReview.Parts)] = new[] { viewModel },
+                [nameof(InstantQuotationReview.Materials)] = new InstantQuotationWorkflowMaterialOption[]
+                {
+                    new("M68", "M68 resin"), new("PLA", "PLA"),
+                },
+            });
+            return (await renderer.RenderComponentAsync<InstantQuotationReview>(parameters)).ToHtmlString();
+        });
+
+        var details = Regex.Matches(html,
+            "<dd\\b[^>]*data-review-fdm-preference-detail[^>]*>([\\s\\S]*?)</dd>");
+        var resinDetails = Regex.Matches(html,
+            "<dd\\b[^>]*data-review-build-preference-detail[^>]*>([\\s\\S]*?)</dd>");
+        if (expectedDetail is null)
+        {
+            Assert.Empty(details.Cast<Match>());
+            Assert.Single(resinDetails.Cast<Match>());
+            return;
+        }
+
+        Assert.Empty(resinDetails.Cast<Match>());
+        var detail = WebUtility.HtmlDecode(Assert.Single(details.Cast<Match>()).Groups[1].Value);
+        Assert.Equal(expectedDetail, detail);
+        foreach (var obsoletePromise in new[]
+        {
+            "0.12 mm layers, reduced speed and acceleration, Gyroid sparse infill",
+            "0.20", "3 walls", "6 walls", "15%", "25%", "0.05", "full-layer", "post-cure",
+            "ผนัง", "อินฟิลล์", "ฉายแสง",
+        })
+        {
+            Assert.DoesNotContain(obsoletePromise, detail, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Theory]
     [InlineData("en", "Standard resin", "Quality")]
     [InlineData("th", "การพิมพ์เรซินมาตรฐาน", "เน้นคุณภาพผิว")]
     public async Task PreliminaryQuotation_UsesQuotedProcessAndPreferenceDespiteStaleConfiguration(
