@@ -518,6 +518,11 @@ await Program.RunHostAsync(async () =>
     }
     else
     {
+        if (string.Equals(builder.Configuration["MALIEV_OBSERVABILITY_STANDBY"], "true", StringComparison.Ordinal))
+        {
+            dataProtection.DisableAutomaticKeyGeneration();
+        }
+
         var redisConnectionString = builder.Configuration.GetConnectionString("redis");
         if (string.IsNullOrWhiteSpace(redisConnectionString))
         {
