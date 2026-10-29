@@ -182,7 +182,8 @@ ROSTERS["migration-consumers"] = {
     "Legacy.Maliev.Web.Tests.AboutPageContractTests": {
         "About_RendersLocalizedSourceStoryAndAccessibleControls": 2,
         "About_PreservesOrderedIllustrativeProjectAndEngineeringLimits": 1,
-        "About_PreservesExactCustomerRosterAndCorrectedArtwork": 2
+        "About_PreservesExactCustomerRosterAndCorrectedArtwork": 2,
+        "AboutContent_HidesCustomersAndPreservesFollowingCallToAction": 2
     },
     "Legacy.Maliev.Web.Tests.WebSurfaceTests": {
         "HomePage_RendersLocalizedStaticBlazorBodyWithNavigationParity": 2,
