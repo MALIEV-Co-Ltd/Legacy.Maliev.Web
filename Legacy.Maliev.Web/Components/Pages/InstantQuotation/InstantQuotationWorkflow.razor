@@ -126,7 +126,7 @@
                                         @onchange='args => ChangeDevelopmentSettingAsync(part.LocalId, "color", args)'>
                                     @foreach (var color in part.Claim.BodyCount > 1 ? new[] { "Any" } : GetColors(part.MaterialKey))
                                     {
-                                        <option value="@color">@Localizer[color]</option>
+                                        <option value="@color">@Localizer[color == "Any" ? "No preference" : color]</option>
                                     }
                                     @if (part.Claim.BodyCount == 1 && !GetColors(part.MaterialKey).Contains(part.Color, StringComparer.Ordinal))
                                     {
@@ -181,7 +181,7 @@
             </section>
             @if (developmentStep is DevelopmentPreviewStep.Configuration)
             {
-                <button type="button" data-local-demo-review @onclick="ShowDevelopmentReview">@Localizer["Review"]</button>
+                <button type="button" data-local-demo-review @onclick="ShowDevelopmentReview"><span class="d-block">@Localizer["Review all items"]</span><small class="d-block">@Localizer["local preview"]</small></button>
             }
             else if (developmentStep is DevelopmentPreviewStep.Review)
             {
@@ -482,6 +482,7 @@
                  aria-labelledby="instant-quote-configuration-heading">
             <div data-workflow-configuration-content>
             <h3 id="instant-quote-configuration-heading">@Localizer["Part configuration"]</h3>
+            <p data-source-printing-intro>@Localizer["Upload and choose how you want your part to be printed. You'll know instantly how much does your part cost."]</p>
 
             <section data-workflow-dfm-status aria-labelledby="instant-quote-dfm-heading">
                 <h4 id="instant-quote-dfm-heading">@Localizer["Design-for-manufacturing checks"]</h4>
@@ -520,23 +521,23 @@
                                 }
                                 @if (geometry.NonWatertight)
                                 {
-                                    <li data-dfm-code="non-watertight">@Localizer["Non-watertight mesh"]</li>
+                                    <li data-dfm-code="non-watertight"><strong>@Localizer["Non-watertight mesh"]</strong><span class="d-block">@Localizer["May cause printing issues"]</span></li>
                                 }
                                 @if (geometry.NonManifold)
                                 {
-                                    <li data-dfm-code="non-manifold">@Localizer["Non-manifold edges"]</li>
+                                    <li data-dfm-code="non-manifold"><strong>@Localizer["Non-manifold edges"]</strong><span class="d-block">@Localizer["Check model integrity"]</span></li>
                                 }
                                 @if (geometry.BodyCount > 1)
                                 {
-                                    <li data-dfm-code="multiple-bodies">@Localizer["Multi-body mesh ({0} bodies)", geometry.BodyCount]</li>
+                                    <li data-dfm-code="multiple-bodies"><strong>@Localizer["Multi-body mesh"]</strong><span class="d-block">@Localizer["Check for unintended merged bodies ({0} bodies)", geometry.BodyCount]</span><small class="d-block">@Localizer["Multi-body mesh ({0} bodies)", geometry.BodyCount]</small></li>
                                 }
                                 @if (oddlySmall)
                                 {
-                                    <li data-dfm-code="dimension-too-small">@Localizer["A dimension is below 3 mm."]</li>
+                                    <li data-dfm-code="dimension-too-small"><strong>@Localizer["Unusually small dimensions"]</strong><span class="d-block">@Localizer["May be difficult to print or handle reliably"]</span><small class="d-block">@Localizer["A dimension is below 3 mm."]</small></li>
                                 }
                                 @if (oddlyLarge)
                                 {
-                                    <li data-dfm-code="dimension-too-large">@Localizer["A dimension exceeds 350 mm."]</li>
+                                    <li data-dfm-code="dimension-too-large"><strong>@Localizer["Unusually large dimensions"]</strong><span class="d-block">@Localizer["May exceed our standard build volume and require splitting"]</span><small class="d-block">@Localizer["A dimension exceeds 350 mm."]</small></li>
                                 }
                             </ul>
                         }
@@ -565,7 +566,7 @@
                             @onchange="args => ChangePendingColorAsync(pendingKey, args)">
                         @foreach (var color in GetColors(pending.Configuration.MaterialKey))
                         {
-                            <option value="@color">@Localizer[color]</option>
+                            <option value="@color">@Localizer[color == "Any" ? "No preference" : color]</option>
                         }
                     </select>
                     <label for="pending-quantity-@pendingKey">@Localizer["Quantity"]</label>
@@ -624,7 +625,7 @@
                             @onchange="args => ChangeColorAsync(part.PartId, args)">
                         @foreach (var color in GetPartColors(part))
                         {
-                            <option value="@color">@Localizer[color]</option>
+                            <option value="@color">@Localizer[color == "Any" ? "No preference" : color]</option>
                         }
                     </select>
                     @if (part.Geometry.BodyCount <= 1 && part.Configuration.MaterialKey == "PLA")
@@ -859,7 +860,16 @@
 
                 <div class="instant-quote__configuration-actions">
                     <button type="button" @onclick="EnterReview" disabled="@(!CanEnterReview)">@Localizer["Review all items"]</button>
-                    <a class="instant-quote__consultation-link" data-summary-consultation href="/contact#contact-us" target="_blank" rel="noopener noreferrer">@Localizer["Talk to an engineer"]<span class="instant-quote__sr-only"> @Localizer["(opens in a new tab)"]</span></a>
+                    <div class="dropup d-flex w-100" data-summary-consultation-menu>
+                        <button type="button" id="instant-quote-consultation" @ref="consultationToggle" class="instant-quote__consultation-link w-100" data-summary-consultation data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-controls="instant-quote-consultation-menu">@Localizer["Talk to an engineer"]</button>
+                        <ul id="instant-quote-consultation-menu" class="dropdown-menu dropdown-menu-end" aria-labelledby="instant-quote-consultation" data-contact-placement="instant_quotation_engineer">
+                            <li><a class="dropdown-item py-2 lh-lg" href="@SocialNetworks.Line" target="_blank" rel="noopener noreferrer"><i class="fab fa-line" aria-hidden="true"></i> LINE OA (@@maliev)<span class="instant-quote__sr-only"> @Localizer["(opens in a new tab)"]</span></a></li>
+                            <li><a class="dropdown-item py-2 lh-lg" href="@SocialNetworks.WhatsApp" target="_blank" rel="noopener noreferrer" data-maliev-contact-destination="whatsapp_business"><i class="fab fa-whatsapp" aria-hidden="true"></i> WhatsApp<span class="instant-quote__sr-only"> @Localizer["(opens in a new tab)"]</span></a></li>
+                            <li><a class="dropdown-item py-2 lh-lg" href="@SocialNetworks.MessengerChat" target="_blank" rel="noopener noreferrer"><i class="fab fa-facebook-messenger" aria-hidden="true"></i> Messenger<span class="instant-quote__sr-only"> @Localizer["(opens in a new tab)"]</span></a></li>
+                            <li><hr class="dropdown-divider" /></li>
+                            <li><a class="dropdown-item py-2 lh-lg" href="@(CanonicalUrlPolicy.GetLocalizedReturnUrl("/contact", System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName) + "#contact-us")" target="_blank" rel="noopener noreferrer"><i class="fas fa-envelope" aria-hidden="true"></i> @Localizer["Contact us page"]<span class="instant-quote__sr-only"> @Localizer["(opens in a new tab)"]</span></a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </section>

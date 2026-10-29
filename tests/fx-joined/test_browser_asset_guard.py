@@ -25,7 +25,8 @@ class AssetGuardControls(unittest.TestCase):
         guard.verify(self.baseline, self.accepted, self.provenance)
 
     def test_actual_current_committed_tree(self):
-        guard.verify(self.baseline, guard.tree('HEAD'), self.provenance)
+        guard.verify_current(guard.tree('HEAD'), guard.tree(guard.CURRENT_COMMIT),
+                             guard.tree_identity(guard.CURRENT_COMMIT))
 
     def test_git_reader_timeout_propagates_without_accepting_empty_tree(self):
         with patch.object(guard.subprocess, 'check_output', side_effect=subprocess.TimeoutExpired('git', 30)) as reader:
@@ -34,7 +35,8 @@ class AssetGuardControls(unittest.TestCase):
             self.assertEqual(reader.call_args.kwargs['timeout'], 30)
 
     def test_working_tree_check_timeout_propagates_without_acceptance(self):
-        with patch.object(guard, 'tree', side_effect=lambda revision: self.accepted if revision == 'HEAD' else self.baseline if revision == guard.BASELINE else self.provenance[revision]), patch.object(guard.subprocess, 'run', side_effect=subprocess.TimeoutExpired('git', 30)) as reader:
+        current = guard.current_contract()
+        with patch.object(guard, 'tree', return_value=current), patch.object(guard, 'tree_identity', return_value=guard.CURRENT_TREE), patch.object(guard.subprocess, 'run', side_effect=subprocess.TimeoutExpired('git', 30)) as reader:
             with self.assertRaises(subprocess.TimeoutExpired):
                 guard.main()
             self.assertEqual(reader.call_args.kwargs['timeout'], 30)
@@ -63,6 +65,71 @@ class AssetGuardControls(unittest.TestCase):
             with self.assertRaises(ValueError): guard.verify(baseline, self.accepted, self.provenance)
             provenance = copy.deepcopy(self.provenance); provenance[revision][name] = ('100644', 'f'*40)
             with self.assertRaises(ValueError): guard.verify(self.baseline, self.accepted, provenance)
+
+    def test_current_contract_requires_exact_complete_accepted_snapshot(self):
+        self.assertEqual('a01c586e3355d9e451b7aa5aa95c9347d82a2014', guard.CURRENT_COMMIT)
+        self.assertEqual('72d3d8ebfdfe6e1420baaf0f32b106934f869d34', guard.CURRENT_TREE)
+        current = guard.current_contract()
+        self.assertEqual(43, len(current))
+        self.assertEqual(current, guard.tree(guard.CURRENT_COMMIT))
+        self.assertEqual(guard.CURRENT_TREE, guard.tree_identity(guard.CURRENT_COMMIT))
+        guard.verify_current(current, current, guard.CURRENT_TREE)
+        for obsolete in (self.baseline, self.accepted,
+                         guard.tree('2c7562fc8234c08f2f6bfc5556765ebb5cc4ef5d'), {}):
+            with self.subTest(obsolete=len(obsolete)), self.assertRaises(ValueError):
+                guard.verify_current(obsolete, current, guard.CURRENT_TREE)
+
+    def test_every_current_content_mode_missing_and_empty_blob_refused(self):
+        current = guard.current_contract()
+        for name, (mode, blob) in current.items():
+            for entry in (('100644', '0'*40), ('100755', blob), ('120000', blob),
+                          ('100644', 'e69de29bb2d1d6434b8b29ae775ad8c2e48c5391'), None):
+                candidate = dict(current)
+                if entry is None: del candidate[name]
+                else: candidate[name] = entry
+                with self.subTest(name=name, entry=entry), self.assertRaises(ValueError):
+                    guard.verify_current(candidate, current, guard.CURRENT_TREE)
+
+    def test_current_unknown_addition_and_every_partial_transition_refused(self):
+        current = guard.current_contract()
+        extra = dict(current, **{guard.ROOT+'/foreign.js': ('100644', 'a'*40)})
+        with self.assertRaises(ValueError): guard.verify_current(extra, current, guard.CURRENT_TREE)
+        for name, entry in current.items():
+            if self.accepted.get(name) == entry: continue
+            candidate = dict(current)
+            if name in self.accepted: candidate[name] = self.accepted[name]
+            else: del candidate[name]
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                guard.verify_current(candidate, current, guard.CURRENT_TREE)
+
+    def test_current_provenance_tree_and_each_entry_tampering_refused(self):
+        current = guard.current_contract()
+        with self.assertRaises(ValueError): guard.verify_current(current, current, 'f'*40)
+        extra = dict(current, **{guard.ROOT+'/foreign.js': ('100644', 'a'*40)})
+        for provenance in ({}, self.baseline, self.accepted, extra):
+            with self.subTest(provenance=len(provenance)), self.assertRaises(ValueError):
+                guard.verify_current(current, provenance, guard.CURRENT_TREE)
+        for name, (_, blob) in current.items():
+            for entry in (('100644', 'f'*40), ('100755', blob), None):
+                provenance = dict(current)
+                if entry is None: del provenance[name]
+                else: provenance[name] = entry
+                with self.subTest(name=name, entry=entry), self.assertRaises(ValueError):
+                    guard.verify_current(provenance, provenance, guard.CURRENT_TREE)
+
+    def test_current_fixture_tampering_refused(self):
+        with patch.object(guard.Path, 'read_bytes', return_value=b'{}'):
+            with self.assertRaises(ValueError): guard.current_contract()
+
+    def test_current_tree_identity_timeout_propagates(self):
+        with patch.object(guard.subprocess, 'check_output', side_effect=subprocess.TimeoutExpired('git', 30)) as reader:
+            with self.assertRaises(subprocess.TimeoutExpired): guard.tree_identity(guard.CURRENT_COMMIT)
+            self.assertEqual(reader.call_args.kwargs['timeout'], 30)
+
+    def test_tracked_working_change_failure_propagates(self):
+        current = guard.current_contract()
+        with patch.object(guard, 'tree', return_value=current), patch.object(guard, 'tree_identity', return_value=guard.CURRENT_TREE), patch.object(guard.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, 'git')):
+            with self.assertRaises(subprocess.CalledProcessError): guard.main()
 
 
 if __name__ == '__main__':

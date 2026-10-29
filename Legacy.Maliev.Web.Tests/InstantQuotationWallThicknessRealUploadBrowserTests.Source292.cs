@@ -103,7 +103,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
     public Task Source292QuantityBoundary_PersistedRequestIgnoresPostedMoney(int quantity) =>
         WithSource292PricedPartAsync(quantity, async state =>
         {
-            await state.Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button").ClickAsync();
+            await state.Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button").ClickAsync();
             await state.Page.Locator("[data-review-continue]").ClickAsync();
             await state.Page.Locator("#instant-quotation-form").WaitForAsync();
             var post = state.Page.EvaluateAsync<JsonElement>("""
@@ -210,7 +210,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
                 MimeType = "model/gltf-binary",
                 Buffer = bytes,
             });
-            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+            var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
             await Assertions.Expect(page.Locator("[data-workflow-part]")).ToHaveCountAsync(1, new() { Timeout = 90000 });
             await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 90000 });
             await MaterialCardBrowserActions.SelectAsync(page, "PLA");

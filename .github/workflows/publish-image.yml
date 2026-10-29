@@ -26,7 +26,7 @@ jobs:
       actions: read
       id-token: write
     if: vars.LEGACY_DEPLOY_ENABLED == 'true'
-    uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/.github/workflows/publish-image.yml@d583f55473f47f72d33b51060fa5d14e0974daf5
+    uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/.github/workflows/publish-image.yml@7a449b36fe5f4f7b9e436d2c6063321480aa4a3f
     with:
       image: ${{ vars.LEGACY_ARTIFACT_REGISTRY }}/legacy-maliev-web
       dockerfile: Legacy.Maliev.Web/Dockerfile

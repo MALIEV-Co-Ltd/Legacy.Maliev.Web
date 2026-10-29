@@ -125,9 +125,27 @@ class CleanupRejectionControls(unittest.TestCase):
         run = 'a'*32; cid = 'b'*64; expiry = (now+datetime.timedelta(minutes=50)).isoformat()
         original = {'id':cid,'createdUtc':now.isoformat(),'imageId':'sha256:'+'c'*64,'name':'/billing-proof-'+run+'-postgres','owner':'web-billing-proof','run':run,'expiresUtc':expiry,'configuredImage':'postgres:18-alpine','envelopeValid':True,'initEnabled':True,'envelopeSignatureSha256':'d'*64,'memoryBytes':536870912,'swapBytes':536870912,'nanoCpus':1000000000,'tmpfs':'/var/lib/postgresql:rw,size=268435456','loopbackPorts':True,'persistentData':False}
         backend = {'backend':'postgres','localEndpoint':'unix:///var/run/docker.sock','databaseSynthetic':True,'name':'billing-proof-'+run+'-postgres','database':'profile_contract_'+'e'*32,'owner':'web-billing-proof','run':run,'expiresUtc':expiry,'daemon':'synthetic-daemon','originalId':cid,'baselineAbsent':True,'startDispatched':True,'startupSettled':True,'captureVerified':True,'absenceVerified':True,'sdkReleased':True,'original':original}
-        return {'owner':'web-billing-proof','run':'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','expiresUtc':(now+datetime.timedelta(minutes=30)).isoformat(),'released':True,'readerFailureRejected':False,'retained':False,'expired':False,'expiryFailure':None,'policy':'Same-owner 1800-second expiry task closes admission, frontends and actual case work before dependent cleanup; unresolved ownership is quarantined, never accepted as release.','hosts':[{'startupComplete':True,'disposal':'RanToCompletion'} for _ in range(11)],'children':[{'dispatched':True,'identityCaptured':True,'exitVerified':True,'noChildVerified':False,'readersClosed':True,'released':True,'process':{'pid':2001+index,'birth':(now+datetime.timedelta(seconds=1)).isoformat(),'executable':'/opt/hostedtoolcache/dotnet/dotnet','startRefused':False,'ExpiresUtc':(now+datetime.timedelta(minutes=30,seconds=1)).isoformat(),'stdout':'RanToCompletion','stderr':'RanToCompletion','stdoutClosed':True,'stderrClosed':True}} for index in range(3)],'backends':[backend]}
+        return {'owner':'web-billing-proof','run':'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','expiresUtc':(now+datetime.timedelta(minutes=30)).isoformat(),'released':True,'readerFailureRejected':False,'retained':False,'expired':False,'expiryFailure':None,'policy':'Same-owner 1800-second expiry task closes admission, frontends and actual case work before dependent cleanup; unresolved ownership is quarantined, never accepted as release.','hosts':[{'startupComplete':True,'disposal':'RanToCompletion'} for _ in range(11)],'children':[{'dispatched':True,'identityCaptured':True,'exitVerified':True,'noChildVerified':False,'readersClosed':True,'released':True,'cleanupStage':'released','process':{'pid':2001+index,'birth':(now+datetime.timedelta(seconds=1)).isoformat(),'executable':'/opt/hostedtoolcache/dotnet/dotnet','startRefused':False,'ExpiresUtc':(now+datetime.timedelta(minutes=30,seconds=1)).isoformat(),'stdout':'RanToCompletion','stderr':'RanToCompletion','stdoutClosed':True,'stderrClosed':True}} for index in range(3)],'backends':[backend]}
     def test_accept_cleanup_metadata_control(self):
         self.assertTrue(cleanup(self.valid())['released'])
+    def test_reject_missing_child_cleanup_stage(self):
+        self.assertTrue(cleanup(self.valid())['released'])
+        for index in range(3):
+            with self.subTest(child=index):
+                value=self.valid();del value['children'][index]['cleanupStage']
+                with self.assertRaises(ValueError):cleanup(value)
+    def test_reject_unfinished_child_cleanup_stage(self):
+        self.assertTrue(cleanup(self.valid())['released'])
+        for stage in ['not-started','verify-no-live-child','capture-identity','observe-exit','request-graceful-stop','wait-graceful-exit','kill-exact','wait-exit','verify-exit','join-readers','close-readers','close-handle']:
+            with self.subTest(stage=stage):
+                value=self.valid();value['children'][0]['cleanupStage']=stage
+                with self.assertRaises(ValueError):cleanup(value)
+    def test_reject_foreign_child_cleanup_stage(self):
+        self.assertTrue(cleanup(self.valid())['released'])
+        for stage in ['Released','released ','released\n','foreign',None,True,1,{},[]]:
+            with self.subTest(stage=stage):
+                value=self.valid();value['children'][1]['cleanupStage']=stage
+                with self.assertRaises(ValueError):cleanup(value)
     def test_actual_helper_serialization_shape_and_hash(self):
         helper = Path(__file__).resolve().parents[2]/'Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'
         self.assertEqual(helper_source(helper),HELPER_SHA256)
@@ -151,7 +169,13 @@ class CleanupRejectionControls(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'BillingProofLifetime.cs';path.write_bytes(old)
             with self.assertRaises(ValueError):helper_source(path)
-    def test_successor_bytes_match_exact_accepted_pr527_commit(self):
+    def test_reject_pr527_helper_before_cleanup_stage_successor(self):
+        root = Path(__file__).resolve().parents[2]
+        old = subprocess.check_output(['git','show','4bcf40db748daa1c4fb4db0fba81e8a039f94627:Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'], cwd=root, timeout=30)
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'BillingProofLifetime.cs';path.write_bytes(old)
+            with self.assertRaises(ValueError):helper_source(path)
+    def test_successor_bytes_match_exact_accepted_helper_commit(self):
         root = Path(__file__).resolve().parents[2]
         accepted = subprocess.check_output(['git','show',HELPER_REVISION+':Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'], cwd=root, timeout=30)
         helper = root/'Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'

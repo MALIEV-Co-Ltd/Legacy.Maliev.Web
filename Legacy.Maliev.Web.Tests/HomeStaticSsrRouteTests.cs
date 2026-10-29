@@ -1,6 +1,9 @@
 using System.Net;
 using System.Text.RegularExpressions;
+using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -282,6 +285,131 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.Equal(heroCnc, Value("Home.Hero.CncLabel"));
     }
 
+    [Theory]
+    [InlineData("en", true, "/services?culture=en", "Manufacturing services | MALIEV")]
+    [InlineData("th", true, "/services", "บริการผลิตชิ้นส่วน | MALIEV")]
+    [InlineData("en", false, "/services?culture=en", "Manufacturing services | MALIEV")]
+    [InlineData("th", false, "/services", "บริการผลิตชิ้นส่วน | MALIEV")]
+    public async Task HomeServiceLinks_FollowTheRenderedDirectoryAndHeroLinksToLocalizedServices(
+        string culture,
+        bool active,
+        string expectedHref,
+        string expectedTitle)
+    {
+        await using var host = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseSetting("BlazorRouting:Home", active ? "true" : "false");
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<ICountryClient>();
+                services.AddSingleton<ICountryClient, HomeNavigationCountryClient>();
+                services.RemoveAll<IInstantQuotationSubmissionService>();
+                services.AddSingleton<IInstantQuotationSubmissionService, HomeNavigationUnusedSubmissionService>();
+            });
+        });
+        using var client = CreateClient(host);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using var homeResponse = await client.GetAsync($"/?culture={culture}&tracking=excluded", deadline.Token);
+        var home = WebUtility.HtmlDecode(await homeResponse.Content.ReadAsStringAsync(deadline.Token));
+        Assert.Equal(HttpStatusCode.OK, homeResponse.StatusCode);
+        Assert.Contains($"<html lang=\"{culture}\"", home, StringComparison.Ordinal);
+
+        var directory = Assert.Single(HomeAnchorRegex().Matches(home).Cast<Match>(), anchor =>
+            anchor.Groups["classes"].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Contains("landing-service-directory-link", StringComparer.Ordinal));
+        Assert.Equal(expectedHref, directory.Groups["href"].Value);
+        using (var destination = await client.GetAsync(directory.Groups["href"].Value, deadline.Token))
+        {
+            var services = WebUtility.HtmlDecode(await destination.Content.ReadAsStringAsync(deadline.Token));
+            Assert.Equal(HttpStatusCode.OK, destination.StatusCode);
+            Assert.Equal("/services", destination.RequestMessage?.RequestUri?.AbsolutePath);
+            Assert.Equal(culture == "en" ? "?culture=en" : string.Empty, destination.RequestMessage?.RequestUri?.Query);
+            Assert.Contains($"<html lang=\"{culture}\"", services, StringComparison.Ordinal);
+            Assert.Contains($"<title>{expectedTitle}</title>", services, StringComparison.Ordinal);
+            Assert.Equal(active, services.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+            Assert.Contains("class=\"maliev-page maliev-page-main services-index-page\"", services, StringComparison.Ordinal);
+            Assert.Contains("data-migration-component=\"service-breadcrumb\"", services, StringComparison.Ordinal);
+        }
+
+        // The accepted carousel replaces the old secondary Services CTA with scene-specific destinations.
+        var scenes = Regex.Matches(home,
+            "<section\\b(?=[^>]*\\bclass=\"home-hero-option hero-(?<scene>assembly|partnership|journey)\")[^>]*>(?<body>.*?)</section>",
+            RegexOptions.Singleline | RegexOptions.CultureInvariant).Cast<Match>().ToArray();
+        Assert.Equal(new[] { "assembly", "partnership", "journey" }, scenes.Select(scene => scene.Groups["scene"].Value));
+        foreach (var scene in scenes)
+        {
+            var paths = scene.Groups["scene"].Value == "assembly"
+                ? new[] { "/Contact", "/InstantQuotation/3D-Printing" }
+                : new[] { "/Contact", "/About" };
+            var anchors = HomeAnchorRegex().Matches(scene.Groups["body"].Value).Cast<Match>().ToArray();
+            Assert.Equal(paths.Select(path => $"{path}?culture={culture}"), anchors.Select(anchor => anchor.Groups["href"].Value));
+            foreach (var anchor in anchors)
+            {
+                var href = anchor.Groups["href"].Value;
+                var expectedPath = href[..href.IndexOf('?')];
+                var requiresRedirect = expectedPath is "/Contact" or "/About";
+                // CanonicalUrlPolicy preserves the historical quotation casing for its interactive bootstrap.
+                var canonicalPath = requiresRedirect ? expectedPath.ToLowerInvariant() : expectedPath;
+                using var emittedResponse = await client.GetAsync(href, deadline.Token);
+                if (requiresRedirect)
+                {
+                    Assert.Equal(HttpStatusCode.MovedPermanently, emittedResponse.StatusCode);
+                    var location = emittedResponse.Headers.Location;
+                    Assert.NotNull(location);
+                    Assert.False(location.IsAbsoluteUri);
+                    Assert.Equal($"{canonicalPath}?culture={culture}", location.OriginalString);
+                    Assert.Equal(client.BaseAddress!.GetLeftPart(UriPartial.Authority),
+                        new Uri(client.BaseAddress, location).GetLeftPart(UriPartial.Authority));
+                }
+                else
+                {
+                    Assert.Equal(HttpStatusCode.OK, emittedResponse.StatusCode);
+                    Assert.Null(emittedResponse.Headers.Location);
+                }
+                using var canonicalResponse = requiresRedirect
+                    ? await client.GetAsync(emittedResponse.Headers.Location!, deadline.Token) : null;
+                var destination = canonicalResponse ?? emittedResponse;
+                var page = WebUtility.HtmlDecode(await destination.Content.ReadAsStringAsync(deadline.Token));
+                Assert.Equal(HttpStatusCode.OK, destination.StatusCode);
+                Assert.Null(destination.Headers.Location);
+                Assert.Equal(canonicalPath, destination.RequestMessage?.RequestUri?.AbsolutePath);
+                Assert.Equal($"?culture={culture}", destination.RequestMessage?.RequestUri?.Query);
+                Assert.Contains($"<html lang=\"{culture}\"", page, StringComparison.Ordinal);
+                var title = expectedPath switch
+                {
+                    "/Contact" => active ? "Contact MALIEV | Manufacturing Services" : "Contact MALIEV",
+                    "/About" => culture == "th" ? "เกี่ยวกับ MALIEV | พัฒนาต้นแบบและวิศวกรรมย้อนกลับ" : "About MALIEV | Prototype Development & Reverse Engineering",
+                    _ => culture == "th" ? "ประเมินราคาพิมพ์ 3D ออนไลน์ | MALIEV" : "Instant 3D Printing Quote | MALIEV",
+                };
+                Assert.Contains($"<title>{title}</title>", page, StringComparison.Ordinal);
+                var identity = expectedPath switch
+                {
+                    "/Contact" => "id=\"contact-us\"",
+                    "/About" => "class=\"landing-main profile-about\"",
+                    _ => "data-migration-component=\"instant-quotation-three-dimensional-printing\"",
+                };
+                Assert.Contains(identity, page, StringComparison.Ordinal);
+            }
+        }
+    }
+
+    private sealed class HomeNavigationCountryClient : ICountryClient
+    {
+        public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new ServiceResponse<IReadOnlyList<Country>>(
+                [new Country(764, "Thailand", "Asia", "66", "TH", "THA", null, null)], true));
+    }
+
+    private sealed class HomeNavigationUnusedSubmissionService : IInstantQuotationSubmissionService
+    {
+        public Task<InstantQuotationSubmissionResult> SubmitAsync(
+            string sessionId,
+            string? ownerIdentity,
+            InstantQuotationCustomerSubmission customer,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Following a Home navigation GET must not submit an instant quotation.");
+    }
+
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) => sourceFactory.CreateClient(
         new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
 
@@ -306,6 +434,9 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
 
         return directory?.FullName ?? throw new DirectoryNotFoundException("Repository root was not found.");
     }
+
+    [GeneratedRegex("<a\\b(?=[^>]*\\bclass=\"(?<classes>[^\"]*)\")(?=[^>]*\\bhref=\"(?<href>[^\"]*)\")[^>]*>", RegexOptions.CultureInvariant)]
+    private static partial Regex HomeAnchorRegex();
 
     [GeneratedRegex("data-cookie-string=\"(?<cookie>[^\"]+)\"")]
     private static partial Regex ConsentCookieRegex();

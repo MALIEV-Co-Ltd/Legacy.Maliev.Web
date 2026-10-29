@@ -77,7 +77,7 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests
             MimeType = "model/gltf+json",
             Buffer = bytes,
         });
-        var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+        var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
         try
         {
             await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 90000 });

@@ -60,6 +60,7 @@ public sealed class HomeStorySsrRouteTests(StartupDataProtectionMigrationFixture
         Assert.Contains($"<html lang=\"{culture}\"", services, StringComparison.Ordinal);
         Assert.Contains(culture == "th" ? "<title>บริการผลิตชิ้นส่วน | MALIEV</title>" : "<title>Manufacturing services | MALIEV</title>", services, StringComparison.Ordinal);
         Assert.Contains("data-service-finder", services, StringComparison.Ordinal);
+        Assert.Contains("class=\"maliev-page maliev-page-main services-index-page\"", services, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"service-breadcrumb\"", services, StringComparison.Ordinal);
         Assert.Equal(active, services.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
         Assert.Contains(culture == "th" ? "ภาพประกอบ" : "Illustrative", html, StringComparison.Ordinal);

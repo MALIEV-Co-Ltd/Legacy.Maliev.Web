@@ -9,8 +9,8 @@ import subprocess
 import sys
 import urllib.request
 
-PRODUCER = 'd583f55473f47f72d33b51060fa5d14e0974daf5'
-PRODUCER_BLOB = '8bfb535fdede094dc9efa09d053f0acfea79f48e'
+PRODUCER = '7a449b36fe5f4f7b9e436d2c6063321480aa4a3f'
+PRODUCER_BLOB = 'fa852f333947ce7c83d6be22bfa1a3049261acad'
 REPOSITORY = 'MALIEV-Co-Ltd/Legacy.Maliev.Web'
 DOCKERFILE = 'Legacy.Maliev.Web/Dockerfile'
 
@@ -41,7 +41,7 @@ def producer_gate(payload):
 def accepted_receipt(payload, head):
     if payload.get('status') != 'accepted' or payload.get('sourceRevision') != head:
         raise ValueError('Actual image/source revision acceptance missing.')
-    if payload.get('assetCount') != 22 or payload.get('fontCount', 0) < 10:
+    if payload.get('assetCount') != 25 or payload.get('fontCount', 0) < 10:
         raise ValueError('Actual packaged corpus incomplete.')
     if not re.fullmatch(r'sha256:[0-9a-f]{64}', payload.get('imageId', '')):
         raise ValueError('Immutable actual image identity missing.')
