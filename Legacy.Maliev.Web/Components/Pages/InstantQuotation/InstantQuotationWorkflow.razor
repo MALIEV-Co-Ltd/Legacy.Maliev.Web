@@ -9,6 +9,7 @@
          aria-busy="@IsBusy.ToString().ToLowerInvariant()"
          data-workflow-state="@State.ToString().ToLowerInvariant()">
     <h1 id="instant-quote-workflow-heading" class="instant-quote__sr-only">@Localizer["Instant Pricing"]</h1>
+    <a data-printing-spacemouse-help href="/help/spacemouse.html" target="_blank" rel="noopener">@Localizer["SpaceMouse help"]</a>
 
     <p id="instant-quote-status" class="instant-quote__sr-only" aria-live="polite" aria-atomic="true">@StatusMessage</p>
     <p data-workflow-preview-status class="instant-quote__sr-only" role="status">@PreviewStatusMessage</p>
