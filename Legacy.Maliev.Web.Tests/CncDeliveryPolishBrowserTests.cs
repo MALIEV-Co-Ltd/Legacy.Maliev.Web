@@ -107,6 +107,45 @@ public sealed class CncDeliveryPolishBrowserTests(CncNativeBrowserFixture fixtur
         Assert.Equal(0, actual.GetProperty("total").GetDouble());
     }
 
+    [Fact]
+    public async Task OriginalPresentationBoundary_RetainsDisabledSetupSizingAndThaiBlockTerminology()
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        await using var page = await context.NewPageAsync();
+        await OpenOriginalPartAsync(page);
+        // Original UnavailableSetupControl_IsVisiblyDisabledAndExplainsWhy renders
+        // this presentation input directly. It never creates a manufacturing plan.
+        var actual = await page.EvaluateAsync<JsonElement>("""
+            () => {
+                RenderCncSetupControls([{id:'setup-1',number:1}]);
+                const button = document.querySelector('#cnc-setup-controls button');
+                const height = button.getBoundingClientRect().height;
+                const font = parseFloat(getComputedStyle(button).fontSize);
+                ApplyCncOverlayUiState(viewer.GetCncOverlayState());
+                const item = utils.GetItem(utils.GetActiveId());
+                return {height,font,
+                    rootFont:parseFloat(getComputedStyle(document.documentElement).fontSize),
+                    controlsHidden:document.querySelector('#cnc-setup-controls').hidden,
+                    disabled:button.disabled,reason:button.title,
+                    stockTerm:CncReviewStockType({stockShape:'block'}),
+                    status:item.cncStatus,hasQuote:!!item.cncQuote,
+                    hasValidatedPlan:!!item.cncValidatedPlan,total:latestOrderTotal.finalOrderPrice};
+            }
+            """);
+        Assert.InRange(actual.GetProperty("height").GetDouble(), 31.5, 32.5);
+        Assert.InRange(actual.GetProperty("font").GetDouble(),
+            actual.GetProperty("rootFont").GetDouble() * .72 - .1,
+            actual.GetProperty("rootFont").GetDouble() * .72 + .1);
+        Assert.True(actual.GetProperty("disabled").GetBoolean());
+        Assert.True(actual.GetProperty("controlsHidden").GetBoolean());
+        Assert.False(string.IsNullOrWhiteSpace(actual.GetProperty("reason").GetString()));
+        Assert.Equal("ก้อนสี่เหลี่ยม", actual.GetProperty("stockTerm").GetString());
+        Assert.Equal("review_required", actual.GetProperty("status").GetString());
+        Assert.False(actual.GetProperty("hasQuote").GetBoolean());
+        Assert.False(actual.GetProperty("hasValidatedPlan").GetBoolean());
+        Assert.Equal(0, actual.GetProperty("total").GetDouble());
+    }
+
     private async Task OpenOriginalPartAsync(IPage page)
     {
         // Existing isolated upload boundary; the CAD worker and planner remain real.
