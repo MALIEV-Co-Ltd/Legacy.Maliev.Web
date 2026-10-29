@@ -255,7 +255,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         await Assertions.Expect(page.Locator("[data-workflow-parts-panel] [data-workflow-part-count]")).ToHaveAttributeAsync("aria-live", "polite");
         await Assertions.Expect(page.Locator("[data-workflow-parts-panel] [data-workflow-part-count]")).ToHaveTextAsync(culture == "th" ? $"{names.Length} ชิ้น" : $"{names.Length} parts");
         await Assertions.Expect(rail.Locator(".iq-compact-dropzone strong")).ToHaveTextAsync(culture == "th" ? "เพิ่มชิ้นงาน" : "Add parts");
-        var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+        var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
         await Assertions.Expect(review).ToBeEnabledAsync();
         var directory = Environment.GetEnvironmentVariable("MALIEV_BROWSER_EVIDENCE_DIR");
         async Task Capture(string state)

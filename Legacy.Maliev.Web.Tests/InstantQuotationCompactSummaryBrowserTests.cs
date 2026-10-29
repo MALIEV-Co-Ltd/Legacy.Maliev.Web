@@ -54,7 +54,12 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
         Assert.Equal("ซ่อนรายละเอียด", labels["Hide details"]);
         Assert.Contains("href=\"/legal/privacypolicy\"", markup, StringComparison.Ordinal);
         Assert.Contains("href=\"/legal/nondisclosureagreement\"", markup, StringComparison.Ordinal);
-        Assert.Contains("data-summary-consultation href=\"/contact#contact-us\" target=\"_blank\"", markup, StringComparison.Ordinal);
+        Assert.Contains("data-summary-consultation-menu", markup, StringComparison.Ordinal);
+        Assert.Contains("type=\"button\" id=\"instant-quote-consultation\"", markup, StringComparison.Ordinal);
+        Assert.Contains("data-bs-popper-config='{\"strategy\":\"fixed\"}'", markup, StringComparison.Ordinal);
+        foreach (var destination in new[] { "@SocialNetworks.Line", "@SocialNetworks.WhatsApp", "@SocialNetworks.MessengerChat" })
+            Assert.Contains("href=\"" + destination + "\" target=\"_blank\" rel=\"noopener noreferrer\"", markup, StringComparison.Ordinal);
+        Assert.Contains("CanonicalUrlPolicy.GetLocalizedReturnUrl(\"/contact\", System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName) + \"#contact-us\"", markup, StringComparison.Ordinal);
     }
 
     [Theory]
@@ -210,7 +215,7 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
         }
         Assert.True(await leadTime.IsVisibleAsync());
         Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
-        Assert.True(await page.Locator(".instant-quote__configuration-actions button").IsVisibleAsync());
+        Assert.True(await page.Locator(".instant-quote__configuration-actions > button").IsVisibleAsync());
         await summary.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
         Assert.False(await dock.EvaluateAsync<bool>("element => element.open"));
@@ -267,7 +272,7 @@ public sealed class InstantQuotationCompactSummaryBrowserTests(CncNativeBrowserF
         var host = page.Locator("#compact-summary-test-host");
         var dock = host.Locator("[data-workflow-summary-dock]");
         var summary = dock.Locator("summary");
-        var review = host.Locator(".instant-quote__configuration-actions button");
+        var review = host.Locator(".instant-quote__configuration-actions > button");
         Assert.False(await dock.EvaluateAsync<bool>("element => element.open"));
         Assert.True(await summary.IsVisibleAsync());
         Assert.True(await host.Locator("[data-workflow-lead-time]").IsVisibleAsync());
