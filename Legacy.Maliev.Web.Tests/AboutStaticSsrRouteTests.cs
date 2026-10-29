@@ -30,6 +30,7 @@ public sealed class AboutStaticSsrRouteTests : IClassFixture<TestingWebApplicati
         Assert.Contains($"<title>{title}</title>", html, StringComparison.Ordinal);
         Assert.Contains($"property=\"og:title\" content=\"{title}\"", html, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", html, StringComparison.Ordinal);
+        AboutPageContractTests.AssertCompanyFactsWithoutDescriptions(html, culture);
         var about = Assert.Single(Regex.Matches(html,
             "<main class=\"landing-main profile-about\"[^>]*>(?<body>.*?)</main>",
             RegexOptions.Singleline).Cast<Match>()).Groups["body"].Value;

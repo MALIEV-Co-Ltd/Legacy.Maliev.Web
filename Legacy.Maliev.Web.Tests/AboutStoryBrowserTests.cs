@@ -173,6 +173,12 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
 
     private static async Task AssertCustomersHiddenAsync(IPage page, string culture)
     {
+        var facts = page.Locator(".profile-company-facts");
+        await Expect(facts.Locator("article")).ToHaveCountAsync(3);
+        await Expect(facts.Locator("h2")).ToHaveTextAsync(culture == "th"
+            ? new[] { "บริษัท มาลีฟ จำกัด", "ก่อตั้งในปี 2018", "นนทบุรี ประเทศไทย" }
+            : new[] { "Maliev Co., Ltd.", "Established in 2018", "Nonthaburi, Thailand" });
+        await Expect(facts.Locator("p")).ToHaveCountAsync(0);
         await Expect(page.Locator(".profile-customers")).ToHaveCountAsync(0);
         await Expect(page.Locator("[data-customer]")).ToHaveCountAsync(0);
         await Expect(page.Locator("img[src^='/src/images/customers/']")).ToHaveCountAsync(0);
