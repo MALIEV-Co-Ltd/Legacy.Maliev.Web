@@ -66,6 +66,7 @@ public sealed class InstantQuotationWallThicknessAdmittedWorkerBrowserTests(ITes
             })();
             """);
         await using var page = await context.NewPageAsync();
+        await OptionalPrintingDriverFixture.UseUnavailableDriverAsync(page);
         var pageErrors = new List<string>();
         var consoleErrors = new List<string>();
         var consoleWarnings = new List<string>();

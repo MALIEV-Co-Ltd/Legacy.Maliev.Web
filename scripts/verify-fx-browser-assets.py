@@ -1,4 +1,4 @@
-"""Require the exact current accepted FX assets; retain frozen historical controls."""
+"""Require the reviewed Printing asset candidate; retain accepted historical controls."""
 import hashlib
 import json
 from pathlib import Path
@@ -14,6 +14,11 @@ ACCEPTED = {
 CURRENT_COMMIT = 'a01c586e3355d9e451b7aa5aa95c9347d82a2014'
 CURRENT_TREE = '72d3d8ebfdfe6e1420baaf0f32b106934f869d34'
 CURRENT_FIXTURE_SHA256 = '891af1aeffe157c624e3621c269628585c5f9a6ce165596b33d66f2c96ac3c0d'
+CANDIDATE_COMMIT = '86cb00d864177685f7c8020f878488ef039e8818'
+CANDIDATE_SOURCE_TREE = 'eb565fbdd476ed99ef24ea23f52c3cee88b2e3fb'
+CANDIDATE_ASSET_TREE = '3cb5ffacfccf3c3a0d026ff1872b44001f4d4e36'
+CANDIDATE_FIXTURE_SHA256 = '465b7973ff68980ef524b695eef323e89b48137e52504fec617d88c6326e119d'
+CANDIDATE_VIEWER_BLOB = '78eb0f20ce88105e297f103cde7a5b06e32cb564'
 
 
 def current_contract():
@@ -36,6 +41,45 @@ def verify_current(candidate, provenance, provenance_tree):
         raise ValueError('Current accepted committed asset provenance mismatch')
     if candidate != expected:
         raise ValueError('Complete exact current asset paths, modes and blobs required')
+
+
+def candidate_contract():
+    content = (Path(__file__).resolve().parents[1]/'tests/fx-joined/reviewed-candidate-printing758-assets.json').read_bytes()
+    if hashlib.sha256(content).hexdigest() != CANDIDATE_FIXTURE_SHA256:
+        raise ValueError('Reviewed candidate asset fixture identity mismatch')
+    contract = json.loads(content)
+    metadata = {
+        'schemaVersion': 1,
+        'scope': 'reviewed-candidate-only',
+        'baselineAcceptedCommit': CURRENT_COMMIT,
+        'baselineAssetTree': CURRENT_TREE,
+        'featureIntegrationCommit': CANDIDATE_COMMIT,
+        'featureIntegrationTree': CANDIDATE_SOURCE_TREE,
+        'assetTree': CANDIDATE_ASSET_TREE,
+        'onlyChangedPath': ROOT+'/instant-quotation-viewer.mjs',
+    }
+    if set(contract) != set(metadata) | {'assets'} or any(contract[key] != value for key, value in metadata.items()):
+        raise ValueError('Reviewed candidate source provenance mismatch')
+    assets = {path: tuple(entry) for path, entry in contract['assets'].items()}
+    expected = current_contract()
+    expected[ROOT+'/instant-quotation-viewer.mjs'] = ('100644', CANDIDATE_VIEWER_BLOB)
+    if len(assets) != 43 or assets != expected:
+        raise ValueError('Only the exact reviewed Printing viewer delta is permitted')
+    return assets
+
+
+def source_tree_identity(revision):
+    return subprocess.check_output(['git', 'rev-parse', revision+'^{tree}'], timeout=30).decode('ascii').strip()
+
+
+def verify_candidate(candidate, provenance, revision, source_tree, asset_tree):
+    expected = candidate_contract()
+    if revision != CANDIDATE_COMMIT or source_tree != CANDIDATE_SOURCE_TREE or asset_tree != CANDIDATE_ASSET_TREE:
+        raise ValueError('Reviewed integration commit and source/asset trees required')
+    if provenance != expected:
+        raise ValueError('Reviewed integration asset provenance mismatch')
+    if candidate != expected:
+        raise ValueError('Complete exact reviewed candidate paths, modes and blobs required')
 
 
 def tree(revision):
@@ -71,10 +115,15 @@ def verify(baseline, candidate, provenance):
 
 
 def main():
-    verify_current(tree('HEAD'), tree(CURRENT_COMMIT), tree_identity(CURRENT_COMMIT))
+    verify_current(current_contract(), tree(CURRENT_COMMIT), tree_identity(CURRENT_COMMIT))
+    verify_candidate(tree('HEAD'), tree(CANDIDATE_COMMIT), CANDIDATE_COMMIT,
+                     source_tree_identity(CANDIDATE_COMMIT), tree_identity(CANDIDATE_COMMIT))
     # Also refuse tracked working changes: the native host must consume committed assets.
     subprocess.run(['git', 'diff', '--exit-code', 'HEAD', '--', ROOT], check=True, timeout=30)
-    print('Current accepted FX asset tree verified; all 43 exact committed assets required')
+    # Untracked files, including ignored files, are also served from this directory.
+    if subprocess.check_output(['git', 'ls-files', '--others', '--', ROOT], timeout=30):
+        raise ValueError('Untracked files under served assets refused')
+    print('Reviewed candidate FX asset tree verified; all 43 exact committed assets required')
 
 
 if __name__ == '__main__':

@@ -9,6 +9,8 @@ on:
       - 'tests/WebPackagedHostedGuardTests.py'
       - 'tests/fx-joined/candidate-graph.json'
       - 'Legacy.Maliev.Web/Dockerfile'
+      - 'Legacy.Maliev.Web/wwwroot/dist/**'
+      - 'tests/fx-joined/reviewed-candidate-*-assets.json'
 
 permissions:
   contents: read
