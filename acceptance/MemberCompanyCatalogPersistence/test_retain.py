@@ -175,6 +175,12 @@ class CleanupRejectionControls(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'BillingProofLifetime.cs';path.write_bytes(old)
             with self.assertRaises(ValueError):helper_source(path)
+    def test_reject_pr723_helper_before_linux_executable_identity_successor(self):
+        root = Path(__file__).resolve().parents[2]
+        old = subprocess.check_output(['git','show','a25cf00409b9df2c7164c24f0a399b0752242e2d:Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'], cwd=root, timeout=30)
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'BillingProofLifetime.cs';path.write_bytes(old)
+            with self.assertRaises(ValueError):helper_source(path)
     def test_successor_bytes_match_exact_accepted_helper_commit(self):
         root = Path(__file__).resolve().parents[2]
         accepted = subprocess.check_output(['git','show',HELPER_REVISION+':Legacy.Maliev.Web.Tests/BillingProofLifetime.cs'], cwd=root, timeout=30)

@@ -1,14 +1,24 @@
 using System.Net;
+using System.Runtime.ExceptionServices;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Xml.Linq;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.AspNetCore.DataProtection.Repositories;
+using Microsoft.AspNetCore.DataProtection.StackExchangeRedis;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 using Testcontainers.Redis;
@@ -20,6 +30,90 @@ public sealed class StartupDataProtectionMigrationTests(StartupDataProtectionMig
 {
     private const string Purpose = "Legacy.Maliev.Web.StartupMigrationProof.v1";
     private const string KeyRing = "legacy:web:data-protection-keys";
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("false")]
+    [InlineData("True")]
+    [InlineData("1")]
+    [InlineData("true")]
+    public Task Production_ExactStandbyPreservesEncryptedExistingCookie(string? standbyValue) =>
+        VerifyStandbyAsync("Production", "Legacy.Maliev.Web", standbyValue);
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("false")]
+    [InlineData("True")]
+    [InlineData("1")]
+    [InlineData("true")]
+    public Task Development_ExactStandbyPreservesEncryptedExistingCookie(string? standbyValue) =>
+        VerifyStandbyAsync("Development", "Legacy.Maliev.Web.Development", standbyValue);
+
+    private async Task VerifyStandbyAsync(string environment, string discriminator, string? standbyValue)
+    {
+        RequireAbsentStandbyEnvironment(standbyValue);
+        string cookie;
+        (int Count, string Sha256) fingerprint;
+        await using (var seed = fixture.CreateFactory(environment,
+            builder => builder.UseSetting("MALIEV_OBSERVABILITY_STANDBY", "false")))
+        {
+            var format = CookieFormat(seed.Services);
+            var identity = new ClaimsIdentity(
+                [new Claim(ClaimTypes.NameIdentifier, "synthetic-standby-member")],
+                CookieAuthenticationDefaults.AuthenticationScheme);
+            cookie = format.Protect(new AuthenticationTicket(new ClaimsPrincipal(identity),
+                new AuthenticationProperties(), CookieAuthenticationDefaults.AuthenticationScheme));
+            fingerprint = await KeyRingFingerprintAsync(seed.Services);
+        }
+
+        await using var candidate = fixture.CreateFactory(environment, builder =>
+        {
+            if (standbyValue is not null) builder.UseSetting("MALIEV_OBSERVABILITY_STANDBY", standbyValue);
+        });
+        var services = candidate.Services;
+        Assert.Equal(standbyValue, services.GetRequiredService<IConfiguration>()["MALIEV_OBSERVABILITY_STANDBY"]);
+        AssertRealEnvironmentAndRedis(candidate, environment, discriminator);
+        var management = services.GetRequiredService<IOptions<KeyManagementOptions>>().Value;
+        Assert.Equal(standbyValue != "true", management.AutoGenerateKeys);
+        Assert.IsType<RedisXmlRepository>(management.XmlRepository);
+        Assert.NotNull(management.XmlEncryptor);
+        Assert.IsNotType<EphemeralDataProtectionProvider>(services.GetRequiredService<IDataProtectionProvider>());
+        var cache = services.GetRequiredService<IOptions<RedisCacheOptions>>().Value;
+        Assert.Equal("legacy:web:", cache.InstanceName);
+        Assert.NotNull(cache.ConnectionMultiplexerFactory);
+        Assert.Same(services.GetRequiredService<IConnectionMultiplexer>(), await cache.ConnectionMultiplexerFactory!());
+        Assert.NotEqual(IntPtr.Zero, services.GetRequiredService<X509Certificate2>().Handle);
+        var restored = CookieFormat(services).Unprotect(cookie);
+        Assert.NotNull(restored);
+        Assert.Equal(CookieAuthenticationDefaults.AuthenticationScheme, restored.AuthenticationScheme);
+        Assert.Equal("synthetic-standby-member", restored.Principal.FindFirstValue(ClaimTypes.NameIdentifier));
+        Assert.Equal(fingerprint, await KeyRingFingerprintAsync(services));
+    }
+
+    private static ISecureDataFormat<AuthenticationTicket> CookieFormat(IServiceProvider services) =>
+        services.GetRequiredService<IOptionsMonitor<CookieAuthenticationOptions>>()
+            .Get(CookieAuthenticationDefaults.AuthenticationScheme).TicketDataFormat;
+
+    private static async Task<(int Count, string Sha256)> KeyRingFingerprintAsync(IServiceProvider services)
+    {
+        var values = await services.GetRequiredService<IConnectionMultiplexer>().GetDatabase().ListRangeAsync(KeyRing);
+        Assert.NotEmpty(values);
+        Assert.True(values.All(value => value.ToString().Contains("encryptedSecret", StringComparison.Ordinal)
+            && value.ToString().Contains("EncryptedKey", StringComparison.Ordinal)
+            && !value.ToString().Contains("<masterKey", StringComparison.Ordinal)),
+            "The disposable key ring must contain only encrypted synthetic key material.");
+        var hashes = values.Select(value => Convert.ToHexString(SHA256.HashData((byte[])value!)));
+        return (values.Length, Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join(';', hashes)))));
+    }
+
+    internal static void RequireAbsentStandbyEnvironment(string? standbyValue)
+    {
+        if (standbyValue is not null) return;
+        // A null UseSetting becomes an empty command-line value in minimal hosting.
+        foreach (var prefix in new[] { "", "ASPNETCORE_", "DOTNET_" })
+            Assert.True(Environment.GetEnvironmentVariable(prefix + "MALIEV_OBSERVABILITY_STANDBY") is null,
+                "The absent standby case requires no ambient standby configuration.");
+    }
 
     [Theory]
     [InlineData("Development", "Legacy.Maliev.Web.Development", "Production")]
@@ -112,6 +206,67 @@ public sealed class StartupDataProtectionMigrationTests(StartupDataProtectionMig
     }
 }
 
+public sealed class StartupDataProtectionMigrationTestsTestingControls
+{
+    [Theory]
+    [InlineData(null)]
+    [InlineData("false")]
+    [InlineData("True")]
+    [InlineData("1")]
+    [InlineData("true")]
+    public async Task Testing_StandbyDoesNotChangeMemoryCacheOrDefaultGeneration(string? standbyValue)
+    {
+        StartupDataProtectionMigrationTests.RequireAbsentStandbyEnvironment(standbyValue);
+        var directory = Directory.CreateTempSubdirectory("maliev-web474-");
+        Exception? primary = null;
+        try
+        {
+            await using var parent = new TestingWebApplicationFactory();
+            await using var factory = parent.WithWebHostBuilder(builder =>
+            {
+                if (standbyValue is not null) builder.UseSetting("MALIEV_OBSERVABILITY_STANDBY", standbyValue);
+                // Keep the actual Program/provider; isolate only Testing's default
+                // filesystem key repository from the persistent user profile.
+                builder.ConfigureServices(services => services.Configure<KeyManagementOptions>(options =>
+                    options.XmlRepository = new FileSystemXmlRepository(directory, NullLoggerFactory.Instance)));
+            });
+            var services = factory.Services;
+            Assert.Equal("Testing", services.GetRequiredService<IHostEnvironment>().EnvironmentName);
+            Assert.Equal(standbyValue, services.GetRequiredService<IConfiguration>()["MALIEV_OBSERVABILITY_STANDBY"]);
+            Assert.IsType<MemoryDistributedCache>(services.GetRequiredService<IDistributedCache>());
+            Assert.Null(services.GetService<IConnectionMultiplexer>());
+            Assert.Null(services.GetService<X509Certificate2>());
+            Assert.Equal("Legacy.Maliev.Web",
+                services.GetRequiredService<IOptions<DataProtectionOptions>>().Value.ApplicationDiscriminator);
+            var management = services.GetRequiredService<IOptions<KeyManagementOptions>>().Value;
+            Assert.True(management.AutoGenerateKeys);
+            Assert.IsType<FileSystemXmlRepository>(management.XmlRepository);
+        }
+        catch (Exception original)
+        {
+            primary = original;
+            throw;
+        }
+        finally
+        {
+            try
+            {
+                var temporaryRoot = Path.GetFullPath(Path.GetTempPath());
+                Assert.StartsWith(temporaryRoot, Path.GetFullPath(directory.FullName), StringComparison.OrdinalIgnoreCase);
+                Assert.StartsWith("maliev-web474-", directory.Name, StringComparison.Ordinal);
+                Assert.False(directory.Attributes.HasFlag(FileAttributes.ReparsePoint));
+                directory.Delete(recursive: true);
+                Assert.False(Directory.Exists(directory.FullName));
+            }
+            catch (Exception cleanup)
+            {
+                if (primary is null) throw;
+                OwnedWebSurfaceResources.RecordFailureTypes(primary, [cleanup]);
+            }
+        }
+    }
+}
+
 public sealed class StartupDataProtectionMigrationFixture : IAsyncLifetime
 {
     private const string CertificatePassword = "owned-startup-migration-proof";
@@ -148,6 +303,18 @@ public sealed class StartupDataProtectionMigrationFixture : IAsyncLifetime
         string environment, string connection, string certificate, Action<IWebHostBuilder>? configure)
         : TestingWebApplicationFactory
     {
+        private readonly OwnedWebSurfaceResources nativeResources = new();
+        private readonly StartupRedisCacheDisposal cacheDisposal = new();
+        private IConnectionMultiplexer? ownedRedis;
+        private X509Certificate2? ownedCertificate;
+
+        public override async ValueTask DisposeAsync()
+        {
+            await cacheDisposal.ReleaseAsync(() => base.DisposeAsync(), nativeResources);
+            Assert.False(ownedRedis?.IsConnected ?? false);
+            if (ownedCertificate is not null) Assert.Equal(IntPtr.Zero, ownedCertificate.Handle);
+        }
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             base.ConfigureWebHost(builder);
@@ -158,6 +325,120 @@ public sealed class StartupDataProtectionMigrationFixture : IAsyncLifetime
             builder.UseSetting("BlazorRouting:KnowledgesIndex", "true");
             builder.UseSetting("Logging:LogLevel:Default", "None");
             configure?.Invoke(builder);
+            builder.ConfigureServices(services =>
+            {
+                // Program creates these exact synthetic instances, but AddSingleton(instance)
+                // does not give DI their disposal ownership. Release them after host shutdown.
+                ownedCertificate = nativeResources.Own(Assert.IsType<X509Certificate2>(Assert.Single(services,
+                    descriptor => descriptor.ServiceType == typeof(X509Certificate2)).ImplementationInstance));
+                ownedRedis = nativeResources.Own(Assert.IsAssignableFrom<IConnectionMultiplexer>(Assert.Single(services,
+                    descriptor => descriptor.ServiceType == typeof(IConnectionMultiplexer)).ImplementationInstance));
+                cacheDisposal.Register(services);
+            });
         }
+    }
+}
+
+internal sealed class StartupRedisCacheDisposal
+{
+    private readonly object sync = new();
+    private readonly List<Witness> captured = [];
+    private bool sealedRegistry;
+    private int lateCaptureCount;
+    private Task? release;
+
+    internal int CapturedCount { get { lock (sync) return captured.Count; } }
+    internal int LateCaptureCount { get { lock (sync) return lateCaptureCount; } }
+    internal bool AllCapturedCompleted
+    {
+        get { lock (sync) return lateCaptureCount == 0 && captured.Count > 0 && captured.All(witness => witness.Completion.IsCompleted); }
+    }
+
+    internal void Register(IServiceCollection services)
+    {
+        lock (sync)
+            if (sealedRegistry) throw new InvalidOperationException("Startup Redis cleanup registry is already sealed.");
+        var registrations = services.Where(descriptor => descriptor.ServiceType == typeof(IConfigureOptions<RedisCacheOptions>)).ToArray();
+        if (registrations.Length != 1 || registrations[0].IsKeyedService || registrations[0].Lifetime != ServiceLifetime.Singleton
+            || registrations[0].ImplementationInstance?.GetType() != typeof(ConfigureNamedOptions<RedisCacheOptions>)
+            || services.Any(descriptor => descriptor.ServiceType == typeof(Witness)))
+            throw new InvalidOperationException("Startup Redis proof requires the original unique singleton options instance.");
+
+        var registration = registrations[0];
+        var configuration = (ConfigureNamedOptions<RedisCacheOptions>)registration.ImplementationInstance!;
+        if (configuration.Name != Options.DefaultName)
+            throw new InvalidOperationException("Startup Redis proof requires the original default-named options instance.");
+
+        services.AddSingleton(_ =>
+        {
+            var witness = new Witness();
+            lock (sync)
+            {
+                if (sealedRegistry)
+                {
+                    lateCaptureCount++;
+                    throw new InvalidOperationException("Startup Redis cleanup cannot accept a late provider witness.");
+                }
+                captured.Add(witness);
+            }
+            return witness;
+        });
+        // RedisCache reads these options before DI captures the completed cache instance.
+        // Reverse DI disposal therefore signals this provider's witness after cache cleanup.
+        services[services.IndexOf(registration)] = ServiceDescriptor.Describe(registration.ServiceType, provider =>
+        {
+            _ = provider.GetRequiredService<Witness>();
+            return configuration;
+        }, registration.Lifetime);
+    }
+
+    internal async Task JoinAsync()
+    {
+        Task[] completions;
+        lock (sync)
+        {
+            sealedRegistry = true;
+            completions = captured.Select(witness => witness.Completion).ToArray();
+        }
+        if (completions.Length != 0)
+            await Task.WhenAll(completions).WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    internal ValueTask ReleaseAsync(Func<ValueTask> disposeHost, OwnedWebSurfaceResources resources)
+    {
+        lock (sync) return new ValueTask(release ??= ReleaseCoreAsync(disposeHost, resources));
+    }
+
+    private async Task ReleaseCoreAsync(Func<ValueTask> disposeHost, OwnedWebSurfaceResources resources)
+    {
+        Exception? primary = null;
+        var cleanupFailures = new List<Exception>();
+        try { await disposeHost(); }
+        catch (Exception failure) { primary = failure; }
+        try { await JoinAsync(); }
+        catch (Exception failure)
+        {
+            if (primary is null) primary = failure;
+            else cleanupFailures.Add(failure);
+        }
+        try { resources.Dispose(); }
+        catch (Exception failure)
+        {
+            if (primary is null) primary = failure;
+            else if (failure is AggregateException aggregate) cleanupFailures.AddRange(aggregate.Flatten().InnerExceptions);
+            else cleanupFailures.Add(failure);
+        }
+        if (primary is not null)
+        {
+            OwnedWebSurfaceResources.RecordFailureTypes(primary, cleanupFailures);
+            ExceptionDispatchInfo.Capture(primary).Throw();
+        }
+    }
+
+    private sealed class Witness : IDisposable
+    {
+        private readonly TaskCompletionSource completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        internal Task Completion => completion.Task;
+        public void Dispose() => completion.TrySetResult();
     }
 }

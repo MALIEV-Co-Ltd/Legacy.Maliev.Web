@@ -7,7 +7,8 @@ import {
   previewColorForSelection,
   supportedPreviewExtensions,
 } from '../wwwroot/src/app/js/instant-quotation/workflow-interop.mjs';
-import { createModelViewer } from '../wwwroot/src/app/js/instant-quotation/model-viewer.mjs';
+import { createModelViewer, loadStandaloneModel } from '../wwwroot/src/app/js/instant-quotation/model-viewer.mjs';
+import { analyzeUploadDerivedGeometry } from '../wwwroot/src/app/js/instant-quotation/geometry-analysis.mjs';
 
 function deferred() {
   let resolve;
@@ -36,6 +37,104 @@ function modelFile(name, bytes = [1, 2, 3]) {
     arrayBuffer: async () => new Uint8Array(bytes).buffer,
   };
 }
+
+function binaryBoxStl() {
+  const vertices = [[0, 0, 0], [6, 0, 0], [6, 6, 0], [0, 6, 0],
+    [0, 0, 6], [6, 0, 6], [6, 6, 6], [0, 6, 6]];
+  const triangles = [[0, 2, 1], [0, 3, 2], [4, 5, 6], [4, 6, 7],
+    [0, 1, 5], [0, 5, 4], [1, 2, 6], [1, 6, 5],
+    [2, 3, 7], [2, 7, 6], [3, 0, 4], [3, 4, 7]];
+  const bytes = new ArrayBuffer(84 + triangles.length * 50);
+  const view = new DataView(bytes);
+  view.setUint32(80, triangles.length, true);
+  triangles.forEach((triangle, index) => triangle.forEach((vertex, corner) =>
+    vertices[vertex].forEach((coordinate, axis) =>
+      view.setFloat32(84 + index * 50 + 12 + corner * 12 + axis * 4, coordinate, true))));
+  return bytes;
+}
+
+for (const firstRead of ['hash', 'loader']) {
+  test(`production STL preview waits for both file reads when ${firstRead} resolves first`, async () => {
+    const bytes = binaryBoxStl();
+    const reads = [deferred(), deferred()];
+    let readCount = 0;
+    let analyzed = 0;
+    let settled = false;
+    const file = { name: 'synthetic-box.stl', arrayBuffer: () => reads[readCount++].promise };
+    const interop = createWorkflowPreviewInterop({
+      loadModel: loadStandaloneModel,
+      analyzeGeometry: object => { analyzed += 1; return analyzeUploadDerivedGeometry(object); },
+      createViewer: () => { throw new Error('A canvas is unnecessary for geometry claims.'); },
+      thicknessAnalyzer: { analyze: async () => null, dispose() {} },
+    });
+    const [key] = interop.beginSelection({ files: [file] });
+    const claim = interop.getGeometryClaim(key);
+    const observed = claim.then(() => { settled = true; }, () => { settled = true; });
+    try {
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(readCount, 2);
+      // Hashing starts immediately; the production loader starts in the queued microtask.
+      const first = firstRead === 'hash' ? 0 : 1;
+      reads[first].resolve(bytes.slice(0));
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(settled, false);
+      assert.equal(analyzed, 0);
+      reads[1 - first].resolve(bytes.slice(0));
+      const result = await claim;
+      assert.equal(analyzed, 1);
+      assert.equal(readCount, 2);
+      assert.equal(result.volumeMm3, 216);
+      assert.deepEqual([result.dimensionXmm, result.dimensionYmm, result.dimensionZmm], [6, 6, 6]);
+      assert.match(result.sha256, /^[0-9a-f]{64}$/);
+    } finally {
+      for (const read of reads) read.resolve(bytes.slice(0));
+      await observed;
+      interop.dispose();
+    }
+  });
+}
+
+test('production STL geometry claim waits for the real digest without depending on a viewer', async t => {
+  const bytes = binaryBoxStl();
+  const digestStarted = deferred();
+  const digestReleased = deferred();
+  const digest = globalThis.crypto.subtle.digest.bind(globalThis.crypto.subtle);
+  t.mock.method(globalThis.crypto.subtle, 'digest', async (...args) => {
+    digestStarted.resolve();
+    await digestReleased.promise;
+    return digest(...args);
+  });
+  let readCount = 0;
+  let analyzed = 0;
+  let settled = false;
+  const interop = createWorkflowPreviewInterop({
+    loadModel: loadStandaloneModel,
+    analyzeGeometry: object => { analyzed += 1; return analyzeUploadDerivedGeometry(object); },
+    createViewer: () => { throw new Error('A canvas is unnecessary for geometry claims.'); },
+    thicknessAnalyzer: { analyze: async () => null, dispose() {} },
+  });
+  const [key] = interop.beginSelection({ files: [{ name: 'synthetic-box.stl',
+    arrayBuffer: async () => { readCount += 1; return bytes.slice(0); } }] });
+  const claim = interop.getGeometryClaim(key);
+  const observed = claim.then(() => { settled = true; }, () => { settled = true; });
+  try {
+    await digestStarted.promise;
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(readCount, 2);
+    assert.equal(analyzed, 0);
+    assert.equal(settled, false);
+    digestReleased.resolve();
+    const result = await claim;
+    assert.equal(analyzed, 1);
+    assert.equal(result.volumeMm3, 216);
+    assert.equal(result.sha256, Buffer.from(await digest('SHA-256', bytes)).toString('hex'));
+  } finally {
+    digestReleased.resolve();
+    await observed;
+    interop.dispose();
+    t.mock.restoreAll();
+  }
+});
 
 function harness(
   loadModel = async () => disposableObject(),
