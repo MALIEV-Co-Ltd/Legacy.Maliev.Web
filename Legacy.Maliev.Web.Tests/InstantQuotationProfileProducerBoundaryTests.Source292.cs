@@ -160,7 +160,7 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                         MimeType = "model/gltf-binary",
                         Buffer = bytes,
                     });
-                    var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+                    var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
                     await Assertions.Expect(page.Locator("[data-workflow-part]")).ToHaveCountAsync(1, new() { Timeout = 90000 });
                     await Assertions.Expect(review).ToBeEnabledAsync(new() { Timeout = 90000 });
                     await MaterialCardBrowserActions.SelectAsync(page, "PLA");
@@ -388,7 +388,7 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
         var capture = page.EvaluateAsync<JsonElement>("""
         () => {
             const input = document.querySelector("input[name='quantity']");
-            const review = document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions button');
+            const review = document.querySelector('[data-workflow-configuration] .instant-quote__configuration-actions > button');
             const summary = document.querySelector('[data-workflow-order-summary]');
             const workflow = document.querySelector('[data-workflow-state]');
             return { inputCount: document.querySelectorAll("input[name='quantity']").length,

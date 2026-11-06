@@ -14,6 +14,47 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class InstantQuotationReviewEditParityTests
 {
+    [Theory]
+    [InlineData("en", 2, true, false)]
+    [InlineData("th", 2, true, false)]
+    [InlineData("en", 3, false, false)]
+    [InlineData("th", 3, false, false)]
+    [InlineData("en", 350, false, false)]
+    [InlineData("th", 350, false, false)]
+    [InlineData("en", 351, false, true)]
+    [InlineData("th", 351, false, true)]
+    public async Task Review_Source21ConsequencesPreserveNumericDiagnosticsAndAnyWireValue(
+        string culture, double maximum, bool small, bool large)
+    {
+        var previous = System.Globalization.CultureInfo.CurrentUICulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+            var id = Guid.NewGuid();
+            var part = Part(id, "source-copy.stl") with
+            {
+                Geometry = AuthoritativeInstantQuotationGeometry.RestoreFromProtectedSession(
+                    1, new string('A', 64), 1, 1, maximum, 1_000, 600, [100], [40], 12, 3, true, true, true, 1),
+                Configuration = new("PLA", "Any", 1),
+            };
+            var html = WebUtility.HtmlDecode(await RenderReviewAsync([part], id, _ => ["retained thin-wall diagnostic"]));
+            using var services = new ServiceCollection().AddLogging().AddLocalization(options => options.ResourcesPath = "Resources").BuildServiceProvider();
+            var localizer = services.GetRequiredService<Microsoft.Extensions.Localization.IStringLocalizer<ThreeDimensionalPrintingEstimateContent>>();
+            Assert.Contains("<option value=\"Any\" selected>" + (culture == "th" ? "ไม่ระบุสี" : "No preference") + "</option>", html, StringComparison.Ordinal);
+            foreach (var key in new[] { "Non-watertight mesh", "May cause printing issues", "Non-manifold edges", "Check model integrity", "Multi-body mesh" })
+                Assert.Contains(localizer[key].Value, html, StringComparison.Ordinal);
+            Assert.Contains(localizer["Check for unintended merged bodies ({0} bodies)", 3].Value, html, StringComparison.Ordinal);
+            Assert.Contains(localizer["Multi-body mesh ({0} bodies)", 3].Value, html, StringComparison.Ordinal);
+            foreach (var key in new[] { "Unusually small dimensions", "May be difficult to print or handle reliably", "A dimension is below 3 mm." })
+                Assert.Equal(small, html.Contains(localizer[key].Value, StringComparison.Ordinal));
+            foreach (var key in new[] { "Unusually large dimensions", "May exceed our standard build volume and require splitting", "A dimension exceeds 350 mm." })
+                Assert.Equal(large, html.Contains(localizer[key].Value, StringComparison.Ordinal));
+            Assert.Contains("retained thin-wall diagnostic", html, StringComparison.Ordinal);
+            Assert.Equal("Any", part.Configuration.Color);
+        }
+        finally { System.Globalization.CultureInfo.CurrentUICulture = previous; }
+    }
+
     [Fact]
     public async Task Review_RendersNativePartSelectionAndEditControlsWithOneActivePart()
     {

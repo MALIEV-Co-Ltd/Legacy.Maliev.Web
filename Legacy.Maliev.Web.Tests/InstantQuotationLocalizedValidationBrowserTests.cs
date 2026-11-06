@@ -17,6 +17,71 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class InstantQuotationLocalizedValidationBrowserTests(CncNativeBrowserFixture fixture)
 {
     [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task OptionalTaxBranch_FollowsTaxPresenceInRenderedCustomerForm(string culture)
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        await using var page = await context.NewPageAsync();
+        var origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
+        await page.GotoAsync(new Uri(new Uri(origin), $"/instantquotation/3d-printing?culture={culture}").ToString());
+        var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
+        if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
+        var html = await RenderCustomerAsync(culture, page.Url);
+        await page.EvaluateAsync("""
+            markup => {
+              const fixture = document.createElement('div');
+              fixture.className = 'instant-quote__workflow';
+              fixture.dataset.workflowState = 'customer';
+              fixture.dataset.optionalTaxTestFixture = 'true';
+              fixture.innerHTML = markup;
+              document.querySelector('main').appendChild(fixture);
+            }
+            """, html);
+
+        var form = page.Locator("[data-optional-tax-test-fixture] form[data-optional-customer-fields]");
+        var tax = form.Locator("#instant-quote-taxnumber");
+        var branch = form.Locator("#instant-quote-tax-branch");
+        var code = form.Locator("#instant-quote-tax-branch-code");
+        await Assertions.Expect(branch).ToBeVisibleAsync();
+        await Assertions.Expect(code).ToBeHiddenAsync();
+        await tax.FillAsync("0105559123456");
+        await branch.SelectOptionAsync("branch");
+        await code.FillAsync("00003");
+        if (Environment.GetEnvironmentVariable("MALIEV_WEB526_SCREENSHOT_DIR") is { Length: > 0 } screenshotDirectory)
+        {
+            await form.ScreenshotAsync(new LocatorScreenshotOptions
+            {
+                Path = Path.Combine(screenshotDirectory, $"optional-tax-{culture}.png"),
+            });
+        }
+        await tax.FillAsync("");
+        Assert.Equal("", await tax.InputValueAsync());
+        await Assertions.Expect(form.Locator("[data-instant-tax-branch-field]")).ToBeHiddenAsync();
+        await Assertions.Expect(form.Locator("[data-instant-tax-branch-code-field]")).ToBeHiddenAsync();
+        Assert.Equal("", await code.InputValueAsync());
+        Assert.True(await code.IsDisabledAsync());
+        Assert.True(await form.EvaluateAsync<bool>("""
+            form => {
+              const data = new FormData(form);
+              return !data.has('TaxBranch') && !data.has('TaxBranchCode');
+            }
+            """));
+
+        await tax.FillAsync("0105559123456");
+        await Assertions.Expect(branch).ToBeVisibleAsync();
+        await Assertions.Expect(code).ToBeVisibleAsync();
+        Assert.False(await code.IsDisabledAsync());
+        await code.FillAsync("00003");
+        Assert.True(await form.EvaluateAsync<bool>("""
+            form => {
+              const data = new FormData(form);
+              return data.get('TaxBranch') === 'branch' && data.get('TaxBranchCode') === '00003';
+            }
+            """));
+    }
+
+    [Theory]
     [InlineData(320, 700, "en", ColorScheme.Light)]
     [InlineData(375, 667, "th", ColorScheme.Dark)]
     [InlineData(820, 800, "th", ColorScheme.Light)]
