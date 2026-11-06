@@ -72,22 +72,34 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
                 "CareerDetailPage.razor",
                 "CareerIndexPage.razor",
                 "ChangeEmailConfirmationPage.razor",
+                "CncCuttingToolsPage.razor",
+                "CncFeedsAndSpeedsPage.razor",
+                "CncGeometryAndWorkholdingPage.razor",
+                "CncHolesAndTolerancesPage.razor",
                 "CncMachiningPage.razor",
+                "CncMachiningProcessesPage.razor",
                 "CncMachiningSpecificationPage.razor",
                 "ContactPage.razor",
                 "CustomManufacturingPage.razor",
                 "EmailConfirmationPage.razor",
                 "ErrorPage.razor",
                 "FinishingAndColorPage.razor",
+                "FinishingHeatTreatmentPage.razor",
+                "FinishingSurfaceFinishesPage.razor",
                 "ForgotPasswordPage.razor",
                 "GuidelinesPage.razor",
                 "HomePage.razor",
+                "InspectionMeasuringPartsPage.razor",
                 "InstantQuotationPage.razor",
                 "KnowledgeIndexPage.razor",
                 "LegalPage.razor",
                 "LineContactPage.razor",
                 "LoginPage.razor",
                 "LogoutPage.razor",
+                "ManufacturingProcessSelectionPage.razor",
+                "MaterialsEngineeringPlasticsPage.razor",
+                "MaterialsMetalsPage.razor",
+                "MaterialsSelectionPage.razor",
                 "MemberAccountIndexPage.razor",
                 "MemberAddressPage.razor",
                 "MemberChangeEmailPage.razor",
@@ -290,6 +302,51 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         Assert.Contains("\"@type\":\"FAQPage\"", WebUtility.HtmlDecode(source), StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
         Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
+    }
+
+    /// <summary>Preserves the original per-project accuracy limitation in both public renderers.</summary>
+    /// <param name="useBlazorRoute">Whether the routed component owns the request.</param>
+    /// <param name="culture">The requested public content language.</param>
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(false, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "th")]
+    public async Task Route_PreservesOriginalPerProjectAccuracyDisclaimer(bool useBlazorRoute, string culture)
+    {
+        await using var application = factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:Services", useBlazorRoute.ToString()));
+        using var client = CreateClient(application);
+        using var response = await client.GetAsync($"/services/3d-scanning?culture={culture}");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+        var content = Assert.Single(Regex.Matches(html,
+            "<main\\b(?=[^>]*data-migration-component=\"three-dimensional-scanning-content\")[^>]*>(?<content>[\\s\\S]*?)</main>",
+            RegexOptions.CultureInvariant));
+        Assert.Equal(useBlazorRoute, content.Value.Contains(
+            "data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var limitations = Assert.Single(Regex.Matches(content.Groups["content"].Value,
+            "<section\\b(?=[^>]*id=\"scanning-limitations\")[^>]*>(?<content>[\\s\\S]*?)</section>",
+            RegexOptions.CultureInvariant));
+        var note = Assert.Single(Regex.Matches(limitations.Groups["content"].Value,
+            "<div class=\"service-note\">(?<copy>[^<]*)</div>", RegexOptions.CultureInvariant));
+
+        if (culture == "th")
+        {
+            // Original bb477 and frozen edf4 differ only in the project noun; retain the complete limitation.
+            Assert.Contains(note.Groups["copy"].Value, new[]
+            {
+                "รายละเอียดและความไม่แน่นอนขึ้นกับขนาด ผิว การเข้าถึง สภาพแวดล้อม การตั้งเครื่อง วิธีจัดแนว และผลลัพธ์ที่ต้องการ จึงไม่ควรใช้ตัวเลขความแม่นยำเดียวกับทุกโครงการ",
+                "รายละเอียดและความไม่แน่นอนขึ้นกับขนาด ผิว การเข้าถึง สภาพแวดล้อม การตั้งเครื่อง วิธีจัดแนว และผลลัพธ์ที่ต้องการ จึงไม่ควรใช้ตัวเลขความแม่นยำเดียวกับทุกโปรเจ็ค"
+            });
+        }
+        else
+        {
+            Assert.Equal("Achievable detail and measurement uncertainty depend on object size, surface, access, environment, scanner setup, alignment strategy, and requested output. A single accuracy number cannot describe every project.",
+                note.Groups["copy"].Value);
+        }
     }
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) =>

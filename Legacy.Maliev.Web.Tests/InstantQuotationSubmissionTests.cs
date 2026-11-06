@@ -915,6 +915,51 @@ public sealed class InstantQuotationSubmissionTests
         Assert.Equal(System.Reflection.NullabilityState.Nullable, nullability.ReadState);
     }
 
+    [Fact]
+    public async Task Submit_ReconstructedQuoteRetainsServerReviewWarningInPersistedRequest()
+    {
+        // This isolates message composition; real byte-to-physical acceptance is tested separately.
+        var events = new List<string>();
+        var quotation = new RecordingQuotationClient(_ =>
+            new QuotationRequestResult(417, ServiceAvailable: true, Authorized: true));
+        var service = new InstantQuotationSubmissionService(
+            new RecordingSessionStore(Session(Part()), Owner),
+            new InstantQuotationPricingService(), quotation, new RecordingSubmissionStore(events),
+            new RecordingUploadClient(events, SuccessfulFinalization()), SuccessfulRequestFileClient.Instance,
+            quoteTicketService: AcceptingQuoteTicketService.Instance,
+            authoritativePricingService: new ReconstructionMessagePricing());
+
+        var result = await service.SubmitAsync(SessionId, Owner, Customer(), default);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Completed, result.Outcome);
+        string message = Assert.Single(quotation.Calls).Submission.Message;
+        Assert.Contains("Voxel-based pricing estimate (0.3 mm). Original geometry requires engineering review before manufacture.",
+            message, StringComparison.Ordinal);
+        Assert.Contains("Review state: engineer_review_required", message, StringComparison.Ordinal);
+        Assert.DoesNotContain(UploadFileIdText, message, StringComparison.Ordinal);
+    }
+
+    private sealed class ReconstructionMessagePricing : IInstantQuotationAuthoritativePricingService
+    {
+        public async Task<InstantQuotationOrderQuote?> QuoteAsync(
+            InstantQuotationSessionState session, string? ownerIdentity, bool includeComparisons,
+            CancellationToken cancellationToken)
+        {
+            var quote = await SyntheticAuthoritativePricingTestService.Instance.QuoteAsync(
+                session, ownerIdentity, includeComparisons, cancellationToken);
+            return quote! with
+            {
+                Parts = quote!.Parts.Select(line => line with
+                {
+                    PhysicalReceipt = line.PhysicalReceipt! with
+                    {
+                        GeometryReconstruction = new("voxel-majority-v1", 0.3),
+                    },
+                }).ToArray(),
+            };
+        }
+    }
+
     private static InstantQuotationSubmissionService Service(
         RecordingQuotationClient quotation,
         RecordingSubmissionStore persisted,
@@ -1130,7 +1175,7 @@ public sealed class InstantQuotationSubmissionTests
         QuotationRequestSubmission Submission,
         string IdempotencyKey);
 
-    private sealed class RecordingSubmissionStore(List<string>? events = null) : IInstantQuotationSubmissionStore
+    internal sealed class RecordingSubmissionStore(List<string>? events = null) : IInstantQuotationSubmissionStore
     {
         private readonly object sync = new();
         private InstantQuotationSubmissionCheckpoint? checkpoint;

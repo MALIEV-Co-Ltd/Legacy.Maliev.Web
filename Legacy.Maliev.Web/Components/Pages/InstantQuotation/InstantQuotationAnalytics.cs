@@ -5,6 +5,8 @@ namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
 public interface IInstantQuotationAnalyticsTracker
 {
+    ValueTask RecordQuoteStartedAsync(string workflowId, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+
     ValueTask RecordStageResultAsync(
         InstantQuotationStage stage,
         InstantQuotationStageResult result,
@@ -77,6 +79,13 @@ public abstract class InstantQuotationAnalyticsPayload
 
     [JsonPropertyName("service")]
     public string Service => "3d_printing";
+}
+
+public sealed class InstantQuotationQuoteStartedPayload : InstantQuotationAnalyticsPayload
+{
+    internal InstantQuotationQuoteStartedPayload() : base("quote_started")
+    {
+    }
 }
 
 public sealed class InstantQuotationUploadFailurePayload : InstantQuotationAnalyticsPayload
@@ -161,6 +170,8 @@ public sealed class NoOpInstantQuotationAnalyticsTracker : IInstantQuotationAnal
 
     public static NoOpInstantQuotationAnalyticsTracker Instance { get; } = new();
 
+    public ValueTask RecordQuoteStartedAsync(string workflowId, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+
     public ValueTask RecordStageResultAsync(
         InstantQuotationStage stage,
         InstantQuotationStageResult result,
@@ -192,6 +203,7 @@ public sealed class InstantQuotationAnalyticsTracker : IInstantQuotationAnalytic
 {
     private readonly IInstantQuotationAnalyticsSink sink;
     private readonly Lock synchronization = new();
+    private readonly HashSet<string> startedWorkflows = new(StringComparer.Ordinal);
     private readonly HashSet<string> uploadBatches = new(StringComparer.Ordinal);
     private readonly HashSet<string> uploadFailureOperations = new(StringComparer.Ordinal);
     private readonly HashSet<long> estimateRevisions = [];
@@ -201,6 +213,16 @@ public sealed class InstantQuotationAnalyticsTracker : IInstantQuotationAnalytic
     public InstantQuotationAnalyticsTracker(IInstantQuotationAnalyticsSink sink)
     {
         this.sink = sink ?? throw new ArgumentNullException(nameof(sink));
+    }
+
+    public ValueTask RecordQuoteStartedAsync(string workflowId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(workflowId) || !TryReserve(startedWorkflows, workflowId))
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        return EmitWithoutBreakingFlowAsync(new InstantQuotationQuoteStartedPayload(), cancellationToken);
     }
 
     public ValueTask RecordStageResultAsync(

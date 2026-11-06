@@ -32,7 +32,7 @@
             ["Silicone Casting"] = new("หล่อซิลิโคน", "Silicone casting", "/services/silicone-casting"),
             ["Custom Manufacturing"] = new("ผลิตชิ้นงานตามแบบ", "Custom manufacturing", "/services/custom-manufacturing"),
             ["Low-volume Injection Molding"] = new("ฉีดพลาสติกจำนวนน้อย", "Low-volume injection molding", "/services/low-volume-injection-molding"),
-            ["Finishing and Color"] = new("การเก็บผิวและสี", "Finishing and colour", "/services/finishing-and-color"),
+            ["Finishing and Color"] = new("การเก็บผิวและมาตรฐานสี", "Finishing and colour standards", "/services/finishing-and-color"),
         };
 
     [Parameter]
@@ -51,9 +51,9 @@
 
     private string ServicesName => IsThai ? "บริการ" : "Services";
 
-    private ServiceRoute SelectedService => ServiceRoutes.TryGetValue(ServiceKey, out var service)
+    private ServiceRoute SelectedService => ServiceRoutes.TryGetValue(ServiceKey ?? "CNC Machining", out var service)
         ? service
-        : throw new InvalidOperationException($"Unknown service breadcrumb key '{ServiceKey}'.");
+        : ServiceRoutes["CNC Machining"];
 
     private string ServiceName => IsThai ? SelectedService.NameTh : SelectedService.NameEn;
 

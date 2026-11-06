@@ -148,6 +148,64 @@ test('instant quotation events retain exact payloads through consent queue, flus
     }
 });
 
+test('consented identity and queued lead/journey precede the single ready marker and permitted loader', () => {
+    const queued = [
+        { event: 'maliev_lead_submitted', transaction_id: 'request-714' },
+        { event: 'generate_lead', transaction_id: 'request-714' },
+        { event: 'maliev_quote_decision', transaction_id: 'quotation-714' },
+    ];
+    const context = createConsentContext('granted', { user_id: 'customer:1' }, queued, true);
+    const layer = context.dataLayer;
+    assert.equal(layer[0][0], 'consent');
+    assert.equal(layer[0][1], 'default');
+    assert.deepEqual({ ...layer[1][1] }, { user_id: 'customer:1' });
+    assert.deepEqual(Array.from(layer).filter(value => value.event).map(value => value.event),
+        [...queued.map(value => value.event), 'maliev_analytics_ready', 'gtm.js']);
+    const ready = findEvents(layer, 'maliev_analytics_ready');
+    assert.equal(ready.length, 1);
+    assert.deepEqual(Object.keys(ready[0]), ['event']);
+    context.malievLoadGoogleTagManager();
+    context.malievLoadGoogleTagManager();
+    assert.equal(context.insertedScripts.length, 1);
+    assert.equal(findEvents(layer, 'gtm.js').length, 1);
+});
+
+test('withheld identity stays withheld on first-document grant while queued events and ready flush once before loader', () => {
+    const queued = [{ event: 'maliev_lead_submitted' }, { event: 'generate_lead' }, { event: 'maliev_quote_decision' }];
+    const context = createConsentContext('denied', null, queued, true);
+    assert.equal(context.insertedScripts.length, 0);
+    assert.equal(context.dataLayer.filter(value => value.event).length, 0);
+    assert.equal(context.dataLayer.filter(value => value[0] === 'set').length, 0);
+    context.gtag('consent', 'update', deniedOrGranted('granted'));
+    context.malievAnalytics.setConsent('granted');
+    context.malievLoadGoogleTagManager();
+    context.malievAnalytics.setConsent('granted');
+    context.malievLoadGoogleTagManager();
+    assert.deepEqual(Array.from(context.dataLayer).filter(value => value.event).map(value => value.event),
+        [...queued.map(value => value.event), 'maliev_analytics_ready', 'gtm.js']);
+    assert.equal(context.dataLayer.filter(value => value[0] === 'set').length, 0);
+    assert.equal(context.insertedScripts.length, 1);
+});
+
+test('revocation clears identity and drops events without ready, lead, identity or loader replay on regrant', () => {
+    const context = createConsentContext('granted', { user_id: 'customer:1' }, [{ event: 'generate_lead' }], true);
+    context.gtag('consent', 'update', deniedOrGranted('denied'));
+    context.malievAnalytics.setConsent('denied');
+    context.malievAnalytics.emit({ event: 'after_revocation' });
+    context.gtag('consent', 'update', deniedOrGranted('granted'));
+    context.malievAnalytics.setConsent('granted');
+    context.malievLoadGoogleTagManager();
+    const identity = context.dataLayer.filter(value => value[0] === 'set');
+    assert.equal(identity.length, 2);
+    assert.deepEqual({ ...identity[0][1] }, { user_id: 'customer:1' });
+    assert.deepEqual({ ...identity[1][1] }, { user_id: null });
+    assert.equal(findEvents(context.dataLayer, 'after_revocation').length, 0);
+    assert.equal(findEvents(context.dataLayer, 'generate_lead').length, 1);
+    assert.equal(findEvents(context.dataLayer, 'maliev_analytics_ready').length, 1);
+    assert.equal(findEvents(context.dataLayer, 'gtm.js').length, 1);
+    assert.equal(context.insertedScripts.length, 1);
+});
+
 function createContactHarness(pathname) {
     const events = [];
     const listeners = new Map();
@@ -191,13 +249,32 @@ function createContactHarness(pathname) {
     };
 }
 
-function createConsentContext(initialConsent) {
+function createConsentContext(initialConsent, userIdConfiguration = null, queuedEvents = [], withLoader = false) {
+    const identityBlock = analyticsHeadSource.match(/    @if \(Model\.CanTrack && !string\.IsNullOrEmpty\(Model\.UserIdConfigurationJson\)\)\n    \{([\s\S]*?)\n    \}/);
+    assert.ok(identityBlock, 'Expected the server-gated identity block in the actual head component.');
+    const identityScript = initialConsent === 'granted' && userIdConfiguration
+        ? identityBlock[1].replaceAll('<text>', '').replaceAll('</text>', '')
+            .replace('@((MarkupString)Model.UserIdConfigurationJson)', JSON.stringify(userIdConfiguration))
+        : '';
+    const queuedScript = queuedEvents.map(value => 'window.malievAnalytics.emit(' + JSON.stringify(value) + ');').join('\n');
     const script = extractFirstScript(analyticsHeadSource)
-        .replace("var consentState = '@Model.ConsentState';", `var consentState = '${initialConsent}';`)
-        .replace(/\s*@\(\(MarkupString\)Model\.QueuedEventScript\)\s*/, '\n');
-    const context = vm.createContext({ console });
+        .replace(identityBlock[0], identityScript)
+        .replace("var consentState = '@Model.ConsentState';", "var consentState = '" + initialConsent + "';")
+        .replace(/\s*@\(\(MarkupString\)Model\.QueuedEventScript\)\s*/, '\n' + queuedScript + '\n');
+    const insertedScripts = [];
+    const document = {
+        querySelector: () => insertedScripts[0] ?? null,
+        getElementsByTagName: () => [{ parentNode: { insertBefore: loader => insertedScripts.push(loader) } }],
+        createElement: () => ({ setAttribute() {} }),
+    };
+    const context = vm.createContext({ console, document, insertedScripts });
     context.window = context;
-    vm.runInContext(script, context);
+    vm.runInContext(script, context, { timeout: 1000 });
+    if (withLoader) {
+        const scripts = [...analyticsHeadSource.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)];
+        assert.equal(scripts.length, 2, 'Expected the existing distinct head bootstrap and deferred loader scripts.');
+        vm.runInContext(scripts[1][1], context, { timeout: 1000 });
+    }
     return context;
 }
 

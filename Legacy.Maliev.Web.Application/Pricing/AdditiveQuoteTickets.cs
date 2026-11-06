@@ -89,6 +89,9 @@ namespace Legacy.Maliev.Web.Application.Pricing
         /// <summary>Gets or sets the required downstream review state.</summary>
         public string ReviewState { get; set; } = string.Empty;
 
+        /// <summary>Gets or sets protected server-produced pricing-only reconstruction provenance.</summary>
+        public Simulation.VoxelReconstructionInfo? GeometryReconstruction { get; set; }
+
         /// <summary>Gets or sets the digest of the normalized geometry inputs.</summary>
         public string GeometryDigest { get; set; } = string.Empty;
 

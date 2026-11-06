@@ -44,7 +44,7 @@ public sealed class Index(ICareerClient careerClient, IConfiguration configurati
             return BadRequest();
         }
 
-        ConfigureQuery(sort, search, index, pageSize);
+        ConfigureSearchQuery(sort, search, index, pageSize);
         await LoadAsync(cancellationToken);
         return Page();
     }
@@ -58,8 +58,8 @@ public sealed class Index(ICareerClient careerClient, IConfiguration configurati
             return BadRequest();
         }
 
-        ConfigureQuery(null, null, 1, pageSize);
-        await LoadAsync(cancellationToken);
+        ConfigureSearchQuery(null, null, 0, pageSize);
+        await LoadAsync(cancellationToken, hideFixture: false);
         return Page();
     }
 
@@ -75,20 +75,25 @@ public sealed class Index(ICareerClient careerClient, IConfiguration configurati
             return BadRequest();
         }
 
-        ConfigureQuery(sort, search, index, pageSize);
-        await LoadAsync(cancellationToken);
+        ConfigureSearchQuery(sort, search, index, pageSize);
+        var offers = await careerClient.GetOffersAsync(
+            CurrentSort, JobSearch, JobOffers.PageIndex, PageSize, cancellationToken);
+        JobOffers = (offers.Value ?? CareerOfferPage.Empty(JobOffers.PageIndex)) with
+        {
+            Items = (offers.Value?.Items ?? []).Where(offer => offer.IsFilled == false).ToArray()
+        };
+        ServiceAvailable = offers.ServiceAvailable;
         return new JsonResult(JobOffers.Items);
     }
 
-    private void ConfigureQuery(string? sort, string? search, int? index, int size)
+    private void ConfigureSearchQuery(string? sort, string? search, int? index, int size)
     {
         PageSize = size;
         CurrentSort = Enum.TryParse<CareerSort>(sort, out var parsedSort)
             ? parsedSort
-            : CareerSort.JobCreatedDate_Descending;
-        JobSearch = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
-        var targetPageIndex = JobSearch is null ? Math.Max(index ?? 1, 1) : 1;
-        JobOffers = CareerOfferPage.Empty(targetPageIndex);
+            : CareerSort.JobId_Ascending;
+        JobSearch = search;
+        JobOffers = CareerOfferPage.Empty(string.IsNullOrEmpty(search) ? index ?? 1 : 1);
         JobIdSort = CurrentSort == CareerSort.JobId_Ascending
             ? CareerSort.JobId_Descending
             : CareerSort.JobId_Ascending;
@@ -97,7 +102,7 @@ public sealed class Index(ICareerClient careerClient, IConfiguration configurati
             : CareerSort.JobCreatedDate_Ascending;
     }
 
-    private async Task LoadAsync(CancellationToken cancellationToken)
+    private async Task LoadAsync(CancellationToken cancellationToken, bool hideFixture = true)
     {
         var listing = await careerClient.GetListingAsync(
             CurrentSort,
@@ -107,7 +112,7 @@ public sealed class Index(ICareerClient careerClient, IConfiguration configurati
             cancellationToken);
 
         CareerLevels = listing.Levels;
-        var hideLocalAspireFixture = configuration.GetValue<bool>("Career:HideLocalAspireFixture");
+        var hideLocalAspireFixture = hideFixture && configuration.GetValue<bool>("Career:HideLocalAspireFixture");
         JobOffers = listing.Offers with
         {
             Items = listing.Offers.Items

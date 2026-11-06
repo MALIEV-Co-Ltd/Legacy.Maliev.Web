@@ -139,3 +139,11 @@ test('exterior queries use world coordinates for translated rotated-frame pocket
     assert.equal(context.CncSpatialField.isExteriorAir(field, { x: 4.1, y: 4.5, z: 5.5 }), true);
     assert.equal(context.CncSpatialField.isExteriorAir(field, { x: NaN, y: 4.5, z: 5.5 }), false);
 });
+
+test('near-square CAD bounds stay within the spatial cell budget without degrading a closed solid', () => {
+    const field = build(box([-31.5, -10.25, -31.5], [31.5, 10.25, 31.5]));
+    const cells = field.dimensions.x * field.dimensions.y * field.dimensions.z;
+    assert.ok(cells > 0 && cells <= 6000000, `Spatial field allocated ${cells} cells`);
+    assert.equal(field.degraded, false);
+    assert.ok(field.surfaceSamples.length > 12);
+});

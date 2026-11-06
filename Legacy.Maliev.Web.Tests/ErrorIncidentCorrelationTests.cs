@@ -76,7 +76,7 @@ public sealed class ErrorIncidentCorrelationTests
 
         var entry = Assert.Single(logger.Entries);
         Assert.Equal(LogLevel.Critical, entry.Level);
-        Assert.Null(entry.Exception);
+        Assert.Same(exception, entry.Exception);
         Assert.Equal("UnhandledRequestFailure", entry.Properties["EventName"]);
         Assert.Equal(incident.IncidentId, entry.Properties["IncidentId"]);
         Assert.Equal("2026-08-02T03:30:00.0000000+00:00", entry.Properties["OccurredAtUtc"]);

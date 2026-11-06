@@ -33,6 +33,13 @@ public sealed class MaterialPricingDisplayRendererContractTests
             var row = MaterialRow(html, "M68");
             Assert.Contains("600.00", WebUtility.HtmlDecode(row), StringComparison.Ordinal);
             Assert.DoesNotContain("1391", row, StringComparison.Ordinal);
+            var rail = Regex.Match(html, "<section\\b[^>]*data-workflow-parts[^>]*>.*?</section>", RegexOptions.Singleline);
+            Assert.True(rail.Success);
+            var count = Regex.Match(rail.Value, "<span\\b[^>]*data-workflow-part-count[^>]*aria-live=\"polite\"[^>]*>(.*?)</span>", RegexOptions.Singleline);
+            Assert.True(count.Success);
+            Assert.Equal(culture == "th" ? "1 ชิ้น" : "1 part", WebUtility.HtmlDecode(count.Groups[1].Value).Trim());
+            Assert.Contains(culture == "th" ? "<strong>เพิ่มชิ้นงาน</strong>" : "<strong>Add parts</strong>",
+                WebUtility.HtmlDecode(rail.Value), StringComparison.Ordinal);
         }
         finally { await fixture.CompleteAsync(); }
     }
@@ -179,7 +186,7 @@ public sealed class MaterialPricingDisplayRendererContractTests
             await fixture.CompleteAsync();
             var old = fixture.Snapshot;
             var beforeEdit = fixture.RenderCount;
-            fixture.BeginQuantityChange();
+            await fixture.BeginQuantityChangeAsync();
             await fixture.Pricing.FirstSelected.Task.WaitAsync(TimeSpan.FromSeconds(5));
             Assert.True(fixture.Snapshot.Generation > old.Generation);
             Assert.True(fixture.RenderCount > beforeEdit);
@@ -216,6 +223,74 @@ public sealed class MaterialPricingDisplayRendererContractTests
             Assert.Null(fixture.Pricing.FinalQuote);
             Assert.Null((await fixture.Store.GetAsync(fixture.SessionId, null, default))!.QuoteAuthorization);
         });
+    }
+
+    /// <summary>Exercises overlapping real review callbacks against held pricing and preview boundaries without treating historical resin input as upload acceptance.</summary>
+    /// <param name="culture">The English or Thai presentation culture for the actual workflow renderer.</param>
+    /// <returns>A task that completes after the older edit is prevented from reviewing an incomplete quote and the final accepted edit restores review.</returns>
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task Renderer_OverlappingReviewColorsWaitForTheFinalAuthoritativeQuote(string culture)
+    {
+        Fixture? fixture = null;
+        Exception? primary = null;
+        try
+        {
+            fixture = await Fixture.CreateAsync(culture, InstantQuotationMaterialPricingStatus.Completed,
+                projectionControls: true);
+            await fixture.Pricing.FirstSelected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await fixture.CompleteAsync();
+            fixture.Pricing.ProjectionControls = false;
+            await fixture.EnterReviewAsync();
+            Assert.Equal(InstantQuotationWorkflowState.Review, fixture.State);
+            await fixture.InstallPreviewBoundaryAsync();
+
+            // The first real callback has priced Black, but its browser preview is still pending.
+            var first = fixture.ChangeReviewColorAsync("Black");
+            await fixture.Preview.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            fixture.Pricing.ResetProjection();
+            var second = fixture.ChangeReviewColorAsync("Gray");
+            await fixture.Pricing.FirstSelected.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Null(fixture.CurrentQuote);
+            Assert.False(second.IsCompleted);
+
+            // Finish the older callback while the newer real pricing request is held.
+            fixture.Preview.Release.TrySetResult();
+            await first.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(second.IsCompleted);
+            Assert.NotEqual(InstantQuotationWorkflowState.Review, fixture.State);
+            Assert.Null(fixture.CurrentQuote);
+            Assert.Null((await fixture.Store.GetAsync(fixture.SessionId, null, default))!.QuoteAuthorization);
+
+            await fixture.CompleteAsync();
+            await second.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(InstantQuotationWorkflowState.Review, fixture.State);
+            var stored = await fixture.Store.GetAsync(fixture.SessionId, null, default);
+            Assert.NotNull(stored);
+            var part = Assert.Single(stored.Parts);
+            Assert.Equal("Gray", part.Configuration.Color);
+            Assert.Equal("M68", part.Configuration.MaterialKey);
+            Assert.Equal(2, part.Configuration.Quantity);
+            var quote = Assert.IsType<InstantQuotationOrderQuote>(fixture.CurrentQuote);
+            var authorization = Assert.IsType<InstantQuotationQuoteAuthorization>(stored.QuoteAuthorization);
+            Assert.True(fixture.Tickets.Validate(stored, quote, authorization, DateTimeOffset.UtcNow));
+            var html = await fixture.HtmlAsync();
+            Assert.Contains("data-workflow-review-content", html, StringComparison.Ordinal);
+            var color = Regex.Match(html, $"<select[^>]*id=\"review-color-{part.PartId}\"[^>]*>(.*?)</select>",
+                RegexOptions.Singleline);
+            Assert.True(color.Success);
+            Assert.Contains("value=\"Gray\"", Regex.Match(color.Value, "^<select[^>]*>").Value, StringComparison.Ordinal);
+            Assert.Contains("<option value=\"Gray\"", color.Value, StringComparison.Ordinal);
+            Assert.Equal(2, fixture.Preview.AppearanceCalls);
+        }
+        catch (Exception failure) { primary = failure; throw; }
+        finally
+        {
+            if (fixture is not null)
+                await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                    async () => await fixture.CompleteAsync(), fixture.DisposeAsync);
+        }
     }
 
     private static async Task RunProjectionAsync(string culture, Func<Fixture, Task> body)
@@ -261,14 +336,14 @@ public sealed class MaterialPricingDisplayRendererContractTests
 
     private static string ReviewButton(string html)
     {
-        var match = Regex.Match(WebUtility.HtmlDecode(html), "<button\\b[^>]*>\\s*(Review|ตรวจสอบรายการ)\\s*</button>", RegexOptions.Singleline);
+        var match = Regex.Match(WebUtility.HtmlDecode(html), "<button\\b[^>]*>\\s*(Review all items|ตรวจสอบรายการทั้งหมด)\\s*</button>", RegexOptions.Singleline);
         Assert.True(match.Success, "The actual component review action was not rendered.");
         return match.Value;
     }
 
     private static void AssertReviewDisabled(string html)
     {
-        var match = Regex.Match(WebUtility.HtmlDecode(html), "<button\\b[^>]*>\\s*(Review|ตรวจสอบรายการ)\\s*</button>", RegexOptions.Singleline);
+        var match = Regex.Match(WebUtility.HtmlDecode(html), "<button\\b[^>]*>\\s*(Review all items|ตรวจสอบรายการทั้งหมด)\\s*</button>", RegexOptions.Singleline);
         // During restored initialization the action is absent; absence cannot authorize review.
         if (match.Success) Assert.Contains("disabled", match.Value, StringComparison.Ordinal);
     }
@@ -396,6 +471,35 @@ public sealed class MaterialPricingDisplayRendererContractTests
             InvokeAsync<TValue>(identifier, args);
     }
 
+    private sealed class PreviewBoundary : IJSObjectReference
+    {
+        private int appearanceCalls;
+        public int AppearanceCalls => Volatile.Read(ref appearanceCalls);
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
+            InvokeAsync<TValue>(identifier, default, args);
+
+        public async ValueTask<TValue> InvokeAsync<TValue>(
+            string identifier, CancellationToken token, object?[]? args)
+        {
+            token.ThrowIfCancellationRequested();
+            if (identifier == "updatePartAppearance" && Interlocked.Increment(ref appearanceCalls) == 1)
+            {
+                Entered.TrySetResult();
+                await Release.Task.WaitAsync(token);
+            }
+            return default!;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            Release.TrySetResult();
+            return ValueTask.CompletedTask;
+        }
+    }
+
     private sealed class Fixture : IAsyncDisposable
     {
         private readonly TestingWebApplicationFactory factory = new();
@@ -406,11 +510,16 @@ public sealed class MaterialPricingDisplayRendererContractTests
         private bool rootCreated;
         private CountingActivator? counter;
         private Task? quantityChange;
+        private readonly List<Task> reviewChanges = [];
+        private bool previewBoundaryInstalled;
+        public PreviewBoundary Preview { get; } = new();
         public int RenderCount => counter!.Workflow!.RenderCount;
         public Guid SecondPartId { get; private set; }
         private InstantQuotationWorkflowCoordinator Coordinator =>
             (InstantQuotationWorkflowCoordinator)typeof(InstantQuotationWorkflow).GetField(
                 "workflow", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(counter!.Workflow)!;
+        public InstantQuotationWorkflowState State => Coordinator.State;
+        public InstantQuotationOrderQuote? CurrentQuote => Coordinator.OrderQuote;
         public InstantQuotationMaterialPriceDisplaySnapshot Snapshot => Coordinator.MaterialPriceDisplay;
         public Task NotifyAsync(InstantQuotationMaterialPriceDisplaySnapshot snapshot, CancellationToken token) =>
             ((ValueTask)typeof(InstantQuotationWorkflow).GetMethod("MaterialDisplayChangedAsync",
@@ -420,18 +529,37 @@ public sealed class MaterialPricingDisplayRendererContractTests
                 (Task)typeof(InstantQuotationWorkflow).GetMethod("SelectPreviewAsync",
                     BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(counter.Workflow, [id])!)
                 .InvokeAsync(partId));
-        public void BeginQuantityChange()
+        public Task EnterReviewAsync() => renderer!.Dispatcher.InvokeAsync(() =>
+            EventCallback.Factory.Create(counter!.Workflow!, () =>
+            {
+                typeof(InstantQuotationWorkflow).GetMethod("EnterReview",
+                    BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(counter.Workflow, null);
+            }).InvokeAsync());
+        public Task InstallPreviewBoundaryAsync() => renderer!.Dispatcher.InvokeAsync(() =>
+        {
+            typeof(InstantQuotationWorkflow).GetField("previewInterop",
+                BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(counter!.Workflow, Preview);
+            previewBoundaryInstalled = true;
+        });
+        public Task ChangeReviewColorAsync(string color)
+        {
+            var change = renderer!.Dispatcher.InvokeAsync(() =>
+                EventCallback.Factory.Create<(Guid PartId, string Value)>(counter!.Workflow!, value =>
+                    (Task)typeof(InstantQuotationWorkflow).GetMethod("ChangeReviewColorAsync",
+                        BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(counter.Workflow, [value])!)
+                    .InvokeAsync((Coordinator.Parts.First().PartId, color)));
+            reviewChanges.Add(change);
+            return change;
+        }
+        public Task BeginQuantityChangeAsync() => renderer!.Dispatcher.InvokeAsync(() =>
         {
             Pricing.ResetProjection();
-            quantityChange = renderer!.Dispatcher.InvokeAsync(() =>
-            {
-                var first = Coordinator.Parts.First();
-                Func<Task> update = () => Coordinator.UpdateConfigurationAsync(
-                    first.PartId, "M68", "White", 3, default);
-                return (Task)typeof(InstantQuotationWorkflow).GetMethod("RepriceAsync",
-                    BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(counter!.Workflow, [update, null])!;
-            });
-        }
+            var first = Coordinator.Parts.First();
+            Func<Task> update = () => Coordinator.UpdateConfigurationAsync(
+                first.PartId, "M68", "White", 3, default);
+            quantityChange = (Task)typeof(InstantQuotationWorkflow).GetMethod("RepriceAsync",
+                BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(counter!.Workflow, [update, null, null])!;
+        });
         private readonly CultureInfo previousCulture = CultureInfo.CurrentCulture;
         private readonly CultureInfo previousUiCulture = CultureInfo.CurrentUICulture;
         public IInstantQuotationSessionStore Store { get; }
@@ -478,6 +606,7 @@ public sealed class MaterialPricingDisplayRendererContractTests
                 fixture.Pricing.ProjectionControls = projectionControls;
                 var services = new ServiceCollection().AddLogging().AddLocalization(options => options.ResourcesPath = "Resources")
                     .AddSingleton<IJSRuntime, NoJavaScript>()
+                    .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager())
                     .AddSingleton(fixture.scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>())
                     .AddSingleton(fixture.Store)
                     .AddSingleton(fixture.scope.ServiceProvider.GetRequiredService<IInstantQuotationUploadClient>())
@@ -517,28 +646,31 @@ public sealed class MaterialPricingDisplayRendererContractTests
         }
         public async Task CompleteAsync()
         {
+            if (previewBoundaryInstalled) Preview.Release.TrySetResult();
             Pricing.ReleaseAll();
-            await Task.WhenAll(root.QuiescenceTask, quantityChange ?? Task.CompletedTask)
+            await Task.WhenAll(reviewChanges.Prepend(root.QuiescenceTask).Append(quantityChange ?? Task.CompletedTask))
                 .WaitAsync(TimeSpan.FromSeconds(10));
         }
         public async Task DisposeRendererAsync()
         {
             if (renderer is null) return;
             await renderer.DisposeAsync();
+            // Disposal cancels initialization, whose framework lifecycle continuation is still owned by the root.
+            if (rootCreated) await root.QuiescenceTask.WaitAsync(TimeSpan.FromSeconds(10));
             renderer = null;
         }
         public async ValueTask DisposeAsync()
         {
-            if (Pricing.ProjectionControls)
+            if (Pricing.ProjectionControls || previewBoundaryInstalled)
             {
                 try
                 {
                     await MaterialPricingTestCleanup.ReleaseAllAsync(null,
-                        () => { Pricing.ReleaseAll(); return ValueTask.CompletedTask; },
+                        () => { Preview.Release.TrySetResult(); Pricing.ReleaseAll(); return ValueTask.CompletedTask; },
                         async () =>
                         {
                             if (rootCreated)
-                                await Task.WhenAll(root.QuiescenceTask, quantityChange ?? Task.CompletedTask)
+                                await Task.WhenAll(reviewChanges.Prepend(root.QuiescenceTask).Append(quantityChange ?? Task.CompletedTask))
                                     .WaitAsync(TimeSpan.FromSeconds(10));
                         },
                         async () => await DisposeRendererAsync(),

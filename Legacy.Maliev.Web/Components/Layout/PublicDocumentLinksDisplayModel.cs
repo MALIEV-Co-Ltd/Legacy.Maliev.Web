@@ -7,6 +7,9 @@ public sealed record PublicDocumentLinksDisplayModel(
     string EnglishUrl,
     string ThaiUrl)
 {
+    /// <summary>Gets whether the document belongs to the public Knowledge area.</summary>
+    public bool IsKnowledgeDocument { get; init; }
+
     public static PublicDocumentLinksDisplayModel Create(HttpContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -21,6 +24,9 @@ public sealed record PublicDocumentLinksDisplayModel(
         return new PublicDocumentLinksDisplayModel(
             CanonicalUrlPolicy.GetLocalizedUrl(path, culture),
             CanonicalUrlPolicy.GetLocalizedUrl(path, "en"),
-            CanonicalUrlPolicy.GetLocalizedUrl(path, "th"));
+            CanonicalUrlPolicy.GetLocalizedUrl(path, "th"))
+        {
+            IsKnowledgeDocument = path.StartsWithSegments("/knowledges", StringComparison.OrdinalIgnoreCase)
+        };
     }
 }

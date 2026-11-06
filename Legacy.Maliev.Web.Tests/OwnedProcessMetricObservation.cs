@@ -13,7 +13,8 @@ internal static class OwnedProcessMetricObservation
             readMetrics();
             return true;
         }
-        catch (InvalidOperationException) when (IsExactRetainedChildTerminal(process, ownedHandle, ownedPid))
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception
+            && IsExactRetainedChildTerminal(process, ownedHandle, ownedPid))
         {
             return false;
         }

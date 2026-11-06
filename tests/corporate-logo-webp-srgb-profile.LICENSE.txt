@@ -1,0 +1,15 @@
+ICC sRGB2014 profile provenance and use
+
+Copyright International Color Consortium, 2015.
+The profile's original bytes, identification and embedded copyright tag are retained without alteration.
+
+ICC's general profile terms permit copying, distribution, embedding, making, use and sale without restriction. An altered profile must remove the original identification and copyright information and must not be represented as the original profile.
+Authoritative terms: https://registry.color.org/profile-library/
+Profile description: https://registry.color.org/rgb-registry/srgbprofiles
+Canonical binary: https://registry.color.org/rgb-registry/profiles/sRGB2014.icc
+
+This fixture is an unmodified 3024-byte reference profile, SHA-256 384b832de3412066743b52a75ee906b6fb9fb8d9e09e936fc2c43223815c6e0a.
+Distributor evidence: Kozea/WeasyPrint commit deda575a4e489a82de5c3c3db3ddb8ba378784d6, weasyprint/pdf/sRGB2014.icc, Git blob 49afbfef10f22a1832590b68369d2f248ea553b9.
+The fixture records the distributor bytes; direct canonical-binary identity must be independently qualified before publication claims.
+
+The application makes no claim of ICC endorsement.

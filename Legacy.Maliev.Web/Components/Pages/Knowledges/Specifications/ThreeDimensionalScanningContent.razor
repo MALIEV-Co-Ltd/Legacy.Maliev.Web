@@ -1,15 +1,116 @@
 @inject IStringLocalizer<ThreeDimensionalScanningContent> Localizer
 
 <article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
-    <p class="maliev-eyebrow">@Localizer["3D scanning preparation"]</p>
-    <h1>@Localizer["Prepare a part for 3D scanning"]</h1>
-    <p class="docs-lead">@Localizer["Bring the best-condition part available and tell us whether you need raw scan data, reverse-engineered CAD, or a deviation report."]</p>
-    <div class="docs-step-list">
-        <section><span>1</span><div><h2>@Localizer["Clean and identify the part"]</h2><p>@Localizer["Remove loose dirt and temporary items. Mark features that must remain untouched and disclose damaged or missing areas."]</p></div></section>
-        <section><span>2</span><div><h2>@Localizer["Explain the deliverable"]</h2><p>@Localizer["Raw scans preserve measured surface data; reverse engineering creates editable CAD; deviation analysis compares a scan with reference geometry."]</p></div></section>
-        <section><span>3</span><div><h2>@Localizer["Plan access and surface treatment"]</h2><p>@Localizer["Deep internal features, occluded surfaces, reflective or transparent materials may need repositioning, temporary scanning spray, or another measurement method."]</p></div></section>
+<h1>@Localizer["Prepare a part for 3D scanning"]</h1>
+<p class="docs-lead">@Localizer["Start with the decision the scan must support: visual reference, a replacement part, editable CAD, or comparison against a reference. These goals require different preparation and deliverables. Define the output and critical features before sending the physical part."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/scanning.webp" srcset="/src/images/knowledge/photos/scanning-small.webp 768w, /src/images/knowledge/photos/scanning.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["A Thai technician scans a cast pump housing with a handheld structured-light scanner."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Agree what is measured, what is reconstructed and whether delivery is mesh or CAD. Illustrative image."]</figcaption>
+</figure>
+<nav class="docs-toc" aria-label="@Localizer["On this page"]">
+<strong>@Localizer["On this page"]</strong>
+<ul>
+<li>
+<a href="#deliverables">@Localizer["Mesh, CAD, or comparison"]</a>
+</li>
+<li>
+<a href="#measurement">@Localizer["Accuracy and resolution"]</a>
+</li>
+<li>
+<a href="#preparation">@Localizer["Part access and preparation"]</a>
+</li>
+<li>
+<a href="#request">@Localizer["Information for quotation"]</a>
+</li>
+</ul>
+</nav>
+<section id="deliverables" class="docs-section">
+<h2>@Localizer["Choose the deliverable explicitly"]</h2>
+<div class="docs-table-wrap" tabindex="0" role="region" aria-label="@Localizer["Technical guidance table"]">
+<table>
+<thead>
+<tr>
+<th scope="col">@Localizer["Requested outcome"]</th>
+<th scope="col">@Localizer["Define in the request"]</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th scope="row">@Localizer["Surface mesh"]</th>
+<td>@Localizer["A triangulated surface represents captured shape. Agree the file format, units, coverage, and whether texture or color is needed. A mesh is not automatically a feature-based CAD model."]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["Reverse-engineered CAD"]</th>
+<td>@Localizer["Specify surfaces or solids, the exchange format such as STEP, and the target application. Ask separately if a native model with editable feature history is required."]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["Deviation comparison"]</th>
+<td>@Localizer["Supply the reference CAD or drawing and define alignment, datums, areas of interest, and acceptance criteria. A color map needs a stated scale and reference to be meaningful."]</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>@Localizer["Decide whether the goal is to reproduce the existing shape, including wear, or reconstruct the intended design. Symmetry, missing features, and nominal dimensions can involve engineering interpretation. Agree those assumptions; an attractive CAD model alone does not prove dimensional conformity."]</p>
+<p>
+<a href="https://www.artec3d.com/3d-scanning-solutions/reverse-engineering">@Localizer["Artec: scanning and reverse-engineering workflows"]</a>
+</p>
+
+<figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["A point and triangle representation is compared with a clean CAD profile and reconstructed internal feature, separated by a workflow arrow."]">
+        <img src="/src/images/knowledge/visual-scan-to-cad.svg" alt="@Localizer["A point and triangle representation is compared with a clean CAD profile and reconstructed internal feature, separated by a workflow arrow."]" width="960" height="480" loading="lazy" decoding="async" />
     </div>
-    <div class="maliev-actions"><a class="maliev-button" href="/services/3d-scanning">@Localizer["View 3D scanning service"]</a></div>
+    <figcaption>@Localizer["1: sampled surface points and triangles. 2: a reconstructed CAD interpretation. Clean edges or reconstructed features are not proof of measured coverage or accuracy. Confirm missing areas, nominal dimensions, assumptions, and the required deliverable with the engineer."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-scan-to-cad.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
+</section>
+<section id="measurement" class="docs-section">
+<h2>@Localizer["Do not confuse detail with measurement accuracy"]</h2>
+<p>@Localizer["A scanner’s stated resolution may describe resolvable surface detail or point spacing; check the supplier’s definition. Accuracy concerns closeness to the true value of the measured quantity. Repeatability compares measurements over a short period with the same procedure, operators, system, location and operating conditions. A dense mesh or a smooth screen image does not establish that a critical dimension is within tolerance."]</p>
+<p>@Localizer["State which features need measurement, the allowable variation, and the reference or datum to use. Part size, surface condition, access, alignment, and processing affect the measurement plan. Request feasibility review for the actual part rather than treating a scanner specification as a guarantee for every feature."]</p>
+<p>
+<a href="https://www.artec3d.com/learning-center/accuracy-precision-resolution">@Localizer["Artec: accuracy, precision, and resolution explained"]</a>
+<p class="docs-source"><a href="https://jcgm.bipm.org/vim/en/2.13.html">@Localizer["JCGM VIM: measurement accuracy"]</a> · <a href="https://jcgm.bipm.org/vim/en/2.20.html">@Localizer["JCGM VIM: repeatability conditions"]</a></p>
+</p>
+</section>
+<section id="preparation" class="docs-section">
+<h2>@Localizer["Plan surface access and treatment"]</h2>
+<p>@Localizer["Provide photographs before shipping, including the underside, recesses, and important interfaces. Optical scanning requires a usable view of the surface. Deep bores, enclosed cavities, undercuts, and areas hidden by an assembly may not be captured completely; ask whether disassembly or another measurement method is needed."]</p>
+<p>@Localizer["Reflective or transparent surfaces may need preparation. Tell the team whether temporary scanning spray or markers are permitted, and identify coatings, seals, fragile areas, or surfaces that must not be touched. Do not remove protective coatings or apply chemicals solely for scanning without agreeing the preparation first."]</p>
+<aside class="docs-note">
+<h3>@Localizer["Measured areas and reconstructed areas"]</h3>
+<p>@Localizer["Hole filling, smoothing, and reconstruction can change a model. Ask for inaccessible or reconstructed regions to be identified in the agreed output. Geometry filled across a missing area should not be mistaken for a directly measured surface."]</p>
+</aside>
+</section>
+<section id="request" class="docs-section">
+<h2>@Localizer["Send enough context for a useful review"]</h2>
+<ul class="docs-checklist">
+<li>@Localizer["Photographs, overall dimensions, approximate weight, surface material, and the number of parts."]</li>
+<li>@Localizer["Intended use, required deliverable and file format, units, target CAD software, and whether color is needed."]</li>
+<li>@Localizer["Critical features, tolerances, reference geometry, alignment requirements, and requested report content."]</li>
+<li>@Localizer["Damaged or missing regions; restrictions on treatment, disassembly, handling, and transport; and the target date."]</li>
+</ul>
+<aside class="docs-example">
+<h3>@Localizer["Example: replacing a worn housing"]</h3>
+<p>@Localizer["Identify the bearing seats and mating faces that must work with existing components. State whether worn geometry should be preserved or corrected, and provide the mating parts or drawings when available. An exterior scan alone may not define hidden interfaces."]</p>
+</aside>
+</section>
+<section class="docs-sources">
+<h2>@Localizer["Further reading"]</h2>
+<p>@Localizer["These manufacturer references explain general principles, not a guarantee of MALIEV equipment, materials, or achievable tolerances."]</p>
+<ol>
+<li>
+<a href="https://docs.artec3d.com/as/20/en/process.html">@Localizer["Artec Studio: processing, hole filling, and smoothing"]</a>
+</li>
+</ol>
+</section>
+<section class="docs-next">
+<h2>@Localizer["Prepare your next step"]</h2>
+<p>@Localizer["Have files and requirements ready? Request a reviewed quotation. If the process, material, or deliverable is still unclear, talk to our team first."]</p>
+<div class="maliev-actions">
+<a class="maliev-button" href="/quotation">@Localizer["Request a quotation"]</a>
+<a class="maliev-button maliev-button--secondary" href="/contact">@Localizer["Talk to our team"]</a>
+<a href="/services/3d-scanning">@Localizer["View 3D scanning service"]</a>
+</div>
+</section>
 </article>
 
 @code {

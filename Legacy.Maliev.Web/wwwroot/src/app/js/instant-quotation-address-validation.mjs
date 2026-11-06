@@ -114,3 +114,36 @@ export function wireInstantQuotationAddressValidation(form, submit = form?.query
     });
     updateSubmit();
 }
+
+export function navigateInstantQuotationValidationField(event, location) {
+    if (String(location?.pathname ?? '').replace(/\/+$/, '').toLowerCase() !== '/instantquotation/3d-printing'
+        || event.defaultPrevented || event.button !== 0
+        || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
+        return false;
+    }
+
+    const link = event.target?.closest?.('a[href^="#"]');
+    const fragment = link?.getAttribute('href');
+    const match = /^#(instant-quote-[a-z0-9-]+)$/.exec(fragment ?? '');
+    if (!match || (link.target && link.target !== '_self') || link.hasAttribute('download')) {
+        return false;
+    }
+
+    const summary = link.closest('.instant-quote__validation-summary[role="alert"]');
+    const section = summary?.closest('[data-workflow-customer-details-content]');
+    const form = section?.querySelector('form#instant-quotation-form');
+    const field = section?.querySelector('#' + match[1]);
+    if (!summary?.contains(link) || !form?.contains(field)
+        || field?.id !== match[1]
+        || field.closest('[data-workflow-customer-details-content]') !== section
+        || typeof field.focus !== 'function') {
+        return false;
+    }
+
+    // A bare fragment otherwise resolves against the document's "/" base URL.
+    // Keep native fragment navigation on this quotation, including its full query.
+    event.preventDefault();
+    location.hash = fragment;
+    field.focus({ preventScroll: true });
+    return true;
+}

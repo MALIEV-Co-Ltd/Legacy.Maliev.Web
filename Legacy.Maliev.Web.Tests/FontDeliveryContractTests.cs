@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Legacy.Maliev.Web.Tests;
 
 public sealed class FontDeliveryContractTests
@@ -39,11 +41,30 @@ public sealed class FontDeliveryContractTests
         {
             Assert.True(File.Exists(Path.Combine(webRoot, "wwwroot", "lib", "outfit", asset)), asset);
         }
+        foreach (var asset in new[]
+        {
+            "NotoSansThai-Medium.woff2",
+            "NotoSansThai-SemiBold.woff2",
+            "NOTO-LICENSE.txt",
+        })
+        {
+            var path = Path.Combine(webRoot, "wwwroot", "lib", "ibm-plex", asset);
+            Assert.True(File.Exists(path), asset);
+            Assert.True(new FileInfo(path).Length > 0, asset);
+        }
+        var notoLicense = File.ReadAllText(Path.Combine(webRoot, "wwwroot", "lib", "ibm-plex", "NOTO-LICENSE.txt"));
+        Assert.Contains("SIL OPEN FONT LICENSE Version 1.1", notoLicense, StringComparison.Ordinal);
         Assert.DoesNotContain("fonts.googleapis.com", fontPartial, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fonts.gstatic.com", fontPartial, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fonts.googleapis.com", blazorShell, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fonts.gstatic.com", blazorShell, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("<body style=\"font-family", blazorShell, StringComparison.OrdinalIgnoreCase);
+
+        var quotationCss = File.ReadAllText(Path.Combine(webRoot, "wwwroot", "src", "app", "css", "instant-quotation.css"));
+        Assert.Contains("font-weight: 600;", quotationCss, StringComparison.Ordinal);
+        Assert.DoesNotMatch(
+            @"font-weight\s*:\s*(?:6(?:0[1-9]|[1-9][0-9])|[7-9][0-9]{2}|bold|bolder)\b",
+            quotationCss);
     }
 
     [Fact]
@@ -59,6 +80,47 @@ public sealed class FontDeliveryContractTests
         Assert.DoesNotContain("font-family:Inter", builtCss, StringComparison.Ordinal);
         Assert.DoesNotContain("fonts.googleapis.com", builtCss, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("fonts.gstatic.com", builtCss, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void AuthoredUiSource_DoesNotRequestFontWeightAbove600()
+    {
+        string webRoot = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web");
+        HashSet<string> authoredExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".cshtml",
+            ".css",
+            ".html",
+            ".js",
+            ".svg",
+            ".razor",
+        };
+        string[] authoredRoots =
+        {
+            Path.Combine(webRoot, "Areas"),
+            Path.Combine(webRoot, "Pages"),
+            Path.Combine(webRoot, "Components"),
+            Path.Combine(webRoot, "wwwroot", "src", "app"),
+            Path.Combine(webRoot, "wwwroot", "src", "images"),
+        };
+        Regex excessiveDeclaration = new Regex(
+            "font-weight\\s*:\\s*(?:6(?:0[1-9]|[1-9][0-9])|[7-9][0-9]{2}|bold|bolder)\\b|fontWeight\\s*[:=]\\s*['\\\"]?(?:6(?:0[1-9]|[1-9][0-9])|[7-9][0-9]{2})\\b|font\\s*:\\s*(?:italic\\s+)?(?:6(?:0[1-9]|[1-9][0-9])|[7-9][0-9]{2})\\b|wght@[^'\\\"\\s]*(?:700|800|900)",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        Regex heavyUtilityClass = new Regex(
+            "class\\s*=\\s*['\\\"][^'\\\"]*\\bfw-(?:bold|bolder)\\b",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        string[] violations = authoredRoots
+            .SelectMany(root => Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+            .Where(path => authoredExtensions.Contains(Path.GetExtension(path)))
+            .Select(path => new { Path = path, Source = File.ReadAllText(path) })
+            .Where(file => excessiveDeclaration.IsMatch(file.Source) || heavyUtilityClass.IsMatch(file.Source))
+            .Select(file => Path.GetRelativePath(webRoot, file.Path))
+            .ToArray();
+
+        Assert.True(
+            violations.Length == 0,
+            $"Font weights above 600 are not supported. Violations:{Environment.NewLine}{string.Join(Environment.NewLine, violations)}");
     }
 
     private static string FindRepositoryRoot()

@@ -3,8 +3,15 @@ import {
     wireInstantEstimate,
 } from './instant-quotation-controller.mjs';
 import { wireOptionalQuotationFields } from './instant-quotation-optional-fields.mjs';
-import { wireInstantQuotationAddressValidation } from './instant-quotation-address-validation.mjs';
+import {
+    navigateInstantQuotationValidationField,
+    wireInstantQuotationAddressValidation,
+} from './instant-quotation-address-validation.mjs';
 import { wireInstantQuotationSubmission } from './instant-quotation-submission.mjs';
+
+document.addEventListener('click', (event) => {
+    navigateInstantQuotationValidationField(event, window.location);
+});
 
 const form = document.querySelector('[data-instant-estimate]');
 const status = document.getElementById('estimate-status');
@@ -49,6 +56,59 @@ if (form instanceof HTMLFormElement
 }
 
 const wiredCustomerForms = new WeakSet();
+const wiredCustomerDetails = new WeakSet();
+
+function wireCustomerValidationLinks(customerDetails) {
+    if (!customerDetails || wiredCustomerDetails.has(customerDetails)) {
+        return;
+    }
+
+    wiredCustomerDetails.add(customerDetails);
+    customerDetails.addEventListener('click', (event) => {
+        if (event.defaultPrevented || event.button !== 0
+            || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+            return;
+        }
+
+        const link = event.target?.closest?.('a[data-instant-quote-invalid-field]');
+        if (!link || !customerDetails.contains(link)
+            || (link.target && link.target !== '_self') || link.hasAttribute('download')) {
+            return;
+        }
+
+        let destination;
+        let targetId;
+        try {
+            destination = new URL(link.href, window.location.href);
+            targetId = decodeURIComponent(destination.hash.slice(1));
+        } catch {
+            return;
+        }
+
+        if (destination.origin !== window.location.origin
+            || destination.pathname !== window.location.pathname
+            || destination.search !== window.location.search || !targetId) {
+            return;
+        }
+
+        const currentForm = customerDetails.querySelector('form[data-optional-customer-fields]');
+        if (!currentForm) {
+            return;
+        }
+
+        const field = Array.from(currentForm.elements)
+            .find((candidate) => candidate.id === targetId);
+        if (!field || field.disabled || !field.matches('input, select, textarea')) {
+            return;
+        }
+
+        event.preventDefault();
+        if (destination.hash !== window.location.hash) {
+            window.history.pushState(window.history.state, '', destination.href);
+        }
+        field.focus();
+    });
+}
 
 function wireCustomerForms(root) {
     const forms = [];
@@ -62,6 +122,7 @@ function wireCustomerForms(root) {
         }
 
         wiredCustomerForms.add(customerForm);
+        wireCustomerValidationLinks(customerForm.closest('[data-workflow-customer-details-content]'));
         wireOptionalQuotationFields(customerForm);
         const customerSubmit = document.querySelector('[data-instant-quote-submit]');
         wireInstantQuotationAddressValidation(customerForm, customerSubmit);

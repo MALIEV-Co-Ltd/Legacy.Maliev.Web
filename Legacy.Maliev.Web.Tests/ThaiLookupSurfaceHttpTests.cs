@@ -75,6 +75,7 @@ public sealed class ThaiLookupSurfaceHttpTests(TestingWebApplicationFactory fact
             var registrations = new ServiceCollection();
             registrations.AddLogging();
             registrations.AddLocalization(options => options.ResourcesPath = "Resources");
+            registrations.AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager());
             using var services = registrations.BuildServiceProvider();
             await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
             var html = await renderer.Dispatcher.InvokeAsync(async () =>

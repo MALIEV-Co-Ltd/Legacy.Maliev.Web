@@ -3,6 +3,49 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class BlazorMigrationContractTests
 {
     [Fact]
+    public void CompanyAndCareerComponents_PreserveLocalizedResponsiveSurfacesWithoutInlineStyles()
+    {
+        var root = FindRepositoryRoot();
+        foreach (var relativePath in new[]
+        {
+            "Components/Pages/About/AboutContent.razor",
+            "Components/Pages/About/SocialMediaContent.razor",
+            "Components/Pages/Career/CareerIndexContent.razor",
+            "Components/Pages/Career/CareerDetailContent.razor"
+        })
+        {
+            var source = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", relativePath));
+            Assert.True(source.Contains("Localizer[", StringComparison.Ordinal) || source.Contains("@T(", StringComparison.Ordinal));
+            Assert.DoesNotContain("style=", source, StringComparison.OrdinalIgnoreCase);
+        }
+
+        var about = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "About", "AboutContent.razor"));
+        Assert.Contains("class=\"landing-main profile-about\"", about, StringComparison.Ordinal);
+        var css = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "wwwroot", "src", "app", "css", "application-shell.css"));
+        Assert.Contains(".career-copy {\n    white-space: pre-line;\n}", css.Replace("\r\n", "\n", StringComparison.Ordinal), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CompatibilityComponents_PreserveLocalizedDestinationsWithoutInsecureMetaRefresh()
+    {
+        var root = FindRepositoryRoot();
+        foreach (var relativePath in new[]
+        {
+            "Components/Pages/Account/AccountIndexPage.razor",
+            "Components/Pages/Legal/LegalContent.razor",
+            "Components/Pages/Services/ServicesContent.razor",
+            "Components/Pages/Member/MemberAccountIndexContent.razor",
+            "Components/Pages/Member/MemberOrdersIndexContent.razor"
+        })
+        {
+            var source = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", relativePath));
+            Assert.True(source.Contains("Localizer[", StringComparison.Ordinal) || source.Contains("@T(", StringComparison.Ordinal));
+            Assert.DoesNotContain("http-equiv=\"refresh\"", source, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("URL=http://", source, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
     public void LegalRoute_RemainsStaticSsrWhileHostSupportsOneScopedInteractiveIsland()
     {
         var root = FindRepositoryRoot();

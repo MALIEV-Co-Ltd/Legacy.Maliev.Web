@@ -14,6 +14,12 @@ public sealed partial class InstantQuotationLocalizationParityTests
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["Email"] = "อีเมล",
+            ["Lead time"] = "ระยะเวลาผลิต",
+            ["max."] = "ไม่เกิน",
+            ["Contact us page"] = "หน้าติดต่อเรา",
+            ["local preview"] = "โหมดทดสอบบนเครื่อง",
+            ["Privacy Policy"] = "นโยบายความเป็นส่วนตัว",
+            ["Non-Disclosure Agreement"] = "สัญญาปกปิดความลับ",
             ["Ready for manufacturing"] = "พร้อมเข้าสู่กระบวนการผลิต",
             ["We will get back to you with a quotation"] = "เราจะติดต่อกลับพร้อมใบเสนอราคา",
             ["{0}–{1} business days"] = "{0}–{1} วันทำการ",
@@ -29,6 +35,7 @@ public sealed partial class InstantQuotationLocalizationParityTests
             ["Balanced finish, durability, lead time, and price for everyday use"] = "สมดุลด้านผิวชิ้นงาน ความทนทาน ระยะเวลา และราคา สำหรับการใช้งานทั่วไป",
             ["Greater structural strength · material and load direction still require engineering review"] = "เพิ่มความแข็งแรงของโครงสร้าง · วัสดุและทิศทางรับแรงยังต้องให้วิศวกรตรวจสอบ",
             ["Preliminary price — model volume was measured; manufacturing suitability is confirmed by our engineer."] = "ราคาประเมินเบื้องต้น — วัดปริมาตรจากโมเดลแล้ว และวิศวกรจะยืนยันความเหมาะสมในการผลิต",
+            ["Manufacturing warnings may affect the final result of this part."] = "มีข้อควรระวังด้านการผลิต อาจส่งผลต่อผลลัพธ์สุดท้ายของชิ้นงาน",
             ["Compare material prices"] = "เปรียบเทียบราคาวัสดุ",
             ["per piece"] = "ต่อชิ้น",
             ["Part {0}"] = "ชิ้นงานที่ {0}",
@@ -67,7 +74,19 @@ public sealed partial class InstantQuotationLocalizationParityTests
             ["Remove {0}"] = "ลบ {0}",
             ["Supported files: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS, and IGES. Maximum 100 files, 100 MB each."] = "ไฟล์ที่รองรับ: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS และ IGES สูงสุด 100 ไฟล์ ไฟล์ละ 100 MB",
             ["Thailand"] = "ประเทศไทย",
-            ["Any"] = "สีใดก็ได้",
+            ["Any"] = "ไม่ระบุสี",
+            ["No preference"] = "ไม่ระบุสี",
+            ["Upload and choose how you want your part to be printed. You'll know instantly how much does your part cost."] = "อัปโหลดไฟล์ แล้วเลือกรูปแบบการพิมพ์ที่ต้องการ ระบบประเมินราคาให้ทันที ไม่ต้องรอใบเสนอราคา",
+            ["Non-watertight mesh"] = "โมเดลไม่ปิดสนิท (มีรูรั่ว)",
+            ["May cause printing issues"] = "อาจส่งผลให้พิมพ์ผิดพลาด",
+            ["Non-manifold edges"] = "เส้นขอบไม่สมบูรณ์ (Non-manifold)",
+            ["Check model integrity"] = "ตรวจสอบความสมบูรณ์ของโมเดล",
+            ["Multi-body mesh"] = "โมเดลแบบหลายชิ้นส่วน",
+            ["Check for unintended merged bodies ({0} bodies)"] = "ตรวจสอบชิ้นส่วนที่รวมกันโดยไม่ตั้งใจ ({0} ชิ้น)",
+            ["Unusually small dimensions"] = "ขนาดชิ้นงานเล็กผิดปกติ",
+            ["May be difficult to print or handle reliably"] = "อาจพิมพ์ได้ยากหรือหยิบจับลำบาก",
+            ["Unusually large dimensions"] = "ขนาดชิ้นงานใหญ่ผิดปกติ",
+            ["May exceed our standard build volume and require splitting"] = "อาจเกินพื้นที่พิมพ์มาตรฐาน และต้องแบ่งชิ้นงาน",
             ["Black"] = "ดำ",
             ["White"] = "ขาว",
             ["Gray"] = "เทา",
@@ -101,6 +120,7 @@ public sealed partial class InstantQuotationLocalizationParityTests
             ["PA12 — Nylon 12"] = "PA12 — ไนลอน 12",
             ["PA-CF — Nylon + Carbon Fiber"] = "PA-CF — ไนลอนผสมเส้นใยคาร์บอน",
             ["TPU — Flexible Thermoplastic Polyurethane"] = "TPU — เทอร์โมพลาสติกโพลียูรีเทนชนิดยืดหยุ่น",
+            ["TPU 95A — Flexible Thermoplastic Polyurethane"] = "TPU 95A — เทอร์โมพลาสติกโพลียูรีเทนชนิดยืดหยุ่น",
             ["PVA — Water-Soluble Support"] = "PVA — วัสดุรองรับชนิดละลายน้ำ",
             ["Standard Resin (M68)"] = "เรซินมาตรฐาน (M68)",
             ["Tough Resin (K)"] = "เรซินเหนียว (K)",
@@ -123,6 +143,9 @@ public sealed partial class InstantQuotationLocalizationParityTests
             "Components",
             "Pages",
             "InstantQuotation");
+        var workflow = File.ReadAllText(Path.Combine(componentDirectory, "InstantQuotationWorkflow.razor"));
+        Assert.Contains("Localizer[\"Privacy Policy\"]", workflow, StringComparison.Ordinal);
+        Assert.Contains("Localizer[\"Non-Disclosure Agreement\"]", workflow, StringComparison.Ordinal);
         var usedKeys = Directory.EnumerateFiles(componentDirectory, "*.*", SearchOption.TopDirectoryOnly)
             .Where(path => Path.GetExtension(path) is ".razor" or ".cs")
             .SelectMany(path => LocalizerKey().Matches(File.ReadAllText(path)).Select(match => match.Groups[1].Value))

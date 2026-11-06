@@ -1,0 +1,22 @@
+@page "/knowledges/finishing/surface-finishes"
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IStringLocalizer<FinishingSurfaceFinishesContent> ContentLocalizer
+@inject IStringLocalizer<KnowledgeIndexPage> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = ContentLocalizer["Surface finishes and coatings | MALIEV"].Value;
+    var description = ContentLocalizer["Plan the supplied surface and final dimensions before machining. Coating, preparation, masking and cosmetic acceptance belong in the same project discussion."].Value;
+    var documentLinks = PublicDocumentLinksDisplayModel.Create(context);
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="documentLinks" />
+</HeadContent>
+<KnowledgeShell CurrentPage="/Finishing/Surface-Finishes" RouteOwner="blazor-static-ssr">
+    <FinishingSurfaceFinishesContent RouteOwner="blazor-static-ssr" />
+</KnowledgeShell>

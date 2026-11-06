@@ -1,0 +1,78 @@
+@inject IStringLocalizer<FinishingHeatTreatmentContent> Localizer
+
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+<h1>@Localizer["Plan heat treatment before final machining"]</h1>
+<p class="docs-lead">@Localizer["Heat treatment changes the properties of a suitable metal through controlled processing. Choose it together with the alloy, starting condition, geometry, and acceptance requirements. A note saying only heat treated leaves important decisions unresolved and can make the finished dimension difficult to achieve."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/heat-treatment.webp" srcset="/src/images/knowledge/photos/heat-treatment-small.webp 768w, /src/images/knowledge/photos/heat-treatment.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["Steel shafts, rings and a tool insert on a rack near a closed industrial furnace."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Plan treatment, remaining machining stock and final inspection in the same process sequence. Illustrative image."]</figcaption>
+</figure>
+<nav class="docs-toc" aria-label="@Localizer["On this page"]"><strong>@Localizer["On this page"]</strong><ul>
+<li><a href="#purpose">@Localizer["Choose the property change you need"]</a></li>
+<li><a href="#surface">@Localizer["Distinguish a hard case from a coating"]</a></li>
+<li><a href="#sequence">@Localizer["Allow for distortion and finishing stock"]</a></li>
+<li><a href="#acceptance">@Localizer["Define certificates and acceptance evidence"]</a></li>
+</ul></nav>
+<section id="purpose" class="docs-section">
+<h2>@Localizer["Choose the property change you need"]</h2>
+<p>@Localizer["Annealing commonly softens steel, restores ductility, or prepares material for further processing. Stress relieving focuses on reducing residual stresses that could cause movement during later work or service. They serve different objectives; neither should be substituted for a specified hardening treatment merely because all involve a furnace."]</p>
+<p class="docs-source"><a href="https://www.bodycote.com/what-we-do/precision-heat-treatment/annealing-normalising/annealing/">@Localizer["Source: Bodycote annealing"]</a></p>
+<p class="docs-source"><a href="https://www.bodycote.com/what-we-do/precision-heat-treatment/stress-relieving-atmosphere-vacuum/">@Localizer["Source: Bodycote stress relieving and machining sequence"]</a></p>
+<div class="docs-table-wrap" tabindex="0" role="region" aria-label="@Localizer["Heat treatment objectives"]"><table><thead><tr>
+<th scope="col">@Localizer["Treatment family"]</th>
+<th scope="col">@Localizer["Main distinction"]</th>
+<th scope="col">@Localizer["What to define"]</th>
+</tr></thead><tbody>
+<tr>
+<th scope="row">@Localizer["Quench and temper"]</th>
+<td>@Localizer["Hardening followed by tempering to obtain the required balance of properties in a responsive alloy."]</td>
+<td>@Localizer["Grade, section size, final hardness range, and any required mechanical tests."]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["Precipitation hardening"]</th>
+<td>@Localizer["Strengthening through a controlled precipitation response in suitable alloys."]</td>
+<td>@Localizer["Exact alloy, incoming condition, required final condition, and governing specification."]</td>
+</tr>
+<tr>
+<th scope="row">@Localizer["Case hardening"]</th>
+<td>@Localizer["A hardened surface region with requirements distinct from the core."]</td>
+<td>@Localizer["Method, treated areas, hardness, case-depth definition, and core requirements."]</td>
+</tr>
+</tbody></table></div>
+<p>@Localizer["Quenching can leave steel brittle; tempering is a separate step used to adjust that condition. Precipitation hardening is a different mechanism used in suitable aluminum, stainless, and other alloys. Do not apply a steel hardening assumption to every metal, or assume all conditions of one alloy have the same strength and toughness."]</p>
+<p class="docs-source"><a href="https://www.bodycote.com/what-we-do/precision-heat-treatment/hardening-and-tempering-atmosphere-vacuum/">@Localizer["Source: Bodycote hardening and tempering"]</a></p>
+<p class="docs-source"><a href="https://www.bodycote.com/what-we-do/precision-heat-treatment/solution-and-age-atmosphere-vacuum/precipitation-hardening-stainless-steels/">@Localizer["Source: Bodycote precipitation hardening of stainless steels"]</a></p>
+<p class="docs-source"><a href="https://www.bodycote.com/what-we-do/precision-heat-treatment/solution-and-age-atmosphere-vacuum/solution-and-age-aluminium-alloys/">@Localizer["Source: Bodycote solution treatment and aging of aluminum alloys"]</a></p>
+</section>
+<section id="surface" class="docs-section">
+<h2>@Localizer["Distinguish a hard case from a coating"]</h2>
+<p>@Localizer["Carburizing introduces carbon into a suitable steel surface and is followed by hardening. Nitriding introduces nitrogen and has a different treatment route. These diffusion treatments are not equivalent to adding a plated or sprayed coating. Choose the method for the material and duty, then specify which surfaces require treatment and which must be protected."]</p>
+<p>@Localizer["A hardness number alone does not define a case. Agree the hardness scale and test location, effective or total case depth as applicable, its measurement method, and core hardness if required. Different depth definitions are not interchangeable. Account for material removed by final grinding so the remaining treated layer still satisfies the drawing."]</p>
+<p class="docs-source"><a href="https://www.bodycote.com/what-we-do/precision-heat-treatment/case-hardening-atmosphere-vacuum/atmospheric-carburising/">@Localizer["Source: Bodycote atmospheric carburizing"]</a></p>
+<p class="docs-source"><a href="https://www.bodycote.com/what-we-do/precision-heat-treatment/case-hardening-atmosphere-vacuum/gas-nitriding/">@Localizer["Source: Bodycote gas nitriding"]</a></p>
+</section>
+<section id="sequence" class="docs-section">
+<h2>@Localizer["Allow for distortion and finishing stock"]</h2>
+<p>@Localizer["Discuss distortion before releasing the machining plan. Thin walls, asymmetric stock removal, sharp transitions, and residual stresses deserve attention. A low-distortion process is not a promise of zero movement. Agree allowable bow, runout, and dimensional change; confirm whether straightening is permitted and how it will be inspected afterward."]</p>
+<p>@Localizer["A possible route is rough machining, an agreed stress-relief step, semi-finishing, hardening, then final grinding of critical interfaces. It is a planning example rather than a universal sequence. The metallurgist and machinist must agree stock allowances, support and hanging locations, protected features, and which dimensions are verified at each stage."]</p>
+<aside class="docs-note"><h3>@Localizer["Example: a precision shaft"]</h3><p>@Localizer["For a shaft requiring hardened bearing seats, resolve the final hardness, journal size, runout datum, grinding allowance, and inspection sequence together. If the drawing demands both a hard case and a finished diameter, ask how post-treatment stock removal affects the remaining case. Do not leave that conflict for final inspection."]</p></aside>
+
+<figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["Three schematic stages show rough stock with allowance, exaggerated bow after treatment, and a final ground straight feature."]">
+        <img src="/src/images/knowledge/visual-treatment-allowance.svg" alt="@Localizer["Three schematic stages show rough stock with allowance, exaggerated bow after treatment, and a final ground straight feature."]" width="960" height="480" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>@Localizer["1: leave an agreed machining allowance a around the final profile (dashed). 2: treatment may cause distortion; the bow is exaggerated. 3: finish critical surfaces and inspect. This planning sketch is not a universal treatment sequence or an allowance value."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-treatment-allowance.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
+</section>
+<section id="acceptance" class="docs-section">
+<h2>@Localizer["Define certificates and acceptance evidence"]</h2>
+<p>@Localizer["Send the material specification, heat or batch identity, incoming condition, drawing revision, required treatment standard, final property limits, and inspection scope. Request confirmation of any proposed substitution. Avoid generic temperature recipes: a suitable cycle depends on alloy, prior history, section, equipment, and the governing specification."]</p>
+<p>@Localizer["Agree whether delivery requires a certificate of conformity, recorded hardness results, case-depth testing, mechanical tests, dimensional inspection, or crack inspection. Define sampling, test locations, permitted test marks, and any sacrificial coupons before production. Confirm whether coupons represent the same material batch and treatment load and whether destructive testing consumes a production part."]</p>
+<p>@Localizer["Keep the treatment certificate linked to the accepted parts and revision. A furnace record describes processing; it does not replace every required property or dimensional result. Resolve missing evidence and out-of-limit results through the agreed disposition process before assembly, rather than assuming that a completed treatment makes the component acceptable."]</p>
+</section>
+</article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}

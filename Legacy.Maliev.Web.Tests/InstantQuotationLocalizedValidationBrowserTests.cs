@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
@@ -23,7 +24,16 @@ public sealed class InstantQuotationLocalizedValidationBrowserTests(CncNativeBro
     public async Task RejectedCustomerFieldsShowReasonSpecificLocalizedGuidance(
         int width, int height, string culture, ColorScheme colorScheme)
     {
-        var html = await RenderCustomerAsync(culture);
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            ViewportSize = new ViewportSize { Width = width, Height = height },
+            ColorScheme = colorScheme,
+        });
+        await using var page = await context.NewPageAsync();
+        var origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
+        await page.GotoAsync(new Uri(new Uri(origin), $"/instantquotation/3d-printing?culture={culture}&navigation-probe=summary%20link").ToString());
+
+        var html = await RenderCustomerAsync(culture, page.Url);
         var decoded = WebUtility.HtmlDecode(html);
         var thai = culture == "th";
         Assert.Contains(thai ? "เลขประจำตัวผู้เสียภาษีไทยต้องมีตัวเลข 13 หลัก" : "Thai tax ID must contain exactly 13 digits.", decoded, StringComparison.Ordinal);
@@ -35,14 +45,6 @@ public sealed class InstantQuotationLocalizedValidationBrowserTests(CncNativeBro
             Assert.DoesNotContain("Building or organization name must be 256 characters or fewer.", decoded, StringComparison.Ordinal);
         }
 
-        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
-        {
-            ViewportSize = new ViewportSize { Width = width, Height = height },
-            ColorScheme = colorScheme,
-        });
-        await using var page = await context.NewPageAsync();
-        var origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
-        await page.GotoAsync(new Uri(new Uri(origin), $"/instantquotation/3d-printing?culture={culture}").ToString());
         var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
         if (await consent.CountAsync() > 0) { await consent.ClickAsync(); }
         var uploadHelp = await page.Locator("[data-workflow-upload]").InnerTextAsync();
@@ -81,17 +83,61 @@ public sealed class InstantQuotationLocalizedValidationBrowserTests(CncNativeBro
                 FullPage = true,
             });
         }
-        await page.Locator(".instant-quote__validation-summary a[href='#instant-quote-taxnumber']").Last.ClickAsync();
+        var currentDocument = new Uri(page.Url);
+        var pageBeforeClick = currentDocument;
+        var validationLink = page.Locator(".instant-quote__validation-summary a[href$='#instant-quote-taxnumber']").Last;
+        var resolvedLink = new Uri(await validationLink.EvaluateAsync<string>("anchor => anchor.href"));
+        Assert.Equal(currentDocument.GetLeftPart(UriPartial.Authority), resolvedLink.GetLeftPart(UriPartial.Authority));
+        Assert.Equal(currentDocument.AbsolutePath, resolvedLink.AbsolutePath);
+        Assert.Equal(currentDocument.Query, resolvedLink.Query);
+        Assert.Equal("#instant-quote-taxnumber", resolvedLink.Fragment);
+        await page.EvaluateAsync("() => { window.__validationDocumentSentinel = document; }");
+        await validationLink.ClickAsync();
+        await Assertions.Expect(page).ToHaveURLAsync(
+            new Regex($"^{Regex.Escape(resolvedLink.AbsoluteUri)}$"));
+        Assert.Equal(pageBeforeClick.GetLeftPart(UriPartial.Path), new Uri(page.Url).GetLeftPart(UriPartial.Path));
+        Assert.Equal(pageBeforeClick.Query, new Uri(page.Url).Query);
+        Assert.True(await page.EvaluateAsync<bool>("() => window.__validationDocumentSentinel === document"));
         Assert.Equal("#instant-quote-taxnumber", await page.EvaluateAsync<string>("() => location.hash"));
+        await Assertions.Expect(tax).ToBeFocusedAsync();
+        Assert.Equal("123", await tax.InputValueAsync());
+        await validationLink.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(tax).ToBeFocusedAsync();
+        Assert.Equal(resolvedLink.AbsoluteUri, page.Url);
+        Assert.True(await page.EvaluateAsync<bool>("() => window.__validationDocumentSentinel === document"));
+        Assert.Equal("123", await tax.InputValueAsync());
+        var historyState = await page.EvaluateAsync<string>("() => JSON.stringify(history.state)");
+        await tax.EvaluateAsync("""
+            oldField => {
+              window.__detachedValidationTax = oldField;
+              const oldForm = oldField.form;
+              const replacement = oldForm.cloneNode(true);
+              replacement.elements.namedItem('TaxNumber').value = '456';
+              oldForm.replaceWith(replacement);
+            }
+            """);
+        await validationLink.ClickAsync();
+        await Assertions.Expect(tax).ToBeFocusedAsync();
+        Assert.Equal("456", await tax.InputValueAsync());
+        Assert.True(await page.EvaluateAsync<bool>("() => !window.__detachedValidationTax.isConnected && document.activeElement !== window.__detachedValidationTax"));
+        await validationLink.FocusAsync();
+        await page.Keyboard.PressAsync("Enter");
+        await Assertions.Expect(tax).ToBeFocusedAsync();
+        Assert.Equal("456", await tax.InputValueAsync());
+        Assert.Equal(resolvedLink.AbsoluteUri, page.Url);
+        Assert.Equal(historyState, await page.EvaluateAsync<string>("() => JSON.stringify(history.state)"));
+        Assert.True(await page.EvaluateAsync<bool>("() => window.__validationDocumentSentinel === document"));
     }
 
-    private static async Task<string> RenderCustomerAsync(string culture)
+    private static async Task<string> RenderCustomerAsync(string culture, string documentUrl)
     {
         CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
         CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
         using var services = new ServiceCollection()
             .AddLogging()
             .AddLocalization(options => options.ResourcesPath = "Resources")
+            .AddSingleton<NavigationManager>(new InstantQuotationTestNavigationManager(documentUrl))
             .AddSingleton<IWebHostEnvironment>(_ => new TestWebHostEnvironment
             {
                 ApplicationName = typeof(Program).Assembly.GetName().Name ?? "Legacy.Maliev.Web",
@@ -129,4 +175,15 @@ public sealed class InstantQuotationLocalizedValidationBrowserTests(CncNativeBro
         public string ContentRootPath { get; set; } = string.Empty;
         public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
+}
+
+internal sealed class InstantQuotationTestNavigationManager : NavigationManager
+{
+    internal InstantQuotationTestNavigationManager(string uri = "https://localhost/instantquotation/3d-printing")
+    {
+        Initialize(new Uri(uri).GetLeftPart(UriPartial.Authority) + "/", uri);
+    }
+
+    protected override void NavigateToCore(string uri, bool forceLoad) =>
+        throw new InvalidOperationException("Static rendering must not navigate.");
 }

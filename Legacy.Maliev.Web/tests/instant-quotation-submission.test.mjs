@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { wireInstantQuotationSubmission } from '../wwwroot/src/app/js/instant-quotation-submission.mjs';
 
-function harness(fetchImpl) {
+function harness(fetchImpl, emitDiagnostic) {
     const heading = { textContent: '' };
     const list = { children: [], replaceChildren(...children) { this.children = children; } };
     const feedback = {
@@ -35,15 +35,22 @@ function harness(fetchImpl) {
         addEventListener(name, listener) { listeners.set(name, listener); },
         removeEventListener(name) { listeners.delete(name); },
     };
-    const submit = { disabled: false };
+    const submitListeners = new Map();
+    const submit = { disabled: false,
+        addEventListener(name, listener) { submitListeners.set(name, listener); },
+        removeEventListener(name) { submitListeners.delete(name); },
+    };
     const navigations = [];
     const restoreFormData = globalThis.FormData;
     globalThis.FormData = class extends Array {
         constructor() { super(); this.push(['FirstName', 'Ada']); }
     };
-    const dispose = wireInstantQuotationSubmission(form, submit, fetchImpl, (url) => navigations.push(url));
+    const diagnostics = [];
+    const dispose = wireInstantQuotationSubmission(form, submit, fetchImpl, (url) => navigations.push(url),
+        emitDiagnostic === null ? undefined : emitDiagnostic ?? (payload => diagnostics.push(payload)));
     return {
-        form, submit, heading, list, field, feedback, navigations,
+        form, submit, heading, list, field, feedback, navigations, diagnostics,
+        clickSubmit() { submitListeners.get('click')?.(); },
         async submitForm() {
             let prevented = false;
             await listeners.get('submit')({ preventDefault() { prevented = true; } });
@@ -96,5 +103,108 @@ test('unconfirmed network outcome locks submit instead of risking duplicate crea
         assert.equal(page.heading.textContent, 'Do not resubmit; contact support');
         assert.equal(page.feedback.focused, true);
         assert.deepEqual(page.navigations, []);
+    } finally { page.dispose(); }
+});
+
+test('diagnostics keep exact scalar contract for each deliberate retry and validation error', async () => {
+    const page = harness(async () => ({ ok: true, json: async () => ({
+        outcome: 'retry', errors: ['private-customer-value'], invalidFields: ['Email'],
+    }) }));
+    page.form.dataset.quoteHasFiles = 'true';
+    page.form.dataset.quoteFileUploadCompleted = 'true';
+    try {
+        await page.submitForm();
+        await page.submitForm();
+        assert.deepEqual(page.diagnostics, [
+            { event: 'quote_submit_attempt', service: '3d_printing', has_files: true, file_upload_completed: true },
+            { event: 'quote_submission_error', service: '3d_printing', failure_category: 'validation' },
+            { event: 'quote_submit_attempt', service: '3d_printing', has_files: true, file_upload_completed: true },
+            { event: 'quote_submission_error', service: '3d_printing', failure_category: 'validation' },
+        ]);
+        assert.equal(JSON.stringify(page.diagnostics).includes('private-customer-value'), false);
+    } finally { page.dispose(); }
+});
+
+test('native invalid final click reports validation without an attempt or network request', async () => {
+    let calls = 0;
+    const page = harness(async () => { calls++; });
+    page.form.checkValidity = () => false;
+    try {
+        page.clickSubmit();
+        assert.equal(calls, 0);
+        assert.deepEqual(page.diagnostics, [
+            { event: 'quote_submission_error', service: '3d_printing', failure_category: 'validation' },
+        ]);
+    } finally { page.dispose(); }
+});
+
+test('invalid scripted submit reports validation and never attempts persistence', async () => {
+    let calls = 0;
+    const page = harness(async () => { calls++; });
+    page.form.reportValidity = () => false;
+    try {
+        await page.submitForm();
+        assert.equal(calls, 0);
+        assert.deepEqual(page.diagnostics, [
+            { event: 'quote_submission_error', service: '3d_printing', failure_category: 'validation' },
+        ]);
+    } finally { page.dispose(); }
+});
+
+test('network diagnostics preserve unconfirmed lock and suppress duplicate attempts', async () => {
+    const page = harness(async () => { throw new Error('private-network-error'); });
+    // No workflow evidence exists in the SSR fallback.
+    page.form.dataset.quoteFileUploadCompleted = 'true';
+    try {
+        await page.submitForm();
+        await page.submitForm();
+        assert.deepEqual(page.diagnostics, [
+            { event: 'quote_submit_attempt', service: '3d_printing', has_files: false, file_upload_completed: false },
+            { event: 'quote_submission_error', service: '3d_printing', failure_category: 'network' },
+        ]);
+        assert.equal(page.submit.disabled, true);
+    } finally { page.dispose(); }
+});
+
+test('pending and terminal submissions emit one attempt and never a conversion diagnostic', async () => {
+    let finish;
+    const response = new Promise(resolve => { finish = resolve; });
+    const page = harness(() => response);
+    try {
+        const pending = page.submitForm();
+        const duplicate = page.submitForm();
+        finish({ ok: true, json: async () => ({ outcome: 'terminal', redirectUrl: '/InstantQuotation/3D-Printing' }) });
+        await Promise.all([pending, duplicate]);
+        await page.submitForm();
+        assert.deepEqual(page.diagnostics, [
+            { event: 'quote_submit_attempt', service: '3d_printing', has_files: false, file_upload_completed: false },
+        ]);
+        assert.equal(page.navigations.length, 1);
+    } finally { page.dispose(); }
+});
+
+test('analytics exceptions cannot block successful submission or unlock an unknown outcome', async () => {
+    const page = harness(async () => ({
+        ok: true, json: async () => ({ outcome: 'terminal', redirectUrl: '/InstantQuotation/3D-Printing' }),
+    }), () => { throw new Error('analytics unavailable'); });
+    try {
+        await page.submitForm();
+        assert.equal(page.navigations.length, 1);
+        assert.equal(page.submit.disabled, true);
+    } finally { page.dispose(); }
+});
+
+test('default native form adapter uses the existing consent sink with no customer fields', async () => {
+    const received = [];
+    const page = harness(async () => ({
+        ok: true, json: async () => ({ outcome: 'terminal', redirectUrl: '/InstantQuotation/3D-Printing' }),
+    }), null);
+    page.form.ownerDocument.defaultView = { malievAnalytics: { emit: payload => received.push(payload) } };
+    try {
+        await page.submitForm();
+        assert.deepEqual(received, [
+            { event: 'quote_submit_attempt', service: '3d_printing', has_files: false, file_upload_completed: false },
+        ]);
+        assert.equal(JSON.stringify(received).includes('Ada'), false);
     } finally { page.dispose(); }
 });

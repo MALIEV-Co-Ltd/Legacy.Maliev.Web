@@ -1,0 +1,22 @@
+@page "/knowledges/cnc/holes-and-tolerances"
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IStringLocalizer<CncHolesAndTolerancesContent> ContentLocalizer
+@inject IStringLocalizer<KnowledgeIndexPage> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = ContentLocalizer["Holes, threads and tolerances | MALIEV"].Value;
+    var description = ContentLocalizer["Specify the feature that the assembly actually needs. Hole depth, full-thread engagement, size, position and inspection conditions describe different requirements."].Value;
+    var documentLinks = PublicDocumentLinksDisplayModel.Create(context);
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="documentLinks" />
+</HeadContent>
+<KnowledgeShell CurrentPage="/CNC/Holes-and-Tolerances" RouteOwner="blazor-static-ssr">
+    <CncHolesAndTolerancesContent RouteOwner="blazor-static-ssr" />
+</KnowledgeShell>

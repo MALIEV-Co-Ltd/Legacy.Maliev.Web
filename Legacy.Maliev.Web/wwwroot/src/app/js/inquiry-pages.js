@@ -172,16 +172,22 @@
     }
 
     function attachUploadDropzone(form) {
-        var input = form.querySelector("#file-upload");
+        var input = form.querySelector("input[type='file'][data-upload-files]");
         var dropzone = form.querySelector("[data-upload-dropzone]");
         var list = form.querySelector("[data-upload-file-list]");
-        if (!input || !dropzone || !list) {
+        var sizeError = form.querySelector("[data-upload-size-error]");
+        var totalSizeOutput = form.querySelector("[data-upload-total-size]");
+        var sizeGate = form.querySelector("[data-upload-size-gate]");
+        if (!input || !dropzone || !list || !sizeError || !totalSizeOutput || !sizeGate) {
             return;
         }
+        var initialAriaInvalid = input.getAttribute("aria-invalid");
 
         function renderFiles() {
             list.innerHTML = "";
+            var totalSize = 0;
             Array.prototype.forEach.call(input.files || [], function (file, index) {
+                totalSize += file.size;
                 var item = document.createElement("li");
                 var name = document.createElement("span");
                 var remove = document.createElement("button");
@@ -201,9 +207,13 @@
             });
 
             list.hidden = !input.files || input.files.length === 0;
-            if (typeof window.CheckFileSize === "function") {
-                window.CheckFileSize();
-            }
+            var exceedsLimit = totalSize > 100 * 1024 * 1024;
+            totalSizeOutput.textContent = exceedsLimit ? formatFileSize(totalSize) : "";
+            sizeError.style.display = exceedsLimit ? "block" : "none";
+            input.setAttribute("aria-invalid", exceedsLimit ? "true" : (initialAriaInvalid || "false"));
+            input.setCustomValidity(exceedsLimit ? sizeError.textContent : "");
+            // Own only the size gate; server and CAPTCHA keep control of the button.
+            sizeGate.disabled = exceedsLimit;
         }
 
         input.addEventListener("change", renderFiles);

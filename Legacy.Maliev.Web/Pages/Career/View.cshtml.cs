@@ -9,7 +9,9 @@ public sealed class View(ICareerClient careerClient, IConfiguration configuratio
 {
     public CareerOffer JobOffer { get; private set; } = null!;
 
-    public CareerDetailContentModel DisplayModel => CareerDetailContentModel.Create(JobOffer);
+    public IReadOnlyList<CareerLevel> CareerLevels { get; private set; } = [];
+
+    public CareerDetailContentModel DisplayModel => CareerDetailContentModel.Create(JobOffer, CareerLevels);
 
     public async Task<IActionResult> OnGetAsync(int id, CancellationToken cancellationToken)
     {
@@ -18,7 +20,11 @@ public sealed class View(ICareerClient careerClient, IConfiguration configuratio
             return BadRequest();
         }
 
-        var response = await careerClient.GetOfferAsync(id, cancellationToken);
+        var offerTask = careerClient.GetOfferAsync(id, cancellationToken);
+        var levelsTask = careerClient.GetLevelsAsync(cancellationToken);
+        await Task.WhenAll(offerTask, levelsTask);
+        var response = await offerTask;
+        CareerLevels = (await levelsTask).Value ?? [];
         if (!response.ServiceAvailable)
         {
             return StatusCode(StatusCodes.Status503ServiceUnavailable);

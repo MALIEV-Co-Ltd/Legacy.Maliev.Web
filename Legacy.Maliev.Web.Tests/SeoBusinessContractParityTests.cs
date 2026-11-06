@@ -32,12 +32,39 @@ public sealed class SeoBusinessContractParityTests
             ["/knowledges/specifications/cnc-machining"] = ("Knowledges/Specifications/CncMachiningSpecificationPage.razor", "Knowledges/Specifications/CncMachiningContent.razor"),
             ["/knowledges/specifications/3d-printing"] = ("Knowledges/Specifications/ThreeDimensionalPrintingSpecificationPage.razor", "Knowledges/Specifications/ThreeDimensionalPrintingContent.razor"),
             ["/knowledges/specifications/3d-scanning"] = ("Knowledges/Specifications/ThreeDimensionalScanningSpecificationPage.razor", "Knowledges/Specifications/ThreeDimensionalScanningContent.razor"),
+            ["/knowledges/manufacturing/process-selection"] = ("Knowledges/ManufacturingProcessSelectionPage.razor", "Knowledges/ManufacturingProcessSelectionContent.razor"),
+            ["/knowledges/cnc/feeds-and-speeds"] = ("Knowledges/CncFeedsAndSpeedsPage.razor", "Knowledges/CncFeedsAndSpeedsContent.razor"),
+            ["/knowledges/cnc/cutting-tools"] = ("Knowledges/CncCuttingToolsPage.razor", "Knowledges/CncCuttingToolsContent.razor"),
+            ["/knowledges/cnc/geometry-and-workholding"] = ("Knowledges/CncGeometryAndWorkholdingPage.razor", "Knowledges/CncGeometryAndWorkholdingContent.razor"),
+            ["/knowledges/cnc/holes-and-tolerances"] = ("Knowledges/CncHolesAndTolerancesPage.razor", "Knowledges/CncHolesAndTolerancesContent.razor"),
+            ["/knowledges/cnc/machining-processes"] = ("Knowledges/CncMachiningProcessesPage.razor", "Knowledges/CncMachiningProcessesContent.razor"),
+            ["/knowledges/materials/selection"] = ("Knowledges/MaterialsSelectionPage.razor", "Knowledges/MaterialsSelectionContent.razor"),
+            ["/knowledges/materials/metals"] = ("Knowledges/MaterialsMetalsPage.razor", "Knowledges/MaterialsMetalsContent.razor"),
+            ["/knowledges/materials/engineering-plastics"] = ("Knowledges/MaterialsEngineeringPlasticsPage.razor", "Knowledges/MaterialsEngineeringPlasticsContent.razor"),
+            ["/knowledges/finishing/surface-finishes"] = ("Knowledges/FinishingSurfaceFinishesPage.razor", "Knowledges/FinishingSurfaceFinishesContent.razor"),
+            ["/knowledges/finishing/heat-treatment"] = ("Knowledges/FinishingHeatTreatmentPage.razor", "Knowledges/FinishingHeatTreatmentContent.razor"),
+            ["/knowledges/inspection/measuring-parts"] = ("Knowledges/InspectionMeasuringPartsPage.razor", "Knowledges/InspectionMeasuringPartsContent.razor"),
             ["/legal"] = ("Legal/LegalPage.razor", "Legal/LegalContent.razor"),
             ["/legal/privacypolicy"] = ("Legal/PrivacyPolicyPage.razor", "Legal/PrivacyPolicyContent.razor"),
             ["/legal/termsconditions"] = ("Legal/TermsConditionsPage.razor", "Legal/TermsConditionsContent.razor"),
             ["/legal/nondisclosureagreement"] = ("Legal/NonDisclosureAgreementPage.razor", "Legal/NonDisclosureAgreementContent.razor"),
             ["/no-weapons"] = ("Legal/NoWeaponsPage.razor", "Legal/NoWeaponsContent.razor"),
         };
+
+    [Fact]
+    public void Startup_UsesCanonicalPathNormalizationAndRemovesDuplicatePageRoutes()
+    {
+        var startup = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "Program.cs"));
+        var canonicalIndex = startup.IndexOf("app.UseMiddleware<CanonicalUrlRedirectMiddleware>();", StringComparison.Ordinal);
+
+        Assert.True(canonicalIndex >= 0);
+        Assert.DoesNotContain("UseForwardedHeaders", startup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UseHttpsRedirection", startup, StringComparison.Ordinal);
+        Assert.DoesNotContain("UseHsts", startup, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddPageRoute(\"/services/3d-printing\", \"3d-printing\")", startup, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddPageRoute(\"/services/3d-scanning\", \"3d-scanning\")", startup, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddPageRoute(\"/services/cnc-machining\", \"cnc-machining\")", startup, StringComparison.Ordinal);
+    }
 
     [Fact]
     public void EveryIndexedRouteHasAStaticSsrPageMetadataAndHeading()
@@ -47,6 +74,11 @@ public sealed class SeoBusinessContractParityTests
             Assert.True(PublicPages.TryGetValue(route.Path, out var files), $"Missing source mapping for {route.Path}.");
             var page = Read(files.Page);
             var content = Read(files.Content);
+            if (route.Path == "/")
+            {
+                Assert.Contains("<HomeHero", content, StringComparison.Ordinal);
+                content += Read("Home/HomeHeroScene.razor");
+            }
 
             Assert.Contains("@page", page, StringComparison.Ordinal);
             Assert.Contains("<PageTitle>", page, StringComparison.Ordinal);
@@ -62,7 +94,7 @@ public sealed class SeoBusinessContractParityTests
     {
         var contracts = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
-            ["/"] = ["รับผลิตชิ้นส่วน", "Custom Manufacturing Services"],
+            ["/"] = ["พัฒนาต้นแบบ", "Functional Prototypes", "วิศวกรรมย้อนกลับ", "Reverse Engineering"],
             ["/services"] = ["บริการผลิตชิ้นส่วน", "Manufacturing services"],
             ["/services/custom-manufacturing"] = ["รับผลิตชิ้นงานตามแบบ", "Custom Part Manufacturing"],
             ["/services/3d-design"] = ["รับออกแบบ 3 มิติ", "3D Design"],

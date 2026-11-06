@@ -151,6 +151,7 @@ test('enterprise recaptcha form obtains a token before native submission', async
         dataset: { recaptchaSiteKey: 'site-key', recaptchaAction: 'contact_submit' },
         querySelector: selector => selector === '[data-recaptcha-response]' ? tokenInput : null,
         addEventListener: (event, handler) => listeners.set(event, handler),
+        checkValidity: () => true,
         submit: () => { nativeSubmissions += 1; },
     };
     const document = createDocument({
@@ -200,6 +201,7 @@ test('quotation upload emits the controlled analytics event before native submis
             '[data-upload-service]': serviceInput,
         })[selector] ?? null,
         addEventListener: (event, handler) => listeners.set(event, handler),
+        checkValidity: () => true,
         submit: () => { nativeSubmissions += 1; },
     };
     const document = createDocument({ '[data-recaptcha-enterprise-form]': [form] });
@@ -219,6 +221,258 @@ test('quotation upload emits the controlled analytics event before native submis
     assert.equal(events[0].service, 'cnc_machining');
     assert.equal(events[0].file_count, 2);
 });
+
+
+for (const row of [
+    { name: 'native refusal', native: false, jquery: null, allowed: false, checks: ['native', 'report'] },
+    { name: 'ambient jQuery refusal does not replace native validation', native: true, jquery: false, allowed: true, checks: ['native'] },
+    { name: 'ambient jQuery success cannot admit native refusal', native: false, jquery: true, allowed: false, checks: ['native', 'report'] },
+    { name: 'native success ignores ambient jQuery', native: true, jquery: true, allowed: true, checks: ['native'] },
+    { name: 'native-only success', native: true, jquery: null, allowed: true, checks: ['native'] },
+    { name: 'ambient jQuery success cannot replace absent native validation', native: null, jquery: true, allowed: false, checks: [] },
+    { name: 'no validation mechanism', native: null, jquery: null, allowed: false, checks: [] },
+]) {
+    test(`native submit-once guard validates before locking: ${row.name}`, () => {
+        const probe = createSubmissionProbe();
+        probe.state.valid = row.native;
+        if (row.native === null) delete probe.form.checkValidity;
+        const context = createBrowserContext(probe.document);
+        if (row.jquery !== null) {
+            context.jQuery = form => {
+                assert.equal(form, probe.form);
+                return { valid: () => { probe.state.checks.push('jquery'); return row.jquery; } };
+            };
+            context.jQuery.fn = { valid() {} };
+        }
+        vm.runInContext(appSource, context);
+
+        assert.equal(context.SubmitFormOnce('source-form', 'source-submit', ''), row.allowed);
+        assert.deepEqual(probe.state.checks, row.checks);
+        assert.equal(probe.state.posts, row.allowed ? 1 : 0);
+        assert.equal(probe.submit.disabled, row.allowed);
+        assert.equal(probe.form.dataset.submitting, row.allowed ? 'true' : undefined);
+        assert.equal(probe.attributes.get('aria-busy'), row.allowed ? 'true' : undefined);
+        if (row.allowed) {
+            assert.equal(probe.state.lockedAtPost, true);
+            assert.equal(context.SubmitFormOnce('source-form', 'source-submit', ''), false);
+            assert.equal(probe.state.posts, 1);
+        }
+    });
+}
+
+test('enterprise recaptcha refuses to request a token when no validator exists', () => {
+    const probe = createSubmissionProbe();
+    delete probe.form.checkValidity;
+    probe.form.dataset.recaptchaSiteKey = 'site-key';
+    let tokenRequests = 0;
+    const context = createBrowserContext(probe.document, {
+        grecaptcha: { enterprise: {
+            ready: callback => callback(),
+            execute: async () => { tokenRequests += 1; return 'source-token'; },
+        } },
+    });
+    vm.runInContext(appSource, context);
+    probe.listeners.get('submit')({ preventDefault() {} });
+
+    assert.equal(tokenRequests, 0);
+    assert.equal(probe.state.posts, 0);
+    assert.equal(probe.submit.disabled, false);
+    assert.equal(probe.form.dataset.recaptchaPending, undefined);
+});
+
+for (const mode of ['active fallback', 'retained callback', 'active upload delay']) {
+    test(`recaptcha revalidates changed fields before native POST: ${mode}`, async () => {
+        const probe = createSubmissionProbe();
+        probe.form.dataset.recaptchaSiteKey = 'site-key';
+        probe.form.dataset.recaptchaAction = 'submit';
+        let releaseToken;
+        const token = new Promise(resolve => { releaseToken = resolve; });
+        const delayed = [];
+        let tokenRequests = 0;
+        const context = createBrowserContext(probe.document, {
+            grecaptcha: { enterprise: {
+                ready: callback => callback(),
+                execute: (siteKey, options) => {
+                    assert.equal(siteKey, 'site-key');
+                    assert.equal(options.action, 'submit');
+                    tokenRequests += 1;
+                    return token;
+                },
+            } },
+            setTimeout: callback => delayed.push(callback),
+            malievAnalytics: { emit() {} },
+        });
+        if (mode === 'retained callback') probe.document.querySelectorAll = () => [];
+        if (mode === 'active upload delay') {
+            probe.form.dataset.uploadAnalytics = 'true';
+            const originalQuery = probe.form.querySelector;
+            probe.form.querySelector = selector => {
+                if (selector === '[data-upload-files]') return { files: [{}] };
+                if (selector === '[data-upload-service]') return { value: 'custom_manufacturing' };
+                return originalQuery(selector);
+            };
+            probe.form.requestSubmit = () => probe.listeners.get('submit')({ preventDefault() {} });
+        }
+        vm.runInContext(appSource, context);
+        if (mode === 'retained callback') {
+            context.GuardRecaptchaSubmit('source-form', 'source-submit', 'site-key', 'submit', '', null);
+        }
+        probe.listeners.get('submit')({ preventDefault() {} });
+        assert.equal(tokenRequests, 1);
+        assert.equal(probe.form.dataset.recaptchaPending, 'true');
+        assert.equal(probe.submit.disabled, true);
+        assert.equal(probe.state.posts, 0);
+
+        if (mode !== 'active upload delay') probe.state.valid = false;
+        releaseToken('source-token');
+        await new Promise(resolve => setImmediate(resolve));
+        if (mode === 'active upload delay') {
+            assert.equal(delayed.length, 1);
+            probe.state.valid = false;
+            delayed[0]();
+        }
+
+        assert.equal(probe.state.posts, 0);
+        assert.equal(probe.state.checks.at(-1), 'report');
+        assert.equal(probe.tokenInput.value, '');
+        assert.equal(probe.form.dataset.recaptchaPending, undefined);
+        assert.equal(probe.form.dataset.recaptchaVerified, undefined);
+        assert.equal(probe.form.dataset.submitting, undefined);
+        assert.equal(probe.submit.disabled, false);
+        assert.equal(probe.attributes.has('aria-busy'), false);
+    });
+}
+
+for (const order of ['automatic then explicit', 'explicit then automatic', 'repeated automatic']) {
+    test(`native single-submit registration admits the first submit: ${order}`, () => {
+        const harness = createNativeSingleSubmitHarness();
+        const form = harness.forms[0];
+        if (order === 'explicit then automatic') harness.context.GuardSingleSubmit(form.id);
+        harness.ready();
+        if (order === 'automatic then explicit') harness.context.GuardSingleSubmit(form.id);
+        if (order === 'repeated automatic') harness.context.initializeApplication();
+        harness.context.GuardSingleSubmit(form.id);
+
+        assert.equal(form.submit.disabled, false);
+        assert.equal(form.dataset.submitting, undefined);
+        assert.equal(form.attributes.has('aria-busy'), false);
+        const first = form.dispatchSubmit();
+        assert.equal(first.prevented, 0, 'The first native POST must remain allowed.');
+        assert.equal(form.nativePosts, 1);
+        assert.equal(form.dataset.submitting, 'true');
+        assert.equal(form.attributes.get('aria-busy'), 'true');
+        assert.equal(form.submit.disabled, false, 'Keep the native submitter and its formaction enabled.');
+        const second = form.dispatchSubmit();
+        assert.equal(second.prevented, 1, 'One guard must reject the duplicate exactly once.');
+        assert.equal(form.nativePosts, 1);
+        assert.equal(form.listeners.length, 1);
+    });
+}
+
+test('native single-submit registration keeps distinct forms independent', () => {
+    const harness = createNativeSingleSubmitHarness();
+    const other = createNativeSingleSubmitForm('other-login');
+    harness.forms.push(other);
+    harness.ready();
+    for (const form of harness.forms) harness.context.GuardSingleSubmit(form.id);
+
+    const first = harness.forms[0];
+    assert.equal(first.dispatchSubmit().prevented, 0);
+    assert.equal(other.dataset.submitting, undefined);
+    assert.equal(other.attributes.has('aria-busy'), false);
+    assert.equal(other.dispatchSubmit().prevented, 0);
+    assert.equal(first.dispatchSubmit().prevented, 1);
+    assert.equal(other.dispatchSubmit().prevented, 1);
+    assert.equal(first.nativePosts, 1);
+    assert.equal(other.nativePosts, 1);
+});
+
+test('native single-submit registration admits a replacement form with the same ID', () => {
+    const harness = createNativeSingleSubmitHarness();
+    harness.ready();
+    const original = harness.forms[0];
+    assert.equal(original.dispatchSubmit().prevented, 0);
+    const replacement = createNativeSingleSubmitForm(original.id);
+    harness.forms[0] = replacement;
+    harness.context.GuardSingleSubmit(replacement.id);
+    harness.context.initializeApplication();
+
+    assert.equal(replacement.dataset.submitting, undefined);
+    assert.equal(replacement.dispatchSubmit().prevented, 0);
+    assert.equal(replacement.dispatchSubmit().prevented, 1);
+    assert.equal(replacement.nativePosts, 1);
+    assert.equal(original.nativePosts, 1);
+    assert.equal(original.listeners.length, 1);
+    assert.equal(replacement.listeners.length, 1);
+});
+
+function createNativeSingleSubmitHarness() {
+    const forms = [createNativeSingleSubmitForm('customer-login')];
+    const readyListeners = [];
+    const document = createDocument({ '[data-single-submit]': forms });
+    document.readyState = 'loading';
+    document.getElementById = id => forms.find(form => form.id === id) ?? null;
+    document.addEventListener = (name, listener) => {
+        if (name === 'DOMContentLoaded') readyListeners.push(listener);
+    };
+    const context = createBrowserContext(document);
+    vm.runInContext(appSource, context);
+    return {
+        context, forms,
+        ready() {
+            document.readyState = 'complete';
+            for (const listener of readyListeners.splice(0)) listener();
+        },
+    };
+}
+
+function createNativeSingleSubmitForm(id) {
+    const form = {
+        id, dataset: {}, attributes: new Map(), listeners: [], nativePosts: 0,
+        submit: { disabled: false },
+        setAttribute(name, value) { this.attributes.set(name, value); },
+        querySelector() { return this.submit; },
+        addEventListener(name, listener) {
+            if (name === 'submit') this.listeners.push(listener);
+        },
+        dispatchSubmit() {
+            const event = { prevented: 0, preventDefault() { this.prevented += 1; } };
+            for (const listener of this.listeners) listener(event);
+            if (event.prevented === 0) this.nativePosts += 1;
+            return event;
+        },
+    };
+    return form;
+}
+
+function createSubmissionProbe() {
+    const listeners = new Map();
+    const attributes = new Map();
+    const state = { valid: true, posts: 0, lockedAtPost: false, checks: [] };
+    const tokenInput = { value: '' };
+    const submit = {
+        disabled: false,
+        setAttribute() {},
+        removeAttribute() {},
+    };
+    const form = {
+        dataset: {},
+        addEventListener: (event, handler) => listeners.set(event, handler),
+        querySelector: selector => selector === '[data-recaptcha-response]' ? tokenInput
+            : selector === 'button[type="submit"], input[type="submit"]' ? submit : null,
+        checkValidity: () => { state.checks.push('native'); return state.valid; },
+        reportValidity: () => state.checks.push('report'),
+        setAttribute: (name, value) => attributes.set(name, value),
+        removeAttribute: name => attributes.delete(name),
+        submit: () => {
+            state.lockedAtPost = form.dataset.submitting === 'true' && submit.disabled;
+            state.posts += 1;
+        },
+    };
+    const document = createDocument({ '[data-recaptcha-enterprise-form]': [form] });
+    document.getElementById = id => id === 'source-form' ? form : id === 'source-submit' ? submit : null;
+    return { form, submit, tokenInput, document, state, listeners, attributes };
+}
 
 function createBrowserContext(document, windowOverrides = {}) {
     const context = vm.createContext({

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" fill="none">
+  <rect width="720" height="300" fill="#f4f7fb"/>
+  <g stroke="#075de8" stroke-width="2" fill="#eaf2ff"><path d="M40 232H140V40H152V232H320V256H40Z"/><path d="M400 232H500V40H516V232H680V256H400Z"/></g>
+  <g stroke="#6c83a0" stroke-width="2"><path d="M100 40V232M90 40H110M90 232H110M460 40V232M450 40H470M450 232H470"/></g>
+  <g fill="#111f33" font-family="sans-serif" font-size="19"><text x="50" y="135">24</text><text x="410" y="135">24</text><text x="180" y="90">t = 1.5 mm</text><text x="540" y="90">t = 2 mm</text><text x="90" y="287">24 / 1.5 = 16</text><text x="450" y="287">24 / 2 = 12</text></g>
+</svg>

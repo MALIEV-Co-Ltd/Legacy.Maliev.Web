@@ -1,0 +1,77 @@
+@inject IStringLocalizer<MaterialsMetalsContent> Localizer
+
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+<h1>@Localizer["Metals: choose the grade and its condition"]</h1>
+<p class="docs-lead">@Localizer["A good metal choice balances function with the way a part will be machined, joined, finished, and maintained. Use these families to form a shortlist, then obtain the exact product specification. Examples illustrate engineering decisions and do not establish local stock availability or a qualified design."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/metals.webp" srcset="/src/images/knowledge/photos/metals-small.webp 768w, /src/images/knowledge/photos/metals.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["Aluminium stock and a heat sink beside a steel shaft, block and brass fitting."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Compare the specified grade, condition and manufacturing consequences, not appearance alone. Illustrative image."]</figcaption>
+</figure>
+<nav class="docs-toc" aria-label="@Localizer["On this page"]">
+<strong>@Localizer["On this page"]</strong>
+<ul>
+<li><a href="#aluminium">@Localizer["1. Aluminium: 6061-T6 and 7075-T6"]</a></li>
+<li><a href="#stainless">@Localizer["2. Stainless steel: 304 and 316"]</a></li>
+<li><a href="#steels">@Localizer["3. Carbon, alloy, and tool steels"]</a></li>
+<li><a href="#comparison">@Localizer["4. Compare the manufacturing consequences"]</a></li>
+</ul>
+</nav>
+<section id="aluminium" class="docs-section">
+<h2>@Localizer["1. Aluminium: 6061-T6 and 7075-T6"]</h2>
+<p>@Localizer["6061-T6 is a candidate for machined brackets, housings, and structural profiles when weight and fabrication matter. Hydro describes good anodising response and weldability for 6061, but warns that welding can reduce strength in the T6 weld region. Design a welded connection around the joint condition, not the untouched bar."]</p>
+<p><a href="https://www.hydro.com/globalassets/01-products--services/extruded-profiles/americas/ena-resources/alloy-data-sheets/hydro_2019_data_sheet_6061.pdf">@Localizer["Hydro 6061 alloy datasheet"]</a></p>
+<p>@Localizer["7075-T6 belongs on the shortlist when a compact, highly loaded component justifies a more demanding alloy choice. Kaiser's 7075 tube-and-pipe sheet rates gas and arc weldability poorly and distinguishes T6 from T73 stress-corrosion behaviour. These are product-specific cautions, not permission to copy tube data into a plate design."]</p>
+<p><a href="https://online.kaiseraluminum.com/depot/PublicProductInformation/Document/1042/Kaiser_Aluminum_7075_Tube_and_Pipe.pdf">@Localizer["Kaiser 7075 tube and pipe technical data"]</a></p>
+<p>@Localizer["Do not select either alloy from tensile strength alone. Check stiffness, fatigue, grain direction, stock thickness, thread engagement, corrosion protection, and distortion after removing material. A wide pocket or thin base may require a different blank and machining sequence even when the nominal alloy stays the same."]</p>
+
+<figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["Brackets separate the alloy or grade from the condition in 6061-T6 and 42CrMo4+QT."]">
+        <img src="/src/images/knowledge/visual-metal-designation.svg" alt="@Localizer["Brackets separate the alloy or grade from the condition in 6061-T6 and 42CrMo4+QT."]" width="960" height="480" loading="lazy" decoding="async" />
+    </div>
+    <figcaption>@Localizer["1 identifies the alloy or steel grade. 2 identifies the temper or treatment condition: T6 for the aluminium example and quenched-and-tempered (+QT) for the steel example. These labels are not a complete product specification."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-metal-designation.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
+</section>
+<section id="stainless" class="docs-section">
+<h2>@Localizer["2. Stainless steel: 304 and 316"]</h2>
+<p>@Localizer["304 and 316 are austenitic stainless families used where corrosion resistance and fabrication matter. Outokumpu identifies 316/4401 as molybdenum-alloyed; its low-carbon 316L/4404 variant helps reduce carbide precipitation associated with welding. Specify the actual designation rather than treating 316 and 316L as interchangeable drawing notes."]</p>
+<p><a href="https://www.outokumpu.com/de-de/products/product-ranges/supra">@Localizer["Outokumpu Supra grade descriptions"]</a></p>
+<p>@Localizer["Neither label means corrosion-proof. Chlorides, crevices, deposits, temperature, and cleaning practice affect performance. Outokumpu explains that chromium, molybdenum, and nitrogen influence resistance to localised attack. For a washdown component, review drainage and trapped joints as well as alloy choice; a more resistant grade cannot correct every poor detail."]</p>
+<p><a href="https://www.outokumpu.com/en/expertise/stainless-basics/corrosion-resistance">@Localizer["Outokumpu corrosion mechanisms"]</a></p>
+</section>
+<section id="steels" class="docs-section">
+<h2>@Localizer["3. Carbon, alloy, and tool steels"]</h2>
+<p>@Localizer["For a painted support or machine base, start by defining weldability, flatness, stiffness, and corrosion protection before demanding a hardened grade. Carbon steel is a family, not a complete specification. State the grade, supply condition, section, and finish; confirm that the selected steel and welding procedure suit the joint."]</p>
+<p>@Localizer["Ovako describes 42CrMo4 as a quench-and-temper steel with a strength-and-toughness balance in that condition. For a shaft or heavily loaded pin, specify heat treatment and required verification. Do not assume an annealed blank and a quenched-and-tempered part share the same mechanical response or machining plan."]</p>
+<p><a href="https://steelnavigator.ovako.com/steel-grades/42crmo4/">@Localizer["Ovako 42CrMo4 grade guidance"]</a></p>
+<p>@Localizer["Tool steel selection starts with the damage mechanism: abrasive wear, chipping, thermal cycling, or plastic deformation. BÖHLER separates hot-work applications such as forging and die casting from other tooling demands. Agree heat-treatment sequence, grinding allowance, hardness verification, and dimensional inspection after treatment before releasing a tool drawing."]</p>
+<p><a href="https://www.bohler-edelstahl.com/en/applications/hot-work/">@Localizer["BÖHLER hot-work tooling guidance"]</a></p>
+</section>
+<section id="comparison" class="docs-section">
+<h2>@Localizer["4. Compare the manufacturing consequences"]</h2>
+<div class="docs-table-wrap" role="region" tabindex="0" aria-label="@Localizer["Metal shortlist questions"]">
+<table>
+<caption>@Localizer["Metal shortlist questions"]</caption>
+<thead><tr><th scope="col">@Localizer["Candidate"]</th><th scope="col">@Localizer["Question before release"]</th></tr></thead>
+<tbody>
+<tr><td>@Localizer["6061-T6 / 7075-T6"]</td><td>@Localizer["Will joining or corrosion exposure change the selected temper's suitability?"]</td></tr>
+<tr><td>@Localizer["304 / 316 stainless"]</td><td>@Localizer["Are cleaning chemistry, crevices, and the welded condition defined?"]</td></tr>
+<tr><td>@Localizer["Engineering / tool steel"]</td><td>@Localizer["Which condition is supplied, and when are final fits inspected?"]</td></tr>
+<tr><td>@Localizer["C36000 brass"]</td><td>@Localizer["Does its lead-containing composition fit the product's restrictions?"]</td></tr>
+</tbody>
+</table>
+</div>
+<p>@Localizer["The Copper Development Association identifies C36000 as leaded free-cutting brass. Its machining advantages can suit turned components, but the alloy name is not a food-contact or drinking-water approval. Check composition restrictions, the specific application, and required documents before substituting it for another copper alloy."]</p>
+<p><a href="https://alloys.copper.org/alloy/C36000">@Localizer["Copper Development Association C36000 profile"]</a></p>
+<aside class="docs-example">
+<h3>@Localizer["Example: a threaded locating pin"]</h3>
+<p>@Localizer["A pin that wears at its contact tip needs a wear and replacement strategy. Define the contact load, mating hardness, alignment, and acceptable clearance first. Then compare a treated steel pin with a replaceable insert concept, including finishing and inspection, rather than upgrading every feature to the hardest available steel."]</p>
+</aside>
+<p>@Localizer["When requesting a quotation, include the drawing revision, critical fits, finish boundaries, and any material certificate or hardness report needed. Ask which dimensions will be checked after finishing. Keeping these requirements together makes a proposed alloy substitution easier to evaluate and reduces ambiguity between engineering, machining, and purchasing."]</p>
+</section>
+<p>@Localizer["Sources reviewed 16 October 2026. Confirm current grade data and project requirements before production."]</p>
+</article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}

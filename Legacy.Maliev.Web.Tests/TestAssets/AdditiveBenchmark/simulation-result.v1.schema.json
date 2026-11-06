@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maliev.com/schemas/additive-simulation/result.v1.schema.json",
+  "title": "MALIEV deterministic FDM physical result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "analysisVersion",
+    "profileSha256",
+    "roles",
+    "totalDepositedMm3",
+    "supportDepositedMm3",
+    "adhesionDepositedMm3",
+    "purgeDepositedMm3"
+  ],
+  "properties": {
+    "analysisVersion": { "type": "string", "minLength": 1 },
+    "profileSha256": { "type": "string", "minLength": 1 },
+    "roles": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/role" }
+    },
+    "totalDepositedMm3": { "$ref": "#/$defs/volume" },
+    "supportDepositedMm3": { "$ref": "#/$defs/volume" },
+    "adhesionDepositedMm3": { "$ref": "#/$defs/volume" },
+    "purgeDepositedMm3": { "$ref": "#/$defs/volume" }
+  },
+  "$defs": {
+    "volume": { "type": "number", "minimum": 0 },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "materialId", "depositedMm3", "seconds"],
+      "properties": {
+        "role": { "type": "string", "minLength": 1 },
+        "materialId": { "type": "string", "minLength": 1 },
+        "depositedMm3": { "$ref": "#/$defs/volume" },
+        "seconds": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}

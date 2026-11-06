@@ -611,7 +611,12 @@ internal sealed class InstantQuotationSubmissionService(
             message.AppendLine($"Height: {part.Geometry.HeightMm.ToString("0.###", CultureInfo.InvariantCulture)} mm");
             message.AppendLine(FormattableString.Invariant($"Size: {part.Geometry.DimensionXmm:0.###} x {part.Geometry.DimensionYmm:0.###} x {part.Geometry.DimensionZmm:0.###} mm"));
             message.AppendLine($"Volume: {part.Geometry.VolumeMm3.ToString("0.###", CultureInfo.InvariantCulture)} mm3");
-            var geometryWarnings = GeometryWarnings(part.Geometry);
+            var geometryWarnings = GeometryWarnings(part.Geometry).ToList();
+            if (partQuote.PhysicalReceipt?.GeometryReconstruction is { } reconstruction)
+            {
+                geometryWarnings.Add(FormattableString.Invariant(
+                    $"Voxel-based pricing estimate ({reconstruction.VoxelSizeMm:0.0} mm). Original geometry requires engineering review before manufacture."));
+            }
             if (geometryWarnings.Count > 0)
             {
                 message.AppendLine($"Geometry warning: {string.Join("; ", geometryWarnings)}");

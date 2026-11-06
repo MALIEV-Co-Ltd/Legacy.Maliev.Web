@@ -1,13 +1,13 @@
 using System.Text.Json;
 using Microsoft.Playwright;
-using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 // Source fad52019c898ebe63c39eb0f30e65b0fb59126ca has four scenarios.
 // Coarse projection comes from 483a2fdb0beeafa014bb6b0a5ca1e85cd7bdbb74,
 // refined by 351825232f787ef988c7c058910520a14aa70123.
-public sealed class InstantQuotationWallThicknessParityBrowserTests(WallThicknessParityBrowserFixture fixture, ITestOutputHelper output)
+public sealed class InstantQuotationWallThicknessParityBrowserTests(
+    WallThicknessParityBrowserFixture fixture, Xunit.Abstractions.ITestOutputHelper output)
     : IClassFixture<WallThicknessParityBrowserFixture>
 {
     [Theory]
@@ -51,33 +51,42 @@ public sealed class InstantQuotationWallThicknessParityBrowserTests(WallThicknes
         await using var page = await fixture.Browser.NewPageAsync();
         var pageErrors = new List<string>();
         await page.SetViewportSizeAsync(width, 800);
-        var failureCategories = new UploadFailureCategories();
-        page.PageError += (_, error) =>
-        {
-            pageErrors.Add(error);
-            failureCategories.RecordPageError(error);
-        };
-        page.RequestFailed += (_, request) => failureCategories.RecordAssetFailure(request.Url);
-        page.Response += (_, response) =>
-        {
-            if (response.Status >= 400) failureCategories.RecordAssetFailure(response.Url);
-        };
-        await page.GotoAsync(fixture.Url + "?culture=" + culture, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
-        await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
-        await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
-        {
-            Name = "source-open-sheet.stl",
-            MimeType = "model/stl",
-            Buffer = WallThicknessParityBrowserFixture.Sheet(),
-        });
+        page.PageError += (_, error) => pageErrors.Add(error);
+        await using var failureEvidence = new BrowserFailureEvidence(page);
         try
         {
+            using (var responseProbe = fixture.ResponseProbes.TryBeginNavigation(
+                fixture.Origin, TestResponseRequestLabel.BaseQuotation))
+            using (var navigation = new MaterialInitialNavigationDiagnostics(page, fixture.Origin, responseProbe?.Probe))
+            {
+                await navigation.RunAsync(
+                    () => page.GotoAsync(fixture.Url + "?culture=" + culture, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle }),
+                    output.WriteLine);
+            }
+            await page.Locator("#cookieConsent [data-consent-action='reject']").ClickAsync();
+            failureEvidence.Stage("UploadAdmission");
+            await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
+            {
+                Name = "source-open-sheet.stl",
+                MimeType = "model/stl",
+                Buffer = WallThicknessParityBrowserFixture.Sheet(),
+            });
             await page.WaitForFunctionAsync("() => document.querySelector('.instant-quote__workflow')?.dataset.workflowState === 'error' || !!document.querySelector('[data-workflow-incomplete-preview]')");
         }
-        catch
+        catch (Exception original)
         {
-            try { await WriteUploadFailureDiagnosticsAsync(page, failureCategories); }
-            catch { /* Diagnostic failure must not replace the original browser failure. */ }
+            await failureEvidence.AttachAsync(original, () => page.EvaluateAsync<string>("""
+                () => {
+                  const state = document.querySelector('.instant-quote__workflow')?.dataset.workflowState;
+                  return JSON.stringify({
+                    workflow: ['empty','uploading','uploaded','error','multipart','configured','review','customerdetails','submitted'].includes(state) ? state : 'unavailable',
+                    parts: Math.min(32, document.querySelectorAll('[data-workflow-part]').length),
+                    uploadRows: Math.min(32, document.querySelectorAll('[data-workflow-upload-item]').length),
+                    progress: !!document.querySelector('[role="progressbar"]'),
+                    errorVisible: !!document.querySelector('#blazor-error-ui')?.offsetParent
+                  });
+                }
+                """), metadata => output.WriteLine("[sheet-failure] " + metadata));
             throw;
         }
         Assert.Equal(0, await page.Locator("[data-workflow-price-tier]").CountAsync());
@@ -86,6 +95,8 @@ public sealed class InstantQuotationWallThicknessParityBrowserTests(WallThicknes
         Assert.Contains("/instantquotation/3d-printing", page.Url, StringComparison.Ordinal);
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
         // Region creation precedes the genuine worker callback; wait for that rendered evidence.
+        await Assertions.Expect(page.Locator("[data-workflow-incomplete-preview]")).ToHaveCountAsync(1);
+        await Assertions.Expect(page.Locator("[data-workflow-incomplete-preview] canvas")).ToHaveCountAsync(1);
         await page.Locator("[data-workflow-incomplete-preview]").GetByText(incomplete, new LocatorGetByTextOptions { Exact = true }).WaitForAsync();
         if (Environment.GetEnvironmentVariable("MALIEV_BROWSER_EVIDENCE_DIR") is { Length: > 0 } directory)
         {
@@ -132,6 +143,8 @@ public sealed class InstantQuotationWallThicknessParityBrowserTests(WallThicknes
             MimeType = "model/stl",
             Buffer = WallThicknessParityBrowserFixture.Sheet(),
         });
+        await Assertions.Expect(page.Locator("[data-workflow-incomplete-preview]")).ToHaveCountAsync(1);
+        await Assertions.Expect(page.Locator("[data-workflow-incomplete-preview] canvas")).ToHaveCountAsync(1);
         await page.Locator("[data-workflow-incomplete-preview]").WaitForAsync();
         await page.WaitForFunctionAsync("() => !document.querySelector('#instant-quote-files').disabled");
         await page.SetInputFilesAsync("#instant-quote-files", new FilePayload
@@ -183,88 +196,6 @@ public sealed class InstantQuotationWallThicknessParityBrowserTests(WallThicknes
         {
             Assert.Null(result.KeyAfterOldReply);
             Assert.DoesNotContain("data-workflow-incomplete-preview", result.HtmlAfterOldReply, StringComparison.Ordinal);
-        }
-    }
-
-    private async Task WriteUploadFailureDiagnosticsAsync(IPage page, UploadFailureCategories categories)
-    {
-        JsonElement? flags = null;
-        try
-        {
-            flags = await page.EvaluateAsync<JsonElement>("""
-                () => {
-                  const workflow = document.querySelector('.instant-quote__workflow');
-                  const input = document.querySelector('#instant-quote-files');
-                  const status = document.querySelector('[data-workflow-preview-status]')?.textContent?.trim();
-                  const errorUi = document.querySelector('#blazor-error-ui');
-                  return {
-                    workflowPresent: !!workflow,
-                    workflowError: workflow?.dataset.workflowState === 'error',
-                    workflowUploading: workflow?.dataset.workflowState === 'uploading',
-                    incompletePresent: !!document.querySelector('[data-workflow-incomplete-preview]'),
-                    uploadPresent: !!input,
-                    uploadEnabled: !!input && !input.disabled,
-                    fileSelected: !!input?.files?.length,
-                    frameworkInputFileInitMarkerPresent: Number.isInteger(input?._blazorInputFileNextFileId),
-                    frameworkInputFileChangeMarkerPresent: !!input && Object.hasOwn(input, '_blazorFilesById'),
-                    previewUnavailable: status === '3D preview is unavailable. You can continue with your quotation.'
-                      || status === 'ไม่สามารถแสดงตัวอย่าง 3 มิติได้ คุณยังสามารถดำเนินการขอใบเสนอราคาต่อได้',
-                    blazorErrorDisplayed: !!errorUi && getComputedStyle(errorUi).display !== 'none'
-                  };
-                }
-                """).WaitAsync(TimeSpan.FromSeconds(2));
-        }
-        catch { /* A closed or unresponsive page yields only a fixed unavailable flag. */ }
-        var errors = categories.Snapshot();
-        output.WriteLine("wall397-upload-failure " + JsonSerializer.Serialize(new
-        {
-            Phase = "BeforeIncompleteRegion",
-            SnapshotUnavailable = flags is null,
-            Flags = flags,
-            ErrorCategories = errors.Categories,
-            ErrorOverflow = errors.Overflowed,
-        }));
-    }
-
-    private sealed class UploadFailureCategories
-    {
-        private readonly object gate = new();
-        private readonly Queue<string> categories = new();
-        private bool overflowed;
-
-        internal void RecordPageError(string error) => Record(
-            error.Contains("dynamically imported module", StringComparison.OrdinalIgnoreCase) ? "ModuleImport"
-            : error.Contains("circuit", StringComparison.OrdinalIgnoreCase)
-                || error.Contains("connection", StringComparison.OrdinalIgnoreCase) ? "CircuitOrConnection"
-            : error.Contains("WebGL", StringComparison.OrdinalIgnoreCase) ? "Graphics"
-            : "OtherPageError");
-
-        internal void RecordAssetFailure(string url)
-        {
-            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || !uri.IsLoopback) return;
-            var category = uri.AbsolutePath switch
-            {
-                "/_framework/blazor.web.js" => "FrameworkScriptLoad",
-                "/dist/instant-quotation-workflow.mjs" => "WorkflowModuleLoad",
-                "/dist/instant-quotation-viewer.mjs" => "ViewerModuleLoad",
-                "/src/app/js/instant-quotation/wall-thickness-runner.worker.js" => "ThicknessWorkerLoad",
-                _ => null,
-            };
-            if (category is not null) Record(category);
-        }
-
-        private void Record(string category)
-        {
-            lock (gate)
-            {
-                if (categories.Count >= 16) { overflowed = true; return; }
-                categories.Enqueue(category);
-            }
-        }
-
-        internal (string[] Categories, bool Overflowed) Snapshot()
-        {
-            lock (gate) return (categories.ToArray(), overflowed);
         }
     }
 

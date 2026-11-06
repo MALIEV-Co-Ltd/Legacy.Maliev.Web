@@ -170,5 +170,13 @@ public static class ServiceCollectionExtensions
         {
             builder.AddPrivateFailureSourceObservation("CountryService");
         }
+        else if (name == "orders")
+        {
+            builder.AddPrivateFailureOperationObservation("OrderService");
+        }
+        else if (name == "customers")
+        {
+            builder.AddPrivateFailureOperationObservation("CustomerService");
+        }
     }
 }

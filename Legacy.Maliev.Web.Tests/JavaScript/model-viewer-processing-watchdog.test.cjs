@@ -7,6 +7,53 @@ const vm = require('node:vm');
 const sourcePath = path.resolve(__dirname,
     '../../Legacy.Maliev.Web/wwwroot/src/app/js/model-viewer/model-viewer.js');
 
+for (const culture of ['en', 'th']) {
+    test('retained CNC thumbnail presents only known material; culture=' + culture, () => {
+        const source = fs.readFileSync(sourcePath, 'utf8');
+        const begin = source.indexOf('    function UpdateThumbnailQuote(id) {');
+        const end = source.indexOf('    function UpdateThumbnailDimensions(id, info) {', begin);
+        assert.ok(begin >= 0 && end > begin, 'Exercise the actual retained thumbnail presenter');
+        const quote = createElement();
+        const item = { material: null, quantity: 1 };
+        const context = vm.createContext({
+            document: { getElementById(id) {
+                assert.equal(id, 'thumb-quote-local');
+                return quote;
+            } },
+            items: { local: item }, isCncQuotation: true, culture, pleaseWaitText: 'pending',
+            InputValue(id) {
+                assert.equal(id, 'item-estimated-unit-cost-local');
+                return '';
+            },
+            CreateEl(tag, className, textContent) {
+                return Object.assign(createElement(tag), { className, textContent });
+            }
+        });
+        vm.runInContext(source.slice(begin, end), context, { filename: sourcePath });
+
+        context.UpdateThumbnailQuote('local');
+        assert.equal(item.material, null);
+        assert.equal(quote.children[0].classList.contains('iq-skeleton-text'), true);
+        assert.equal(quote.children[1].classList.contains('iq-skeleton-text'), true);
+        assert.equal(quote.title.includes('PLA'), false);
+        assert.equal(quote.title, culture === 'th' ? 'ยังไม่มีราคาสรุป' : 'No finalized price yet');
+
+        item.material = '6061';
+        item.quantity = 2;
+        item.cncStatus = 'finalized';
+        context.UpdateThumbnailQuote('local');
+        assert.equal(quote.children[0].textContent, '6061 2×');
+        assert.equal(quote.children[0].classList.contains('iq-skeleton-text'), false);
+        assert.equal(quote.children[1]['aria-label'], culture === 'th' ? 'ราคาต่อชิ้น —' : 'Unit price —');
+
+        item.material = null;
+        context.UpdateThumbnailQuote('local');
+        assert.equal(quote.children[0].textContent, '—');
+        assert.equal(quote.title.includes('PLA'), false);
+        assert.equal(quote.title, culture === 'th' ? '— · 2 ชิ้น · ราคาต่อชิ้น —' : '— · 2 pcs · Unit price —');
+    });
+}
+
 function createElement(tag = 'div') {
     const children = [];
     const classes = new Set();

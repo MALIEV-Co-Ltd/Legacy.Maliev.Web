@@ -1,0 +1,99 @@
+/* Homepage hero compositions; individual review routes remain Development-only. */
+.hero-review-bar { border-bottom: 1px solid var(--landing-line); background: var(--landing-soft); }
+.hero-review-inner { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.5rem; padding-block: .6rem; font-size: .85rem; }
+.hero-review-inner > span { font-weight: 600; color: var(--landing-ink); }
+.hero-review-options { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; }
+.hero-review-bar a { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--landing-muted); text-decoration: none; border-bottom: 2px solid transparent; }
+.hero-review-bar a[aria-current="page"] { color: var(--landing-ink); border-color: var(--landing-blue); }
+.hero-review-original { margin-left: auto; }
+.hero-review-bar a:hover, .hero-option-link:hover { color: var(--landing-blue); }
+.home-hero-option { color: var(--landing-ink); background: #fff; padding-block: clamp(2.5rem, 5vw, 5rem); }
+.home-hero-option :is(h1, h2) { margin: 0; color: var(--landing-ink); font-size: clamp(2.7rem, 4.8vw, 4.75rem); font-weight: 600; line-height: 1.12; letter-spacing: -.035em; text-wrap: balance; }
+html[lang="th"] .home-hero-option :is(h1, h2) { line-height: 1.4; letter-spacing: -.025em; }
+.hero-option-copy { min-width: 0; }
+.hero-option-copy > p { margin: 1.6rem 0 0; color: var(--landing-muted); max-width: 56ch; font-size: 1.05rem; line-height: 1.85; }
+.home-hero-option .landing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem; margin-top: 2rem; }
+.hero-option-link { display: inline-flex; align-items: center; gap: .65rem; min-height: 2.75rem; color: var(--landing-ink); font-weight: 600; text-decoration: none; }
+.hero-option-link:hover, .hero-option-link:focus-visible { text-decoration: none; }
+.hero-option-link > span { text-decoration: underline; text-underline-offset: .3em; }
+.home-hero-option a:focus-visible, .hero-review-bar a:focus-visible { outline: 3px solid var(--landing-blue); outline-offset: 4px; }
+.hero-assembly-grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: center; gap: clamp(2rem, 4vw, 4rem); }
+.hero-assembly-media { margin: 0; min-width: 0; padding: 1rem; background: var(--landing-soft); overflow: hidden; }
+.hero-assembly-media, .hero-partnership-media img, .hero-journey-images img { border-radius: 20px; }
+.hero-assembly-media img { display: block; width: 100%; height: auto; aspect-ratio: 1.1; object-fit: contain; }
+.hero-assembly-annotated { position: relative; aspect-ratio: 1.1; }
+.hero-assembly-annotated img { position: absolute; inset: 0; height: 100%; aspect-ratio: auto; }
+.hero-tech-leaders { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.hero-tech-leaders path { fill: none; stroke: var(--landing-blue); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.hero-tech-leaders circle { fill: #fff; stroke: var(--landing-blue); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.hero-tech-callouts { list-style: none; margin: 0; padding: 0; }
+.hero-tech-callouts li { position: absolute; width: fit-content; max-width: 39%; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--landing-ink); line-height: 1.45; }
+.hero-tech-callouts strong { display: block; font-size: clamp(.75rem, 1.05vw, .95rem); font-weight: 600; }
+.hero-tech-callouts span { display: block; margin-top: .15rem; font-size: clamp(.65rem, .9vw, .8rem); color: var(--landing-muted); }
+.hero-tech-resin { top: 4%; left: 59%; }
+.hero-tech-fdm { top: 4%; left: 2%; }
+.hero-tech-nylon { bottom: 4%; left: 2%; }
+.hero-tech-cnc { bottom: 4%; right: 2%; }
+.hero-option-copy > .hero-material-summary { border-top: 1px solid var(--landing-line); padding-top: 1.25rem; font-size: .85rem; max-width: 48ch; }
+.hero-partnership-stage { display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); align-items: center; isolation: isolate; }
+.hero-partnership-media { margin: 0; grid-row: 1; grid-column: 1 / -1; width: 76%; justify-self: end; }
+.hero-partnership-media img { display: block; width: 100%; height: clamp(32rem, 40vw, 40rem); object-fit: cover; object-position: 72% center; }
+.hero-partnership-copy { position: relative; grid-row: 1; grid-column: 1; z-index: 1; background: #fff; padding: 2.5rem 2.5rem 2.5rem 0; }
+.hero-journey-heading { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); align-items: end; gap: clamp(2rem, 6vw, 6rem); }
+.hero-journey-heading .hero-option-copy > p { margin: 0 0 .4rem; }
+.hero-journey-images { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .85rem; margin-top: 2.5rem; }
+.hero-journey-images img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; }
+.hero-journey-images img:nth-child(2) { object-position: 63% center; }
+.home-hero-option .hero-journey-actions { margin-top: 1.75rem; }
+@media (max-width: 1023px) {
+    .home-hero-option :is(h1, h2) { font-size: clamp(2.5rem, 4.8vw, 4rem); }
+    .hero-partnership-copy { padding-right: 1.75rem; }
+    .hero-partnership-media { width: 80%; }
+    .hero-journey-heading { gap: 2rem; }
+}
+@media (max-width: 767px) {
+    .hero-review-inner { gap: .25rem 1rem; }
+    .hero-review-inner > span { width: 100%; }
+    .hero-review-options { gap: .25rem 1rem; }
+    .hero-review-original { margin-left: 0; }
+    .home-hero-option :is(h1, h2) { font-size: clamp(2.35rem, 9vw, 3.5rem); }
+    .hero-assembly-grid, .hero-partnership-stage, .hero-journey-heading { grid-template-columns: minmax(0, 1fr); gap: 1.75rem; }
+    .hero-assembly-media { padding: 0; }
+    .hero-assembly-media img { aspect-ratio: 3 / 2; }
+    .hero-assembly-annotated img { aspect-ratio: auto; }
+    .hero-partnership-copy, .hero-partnership-media { grid-row: auto; grid-column: 1; width: 100%; }
+    .hero-partnership-copy { padding: 0; }
+    .hero-partnership-media { order: 2; }
+    .hero-partnership-media img { height: auto; aspect-ratio: 3 / 2; object-fit: contain; }
+    .hero-journey-images { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin-top: 1.75rem; }
+    .hero-journey-images img { aspect-ratio: 3 / 2; object-fit: contain; }
+}
+
+/* All three compositions share one measured grid track; no layout jump on rotation. */
+.home-hero-carousel { position: relative; }
+.hero-carousel-controls { display: flex; justify-content: flex-end; padding-block: .75rem; }
+.hero-carousel-controls[hidden] { display: none; }
+.hero-carousel-controls button { min-height: 2.75rem; padding: .5rem .875rem; border: 1px solid var(--landing-line); border-radius: .375rem; background: #fff; color: var(--landing-ink); font: inherit; font-size: .875rem; }
+.hero-carousel-controls button:focus-visible { outline: 3px solid var(--landing-blue); outline-offset: 4px; }
+.hero-carousel-controls button:disabled { color: var(--landing-muted); }
+.hero-carousel-stage { display: grid; }
+.hero-carousel-panel { grid-area: 1 / 1; min-width: 0; }
+/* Bootstrap's [hidden] uses !important: keep inactive scenes measurable, not visible. */
+.home-hero-carousel[data-carousel-ready="true"] .hero-carousel-panel[hidden] { display: block !important; visibility: hidden; pointer-events: none; }
+.hero-carousel-panel[aria-hidden="true"] { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) {
+    .home-hero-carousel *, .home-hero-carousel *::before, .home-hero-carousel *::after { animation: none !important; transition: none !important; }
+}
+
+/* Home-only dependencies extracted from source company-profile.css; no About activation. */
+.landing-service-card .profile-image-note { min-height: 0; margin: 0 0 .35rem; font-size: .76rem; }
+.profile-pricing-link { display: inline-flex; margin-top: .85rem; }
+.profile-cutout-cta img { display: block; width: 30%; max-height: 100%; aspect-ratio: 3 / 2; object-fit: contain; border: 0; border-radius: 0; background: transparent; right: -.5rem; filter: none; }
+@media (max-width: 1023px) {
+    .profile-cutout-cta { padding-right: 30%; }
+    .profile-cutout-cta img { top: 50%; bottom: auto; transform: translateY(-50%); }
+}
+@media (max-width: 767px) {
+    .profile-cutout-cta { padding-right: 2.2rem; }
+    .profile-cutout-cta img { position: relative; inset: auto; transform: none; width: min(100%, 22rem); margin: 0; }
+}

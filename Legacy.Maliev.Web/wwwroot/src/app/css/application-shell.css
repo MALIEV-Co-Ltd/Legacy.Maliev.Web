@@ -823,17 +823,12 @@ body {
 }
 
 .legal-document a,
-.docs-content a {
+.docs-content a:not(.maliev-button) {
     color: var(--maliev-blue-dark);
     text-underline-offset: .16em;
 }
 
 .legal-document a.maliev-button {
-    color: #fff;
-    text-decoration: none;
-}
-
-.docs-content a.maliev-button {
     color: #fff;
     text-decoration: none;
 }
@@ -1094,6 +1089,10 @@ body {
     max-width: 68ch;
     color: var(--maliev-muted);
     line-height: 1.65;
+}
+
+.career-copy {
+    white-space: pre-line;
 }
 
 .career-table-wrapper {
@@ -1765,6 +1764,243 @@ html.privacy-consent-open {
     }
 }
 
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}
+
+/* Knowledge pages are reading surfaces. Keep diagrams and tables responsive,
+   but constrain prose so long technical guidance remains comfortable to read. */
+.knowledge-document .docs-section,
+.knowledge-document .docs-next,
+.knowledge-document .docs-sources {
+    min-width: 0;
+    padding-block: 1.25rem .5rem;
+    border-top: 1px solid var(--maliev-line);
+    scroll-margin-top: 6rem;
+}
+
+.knowledge-document h2 {
+    margin: 0 0 .85rem;
+    color: var(--maliev-navy);
+    font-size: clamp(1.3rem, 2.2vw, 1.7rem);
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.knowledge-document h3 {
+    margin: 1.25rem 0 .55rem;
+    color: var(--maliev-navy);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.knowledge-document .docs-section > p,
+.knowledge-document .docs-section > ul,
+.knowledge-document .docs-section > ol {
+    max-width: 76ch;
+}
+
+.knowledge-document p,
+.knowledge-document li,
+.knowledge-document td {
+    overflow-wrap: anywhere;
+}
+
+.docs-toc {
+    margin-block: 1.5rem 2rem;
+    padding-block: 1.25rem;
+    border-block: 1px solid var(--maliev-line);
+}
+
+.docs-toc h2,
+.docs-toc > strong {
+    display: block;
+    margin: 0 0 .75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--maliev-navy);
+}
+
+.docs-toc ul {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.docs-toc li + li {
+    border-top: 1px solid var(--maliev-line);
+}
+
+.docs-content .knowledge-document .docs-toc li > a {
+    display: flex;
+    width: 100%;
+    min-height: 44px;
+    align-items: center;
+    padding: .65rem .75rem;
+    color: var(--maliev-ink);
+    line-height: 1.6;
+    text-decoration: none;
+    transition: background-color 180ms ease;
+}
+
+.docs-content .knowledge-document .docs-toc li > a:hover,
+.docs-content .knowledge-document .docs-toc li > a:focus-visible {
+    background-color: #f0f1f3;
+    color: var(--maliev-blue);
+}
+
+
+.docs-note,
+.docs-example {
+    margin-block: 1rem;
+    padding: 1rem 1.15rem;
+    border-inline-start: 3px solid var(--maliev-blue);
+    background: var(--maliev-blue-soft);
+}
+
+.docs-note p:last-child,
+.docs-example p:last-child {
+    margin-bottom: 0;
+}
+
+.docs-example {
+    border-color: #6c83a0;
+    background: var(--maliev-canvas);
+}
+
+.docs-checklist {
+    padding-inline-start: 1.3rem;
+}
+
+.docs-checklist li + li {
+    margin-top: .55rem;
+}
+
+.docs-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    margin-block: 1rem;
+    border: 1px solid var(--maliev-line);
+    border-radius: var(--maliev-radius-sm);
+}
+
+.docs-table-wrap table {
+    width: 100%;
+    min-width: 34rem;
+    border-collapse: collapse;
+    font-size: .95rem;
+}
+
+.docs-table-wrap th,
+.docs-table-wrap td {
+    padding: .85rem 1rem;
+    border-bottom: 1px solid var(--maliev-line);
+    vertical-align: top;
+    line-height: 1.7;
+}
+
+.docs-table-wrap th {
+    background: var(--maliev-canvas);
+    color: var(--maliev-navy);
+    font-weight: 600;
+    text-align: start;
+}
+
+.docs-table-wrap tr:last-child td {
+    border-bottom: 0;
+}
+
+.docs-table-wrap caption {
+    padding: .8rem 1rem;
+    caption-side: top;
+    color: var(--maliev-muted);
+    text-align: start;
+}
+
+.docs-figure {
+    max-width: 48rem;
+    margin: 1.25rem 0;
+}
+
+.docs-figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--maliev-line);
+    border-radius: var(--maliev-radius);
+    background: var(--maliev-canvas);
+}
+
+.docs-figure figcaption,
+.docs-reviewed {
+    margin-top: .55rem;
+    color: var(--maliev-muted);
+    font-size: .88rem;
+    line-height: 1.7;
+}
+
+.docs-sources ol {
+    padding-inline-start: 1.4rem;
+}
+
+.docs-sources li + li {
+    margin-top: .6rem;
+}
+
+.docs-content a:focus-visible,
+.docs-table-wrap:focus-visible {
+    outline: 3px solid var(--maliev-blue);
+    outline-offset: 4px;
+}
+
+.docs-content .docs-topic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: 1rem;
+    margin-block: 1rem;
+}
+
+.docs-content .docs-link-card {
+    min-height: 0;
+}
+
+.docs-content .docs-link-card:focus-visible {
+    outline-offset: 3px;
+}
+
+.workspace-sidebar--knowledge .workspace-nav-group__label {
+    color: var(--maliev-muted);
+    font-size: .78rem;
+    letter-spacing: .04em;
+}
+
+.knowledge-document p a:not(.maliev-button),
+.knowledge-document li a:not(.maliev-button) {
+    text-decoration: underline;
+}
+
+.knowledge-document .docs-source {
+    margin-block: .7rem 0;
+    font-size: .88rem;
+}
+
+@media (max-width: 71.99rem) {
+    .workspace-sidebar--knowledge:not(.is-open) {
+        box-shadow: none;
+    }
+}
+
+
 /* Arrow icons must never inherit a link-wide underline, including page hover rules.
    Put any desired text underline on a separate label, outside the icon. */
 a:has([class*="fa-arrow-"], svg[data-icon^="arrow-"]) {
@@ -1776,13 +2012,342 @@ a:has([class*="fa-arrow-"], svg[data-icon^="arrow-"]) {
     text-underline-offset: .25em;
 }
 
+/* Manufacturing library: topic groups remain native keyboard-operable disclosures. */
+.knowledge-nav-group + .knowledge-nav-group {
+    border-top: 1px solid var(--maliev-line);
+}
+
+.knowledge-nav-group > summary {
+    min-height: 48px;
+    padding: .85rem 1rem;
+    color: var(--maliev-ink);
+    font-size: .9rem;
+    font-weight: 600;
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+.knowledge-nav-group > summary::marker {
+    color: var(--maliev-blue-dark);
+}
+
+.knowledge-nav-group > summary:focus-visible {
+    outline: 2px solid var(--maliev-blue);
+    outline-offset: -3px;
+}
+
+.knowledge-section-links {
+    margin: 0 .7rem .5rem 1rem;
+    padding-left: .8rem;
+    border-left: 2px solid var(--maliev-line);
+    list-style: none;
+}
+
+.knowledge-section-links a {
+    display: block;
+    padding: .45rem .3rem;
+    color: var(--maliev-muted);
+    font-size: .8rem;
+    line-height: 1.5;
+    text-decoration: none;
+}
+
+.knowledge-section-links a:hover {
+    color: var(--maliev-blue-dark);
+    text-decoration: underline;
+}
+
+.knowledge-section-links a:focus-visible {
+    outline: 2px solid var(--maliev-blue);
+    outline-offset: 1px;
+}
+
+.knowledge-directory-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    gap: .25rem 1.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.knowledge-directory-list li {
+    min-width: 0;
+}
+
+.docs-content .knowledge-directory-list li > a {
+    display: grid;
+    gap: .35rem;
+    min-height: 44px;
+    padding: .75rem;
+    text-decoration: none;
+    background-color: transparent;
+    transition: background-color 180ms ease;
+}
+
+.knowledge-directory-list strong {
+    color: var(--maliev-ink);
+    font-size: 1.05rem;
+}
+
+.knowledge-directory-list span {
+    color: var(--maliev-muted);
+    font-size: .92rem;
+    line-height: 1.7;
+}
+
+.docs-content .knowledge-directory-list li > a:hover,
+.docs-content .knowledge-directory-list li > a:focus-visible {
+    background-color: #f0f1f3;
+}
+
+.docs-content .knowledge-directory-list li > a:focus-visible {
+    outline: 2px solid var(--maliev-blue);
+    outline-offset: 2px;
+}
+
+
+.knowledge-legacy-anchor {
+    display: block;
+    scroll-margin-top: 6rem;
+}
+
+/* Knowledge imagery: photographs frame the subject; diagrams preserve precise labels. */
+.knowledge-photo,
+.knowledge-diagram {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+}
+
+.knowledge-photo img {
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+}
+
+.docs-content .knowledge-directory-list li > a {
+    grid-template-columns: clamp(6rem, 10vw, 8rem) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.knowledge-directory-list img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: .5rem;
+}
+
+.knowledge-directory-list .knowledge-directory-copy {
+    display: grid;
+    gap: .35rem;
+}
+
+.knowledge-diagram-viewport {
+    overflow-x: auto;
+    border: 1px solid var(--maliev-line);
+    border-radius: var(--maliev-radius);
+    background: #f4f7fb;
+}
+
+.knowledge-diagram-viewport:focus-visible {
+    outline: 2px solid var(--maliev-blue);
+    outline-offset: 2px;
+}
+
+.knowledge-diagram-viewport img {
+    min-width: 48rem;
+    max-width: none;
+    border: 0;
+    border-radius: 0;
+}
+
+.knowledge-diagram-link {
+    display: inline-block;
+    margin-inline-start: .4em;
+}
+
+
+.knowledge-process-illustration {
+    display: grid;
+    gap: 1.25rem;
+    align-items: center;
+    margin-block: 2rem;
+}
+
+.knowledge-process-illustration .knowledge-diagram-viewport img {
+    min-width: 0;
+    max-width: 100%;
+    aspect-ratio: 3 / 2;
+    object-fit: contain;
+}
+
+.knowledge-process-illustration figcaption {
+    margin-top: 0;
+}
+
+.knowledge-process-illustration figcaption strong {
+    color: var(--maliev-ink);
+    font-size: 1.05rem;
+}
+
+.knowledge-process-illustration figcaption p {
+    margin-block: .5rem;
+}
+
+.knowledge-process-illustration .knowledge-diagram-link {
+    margin-inline-start: 0;
+}
+
+.knowledge-search {
+    padding: 1rem;
+    border-bottom: 1px solid var(--maliev-line);
+}
+
+.knowledge-search[hidden],
+.knowledge-search [hidden],
+[data-knowledge-browse][hidden] {
+    display: none;
+}
+
+.knowledge-search label {
+    display: block;
+    margin-bottom: .5rem;
+    font-size: .9rem;
+    font-weight: 600;
+}
+
+.knowledge-search-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: .25rem;
+}
+
+.knowledge-search input {
+    min-width: 0;
+    width: 100%;
+    min-height: 44px;
+    padding: .55rem .65rem;
+    border: 1px solid var(--maliev-line);
+    border-radius: .4rem;
+    background: #fff;
+    color: var(--maliev-ink);
+    font: inherit;
+    font-size: 1rem;
+}
+
+.knowledge-search input::-webkit-search-cancel-button {
+    display: none;
+}
+
+@media (min-width: 72rem) {
+    .knowledge-search input {
+        font-size: .875rem;
+    }
+}
+
+.knowledge-search-clear,
+.knowledge-search-retry {
+    min-height: 44px;
+    padding: .5rem .65rem;
+    border: 1px solid var(--maliev-line);
+    border-radius: .4rem;
+    background: #fff;
+    color: var(--maliev-ink);
+    font: inherit;
+    cursor: pointer;
+}
+
+.knowledge-search-clear {
+    width: 44px;
+}
+
+.knowledge-search-hint,
+.knowledge-search-status {
+    margin: .5rem 0 0;
+    color: var(--maliev-muted);
+    font-size: .8rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.knowledge-search-retry {
+    margin-top: .6rem;
+}
+
+.knowledge-search-results {
+    margin: .75rem 0 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--maliev-line);
+}
+
+.knowledge-search-results li {
+    border-bottom: 1px solid var(--maliev-line);
+}
+
+.knowledge-search-results a {
+    display: block;
+    padding: .75rem .35rem;
+    color: var(--maliev-ink);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+    transition: background-color 180ms ease;
+}
+
+.knowledge-search-results strong {
+    display: block;
+    font-size: .9rem;
+}
+
+.knowledge-search-article {
+    display: block;
+    margin-top: .25rem;
+    color: var(--maliev-muted);
+    font-size: .75rem;
+}
+
+.knowledge-search-results p {
+    margin: .35rem 0 0;
+    color: var(--maliev-muted);
+    font-size: .8rem;
+    line-height: 1.5;
+}
+
+.knowledge-search-results a:hover,
+.knowledge-search-clear:hover,
+.knowledge-search-retry:hover {
+    background-color: #f0f1f3;
+}
+
+.knowledge-search input:focus-visible,
+.knowledge-search button:focus-visible,
+.knowledge-search-results a:focus-visible {
+    outline: 2px solid var(--maliev-blue);
+    outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        scroll-behavior: auto !important;
-        transition-duration: .01ms !important;
-        animation-duration: .01ms !important;
-        animation-iteration-count: 1 !important;
+    .docs-content .knowledge-directory-list li > a,
+    .knowledge-search-results a,
+    .docs-content .knowledge-document .docs-toc li > a { transition: none; }
+}
+
+/* Native contents remain available when scripting is unavailable. Only the enhanced
+   Knowledge drawer becomes modal; other workspace shells retain their rules. */
+@media (max-width: 71.99rem) {
+    .workspace-sidebar--knowledge:not([data-navigation-ready="true"]) {
+        position: static;
+        inset: auto;
+        width: 100%;
+        transform: none;
+        overflow: visible;
+        box-shadow: none;
+    }
+    .docs-shell:not(:has([data-navigation-ready="true"])) .workspace-drawer-toggle,
+    .workspace-sidebar--knowledge:not([data-navigation-ready="true"]) .workspace-drawer-close {
+        display: none;
     }
 }

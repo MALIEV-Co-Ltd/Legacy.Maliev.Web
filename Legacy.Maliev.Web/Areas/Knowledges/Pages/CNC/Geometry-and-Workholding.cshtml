@@ -1,0 +1,7 @@
+@page
+@inject IStringLocalizer<CncGeometryAndWorkholdingContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["Geometry, rigidity and workholding | MALIEV"];
+    ViewData["Description"] = MetadataLocalizer["Consider tool access and how the part is supported throughout the cut, not only the final shape. These design reviews connect thin features and deep pockets to fixturing, distortion and vibration."];
+}
+<component type="typeof(CncGeometryAndWorkholdingContent)" render-mode="Static" />

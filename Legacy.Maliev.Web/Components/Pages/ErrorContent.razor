@@ -37,9 +37,9 @@ else
             <section class="maliev-panel maliev-status" aria-labelledby="error-title">
                 <p class="maliev-eyebrow">@Localizer[Model.IsPreview ? "Error page preview" : "Application error"]</p>
                 <h1 id="error-title">@Localizer["Sorry. Something did not work properly."]</h1>
-                <p>@Localizer["Please include this incident ID when contacting support."]</p>
                 @if (Model.ShowIncidentId)
                 {
+                    <p>@Localizer["Please include this incident ID when contacting support."]</p>
                     <dl class="maliev-meta-list maliev-status__details">
                         <dt>@Localizer["Incident ID"]</dt>
                         <dd><code id="incident-id">@Model.IncidentId</code></dd>

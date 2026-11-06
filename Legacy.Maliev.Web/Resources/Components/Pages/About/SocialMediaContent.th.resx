@@ -13,4 +13,6 @@
   <data name="Manufacturing conversations and company updates" xml:space="preserve"><value>บทสนทนาด้านการผลิตและข่าวสารบริษัท</value></data>
   <data name="Company news and customer-facing updates" xml:space="preserve"><value>ข่าวบริษัทและประกาศสำหรับลูกค้า</value></data>
   <data name="Chat with our team through LINE Official Account" xml:space="preserve"><value>แชตกับทีมงานผ่าน LINE Official Account</value></data>
+  <data name="Message our team through WhatsApp" xml:space="preserve"><value>ส่งข้อความถึงทีมงานผ่าน WhatsApp</value></data>
+  <data name="Message our team through Facebook Messenger" xml:space="preserve"><value>ส่งข้อความถึงทีมงานผ่าน Facebook Messenger</value></data>
 </root>

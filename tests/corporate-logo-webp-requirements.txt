@@ -1,0 +1,3 @@
+# Test-only artifact proof; official PyPI CPython3.12 Linuxx86_64 wheel only.
+# https://pypi.org/project/pillow/13.0.0/#files
+pillow==13.0.0 --hash=sha256:42d63be3af4f9b951b199b0a9d23365d37ab14687e6d77b74940432c8515c4ca

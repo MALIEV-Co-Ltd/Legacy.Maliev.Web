@@ -15,7 +15,7 @@ public sealed class PublicContactChannelsParityTests
         Assert.Contains("https://wa.me/66898950690", networks, StringComparison.Ordinal);
         Assert.Contains("MessengerChat = Messenger", networks, StringComparison.Ordinal);
         Assert.Contains("SocialNetworks.WhatsApp", socialLinks, StringComparison.Ordinal);
-        Assert.Contains("aria-label=\"Contact MALIEV through WhatsApp\"", socialLinks, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"@Localizer[\"Contact MALIEV through WhatsApp\"]\"", socialLinks, StringComparison.Ordinal);
         Assert.Contains("data-maliev-contact-destination=\"whatsapp_business\"", socialLinks, StringComparison.Ordinal);
         Assert.Contains("href=\"/contact#contact-us\"", contact, StringComparison.Ordinal);
         Assert.Contains("class=\"contact-channel-actions\"", contact, StringComparison.Ordinal);
@@ -37,6 +37,12 @@ public sealed class PublicContactChannelsParityTests
 
         Assert.Contains(".contact-channel-actions a", css, StringComparison.Ordinal);
         Assert.Contains("min-height: 3.15rem", css, StringComparison.Ordinal);
+        Assert.Contains(".contact-line-card { display: grid; grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr); gap: 1.25rem; align-items: center; }", css, StringComparison.Ordinal);
+        Assert.Contains(".contact-line-card > div { display: flex; min-width: 0; flex-direction: column; justify-content: center; }", css, StringComparison.Ordinal);
+        Assert.Contains(".contact-channel-actions { display: grid; grid-template-columns: 1fr;", css, StringComparison.Ordinal);
+        Assert.Contains(".contact-channel-actions a { display: flex; min-width: 0; min-height: 3.15rem; flex-direction: row;", css, StringComparison.Ordinal);
+        Assert.Contains("@media (min-width: 48rem) and (max-width: 69.99rem)", css, StringComparison.Ordinal);
+        Assert.Contains(".contact-channel-actions a { min-height: 2.8rem; gap: .55rem;", css, StringComparison.Ordinal);
         Assert.Contains(".service-location-section .service-actions { display: grid; grid-template-columns: repeat(4", serviceCss, StringComparison.Ordinal);
         Assert.Contains("@media (prefers-reduced-motion: reduce)", css, StringComparison.Ordinal);
     }

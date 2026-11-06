@@ -47,10 +47,10 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<TestingW
             }.Contains(Path.GetFileName(path), StringComparer.Ordinal))
             .LegacyPagesAfterVerifyingDocuments()
             .ToArray();
-        Assert.Equal(50, routedPages.Length);
+        Assert.Equal(62, routedPages.Length);
         Assert.Contains(routedPages, path => Path.GetFileName(path) == "LineContactPage.razor");
         Assert.Equal(
-            ["AboutPage.razor", "AccessDeniedPage.razor", "AccountIndexPage.razor", "CareerDetailPage.razor", "CareerIndexPage.razor", "ChangeEmailConfirmationPage.razor", "CncMachiningPage.razor", "CncMachiningSpecificationPage.razor", "ContactPage.razor", "CustomManufacturingPage.razor", "EmailConfirmationPage.razor", "ErrorPage.razor", "FinishingAndColorPage.razor", "ForgotPasswordPage.razor", "GuidelinesPage.razor", "HomePage.razor", "InstantQuotationPage.razor", "KnowledgeIndexPage.razor", "LegalPage.razor", "LoginPage.razor", "LogoutPage.razor", "MemberAccountIndexPage.razor", "MemberAddressPage.razor", "MemberChangeEmailPage.razor", "MemberChangePasswordPage.razor", "MemberCreatePasswordPage.razor", "MemberOrderCreationPage.razor", "MemberOrderDetailPage.razor", "MemberOrderHistoryPage.razor", "MemberOrdersIndexPage.razor", "MemberOverviewPage.razor", "MemberProfilePage.razor", "MemberQuotationDetailPage.razor", "MemberQuotationsIndexPage.razor", "NoWeaponsPage.razor", "NonDisclosureAgreementPage.razor", "PrivacyPolicyPage.razor", "QuotationPage.razor", "ResetPasswordPage.razor", "ServicesPage.razor", "SignupPage.razor", "SocialMediaPage.razor", "SpecificationsIndexPage.razor", "TermsConditionsPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
+            ["AboutPage.razor", "AccessDeniedPage.razor", "AccountIndexPage.razor", "CareerDetailPage.razor", "CareerIndexPage.razor", "ChangeEmailConfirmationPage.razor", "CncCuttingToolsPage.razor", "CncFeedsAndSpeedsPage.razor", "CncGeometryAndWorkholdingPage.razor", "CncHolesAndTolerancesPage.razor", "CncMachiningPage.razor", "CncMachiningProcessesPage.razor", "CncMachiningSpecificationPage.razor", "ContactPage.razor", "CustomManufacturingPage.razor", "EmailConfirmationPage.razor", "ErrorPage.razor", "FinishingAndColorPage.razor", "FinishingHeatTreatmentPage.razor", "FinishingSurfaceFinishesPage.razor", "ForgotPasswordPage.razor", "GuidelinesPage.razor", "HomePage.razor", "InspectionMeasuringPartsPage.razor", "InstantQuotationPage.razor", "KnowledgeIndexPage.razor", "LegalPage.razor", "LoginPage.razor", "LogoutPage.razor", "ManufacturingProcessSelectionPage.razor", "MaterialsEngineeringPlasticsPage.razor", "MaterialsMetalsPage.razor", "MaterialsSelectionPage.razor", "MemberAccountIndexPage.razor", "MemberAddressPage.razor", "MemberChangeEmailPage.razor", "MemberChangePasswordPage.razor", "MemberCreatePasswordPage.razor", "MemberOrderCreationPage.razor", "MemberOrderDetailPage.razor", "MemberOrderHistoryPage.razor", "MemberOrdersIndexPage.razor", "MemberOverviewPage.razor", "MemberProfilePage.razor", "MemberQuotationDetailPage.razor", "MemberQuotationsIndexPage.razor", "NoWeaponsPage.razor", "NonDisclosureAgreementPage.razor", "PrivacyPolicyPage.razor", "QuotationPage.razor", "ResetPasswordPage.razor", "ServicesPage.razor", "SignupPage.razor", "SocialMediaPage.razor", "SpecificationsIndexPage.razor", "TermsConditionsPage.razor", "ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingSpecificationPage.razor", "ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningSpecificationPage.razor", "WorkflowPage.razor"],
             routedPages.Select(path => Path.GetFileName(path)!)
                 .Where(name => name != "LineContactPage.razor")
                 .Order(StringComparer.Ordinal)
@@ -172,6 +172,42 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<TestingW
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
         Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(false, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "th")]
+    public async Task ServicesRoute_PreservesFinderContactActionsAcrossRenderers(bool useBlazorRoute, string culture)
+    {
+        await using var application = factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:Services", useBlazorRoute.ToString()));
+        using var client = CreateClient(application);
+        using var response = await client.GetAsync($"/services?culture={culture}");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(useBlazorRoute, html.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var finder = Assert.Single(Regex.Matches(html,
+            "<main\\b(?=[^>]*\\sdata-service-finder(?=\\s|=|>))[^>]*>(?<body>[\\s\\S]*?)</main>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        var actions = Assert.Single(Regex.Matches(finder.Groups["body"].Value,
+            "<div class=\"service-finder-result-actions\">(?<body>[\\s\\S]*?)</div>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        var contact = Assert.Single(Regex.Matches(actions.Groups["body"].Value,
+            "<a class=\"service-finder-contact\" href=\"(?<href>[^\"]+)\">(?<copy>[\\s\\S]*?)</a>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Equal(new Uri(client.BaseAddress!, "/Contact"), new Uri(client.BaseAddress!, contact.Groups["href"].Value));
+        Assert.Equal(culture == "th" ? "อยากคุยกับเราโดยตรงไหม? ติดต่อ MALIEV" : "Prefer to talk to us directly? Contact MALIEV",
+            Regex.Replace(contact.Groups["copy"].Value, "<[^>]+>", string.Empty, RegexOptions.CultureInvariant).Trim());
+
+        var viewAll = Assert.Single(Regex.Matches(actions.Groups["body"].Value,
+            "<a class=\"service-finder-view-all\" href=\"(?<href>[^\"]+)\">(?<copy>[\\s\\S]*?)</a>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Equal(new Uri(client.BaseAddress!, "/services"), new Uri(client.BaseAddress!, viewAll.Groups["href"].Value));
+        Assert.Equal(culture == "th" ? "ดูบริการทั้งหมด" : "View all services",
+            Regex.Replace(viewAll.Groups["copy"].Value, "<[^>]+>", string.Empty, RegexOptions.CultureInvariant).Trim());
     }
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) =>

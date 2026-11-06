@@ -28,7 +28,10 @@ internal sealed record InstantQuotationPhysicalAnalysisBinding(
     BuildPreference BuildPreference,
     int Quantity,
     string ProfileVersion,
-    string? ConfiguredMaterialKey = null);
+    string? ConfiguredMaterialKey = null)
+{
+    internal InstantQuotationGltfUnitPolicy GltfUnitPolicy { get; init; } = InstantQuotationGltfUnitPolicy.Legacy;
+}
 
 /// <summary>Physical evidence only. This result does not authorize money or a quote ticket.</summary>
 internal sealed record InstantQuotationBoundPhysicalAnalysisResult(
@@ -102,7 +105,7 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
         InstantQuotationAdmittedMeshResult admitted = await admittedMeshService.ReadAsync(
             binding.SessionId, binding.OwnerIdentity, binding.PartId, binding.FileId,
             binding.UploadSha256, cancellationToken);
-        if (!admitted.IsReady)
+        if (!admitted.IsReady || admitted.GltfUnitPolicy != binding.GltfUnitPolicy)
         {
             return InstantQuotationBoundPhysicalAnalysisResult.Unavailable(
                 admitted.Failure == InstantQuotationAdmittedMeshFailure.InvalidMesh
@@ -119,7 +122,7 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
         SimulationResult physical;
         try
         {
-            physical = await Task.Run(() => FdmSimulationEngine.Estimate(new SimulationRequest(
+            physical = await Task.Run(() => FdmSimulationEngine.EstimateRecoverable(new SimulationRequest(
                 admitted.Mesh!, new Pose("source", Matrix4x4.Identity), profile!, binding.Quantity,
                 new AnalysisBudget(MaximumTriangles, MaximumLayers, MaximumPathSegments, cancellationToken))),
                 cancellationToken);
@@ -131,6 +134,7 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
             {
                 "geometry_requires_review" => InstantQuotationBoundPhysicalAnalysisFailure.GeometryReview,
                 "triangle_budget_exceeded" or "layer_budget_exceeded" or "path_segment_budget_exceeded"
+                    or "boolean_work_budget_exceeded" or "geometry_complexity_exceeded"
                     => InstantQuotationBoundPhysicalAnalysisFailure.ComplexityExceeded,
                 _ => InstantQuotationBoundPhysicalAnalysisFailure.SimulationUnavailable,
             });
@@ -220,6 +224,8 @@ internal sealed class InstantQuotationBoundPhysicalAnalysisService(
         InstantQuotationPart part = matches[0];
         InstantQuotationPhysicalAnalysisUpload? upload = part.PhysicalAnalysisUpload;
         return upload is not null
+            && upload.GltfUnitPolicy?.IsValidForFile(upload.FileName, newUpload: false) is true
+            && binding.GltfUnitPolicy == upload.GltfUnitPolicy
             && binding.FileId != Guid.Empty
             && binding.UploadSha256 is { Length: 64 }
             && binding.Quantity is >= 1 and <= PricingCatalog.MaximumAdditiveQuantity

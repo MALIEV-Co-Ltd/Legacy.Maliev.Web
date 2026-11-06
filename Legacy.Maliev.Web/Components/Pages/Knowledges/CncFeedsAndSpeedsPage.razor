@@ -1,0 +1,22 @@
+@page "/knowledges/cnc/feeds-and-speeds"
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IStringLocalizer<CncFeedsAndSpeedsContent> ContentLocalizer
+@inject IStringLocalizer<KnowledgeIndexPage> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = ContentLocalizer["CNC feeds and speeds: calculate, then verify"].Value;
+    var description = ContentLocalizer["Connect cutting speed, spindle speed and feed with the actual tool, material, engagement and machine limits. Worked metric examples show how to keep units and assumptions consistent."].Value;
+    var documentLinks = PublicDocumentLinksDisplayModel.Create(context);
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="documentLinks" />
+</HeadContent>
+<KnowledgeShell CurrentPage="/CNC/Feeds-and-Speeds" RouteOwner="blazor-static-ssr">
+    <CncFeedsAndSpeedsContent RouteOwner="blazor-static-ssr" />
+</KnowledgeShell>
