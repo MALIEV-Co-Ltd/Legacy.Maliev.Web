@@ -238,8 +238,7 @@ public sealed class ThreeDimensionalPrinting : PageModel
                 StoreRejected(InstantQuotationProblemCategory.DependencyUnavailable);
                 return TerminalOrRedirect(wantsJson);
             }
-            Company = NormalizeOptionalCustomerText(Company);
-            TaxNumber = NormalizeOptionalCustomerText(TaxNumber);
+            NormalizeOptionalCustomerFields();
             prepared = await profilePreparation.PrepareAsync(trustedSession!, trustedOwner, PostedProfile(), Description, cancellationToken);
             if (prepared.Customer is null)
             {
@@ -498,13 +497,20 @@ public sealed class ThreeDimensionalPrinting : PageModel
     private static string? NormalizeOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    /// <summary>Normalizes optional company and tax placeholders before persistence.</summary>
     internal void NormalizeOptionalCustomerFields()
     {
         Company = NormalizeOptionalCustomerText(Company);
         TaxNumber = NormalizeOptionalCustomerText(TaxNumber);
         TaxBranchCode = NormalizeOptionalCustomerText(TaxBranchCode);
+        if (TaxNumber is null)
+        {
+            TaxBranch = string.Empty;
+            TaxBranchCode = null;
+        }
         RevalidateOptionalCustomerField(nameof(Company));
         RevalidateOptionalCustomerField(nameof(TaxNumber));
+        RevalidateOptionalCustomerField(nameof(TaxBranch));
         RevalidateOptionalCustomerField(nameof(TaxBranchCode));
     }
 
