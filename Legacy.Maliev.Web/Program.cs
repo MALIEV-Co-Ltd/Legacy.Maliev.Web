@@ -31,7 +31,7 @@ await Program.RunHostAsync(async () =>
         startupHostConfiguration.AddEnvironmentVariables(prefix: "DOTNET_");
         Program.ResolveStartupEnvironment(startupHostConfiguration, args, ref preserveTestingException);
     }
-    var builder = WebApplication.CreateBuilder(args);
+    var builder = Program.CreateApplicationBuilder(args);
     preserveTestingException = builder.Environment.IsEnvironment("Testing");
     using var testingWebRoot = TestingWebRootLease.Create(builder.Environment);
     if (builder.Environment.IsEnvironment("Testing"))
@@ -751,5 +751,54 @@ public partial class Program
             }
             PrivateStartupBoundary.ReportFailure(exception, privateOutput: privateOutput);
         }
+    }
+
+    internal static WebApplicationBuilder CreateApplicationBuilder(string[] args)
+    {
+        using var hostConfiguration = new ConfigurationManager();
+        hostConfiguration.AddEnvironmentVariables("ASPNETCORE_");
+        hostConfiguration.AddEnvironmentVariables("DOTNET_");
+        hostConfiguration.AddCommandLine(args);
+        return WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            Args = args,
+            ContentRootPath = ResolveContentRoot(hostConfiguration, Directory.GetCurrentDirectory),
+        });
+    }
+
+    internal static string? ResolveContentRoot(IConfiguration hostConfiguration, Func<string> getCurrentDirectory)
+    {
+        if (!string.Equals(hostConfiguration[HostDefaults.EnvironmentKey], Environments.Development,
+            StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var configuredRoot = hostConfiguration[HostDefaults.ContentRootKey];
+        if (configuredRoot is null)
+        {
+            var currentDirectory = getCurrentDirectory();
+            configuredRoot = OperatingSystem.IsWindows()
+                && string.Equals(currentDirectory, Environment.SystemDirectory, StringComparison.OrdinalIgnoreCase)
+                    ? AppContext.BaseDirectory
+                    : currentDirectory;
+        }
+
+        // Match the framework's relative/empty-root base; override only the Development child fallback.
+        var contentRoot = string.IsNullOrEmpty(configuredRoot)
+            ? AppContext.BaseDirectory
+            : Path.GetFullPath(Path.IsPathRooted(configuredRoot)
+                ? configuredRoot
+                : Path.Combine(AppContext.BaseDirectory, configuredRoot));
+        if (File.Exists(Path.Combine(contentRoot, "appsettings.Development.json")))
+        {
+            return null;
+        }
+
+        var webProjectRoot = Path.Combine(contentRoot, "Legacy.Maliev.Web");
+        return File.Exists(Path.Combine(webProjectRoot, "appsettings.Development.json"))
+            && Directory.Exists(Path.Combine(webProjectRoot, "wwwroot"))
+                ? webProjectRoot
+                : null;
     }
 }
