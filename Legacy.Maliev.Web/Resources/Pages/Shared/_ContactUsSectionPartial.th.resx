@@ -123,4 +123,10 @@
   <data name="If you have any questions regarding our services. You can reach us easily using several ways listed here." xml:space="preserve">
     <value>ถ้าคุณมีคำถามหรือข้อสงสัยเกี่ยวกับบริการของเรา สามารถติดต่อเราที่ช่องทางด้านล่างนี้</value>
   </data>
+  <data name="Contact MALIEV on WhatsApp" xml:space="preserve">
+    <value>ติดต่อ MALIEV ผ่าน WhatsApp</value>
+  </data>
+  <data name="WhatsApp" xml:space="preserve">
+    <value>WhatsApp</value>
+  </data>
 </root>

@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -74,6 +75,12 @@ public sealed class ScanningWorkflowSourceCommitHttpTests(TestingWebApplicationF
         Assert.Equal(24, images.Length);
         Assert.Equal(images.Length, images.Distinct(StringComparer.Ordinal).Count());
         Assert.DoesNotContain("blazor.web.js", html, StringComparison.OrdinalIgnoreCase);
+
+        var contentRoot = configured.Services.GetRequiredService<IWebHostEnvironment>().ContentRootPath;
+        var styles = File.ReadAllText(Path.Combine(contentRoot, "wwwroot", "src", "app", "css", "service-pages.css"));
+        Assert.Contains(".service-card h3 { margin: 1rem 0 .45rem; color: var(--service-ink);", styles, StringComparison.Ordinal);
+        Assert.Contains("aspect-ratio: 1 / 1", styles, StringComparison.Ordinal);
+        Assert.Contains("box-sizing: border-box", styles, StringComparison.Ordinal);
     }
 
     [Theory]

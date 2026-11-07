@@ -22,7 +22,8 @@ public sealed class AdditivePhysicalFailureMeaningContractTests
     {
         var bytes = input switch
         {
-            "open" => Box(8, omitLastFace: true),
+            // Retained row label: a single sheet has no recoverable solid, as in the source/browser control.
+            "open" => IrrecoverableSheet(),
             "layers" => Box(1000), // 1000mm / qualified PLA layer height exceeds the fixed 2000-layer budget.
             _ => Encoding.ASCII.GetBytes("solid incomplete\nfacet normal 0 0 1\n"),
         };
@@ -36,6 +37,29 @@ public sealed class AdditivePhysicalFailureMeaningContractTests
         // Fixed semantic contract over an actual result, not source text or a missing symbol.
         // Existing enums currently compile; runtime approval may add these precise categories.
         Assert.Equal(expected, result.Failure.ToString());
+        Assert.Equal(1, fixture.Reader.Reads);
+        Assert.Equal((Session, Owner, PartId), fixture.Reader.LastRequest);
+        Assert.Null(fixture.Store.State.QuoteAuthorization);
+        Assert.Equal(0, fixture.Store.Writes);
+    }
+
+    /// <summary>Retains the former open-box input as a flagged recovery control without publishing quote authority.</summary>
+    [Fact]
+    public async Task RecoverableOpenBoxRetainsBoundPhysicalEvidenceAndReconstructionProvenance()
+    {
+        var fixture = Create(Box(8, omitLastFace: true));
+
+        var result = await fixture.Service.AnalyzeAsync(fixture.Binding, default);
+
+        Assert.True(result.IsReady);
+        Assert.Equal(fixture.Binding, result.Binding);
+        var physical = Assert.IsType<Legacy.Maliev.Web.Application.Pricing.Simulation.SimulationResult>(result.Physical);
+        var reconstruction = Assert.IsType<Legacy.Maliev.Web.Application.Pricing.Simulation.VoxelReconstructionInfo>(
+            physical.GeometryReconstruction);
+        Assert.Equal("voxel-majority-v1", reconstruction.Method);
+        Assert.InRange(reconstruction.VoxelSizeMm, 0.2, 0.5);
+        Assert.True(physical.TotalDepositedMm3 > 0);
+        Assert.True(physical.Motion.TotalSeconds > 0);
         Assert.Equal(1, fixture.Reader.Reads);
         Assert.Equal((Session, Owner, PartId), fixture.Reader.LastRequest);
         Assert.Null(fixture.Store.State.QuoteAuthorization);
@@ -102,6 +126,13 @@ public sealed class AdditivePhysicalFailureMeaningContractTests
                 new InstantQuotationAdmittedMeshService(reader), catalog),
             new InstantQuotationPhysicalAnalysisBinding(Session, Owner, PartId, FileId, digest,
                 "PLA", BuildPreference.Standard, 1, catalog.ProfileVersion), store, reader);
+    }
+
+    private static byte[] IrrecoverableSheet()
+    {
+        byte[] sheet = Box(8)[..134];
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32LittleEndian(sheet.AsSpan(80, 4), 1);
+        return sheet;
     }
 
     private static byte[] Box(float height, bool omitLastFace = false)

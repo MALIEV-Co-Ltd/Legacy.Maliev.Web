@@ -41,6 +41,9 @@
         }
         else
         {
+            <div class="maliev-form-field maliev-form-field--full">
+                <img src="/src/images/box-dimensions-annotation.webp" title="box dimension annotation" alt="box dimension annotation" class="w-75 d-block mx-auto" loading="lazy" decoding="async" />
+            </div>
             <fieldset class="maliev-form-field"><legend>@Localizer["Measurement system"]</legend><label><input type="radio" name="IsMetric" value="true" checked="@Model.IsMetric" /> @Localizer["Metric (mm)"]</label><label><input type="radio" name="IsMetric" value="false" checked="@(!Model.IsMetric)" /> @Localizer["Imperial (in)"]</label></fieldset>
             <div class="maliev-form-field"><label for="member-order-width">@Localizer["Width"]</label><input id="member-order-width" type="number" name="Width" value="@Model.Width" step="any" required /></div>
             <div class="maliev-form-field"><label for="member-order-length">@Localizer["Length"]</label><input id="member-order-length" type="number" name="Length" value="@Model.Length" step="any" required /></div>

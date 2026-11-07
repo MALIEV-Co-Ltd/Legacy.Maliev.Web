@@ -24,10 +24,23 @@ function Get-ExpectedPublicSearchPaths {
         '/knowledges/specifications/cnc-machining',
         '/knowledges/specifications/3d-printing',
         '/knowledges/specifications/3d-scanning',
+        '/knowledges/manufacturing/process-selection',
+        '/knowledges/cnc/feeds-and-speeds',
+        '/knowledges/cnc/cutting-tools',
+        '/knowledges/cnc/geometry-and-workholding',
+        '/knowledges/cnc/holes-and-tolerances',
+        '/knowledges/cnc/machining-processes',
+        '/knowledges/materials/selection',
+        '/knowledges/materials/metals',
+        '/knowledges/materials/engineering-plastics',
+        '/knowledges/finishing/surface-finishes',
+        '/knowledges/finishing/heat-treatment',
+        '/knowledges/inspection/measuring-parts',
         '/legal',
         '/legal/privacypolicy',
         '/legal/termsconditions',
-        '/legal/nondisclosureagreement'
+        '/legal/nondisclosureagreement',
+        '/no-weapons'
     )
 }
 

@@ -30,6 +30,8 @@ public sealed partial class LowVolumeInjectionMoldingParityTests : IClassFixture
         Assert.Contains("id=\"injection-volume-title\"", source, StringComparison.Ordinal);
         Assert.Contains("id=\"injection-faq\"", source, StringComparison.Ordinal);
         Assert.Contains("Lower tooling cost while you validate the part", source, StringComparison.Ordinal);
+        Assert.Contains("2,500 Baht", source, StringComparison.Ordinal);
+        Assert.Contains("100,000 Baht", source, StringComparison.Ordinal);
         Assert.Contains("Use the service for up to 1,000 parts; own the machine for larger runs", source, StringComparison.Ordinal);
         Assert.Contains("Manufacturer guides cite melt settings around 205–220 °C", source, StringComparison.Ordinal);
         Assert.Contains("hazardous formaldehyde-containing fumes", source, StringComparison.Ordinal);
@@ -61,11 +63,42 @@ public sealed partial class LowVolumeInjectionMoldingParityTests : IClassFixture
             "LowVolumeInjectionMoldingContent.razor"));
         var styles = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "css", "service-pages.css"));
 
-        Assert.Contains("service-page-toc", component, StringComparison.Ordinal);
+        Assert.Contains("<ServicePageToc />", component, StringComparison.Ordinal);
+        Assert.Contains("Low-Volume Injection Molding for Up to 1,000 Parts", component, StringComparison.Ordinal);
+        Assert.Contains("รับฉีดพลาสติกจำนวนน้อยไม่เกิน 1,000 ชิ้น", component, StringComparison.Ordinal);
+        Assert.Contains("Shot weights up to 50 g", component, StringComparison.Ordinal);
+        Assert.Contains("Plastics melting at no more than 350 °C", component, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://shop.maliev.com\"", component, StringComparison.Ordinal);
+        Assert.Contains("href=\"/Quotation?item=low-volume-injection-molding\"", component, StringComparison.Ordinal);
+        Assert.Contains("<ServiceLocation />", component, StringComparison.Ordinal);
+        Assert.Contains("PP (Polypropylene)", component, StringComparison.Ordinal);
+        Assert.Contains("PE (Polyethylene)", component, StringComparison.Ordinal);
+        Assert.Contains("PS / HIPS", component, StringComparison.Ordinal);
+        Assert.Contains("ABS", component, StringComparison.Ordinal);
+        Assert.Contains("POM is excluded from this service", component, StringComparison.Ordinal);
+        Assert.Contains("We can make a mold for the job", component, StringComparison.Ordinal);
+        Assert.Contains("five parts carry more setup and mold cost per part than 1,000 parts", component, StringComparison.Ordinal);
+        Assert.Contains("service-material-grid", component, StringComparison.Ordinal);
+        Assert.Contains("service-note", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("ภาพเรนเดอร์สินค้าจริงของเครื่องระบบลมตามรุ่นที่ MALIEV อ้างอิง", component, StringComparison.Ordinal);
+        Assert.DoesNotContain("injection-service-hero-wide.png", component, StringComparison.Ordinal);
+        var fitIndex = component.IndexOf("id=\"injection-fit\"", StringComparison.Ordinal);
+        var proofIndex = component.IndexOf("id=\"injection-part-proof\"", StringComparison.Ordinal);
+        var materialIndex = component.IndexOf("id=\"injection-material-title\"", StringComparison.Ordinal);
+        Assert.True(fitIndex >= 0);
+        Assert.True(proofIndex > fitIndex);
+        Assert.True(materialIndex > proofIndex);
+        Assert.Contains("service-part-bento-card--guidance", component, StringComparison.Ordinal);
+        Assert.Contains("service-part-bento-card--cta", component, StringComparison.Ordinal);
         Assert.Contains("service-pricing-section", component, StringComparison.Ordinal);
         Assert.Contains("role=\"note\"", component, StringComparison.Ordinal);
         Assert.Contains("purge/shutdown procedures", component, StringComparison.Ordinal);
         Assert.Contains("local exhaust ventilation", component, StringComparison.Ordinal);
+        Assert.Contains("grade-specific processing window", component, StringComparison.Ordinal);
+        Assert.Contains("230 °C", component, StringComparison.Ordinal);
+        Assert.Contains("excessive shear", component, StringComparison.Ordinal);
+        Assert.Contains("long residence time", component, StringComparison.Ordinal);
+        Assert.Contains("PVC", component, StringComparison.Ordinal);
         Assert.Contains("decoding=\"async\"", component, StringComparison.Ordinal);
         Assert.Matches(
             "@media \\(max-width: 47\\.99rem\\) \\{[\\s\\S]*?#injection-part-proof \\.service-part-bento \\{ grid-template-columns: 1fr; \\}[\\s\\S]*?#injection-part-proof \\.service-part-bento-card--feature, #injection-part-proof \\.service-part-bento-card--process, #injection-part-proof \\.service-part-bento-card--guidance, #injection-part-proof \\.service-part-bento-card--cta \\{ grid-column: auto; min-height: 0; \\}",
@@ -78,6 +111,9 @@ public sealed partial class LowVolumeInjectionMoldingParityTests : IClassFixture
             "wwwroot/src/images/services/injection-molding/part-bento-pp-source-derived-640.webp",
             "wwwroot/src/images/services/injection-molding/part-bento-pp-source-derived-1024.webp",
             "wwwroot/src/images/services/injection-molding/part-bento-pp-source-derived.webp",
+            "wwwroot/src/images/services/injection-molding/pimm-50g-hero.webp",
+            "wwwroot/src/images/services/injection-molding/pimm-50g-square.webp",
+            "wwwroot/src/images/services/injection-molding/pimm-50g-cover.webp",
             "wwwroot/src/images/services/injection-molding/pimm-50g-controller.webp",
             "wwwroot/src/images/services/injection-molding/pimm-50g-nozzle.webp",
             "wwwroot/src/images/services/injection-molding/pimm-sample-mold.webp"

@@ -66,22 +66,34 @@ public sealed partial class KnowledgeThreeDimensionalScanningStaticSsrRouteTests
                 "CareerDetailPage.razor",
                 "CareerIndexPage.razor",
                 "ChangeEmailConfirmationPage.razor",
+                "CncCuttingToolsPage.razor",
+                "CncFeedsAndSpeedsPage.razor",
+                "CncGeometryAndWorkholdingPage.razor",
+                "CncHolesAndTolerancesPage.razor",
                 "CncMachiningPage.razor",
+                "CncMachiningProcessesPage.razor",
                 "CncMachiningSpecificationPage.razor",
                 "ContactPage.razor",
                 "CustomManufacturingPage.razor",
                 "EmailConfirmationPage.razor",
                 "ErrorPage.razor",
                 "FinishingAndColorPage.razor",
+                "FinishingHeatTreatmentPage.razor",
+                "FinishingSurfaceFinishesPage.razor",
                 "ForgotPasswordPage.razor",
                 "GuidelinesPage.razor",
                 "HomePage.razor",
+                "InspectionMeasuringPartsPage.razor",
                 "InstantQuotationPage.razor",
                 "KnowledgeIndexPage.razor",
                 "LegalPage.razor",
                 "LineContactPage.razor",
                 "LoginPage.razor",
                 "LogoutPage.razor",
+                "ManufacturingProcessSelectionPage.razor",
+                "MaterialsEngineeringPlasticsPage.razor",
+                "MaterialsMetalsPage.razor",
+                "MaterialsSelectionPage.razor",
                 "MemberAccountIndexPage.razor",
                 "MemberAddressPage.razor",
                 "MemberChangeEmailPage.razor",
@@ -120,33 +132,33 @@ public sealed partial class KnowledgeThreeDimensionalScanningStaticSsrRouteTests
         "3D scanning specifications | MALIEV",
         "Bring the best-condition part available and tell us whether you need raw scan data, reverse-engineered CAD, or a deviation report.",
         "Prepare a part for 3D scanning",
-        "3D scanning preparation",
-        "Clean and identify the part",
-        "Remove loose dirt and temporary items. Mark features that must remain untouched and disclose damaged or missing areas.",
-        "Explain the deliverable",
-        "Raw scans preserve measured surface data; reverse engineering creates editable CAD; deviation analysis compares a scan with reference geometry.",
-        "Plan access and surface treatment",
-        "Deep internal features, occluded surfaces, reflective or transparent materials may need repositioning, temporary scanning spray, or another measurement method.",
+        "Start with the decision the scan must support: visual reference, a replacement part, editable CAD, or comparison against a reference. These goals require different preparation and deliverables. Define the output and critical features before sending the physical part.",
+        "Choose the deliverable explicitly",
+        "A triangulated surface represents captured shape. Agree the file format, units, coverage, and whether texture or color is needed. A mesh is not automatically a feature-based CAD model.",
+        "Do not confuse detail with measurement accuracy",
+        "A scanner’s stated resolution may describe resolvable surface detail or point spacing; check the supplier’s definition. Accuracy concerns closeness to the true value of the measured quantity. Repeatability compares measurements over a short period with the same procedure, operators, system, location and operating conditions. A dense mesh or a smooth screen image does not establish that a critical dimension is within tolerance.",
+        "Plan surface access and treatment",
+        "Provide photographs before shipping, including the underside, recesses, and important interfaces. Optical scanning requires a usable view of the surface. Deep bores, enclosed cavities, undercuts, and areas hidden by an assembly may not be captured completely; ask whether disassembly or another measurement method is needed.",
         "View 3D scanning service")]
     [InlineData(
         "th",
         "ข้อแนะนำงานสแกน 3 มิติ | MALIEV",
         "นำชิ้นงานสภาพดีที่สุดมา และระบุว่าต้องการไฟล์สแกนดิบ CAD reverse engineering หรือรายงาน deviation",
         "เตรียมชิ้นงานสำหรับสแกน 3 มิติ",
-        "การเตรียมงานสแกน 3 มิติ",
-        "ทำความสะอาดและระบุชิ้นงาน",
-        "กำจัดฝุ่นและสิ่งของชั่วคราว ระบุจุดที่ห้ามแก้ไขและส่วนที่เสียหายหรือขาด",
-        "ระบุไฟล์ส่งมอบ",
-        "ไฟล์สแกนดิบเก็บข้อมูลผิวที่วัดได้ reverse engineering สร้าง CAD แก้ไขได้ และ deviation analysis เปรียบเทียบสแกนกับแบบอ้างอิง",
+        "เริ่มจากสิ่งที่ต้องการใช้ผลสแกนตัดสินใจ เช่น ข้อมูลอ้างอิงรูปลักษณ์ ชิ้นส่วนทดแทน CAD ที่แก้ไขได้ หรือการเปรียบเทียบกับแบบอ้างอิง แต่ละเป้าหมายต้องเตรียมงานและส่งมอบต่างกัน ควรระบุผลลัพธ์และจุดสำคัญก่อนส่งชิ้นงานจริง",
+        "ระบุสิ่งที่ต้องส่งมอบให้ชัดเจน",
+        "ผิวสามเหลี่ยมแสดงรูปทรงที่เก็บข้อมูลได้ ตกลงรูปแบบไฟล์ หน่วย พื้นที่ครอบคลุม และความต้องการเท็กซ์เจอร์หรือสี เมชไม่ได้เป็นโมเดล CAD ที่มีฟีเจอร์โดยอัตโนมัติ",
+        "อย่าสับสนรายละเอียดกับความแม่นยำในการวัด",
+        "ความละเอียดที่ผู้ผลิตสแกนเนอร์ระบุอาจหมายถึงรายละเอียดผิวที่แยกแยะได้หรือระยะห่างระหว่างจุด ควรตรวจสอบนิยามของผู้ผลิต ความถูกต้องเกี่ยวข้องกับความใกล้เคียงค่าจริงของปริมาณที่วัด ความสามารถทำซ้ำเปรียบเทียบผลในช่วงเวลาสั้นโดยใช้วิธี ผู้ปฏิบัติงาน ระบบ สถานที่ และสภาวะการทำงานเดิม เมชที่หนาแน่นหรือภาพบนจอที่เรียบไม่ได้ยืนยันว่าขนาดสำคัญอยู่ในค่าความคลาดเคลื่อนที่กำหนด",
         "วางแผนการเข้าถึงและเตรียมผิว",
-        "ร่องลึก ผิวที่บัง วัสดุสะท้อนหรือโปร่งใส อาจต้องจัดท่า ใช้สเปรย์ชั่วคราว หรือใช้วิธีวัดอื่น",
+        "ส่งภาพถ่ายก่อนจัดส่ง รวมด้านใต้ ร่อง และจุดประกอบสำคัญ การสแกนเชิงแสงต้องมองเห็นผิวในสภาพที่เก็บข้อมูลได้ รูลึก โพรงปิด ส่วนเว้า และผิวที่ถูกชุดประกอบบังอาจเก็บข้อมูลได้ไม่ครบ ควรสอบถามว่าต้องถอดประกอบหรือใช้วิธีวัดอื่นหรือไม่",
         "ดูบริการสแกน 3 มิติ")]
     public async Task ThreeDimensionalScanningSpecificationRoute_RendersCompleteLocalizedAccessibleDocument(
         string culture,
         string title,
         string description,
         string heading,
-        string eyebrow,
+        string lead,
         string firstStep,
         string firstStepDescription,
         string secondStep,
@@ -167,7 +179,7 @@ public sealed partial class KnowledgeThreeDimensionalScanningStaticSsrRouteTests
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
-        Assert.Contains($">{eyebrow}<", source, StringComparison.Ordinal);
+        Assert.Contains($">{lead}<", source, StringComparison.Ordinal);
         Assert.Contains($">{firstStep}<", source, StringComparison.Ordinal);
         Assert.Contains($">{firstStepDescription}<", source, StringComparison.Ordinal);
         Assert.Contains($">{secondStep}<", source, StringComparison.Ordinal);
@@ -175,7 +187,7 @@ public sealed partial class KnowledgeThreeDimensionalScanningStaticSsrRouteTests
         Assert.Contains($">{thirdStep}<", source, StringComparison.Ordinal);
         Assert.Contains($">{thirdStepDescription}<", source, StringComparison.Ordinal);
         Assert.Contains($">{serviceLink}<", source, StringComparison.Ordinal);
-        Assert.Equal(3, Regex.Matches(source, "<section><span>[123]</span>", RegexOptions.CultureInvariant).Count);
+        Assert.Equal(4, Regex.Matches(source, "<section\\b[^>]*class=\"docs-section\"", RegexOptions.CultureInvariant).Count);
         Assert.Contains("href=\"/services/3d-scanning\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
@@ -194,13 +206,15 @@ public sealed partial class KnowledgeThreeDimensionalScanningStaticSsrRouteTests
         Assert.Contains("aria-current=\"page\"", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-open", source, StringComparison.Ordinal);
         Assert.Contains("data-workspace-close", source, StringComparison.Ordinal);
-        Assert.Contains("event.key === 'Escape'", source, StringComparison.Ordinal);
-        Assert.Contains("openButton.focus()", source, StringComparison.Ordinal);
-        Assert.Contains("href=\"/knowledges/guidelines\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/knowledges/workflow\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/knowledges/specifications/cnc-machining\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/knowledges/specifications/3d-printing\"", source, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("href=\"/knowledges/specifications/3d-scanning\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
+        Assert.Contains("event.key === 'Escape'", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
+        Assert.Contains("route-knowledge.js", source, StringComparison.Ordinal);
+        Assert.Contains("openButton.focus()", File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "knowledge-navigation.js")), StringComparison.Ordinal);
+        Assert.Contains($"href=\"/knowledges/guidelines?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/workflow?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/specifications/cnc-machining?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/specifications/3d-printing?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"href=\"/knowledges/specifications/3d-scanning?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("tracking=excluded", ExtractDocumentLinks(source), StringComparison.Ordinal);
         Assert.DoesNotContain("jquery", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("new WOW", source, StringComparison.Ordinal);

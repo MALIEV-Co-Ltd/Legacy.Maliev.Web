@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "source_candidate": "9093de0f5a0a45239100eb4c07ae42106732a873",
+  "source_component": {
+    "path": "Legacy.Maliev.Web/Components/Pages/About/CorporateCustomers.razor",
+    "git_blob": "6c3f49a3c232f2f9b1a32fead5675420ebc4ae59"
+  },
+  "asset_count": 18,
+  "assets": [
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/ptt.png",
+      "source_git_blob": "a2a15c062fd2570efff342b5003a11e4af2d3841",
+      "source_bytes": 22718,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/ptt.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mitsubishi-materials.png",
+      "source_git_blob": "70266937619a2e576a31788d07de41987746012f",
+      "source_bytes": 8051,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mitsubishi-materials.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/fabrinet.png",
+      "source_git_blob": "1aed2161ba8f692ef2a523adb12f96b71e84fc69",
+      "source_bytes": 8209,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/fabrinet.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/minor-food.png",
+      "source_git_blob": "69544724a554792184b5f39d4835a6e702d4ce0c",
+      "source_bytes": 39709,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/minor-food.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/kohler.png",
+      "source_git_blob": "1d6dd48ac11b710ec0f219bb2c87089a69987f03",
+      "source_bytes": 2539,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/kohler.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/olympus.png",
+      "source_git_blob": "7e58f285ae59caac385d907beff3bfa4e0f61f58",
+      "source_bytes": 1925,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/olympus.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/kobelco.gif",
+      "source_git_blob": "9bc957bdd8b1d79ad91487b560f76f18c2ebd85a",
+      "source_bytes": 2802,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/kobelco.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mektec.png",
+      "source_git_blob": "4d6ddca173368afa88b563226c43c4939c4fff7d",
+      "source_bytes": 7447,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mektec.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-asahi-denso-en.png",
+      "source_git_blob": "e4110763d9a1e99b7d0cc58c4d11fd89c4646f78",
+      "source_bytes": 3403,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-asahi-denso-en.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/yg-1-official-mark.png",
+      "source_git_blob": "2f84b3389a5333b2227e655b24ff4f5e52bd074f",
+      "source_bytes": 7399,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/yg-1-official-mark.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/sp-syndicate.jpg",
+      "source_git_blob": "94019818b17505ddfa0b54c58d0ea34d4b7e2fbf",
+      "source_bytes": 3415,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/sp-syndicate.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/singha-kameda-current.png",
+      "source_git_blob": "4b72a122cab586f746c110ebad99f8d24acc26de",
+      "source_bytes": 38923,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/singha-kameda-current.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mfec.png",
+      "source_git_blob": "531c23eb7188f44b6c0ce94da12207c271f3bd0a",
+      "source_bytes": 22572,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mfec.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-coconut.jpg",
+      "source_git_blob": "221d22c268dd45d3841b81d6b546d28e824aa802",
+      "source_bytes": 35071,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-coconut.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/khon-kaen-sugar.png",
+      "source_git_blob": "63e658b3739da162d41c61ff16ba7f8a5b3aea65",
+      "source_bytes": 4559,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/khon-kaen-sugar.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/crown-seal.png",
+      "source_git_blob": "bd72b4b00d8d65848241919f517eb692eaa886f4",
+      "source_bytes": 9426,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/crown-seal.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-optical.png",
+      "source_git_blob": "86b20b55e4533cf5f3a1ed9ee29dbbc414711d30",
+      "source_bytes": 6809,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-optical.webp"
+    },
+    {
+      "source_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/tpi-polene-power-emblem.png",
+      "source_git_blob": "6d25ffb99bd420f594f5b091b9817e0789a7f879",
+      "source_bytes": 6041,
+      "derived_path": "Legacy.Maliev.Web/wwwroot/src/images/customers/tpi-polene-power-emblem.webp"
+    }
+  ]
+}

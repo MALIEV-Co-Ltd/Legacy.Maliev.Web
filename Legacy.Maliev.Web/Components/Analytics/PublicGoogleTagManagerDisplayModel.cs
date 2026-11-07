@@ -5,11 +5,26 @@ using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
 namespace Legacy.Maliev.Web.Components.Analytics;
 
+/// <summary>
+/// Carries consent state and one-time queued event scripts for the public analytics component.
+/// </summary>
+/// <param name="ConsentState">The granted or denied tracking consent state reported to the browser.</param>
+/// <param name="CanTrack">Whether the request's consent feature currently permits tracking.</param>
+/// <param name="QueuedEventScript">Scripts for validated queued events whose removal was persisted.</param>
 public sealed record PublicGoogleTagManagerDisplayModel(
     string ConsentState,
     bool CanTrack,
     string QueuedEventScript)
 {
+    /// <summary>Gets safely serialized server-owned identity only for a consented authenticated request.</summary>
+    public string UserIdConfigurationJson { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Consumes queued analytics events and resolves tracking consent for this request.
+    /// </summary>
+    /// <param name="context">The current request containing consent features and temporary event data.</param>
+    /// <param name="tempDataDictionaryFactory">The factory used to load and persist consumption of queued events.</param>
+    /// <returns>The consent display state and event scripts; scripts are empty if consumption could not be persisted.</returns>
     public static PublicGoogleTagManagerDisplayModel Create(
         HttpContext context,
         ITempDataDictionaryFactory tempDataDictionaryFactory)
@@ -34,7 +49,11 @@ public sealed record PublicGoogleTagManagerDisplayModel(
         return new PublicGoogleTagManagerDisplayModel(
             canTrack ? "granted" : "denied",
             canTrack,
-            queuedEventScript);
+            queuedEventScript)
+        {
+            UserIdConfigurationJson = GoogleAnalyticsUserId.TryBuildConfiguration(context.User, canTrack, out var userIdJson)
+                ? userIdJson : string.Empty,
+        };
     }
 
     private static string BuildQueuedEventScript(ITempDataDictionary tempData)

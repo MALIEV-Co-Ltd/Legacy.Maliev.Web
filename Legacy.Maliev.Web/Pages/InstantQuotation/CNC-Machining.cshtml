@@ -10,9 +10,9 @@
     string submitRequestUrl = quotationPath + "?Handler=SubmitRequest";
     int maxUploadMb = Model.MaximumCncModelUploadSizeMegabytes;
     int maxCncDrawingUploadMb = Model.MaximumCncDrawingUploadSizeMegabytes;
-    string quotationLogoPath = System.IO.Path.Combine(WebHostEnvironment.WebRootPath, "src", "images", "navbar_logo_black.png");
+    string quotationLogoPath = System.IO.Path.Combine(WebHostEnvironment.WebRootPath, "src", "images", "navbar_logo_black.webp");
     string quotationLogoDataUri = System.IO.File.Exists(quotationLogoPath)
-        ? "data:image/png;base64," + System.Convert.ToBase64String(System.IO.File.ReadAllBytes(quotationLogoPath))
+        ? "data:image/webp;base64," + System.Convert.ToBase64String(System.IO.File.ReadAllBytes(quotationLogoPath))
         : string.Empty;
     if (System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th")
     {

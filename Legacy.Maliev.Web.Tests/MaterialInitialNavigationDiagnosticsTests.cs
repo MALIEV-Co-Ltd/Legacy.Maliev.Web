@@ -156,6 +156,112 @@ public sealed class MaterialInitialNavigationDiagnosticsTests
         Assert.Empty(events.Handlers);
     }
 
+    [Fact]
+    public async Task CorrelatedNavigation_CombinesOwnedServerAndCategoricalBrowserMilestonesWithoutSecrets()
+    {
+        var (page, events) = Page();
+        var registry = new TestResponseProbeRegistry();
+        using var lease = Assert.IsType<TestResponseProbeRegistry.Lease>(
+            registry.TryBeginNavigation(new Uri("http://127.0.0.1:40001"), TestResponseRequestLabel.BaseQuotation));
+        using var observer = new MaterialInitialNavigationDiagnostics(
+            page, new("http://127.0.0.1:40001"), lease.Probe, "reload");
+        var original = new TimeoutException("private-primary");
+        var output = new List<string>();
+        var request = Request("http://127.0.0.1:40001/_framework/blazor.web.js?private=secret", "script");
+        var message = DispatchProxy.Create<IConsoleMessage, EventProxy>();
+        var values = ((EventProxy)(object)message).Properties;
+        values["Type"] = "error";
+        values["Text"] = "[2026-10-20T10:23:37.317Z] timeout private-credential";
+        Assert.Same(original, await Assert.ThrowsAsync<TimeoutException>(() => observer.RunAsync<object>(async () =>
+        {
+            var server = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+            server.Request.Method = "GET";
+            server.Request.Host = new("127.0.0.1:40001");
+            server.Request.Path = "/instantquotation/3d-printing";
+            server.Request.Headers["Sec-Fetch-Dest"] = "document";
+            server.Request.Headers["Sec-Fetch-Mode"] = "navigate";
+            server.Request.Headers.Accept = "text/html";
+            await new TestResponseProbeStartupFilter(registry).InvokeAsync(server, _ => Task.CompletedTask);
+            events.Raise("Request", request);
+            events.Raise("Response", Response(request, 200));
+            events.Raise("DOMContentLoaded", page);
+            events.Raise("Console", message);
+            observer.ObserveInputFileReady();
+            throw original;
+        }, output.Add)));
+        var text = Assert.Single(output);
+        using var snapshot = JsonDocument.Parse(text["quotation-navigation ".Length..]);
+        Assert.Equal("reload", snapshot.RootElement.GetProperty("Phase").GetString());
+        Assert.Equal("managed-callback-arrival", snapshot.RootElement.GetProperty("ClockDomain").GetString());
+        var browser = snapshot.RootElement.GetProperty("Snapshot");
+        Assert.True(browser.GetProperty("InputFileReadyObserved").GetBoolean());
+        var milestones = browser.GetProperty("Milestones").EnumerateArray().ToArray();
+        Assert.Contains(milestones, item => item.GetProperty("Category").GetString() == "framework"
+            && item.GetProperty("Event").GetString() == "response");
+        var console = Assert.Single(milestones, item => item.GetProperty("Category").GetString() == "timeout");
+        Assert.Equal("2026-10-20T10:23:37.317+00:00", console.GetProperty("BrowserEmittedUtc").GetString());
+        Assert.Equal(JsonValueKind.String, console.GetProperty("CallbackUtc").ValueKind);
+        Assert.Contains(milestones, item => item.GetProperty("Category").GetString() == "input-file"
+            && item.GetProperty("Event").GetString() == "ready");
+        Assert.Equal(JsonValueKind.String, browser.GetProperty("Server").GetProperty("ClockOriginUtc").ValueKind);
+        var serverPhases = browser.GetProperty("Server").GetProperty("Records").EnumerateArray()
+            .Select(item => item.GetProperty("Phase").GetString()).ToArray();
+        Assert.Contains("ServerAdmitted", serverPhases);
+        Assert.Contains("NextReturned", serverPhases);
+        Assert.Contains("ClientFailed", serverPhases);
+        foreach (var secret in new[] { "private", "credential", "secret", "127.0.0.1", "40001", lease.Id.ToString("N") })
+            Assert.DoesNotContain(secret, text, StringComparison.OrdinalIgnoreCase);
+        Assert.True(text.Length < 16_384);
+        Assert.Empty(events.Handlers);
+        lease.Dispose();
+        Assert.Equal(0, registry.ActiveCount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CorrelatedNavigation_PrimarySurvivesOutputFailureAndAllOwnershipIsReleased(bool sinkFails)
+    {
+        var (page, events) = Page();
+        var registry = new TestResponseProbeRegistry();
+        using var lease = Assert.IsType<TestResponseProbeRegistry.Lease>(
+            registry.TryBeginNavigation(new Uri("http://127.0.0.1:40001"), TestResponseRequestLabel.BaseQuotation));
+        using var observer = new MaterialInitialNavigationDiagnostics(page, new("http://127.0.0.1:40001"), lease.Probe);
+        var original = new HostileDataException();
+        var output = new List<string>();
+        Assert.Same(original, await Assert.ThrowsAsync<HostileDataException>(() => observer.RunAsync<object>(
+            () => Task.FromException<object>(original), value =>
+            {
+                if (sinkFails) throw new IOException("private-output");
+                output.Add(value);
+            })));
+        Assert.Equal(sinkFails ? 0 : 1, output.Count);
+        Assert.Empty(events.Handlers);
+        Assert.Equal(0, observer.PendingSubscriptions);
+        lease.Dispose();
+        Assert.Equal(0, registry.ActiveCount);
+    }
+
+    [Fact]
+    public async Task CorrelatedNavigation_SuccessRemainsSilentWithoutChangingTheResult()
+    {
+        var (page, events) = Page();
+        var registry = new TestResponseProbeRegistry();
+        using var lease = Assert.IsType<TestResponseProbeRegistry.Lease>(
+            registry.TryBeginNavigation(new Uri("http://127.0.0.1:40001"), TestResponseRequestLabel.BaseQuotation));
+        using var observer = new MaterialInitialNavigationDiagnostics(page, new("http://127.0.0.1:40001"), lease.Probe);
+        var expected = new object();
+        var output = new List<string>();
+        Assert.Same(expected, await observer.RunAsync(() => Task.FromResult(expected), output.Add));
+        Assert.Empty(output);
+        Assert.Empty(events.Handlers);
+        Assert.Equal(7, events.Adds);
+        Assert.Equal(7, events.Removes);
+        Assert.Contains("ClientReturned", lease.Probe.Snapshot(), StringComparison.Ordinal);
+        lease.Dispose();
+        Assert.Equal(0, registry.ActiveCount);
+    }
+
     private static JsonDocument Parse(string output) =>
         JsonDocument.Parse(output["material-initial-navigation ".Length..]);
 

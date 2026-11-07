@@ -1,0 +1,22 @@
+@page "/knowledges/cnc/cutting-tools"
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IStringLocalizer<CncCuttingToolsContent> ContentLocalizer
+@inject IStringLocalizer<KnowledgeIndexPage> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = ContentLocalizer["CNC cutting tools: select the whole cutting system"].Value;
+    var description = ContentLocalizer["Match tool material, geometry, coating and holding to the workpiece and operation. A useful selection balances edge strength, chip space, access and a stable cutting process."].Value;
+    var documentLinks = PublicDocumentLinksDisplayModel.Create(context);
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="documentLinks" />
+</HeadContent>
+<KnowledgeShell CurrentPage="/CNC/Cutting-Tools" RouteOwner="blazor-static-ssr">
+    <CncCuttingToolsContent RouteOwner="blazor-static-ssr" />
+</KnowledgeShell>

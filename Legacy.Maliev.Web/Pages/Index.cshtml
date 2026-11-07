@@ -1,23 +1,17 @@
 @page
 @model IndexModel
 @using Legacy.Maliev.Web.Components.Pages.Home
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment HostEnvironment
 @{
     Layout = "_Layout";
-    string keywordResult;
-    if (System.Threading.Thread.CurrentThread.CurrentCulture.TwoLetterISOLanguageName == "th")
-    {
-        ViewData["Title"] = "รับผลิตชิ้นงานตามแบบ | MALIEV";
-        ViewData["Description"] = "รับผลิตชิ้นงานตามแบบด้วย CNC พิมพ์ 3D สแกน 3D และออกแบบ 3D ในนนทบุรีและกรุงเทพ";
-        keywordResult = "รับผลิตชิ้นงานตามแบบ, รับปริ้น 3D, รับพิมพ์ 3 มิติ, รับสแกน 3D, รับออกแบบ 3D, หล่อซิลิโคน, ฉีดพลาสติกจำนวนน้อย, รับ CNC ตามแบบ";
-    }
-    else
-    {
-        ViewData["Title"] = "Custom Manufacturing Services | MALIEV";
-        ViewData["Description"] = "Custom CNC, 3D printing, 3D scanning, and design services for prototypes and production parts in Bangkok and Nonthaburi.";
-        keywordResult = "custom part manufacturing thailand, 3d printing thailand, 3d scanning thailand, 3d design thailand, silicone casting thailand, low volume injection molding thailand, cnc machining thailand";
-    }
-
-    ViewData["Keywords"] = keywordResult;
+    var isThai = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th";
+    var heroPreload = HomeHeroSelection.GetPreload(HomeHeroSelection.GetVariant(Model.HttpContext, HostEnvironment));
+    ViewData["Title"] = isThai ? "พัฒนาต้นแบบและวิศวกรรมย้อนกลับ | MALIEV" : "Functional Prototypes & Reverse Engineering | MALIEV";
+    ViewData["Description"] = isThai ? "จากไอเดียและชิ้นงานตัวอย่าง สู่แบบ CAD และต้นแบบที่ใช้งานได้ ด้วยงานออกแบบ 3 มิติ CNC, 3D Printing, 3D Scanning และการขึ้นรูปที่เหมาะกับงาน โดย MALIEV นนทบุรี" : "Turn ideas and existing parts into CAD and functional prototypes with MALIEV in Nonthaburi, Thailand. 3D design, CNC machining, 3D printing, 3D scanning and suitable molding processes.";
+    ViewData["Keywords"] = isThai ? "พัฒนาต้นแบบ, วิศวกรรมย้อนกลับ, ออกแบบ 3 มิติ, CNC, พิมพ์ 3 มิติ, สแกน 3 มิติ, ชิ้นส่วนทดแทน" : "functional prototypes, reverse engineering Thailand, 3D design, CNC machining, 3D printing, 3D scanning, replacement parts";
+}
+@section Head {
+    <link rel="preload" as="image" href="@heroPreload" fetchpriority="high" />
 }
 
 <component type="typeof(HomeContent)" render-mode="Static" />

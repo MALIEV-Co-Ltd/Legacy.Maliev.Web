@@ -37,6 +37,29 @@ public sealed class InstantQuotationQuantityEditStateTests
     }
 
     [Fact]
+    public async Task AcceptedValueRestorationCannotLetAnOldQuoteClearANewerEdit()
+    {
+        var edits = new QuantityEditState();
+        var partId = Guid.NewGuid();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var old = edits.RepriceAsync(partId, () => release.Task);
+        try
+        {
+            edits.RestoreAccepted(partId);
+            Assert.False(edits.IsPending(partId));
+            edits.Begin(partId);
+            release.TrySetResult();
+            await old;
+            Assert.True(edits.IsPending(partId));
+        }
+        finally
+        {
+            release.TrySetResult();
+            await old;
+        }
+    }
+
+    [Fact]
     public async Task EarlierSuccessfulQuoteCannotClearAnewerQuantityEdit()
     {
         var edits = new QuantityEditState();

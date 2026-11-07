@@ -58,13 +58,14 @@
         <p class="maliev-form-help" data-record-count="@Model.TotalRecords">@Localizer["Showing {0} of {1} orders", Model.Orders.Count, Model.TotalRecords]</p>
         <div class="table-wrapper">
             <table class="data-table data-responsive" data-stack="true">
-                <thead><tr><th>@Localizer["Order"]</th><th>@Localizer["Name"]</th><th>@Localizer["Quantity"]</th><th>@Localizer["Subtotal"]</th><th>@Localizer["Created"]</th><th>@Localizer["Action"]</th></tr></thead>
+                <thead><tr><th>@Localizer["Order"]</th><th>@Localizer["Name"]</th><th class="d-none d-lg-table-cell">@Localizer["Description"]</th><th>@Localizer["Quantity"]</th><th>@Localizer["Subtotal"]</th><th>@Localizer["Created"]</th><th>@Localizer["Action"]</th></tr></thead>
                 <tbody>
                 @foreach (var order in Model.Orders)
                 {
                     <tr>
                         <td data-title="@Localizer["Order"]">#@order.Id</td>
                         <td data-title="@Localizer["Name"]">@(string.IsNullOrWhiteSpace(order.Name) ? Localizer["Unnamed order"] : order.Name)</td>
+                        <td data-title="@Localizer["Description"]" class="d-none d-lg-table-cell table-multiline">@(string.IsNullOrWhiteSpace(order.Description) ? "-" : order.Description)</td>
                         <td data-title="@Localizer["Quantity"]">@order.Quantity</td>
                         <td data-title="@Localizer["Subtotal"]">@order.Subtotal</td>
                         <td data-title="@Localizer["Created"]">@if (order.CreatedDate == "-") { <span>-</span> } else { <time class="convert-to-localdate" datetime="@order.CreatedDate">@order.CreatedDate</time> }</td>

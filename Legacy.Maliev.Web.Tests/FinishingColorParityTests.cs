@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -69,6 +71,34 @@ public sealed class FinishingColorParityTests : IClassFixture<TestingWebApplicat
         Assert.Contains("data-service-toc", source, StringComparison.Ordinal);
         Assert.Contains("Finishing &amp; Colour Standards", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-service-structured-data\"", source, StringComparison.Ordinal);
+
+        var printing = await client.GetStringAsync("/services/3d-printing?culture=en");
+        foreach (var (document, detailsCount, questionCount) in new[]
+        {
+            (source, 6, 6),
+            (printing, 8, 8)
+        })
+        {
+            Assert.Equal(detailsCount, Regex.Matches(document, "<details><summary>", RegexOptions.CultureInvariant).Count);
+            var faqQuestionCounts = new List<int>();
+            foreach (Match match in Regex.Matches(
+                System.Net.WebUtility.HtmlDecode(document),
+                "(?<tag><script\\b[^>]*>)(?<json>.*?)</script>",
+                RegexOptions.Singleline | RegexOptions.CultureInvariant)
+                .Where(match => System.Net.WebUtility.HtmlDecode(Regex.Match(
+                    match.Groups["tag"].Value,
+                    "\\btype=[\"'](?<value>[^\"']*)[\"']",
+                    RegexOptions.IgnoreCase).Groups["value"].Value) == "application/ld+json"))
+            {
+                using var schema = JsonDocument.Parse(match.Groups["json"].Value);
+                if (schema.RootElement.TryGetProperty("@type", out var type) && type.GetString() == "FAQPage")
+                {
+                    faqQuestionCounts.Add(schema.RootElement.GetProperty("mainEntity").GetArrayLength());
+                }
+            }
+
+            Assert.Equal(questionCount, Assert.Single(faqQuestionCounts));
+        }
     }
 
     [Fact]
@@ -85,6 +115,39 @@ public sealed class FinishingColorParityTests : IClassFixture<TestingWebApplicat
         Assert.Contains("a different color, sheen, or clear-coat type after approval", page, StringComparison.Ordinal);
         Assert.Contains("split and joining plan, final dimensions, quantity, use environment", page, StringComparison.Ordinal);
         Assert.Contains("แผนแบ่งและต่อชิ้นงาน ขนาดสุดท้าย จำนวน สภาพการใช้งาน", page, StringComparison.Ordinal);
+
+        var printing = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages", "Services", "ThreeDimensionalPrintingContent.razor"));
+        Assert.Contains("id=\"printing-related\"", printing, StringComparison.Ordinal);
+        Assert.Contains("href=\"/services/finishing-and-color\"", printing, StringComparison.Ordinal);
+        foreach (var marker in new[]
+        {
+            "finishing-standards",
+            "finishing-split-assembly",
+            "finishing-brief",
+            "printing-finish-color-approval.webp",
+            "printing-finish-surface-prep.webp",
+            "printing-finish-clear-coat.webp",
+            "printing-split-assembly.webp",
+            "spray-priming",
+            "putty spreader",
+            "Pantone",
+            "RAL",
+            "กำหนดสีให้ชัดเจนด้วยรหัส Pantone หรือ RAL",
+            "พ่นเคลือบใส: ระบุผิวด้านหรือผิวเงา",
+            "ยืนยันก่อนผลิต",
+            "matte, satin, or gloss",
+            "additional change order",
+            "heat welding",
+            "service-tool-reference",
+            "https://shop.maliev.com/tools/mesh-splitter",
+            "Optional customer tool:",
+            "เครื่องมือเสริมสำหรับลูกค้า:",
+            "เกณฑ์ตรวจรับ",
+            "ฟิลเลอร์รถยนต์"
+        })
+        {
+            Assert.Contains(marker, page, StringComparison.Ordinal);
+        }
     }
 
     private static string FindRepositoryRoot()

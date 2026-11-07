@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -118,6 +118,182 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="Knowledge center | MALIEV" xml:space="preserve"><value>ศูนย์ความรู้ | MALIEV</value></data><data name="Practical manufacturing guidance for preparing files, choosing processes, and working with MALIEV." xml:space="preserve"><value>คำแนะนำการเตรียมไฟล์ เลือกกระบวนการ และทำงานร่วมกับ MALIEV</value></data>
-<data name="Manufacturing resources" xml:space="preserve"><value>ข้อมูลด้านการผลิต</value></data><data name="Knowledge center" xml:space="preserve"><value>ศูนย์ความรู้</value></data><data name="Use these concise guides to prepare your project and understand what happens after you request a quotation." xml:space="preserve"><value>ใช้คู่มือฉบับย่อเพื่อเตรียมโปรเจกต์และเข้าใจขั้นตอนหลังขอใบเสนอราคา</value></data>
-<data name="Project guidelines" xml:space="preserve"><value>แนวทางเตรียมโปรเจกต์</value></data><data name="Files, dimensions, tolerances, quantities, and supporting information." xml:space="preserve"><value>ไฟล์ ขนาด ค่าความคลาดเคลื่อน จำนวน และข้อมูลประกอบ</value></data><data name="How projects move forward" xml:space="preserve"><value>ขั้นตอนดำเนินโปรเจกต์</value></data><data name="From review and quotation through production, inspection, and delivery." xml:space="preserve"><value>ตั้งแต่ตรวจสอบและเสนอราคา ไปจนถึงผลิต ตรวจสอบ และส่งมอบ</value></data><data name="Service specifications" xml:space="preserve"><value>ข้อแนะนำเฉพาะบริการ</value></data><data name="Process-specific preparation and capability guidance." xml:space="preserve"><value>แนวทางเตรียมงานและความสามารถของแต่ละกระบวนการ</value></data>
+  <data name="Manufacturing resources" xml:space="preserve"><value>ข้อมูลด้านการผลิต</value></data><data name="Knowledge center" xml:space="preserve"><value>ศูนย์ความรู้</value></data><data name="Use these concise guides to prepare your project and understand what happens after you request a quotation." xml:space="preserve"><value>ใช้คู่มือฉบับย่อเพื่อเตรียมโปรเจกต์และเข้าใจขั้นตอนหลังขอใบเสนอราคา</value></data>
+  <data name="Project guidelines" xml:space="preserve"><value>แนวทางเตรียมโปรเจกต์</value></data><data name="Files, dimensions, tolerances, quantities, and supporting information." xml:space="preserve"><value>ไฟล์ ขนาด ค่าความคลาดเคลื่อน จำนวน และข้อมูลประกอบ</value></data><data name="How projects move forward" xml:space="preserve"><value>ขั้นตอนดำเนินโปรเจกต์</value></data><data name="From review and quotation through production, inspection, and delivery." xml:space="preserve"><value>ตั้งแต่ตรวจสอบและเสนอราคา ไปจนถึงผลิต ตรวจสอบ และส่งมอบ</value></data><data name="Service specifications" xml:space="preserve"><value>ข้อแนะนำเฉพาะบริการ</value></data><data name="Process-specific preparation and capability guidance." xml:space="preserve"><value>แนวทางเตรียมงานและความสามารถของแต่ละกระบวนการ</value></data>
+  <data name="Design a better CNC part" xml:space="preserve"><value>ออกแบบชิ้นงาน CNC ให้ผลิตได้เหมาะสม</value></data>
+  <data name="A CAD model can be geometrically correct yet difficult to hold, reach, cut, or inspect. Learn the trade-offs behind manufacturability, cost, dimensional control, and finishing." xml:space="preserve"><value>โมเดล CAD อาจมีรูปทรงถูกต้อง แต่จับยึด เข้าถึงด้วยเครื่องมือ ตัด หรือวัดได้ยาก เรียนรู้ข้อดีและข้อจำกัดที่ส่งผลต่อความสามารถในการผลิต ต้นทุน การควบคุมขนาด และการตกแต่งผิว</value></data>
+  <data name="Thin walls, warpage, and chatter" xml:space="preserve"><value>ผนังบาง การโก่งตัว และการสั่น</value></data>
+  <data name="Understand stiffness, residual stress, tool reach, and why a part can move during machining." xml:space="preserve"><value>เข้าใจความแข็งแกร่ง ความเค้นตกค้าง ระยะยื่นเครื่องมือ และสาเหตุที่ชิ้นงานเปลี่ยนรูปขณะผลิต</value></data>
+  <data name="Corner radii and deep pockets" xml:space="preserve"><value>รัศมีมุมและโพรงลึก</value></data>
+  <data name="Give the cutter room to work. Review depth, internal corners, access, and relief features." xml:space="preserve"><value>เผื่อพื้นที่ให้เครื่องมือตัด พิจารณาความลึก มุมด้านใน การเข้าถึง และร่องหลบ</value></data>
+  <data name="Holes, threads, and fits" xml:space="preserve"><value>รู เกลียว และการสวมประกอบ</value></data>
+  <data name="Specify usable depth, thread details, locating features, and mating components." xml:space="preserve"><value>ระบุความลึกใช้งาน รายละเอียดเกลียว จุดกำหนดตำแหน่ง และชิ้นส่วนที่ต้องประกอบร่วม</value></data>
+  <data name="Tolerances and inspection" xml:space="preserve"><value>ค่าความคลาดเคลื่อนและการตรวจสอบ</value></data>
+  <data name="Separate size from position and form. Define datums and the acceptance condition." xml:space="preserve"><value>แยกข้อกำหนดขนาด ตำแหน่ง และรูปทรง ระบุดาตัมและสภาวะที่ใช้ตรวจรับ</value></data>
+  <data name="3-axis, 5-axis, EDM, and grinding" xml:space="preserve"><value>งาน 3 แกน 5 แกน EDM และเจียระไน</value></data>
+  <data name="Compare routes by tool access, geometry, material, and the surfaces that matter." xml:space="preserve"><value>เปรียบเทียบกระบวนการจากการเข้าถึงของเครื่องมือ รูปทรง วัสดุ และผิวสำคัญ</value></data>
+  <data name="Surface finish and anodizing" xml:space="preserve"><value>การตกแต่งผิวและอโนไดซ์</value></data>
+  <data name="Plan coating growth, masking, cosmetic faces, and the effect on a close fit." xml:space="preserve"><value>วางแผนความหนาที่เพิ่มขึ้น การปิดบังผิว ผิวที่ต้องควบคุมรูปลักษณ์ และผลต่อการสวมประกอบ</value></data>
+  <data name="Read the CNC design guide" xml:space="preserve"><value>อ่านคู่มือออกแบบสำหรับงาน CNC</value></data>
+  <data name="Prepare your project" xml:space="preserve"><value>เตรียมข้อมูลให้พร้อมก่อนเริ่มงาน</value></data>
+  <data name="Design for 3D printing" xml:space="preserve"><value>ออกแบบสำหรับพิมพ์ 3 มิติ</value></data>
+  <data name="FDM and resin, orientation, supports, hollow parts, fit, and finishing requirements." xml:space="preserve"><value>FDM และเรซิน ทิศทางพิมพ์ ซัพพอร์ต ชิ้นงานกลวง การสวมประกอบ และการตกแต่ง</value></data>
+  <data name="Plan a 3D scan" xml:space="preserve"><value>วางแผนงานสแกน 3 มิติ</value></data>
+  <data name="Choose mesh or CAD deliverables and agree access, accuracy, datums, and reconstructed areas." xml:space="preserve"><value>เลือกรูปแบบเมชหรือ CAD และตกลงการเข้าถึง ความแม่นยำ ดาตัม และบริเวณที่ต้องสร้างรูปทรงเพิ่ม</value></data>
+  <data name="Build a complete quotation package" xml:space="preserve"><value>เตรียมชุดข้อมูลสำหรับขอราคา</value></data>
+  <data name="Files, units, revisions, quantities, functional requirements, and confidentiality." xml:space="preserve"><value>ไฟล์ หน่วย รุ่นแก้ไข จำนวน ข้อกำหนดการใช้งาน และการรักษาความลับ</value></data>
+  <data name="Before you send a part" xml:space="preserve"><value>ตรวจข้อมูลก่อนส่งชิ้นงาน</value></data>
+  <data name="Match the model and drawing revision; identify the units and quantity for every part." xml:space="preserve"><value>ใช้โมเดลและแบบรุ่นแก้ไขเดียวกัน ระบุหน่วยและจำนวนของชิ้นงานแต่ละรายการ</value></data>
+  <data name="Explain how the part works, where it locates in the assembly, and which dimensions or surfaces are critical." xml:space="preserve"><value>อธิบายการใช้งาน ตำแหน่งในชุดประกอบ และขนาดหรือผิวที่สำคัญ</value></data>
+  <data name="Specify the material grade or required properties, finish, masking, and reports needed for acceptance." xml:space="preserve"><value>ระบุเกรดวัสดุหรือคุณสมบัติที่ต้องการ การตกแต่ง การปิดบังผิว และรายงานที่ใช้ตรวจรับ</value></data>
+  <data name="Flag flexible design choices, supplied components, the requested date, and delivery destination." xml:space="preserve"><value>แจ้งส่วนของแบบที่ปรับได้ ชิ้นส่วนที่ส่งมาให้ วันที่ต้องการ และสถานที่ส่งมอบ</value></data>
+  <data name="Understand review, approval, production, and delivery" xml:space="preserve"><value>เข้าใจขั้นตอนตรวจทาน อนุมัติ ผลิต และส่งมอบ</value></data>
+  <data name="Design examples explain engineering principles; they are not guaranteed MALIEV machine limits or acceptance tolerances. Material, geometry, tooling, finishing, and inspection need review together." xml:space="preserve"><value>ตัวอย่างการออกแบบใช้อธิบายหลักวิศวกรรม ไม่ใช่ขีดจำกัดเครื่องจักรหรือค่าความคลาดเคลื่อนที่ MALIEV รับประกัน ต้องประเมินวัสดุ รูปทรง เครื่องมือ การตกแต่ง และการตรวจสอบร่วมกัน</value></data>
+  <data name="Have a design question?" xml:space="preserve"><value>มีคำถามเกี่ยวกับแบบชิ้นงานหรือไม่?</value></data>
+  <data name="Send the files you have and describe what the part needs to do. If you are still choosing a process, start with the preparation guides." xml:space="preserve"><value>ส่งไฟล์ที่มีพร้อมอธิบายหน้าที่ของชิ้นงาน หากยังไม่เลือกกระบวนการ ให้เริ่มจากคู่มือเตรียมงาน</value></data>
+  <data name="Request a project review" xml:space="preserve"><value>ส่งงานให้ทีมวิศวกรประเมิน</value></data>
+  <data name="Compare preparation guides" xml:space="preserve"><value>เปรียบเทียบคู่มือเตรียมงาน</value></data>
+  <data name="Practical CNC, 3D printing, and scanning guidance for better designs and complete quotation requests." xml:space="preserve"><value>ความรู้ด้าน CNC พิมพ์ 3 มิติ และสแกน 3 มิติ เพื่อออกแบบและเตรียมข้อมูลขอราคาให้ครบ</value></data>
+  <data name="Understand what makes a part easier to manufacture, what to put on the drawing, and which decisions to resolve before requesting a quotation." xml:space="preserve"><value>เข้าใจปัจจัยที่ทำให้ชิ้นงานผลิตได้ง่ายขึ้น สิ่งที่ควรระบุในแบบ และประเด็นที่ควรตัดสินใจก่อนขอราคา</value></data>
+
+<data name="Manufacturing knowledge library | MALIEV" xml:space="preserve">
+    <value>คลังความรู้ด้านการผลิต | MALIEV</value>
+  </data>
+<data name="Practical manufacturing articles, calculations, material comparisons and design guidance for better engineering decisions." xml:space="preserve">
+    <value>บทความด้านการผลิต การคำนวณ การเปรียบเทียบวัสดุ และแนวทางออกแบบ เพื่อช่วยตัดสินใจทางวิศวกรรม</value>
+  </data>
+<data name="Manufacturing knowledge library" xml:space="preserve">
+    <value>คลังความรู้ด้านการผลิต</value>
+  </data>
+<data name="Browse by topic. Each article explains the reasoning, inputs to check, and practical examples you can use when preparing a part for production." xml:space="preserve">
+    <value>เลือกอ่านตามหัวข้อ แต่ละบทความอธิบายหลักการ ข้อมูลที่ควรตรวจสอบ และตัวอย่างที่นำไปใช้เตรียมชิ้นงานก่อนผลิตได้</value>
+  </data>
+<data name="Start here" xml:space="preserve">
+    <value>เริ่มต้นที่นี่</value>
+  </data>
+<data name="Files and quotation checklist" xml:space="preserve">
+    <value>ไฟล์และข้อมูลสำหรับขอราคา</value>
+  </data>
+<data name="Prepare models, drawings, units, revisions, quantities, and functional requirements." xml:space="preserve">
+    <value>เตรียมโมเดล แบบงาน หน่วย รุ่นแก้ไข จำนวน และข้อกำหนดการใช้งาน</value>
+  </data>
+<data name="Review and production workflow" xml:space="preserve">
+    <value>การทบทวนแบบและขั้นตอนผลิต</value>
+  </data>
+<data name="Understand engineering review, approvals, changes, inspection, and delivery." xml:space="preserve">
+    <value>เข้าใจการทบทวนทางวิศวกรรม การยืนยันแบบ การเปลี่ยนแปลง การตรวจสอบ และการส่งมอบ</value>
+  </data>
+<data name="Choose a manufacturing process" xml:space="preserve">
+    <value>เลือกกระบวนการผลิต</value>
+  </data>
+<data name="Compare geometry, material, quantity, tooling, and total project cost." xml:space="preserve">
+    <value>เปรียบเทียบรูปทรง วัสดุ จำนวน เครื่องมือ และต้นทุนรวมของโครงการ</value>
+  </data>
+<data name="Service preparation guides" xml:space="preserve">
+    <value>เตรียมงานสำหรับแต่ละบริการ</value>
+  </data>
+<data name="Compare the inputs needed for machining, printing, and scanning." xml:space="preserve">
+    <value>เปรียบเทียบข้อมูลที่ต้องใช้สำหรับงาน CNC งานพิมพ์ และงานสแกน</value>
+  </data>
+<data name="CNC machining" xml:space="preserve">
+    <value>งาน CNC</value>
+  </data>
+<data name="CNC design overview" xml:space="preserve">
+    <value>ภาพรวมการออกแบบงาน CNC</value>
+  </data>
+<data name="Start with a complete drawing and identify the features that drive manufacturing decisions." xml:space="preserve">
+    <value>เริ่มจากแบบงานที่ครบถ้วน และระบุจุดที่มีผลต่อการเลือกแนวทางผลิต</value>
+  </data>
+<data name="Calculate feeds and speeds" xml:space="preserve">
+    <value>คำนวณความเร็วตัดและอัตราป้อน</value>
+  </data>
+<data name="Work through spindle speed, feed per tooth, feed per revolution, and machine limits." xml:space="preserve">
+    <value>คำนวณรอบหมุน อัตราป้อนต่อฟัน อัตราป้อนต่อรอบ และตรวจสอบข้อจำกัดของเครื่อง</value>
+  </data>
+<data name="Choose cutting tools" xml:space="preserve">
+    <value>เลือกเครื่องมือตัด</value>
+  </data>
+<data name="Understand tool material, flute geometry, coatings, overhang, holders, and wear." xml:space="preserve">
+    <value>ทำความเข้าใจวัสดุเครื่องมือ รูปทรงคมตัด สารเคลือบ ระยะยื่น ด้ามจับ และการสึกหรอ</value>
+  </data>
+<data name="Geometry, rigidity and workholding" xml:space="preserve">
+    <value>รูปทรง ความแข็งแกร่ง และการจับยึด</value>
+  </data>
+<data name="Review walls, corners, pockets, part size, distortion, chatter, and support." xml:space="preserve">
+    <value>ทบทวนผนัง มุม โพรง ขนาดชิ้นงาน การบิดตัว การสั่น และการรองรับ</value>
+  </data>
+<data name="Holes, threads and tolerances" xml:space="preserve">
+    <value>รู เกลียว และค่าความคลาดเคลื่อน</value>
+  </data>
+<data name="Define usable depths, mating features, datums, fits, and inspection conditions." xml:space="preserve">
+    <value>กำหนดความลึกใช้งาน จุดสวมประกอบ ดาตัม พิกัดสวม และสภาพขณะตรวจวัด</value>
+  </data>
+<data name="3-axis, 5-axis, EDM and grinding" xml:space="preserve">
+    <value>3 แกน 5 แกน EDM และการเจียร</value>
+  </data>
+<data name="Choose a route around tool access, geometry, material, and functional surfaces." xml:space="preserve">
+    <value>เลือกแนวทางจากการเข้าถึงของเครื่องมือ รูปทรง วัสดุ และผิวที่มีหน้าที่ใช้งาน</value>
+  </data>
+<data name="Materials and applications" xml:space="preserve">
+    <value>วัสดุและการใช้งาน</value>
+  </data>
+<data name="Material selection checklist" xml:space="preserve">
+    <value>แนวทางเลือกวัสดุ</value>
+  </data>
+<data name="Turn loads, environment, life, finishing, and documentation needs into a material brief." xml:space="preserve">
+    <value>สรุปแรงที่รับ สภาพแวดล้อม อายุใช้งาน ผิวงาน และเอกสารที่ต้องใช้ เพื่อเลือกวัสดุ</value>
+  </data>
+<data name="Metals and their applications" xml:space="preserve">
+    <value>โลหะและการใช้งาน</value>
+  </data>
+<data name="Compare specific aluminum, steel, stainless, and copper-alloy grades and conditions." xml:space="preserve">
+    <value>เปรียบเทียบเกรดและสภาพของอะลูมิเนียม เหล็ก สเตนเลส และโลหะผสมทองแดง</value>
+  </data>
+<data name="Engineering plastics" xml:space="preserve">
+    <value>พลาสติกวิศวกรรม</value>
+  </data>
+<data name="Consider moisture, creep, wear, temperature, chemicals, and manufacturing route." xml:space="preserve">
+    <value>พิจารณาความชื้น การคืบ การสึกหรอ อุณหภูมิ สารเคมี และกระบวนการผลิต</value>
+  </data>
+<data name="3D printing and scanning" xml:space="preserve">
+    <value>พิมพ์ 3 มิติและสแกน</value>
+  </data>
+<data name="Prepare geometry, choose orientation and material, and review supports and fits." xml:space="preserve">
+    <value>เตรียมรูปทรง เลือกทิศทางและวัสดุ ทบทวนซัพพอร์ตและจุดสวมประกอบ</value>
+  </data>
+<data name="Scanning and reverse engineering" xml:space="preserve">
+    <value>สแกนและวิศวกรรมย้อนกลับ</value>
+  </data>
+<data name="Specify mesh or CAD deliverables, access, datums, and reconstructed areas." xml:space="preserve">
+    <value>กำหนดไฟล์เมชหรือ CAD การเข้าถึง ดาตัม และบริเวณที่ต้องสร้างรูปทรงเพิ่มเติม</value>
+  </data>
+<data name="Finishing and inspection" xml:space="preserve">
+    <value>ปรับสภาพผิวและตรวจสอบ</value>
+  </data>
+<data name="Surface finishes and coatings" xml:space="preserve">
+    <value>ผิวงานและการเคลือบ</value>
+  </data>
+<data name="Plan anodizing, masking, coating growth, cosmetic faces, and final dimensions." xml:space="preserve">
+    <value>วางแผนอโนไดซ์ การปิดผิว การเพิ่มขนาดจากชั้นเคลือบ ผิวโชว์ และขนาดสุดท้าย</value>
+  </data>
+<data name="Heat treatment and material condition" xml:space="preserve">
+    <value>อบชุบและสภาพวัสดุ</value>
+  </data>
+<data name="Understand hardness, stress relief, distortion, machining sequence, and records." xml:space="preserve">
+    <value>เข้าใจความแข็ง การคลายเค้น การบิดตัว ลำดับงานกลึงกัด และเอกสารยืนยัน</value>
+  </data>
+<data name="Measure and inspect parts" xml:space="preserve">
+    <value>วัดและตรวจสอบชิ้นงาน</value>
+  </data>
+<data name="Choose measurement methods and define datums, uncertainty, and acceptance." xml:space="preserve">
+    <value>เลือกวิธีวัด กำหนดดาตัม ความไม่แน่นอน และเกณฑ์ยอมรับ</value>
+  </data>
+<data name="Have a part to discuss?" xml:space="preserve">
+    <value>มีชิ้นงานที่อยากปรึกษา?</value>
+  </data>
+<data name="Send the model, drawing revision, quantity and the features that matter to its function." xml:space="preserve">
+    <value>ส่งโมเดล รุ่นแบบงาน จำนวน และรายละเอียดจุดที่สำคัญต่อการใช้งาน</value>
+  </data>
+  <data name="A workbench with machined, turned, printed and formed components." xml:space="preserve"><value>โต๊ะงานที่มีชิ้นส่วนจากการกัด กลึง พิมพ์ และขึ้นรูป</value></data>
+  <data name="Different processes leave different geometry and surface characteristics. Illustrative image." xml:space="preserve"><value>แต่ละกระบวนการให้รูปทรงและลักษณะผิวต่างกัน ภาพประกอบ</value></data>
 </root>

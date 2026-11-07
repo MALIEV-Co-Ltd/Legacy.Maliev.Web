@@ -32,6 +32,22 @@ public sealed class MemberOrderPostShipmentParityTests
         Assert.Contains("SocialNetworks.GoogleMaps", source, StringComparison.Ordinal);
         Assert.Contains("SocialNetworks.Line", source, StringComparison.Ordinal);
         Assert.Contains("SocialNetworks.WhatsApp", source, StringComparison.Ordinal);
+        const string reviewPolicy = "Reviews are optional and are not tied to discounts, rewards, or order support.";
+        Assert.Contains(reviewPolicy, source, StringComparison.Ordinal);
+        var thaiResource = System.Xml.Linq.XDocument.Load(Path.Combine(
+            SolutionRoot(),
+            "Legacy.Maliev.Web",
+            "Resources",
+            "Components",
+            "Pages",
+            "Member",
+            "MemberOrderDetailContent.th.resx"));
+        var policy = Assert.Single(
+            thaiResource.Root!.Elements("data"),
+            entry => (string?)entry.Attribute("name") == reviewPolicy);
+        Assert.Equal(
+            "การรีวิวเป็นความสมัครใจ และไม่ผูกกับส่วนลด รางวัล หรือการช่วยเหลือเกี่ยวกับคำสั่งซื้อ",
+            policy.Element("value")?.Value);
     }
 
     private static CustomerOrderDetails Details(string status) => new(

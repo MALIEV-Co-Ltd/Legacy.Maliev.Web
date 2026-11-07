@@ -1,0 +1,1801 @@
+{
+  "schema": "legacy-web-598-599-600-integrated-candidate.v1",
+  "status": "INTEGRATED DRAFT SOURCE PLAN; exact-head normal validation and protected-main acceptance remain pending; no deployment",
+  "repository": "MALIEV-Co-Ltd/Legacy.Maliev.Web",
+  "exactBase": "6fb9850658e8b9a345182dd9b16e6bffeb01aa0a",
+  "sequence": [
+    {
+      "name": "custody-and-FX-diagnostic",
+      "meaning": "Stage all 59 exact company assets, 3 custody files, .gitattributes, additive FX diagnostic tests and integrated 608-preserving custody/FX workflow; Home remains inactive.",
+      "paths": [
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/aeon-fantasy.svg",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "1628fa693987cd9ca3e65662b8191cc3acb1c6d2",
+          "postimageBytes": 68761,
+          "postimageSha256": "c59715898f7587672c55bc563d28c554134b6fe53b347441388e9b7242630935",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/air-liquide.svg",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "906c9f8fc9fca956aa167d05804fe00a30db02c9",
+          "postimageBytes": 3373,
+          "postimageSha256": "1d14ac4be72ff4807aeccb908d6054f7b8f06ef99ef2fd11fd3cb8688e1b4e42",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/bangchak.svg",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "286fa352aedffec2f6b8260c0b49d31c99b26e16",
+          "postimageBytes": 10484,
+          "postimageSha256": "cc3ae44a668627c20d18ef9594fd572e903f939beffa29d1130100b98c401998",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/bem.svg",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "14b084f1ee496d84dd9af132e944b5720474f33d",
+          "postimageBytes": 7506,
+          "postimageSha256": "76f20526c63d363bcb2c3a8e0aae8bd5cc9b0eca29222d26c62c5a3728fc3d1c",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/crown-seal.png",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "bd72b4b00d8d65848241919f517eb692eaa886f4",
+          "postimageBytes": 9426,
+          "postimageSha256": "8796dce4263902d6633810f0e510f66636ebecf6ad6f7e0bc644a9f3557f9f68",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/fabrinet.png",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "1aed2161ba8f692ef2a523adb12f96b71e84fc69",
+          "postimageBytes": 8209,
+          "postimageSha256": "379453f77d9b8eede9bcf8151372cf632193ba4b9287eceb86fcb11f5616501b",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/grohe.svg",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "9372c470e37afe833e04033c7312a699e29e2793",
+          "postimageBytes": 2792,
+          "postimageSha256": "ccbbb8be82912bdb26cd0d291a17163faac0cb378e4600674ef8e9343e9103d5",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/khon-kaen-sugar.png",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "63e658b3739da162d41c61ff16ba7f8a5b3aea65",
+          "postimageBytes": 4559,
+          "postimageSha256": "7abfb51c3ce6ebc058cc0e0d854beddd83743f41b70a800aac9913c97236fe96",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/kobelco.gif",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "9bc957bdd8b1d79ad91487b560f76f18c2ebd85a",
+          "postimageBytes": 2802,
+          "postimageSha256": "82963050c2b450c166a2e6f98c16dd2a41e50a9a5da8dd1353998b810856546f",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/kohler.png",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "1d6dd48ac11b710ec0f219bb2c87089a69987f03",
+          "postimageBytes": 2539,
+          "postimageSha256": "3e3572e43a10e72ac4071893c30fd019f470fa84b31ea02dc25c6bee34eb9b47",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/kumwell.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "741bb11fa620f8a1972dacc75e4b1f28d0f82025",
+          "postimageBytes": 11852,
+          "postimageSha256": "21cbe930a7676c915da510e276ba1bc5677d94a0d5c38a2deeb91c3ee058b567",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/lenso.svg",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "76008173e1ea56c14548635c0241b0d4346abfe9",
+          "postimageBytes": 2750,
+          "postimageSha256": "3451f21ce02902774d116e410c312bc5268023a8237a9f4384f8d8459d80e06a",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/lixil.svg",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "723059aff9c8a67a58ef5935e70bc22013bb5df4",
+          "postimageBytes": 1073,
+          "postimageSha256": "1b6659fa8e22836545dd3ee6ffaeff2b7c289f5d3a29150b27dd71dad5ef0f46",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mektec.png",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "4d6ddca173368afa88b563226c43c4939c4fff7d",
+          "postimageBytes": 7447,
+          "postimageSha256": "42aeb7fb11e9aacf799d9d38cf9a23204e242378e3f370faea8d01d026f64253",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mfec.png",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "531c23eb7188f44b6c0ce94da12207c271f3bd0a",
+          "postimageBytes": 22572,
+          "postimageSha256": "96d6de2772333c670d0a022cbd7239f763b9280a01936b5aefa20925d43e5a15",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/minor-food.png",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "69544724a554792184b5f39d4835a6e702d4ce0c",
+          "postimageBytes": 39709,
+          "postimageSha256": "56fd7fabf3cdc29f8f64419dcb3b394f466e67bd1289e0684c9627e4f4d53dce",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/mitsubishi-materials.png",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "70266937619a2e576a31788d07de41987746012f",
+          "postimageBytes": 8051,
+          "postimageSha256": "c761ad949ef9e2bed73b99a1bd3886ee3576260daa5b00db6d47a0a66c1d7fa8",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/murata.svg",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "80f04b8c96c1c642c584e4670ba9ab21d8268e40",
+          "postimageBytes": 8154,
+          "postimageSha256": "89eea0e216896afaa944b1731a51843329ddaaf7c1e7382c2a48d2984a0acaae",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/olympus.png",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "7e58f285ae59caac385d907beff3bfa4e0f61f58",
+          "postimageBytes": 1925,
+          "postimageSha256": "2f89895cda9d845705cd87e9467d3fda719f1d41cc00f720193ea9ebb4e75591",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/pttep.svg",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "37aefad58b38854b70339fe94faf9a4c906faeea",
+          "postimageBytes": 6270,
+          "postimageSha256": "ea4c76270d8bbc1e0bdec58e846242f98f21dc7a8c948e664c6d43765ddefab8",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/ptt.png",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "a2a15c062fd2570efff342b5003a11e4af2d3841",
+          "postimageBytes": 22718,
+          "postimageSha256": "a800ec46765bafee5692624f8c7f8c6efd6d6a818784b740c21fcffafa4fcf76",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/siam-motors.svg",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "af72d16b7e1608d7de6d95420578b83d23951748",
+          "postimageBytes": 4518,
+          "postimageSha256": "ac01a6c392c6596eadddf4049984eaa83f28498ef2122a8169aeaae1056f878c",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/siemens-mobility.svg",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "c07e468152f10f3aae247c3817ac8bbe92c71bf7",
+          "postimageBytes": 1382,
+          "postimageSha256": "6a2ed4b37e8937a053072b06cca0e8cd4024edde804ebff03f14b0315da71033",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/singha-kameda-current.png",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "4b72a122cab586f746c110ebad99f8d24acc26de",
+          "postimageBytes": 38923,
+          "postimageSha256": "5ef06d8d337f72b9c03904cf080c7615183345adafe9357c64ca97d12b26e753",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/sp-syndicate.jpg",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "94019818b17505ddfa0b54c58d0ea34d4b7e2fbf",
+          "postimageBytes": 3415,
+          "postimageSha256": "d5226d3b69e8cd84bc8380ed3b2e5888aafdf4af682e0baf9e9a8faabe83096c",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-asahi-denso-en.png",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "e4110763d9a1e99b7d0cc58c4d11fd89c4646f78",
+          "postimageBytes": 3403,
+          "postimageSha256": "2222f2166ac130ae80a202edd5e823b2d19a4caef5a7ae4e080462f550676088",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-coconut.jpg",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "221d22c268dd45d3841b81d6b546d28e824aa802",
+          "postimageBytes": 35071,
+          "postimageSha256": "dc1fbb9e8dbfdbdedbe4637ae7860f76bedad30189751c3a183042ef2f33f9a5",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/thai-optical.png",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "86b20b55e4533cf5f3a1ed9ee29dbbc414711d30",
+          "postimageBytes": 6809,
+          "postimageSha256": "2c0265a1bad345f534ed3fd86659608e223ce9cf19ea789fa72fcb6156746dfc",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/tpi-polene-power-emblem.png",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "6d25ffb99bd420f594f5b091b9817e0789a7f879",
+          "postimageBytes": 6041,
+          "postimageSha256": "e3f5687098b53f137e4ed9bac25bba62deba91404fea50a0b360c92d186e9535",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/customers/yg-1-official-mark.png",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "2f84b3389a5333b2227e655b24ff4f5e52bd074f",
+          "postimageBytes": 7399,
+          "postimageSha256": "75e7f962223eca5f3a4405adef091249c26d034d02b7c9aa59802ea765bdb1db",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/about-customer-partnership.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "319b8565392b3420ee44b64a9fd60fd21d193fa1",
+          "postimageBytes": 129392,
+          "postimageSha256": "ee4a064d4687cf98c14e118f292763b5f297e9cdc6146a1d1fc7e484a2db1301",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/camera-bracket-cad-v5.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "0d4f2807b9bbe5ff348473cbbe4a75486bf2312e",
+          "postimageBytes": 97398,
+          "postimageSha256": "84c2950d026b00ab35adada7a1c9fda8bfd1e5aa6320dcf26e25399b123d5a85",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/camera-bracket-deployment.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "00f3fb90b23c3d448f6588b9f5b40b0c8ba3c201",
+          "postimageBytes": 159202,
+          "postimageSha256": "4960be27ec1c390808fe02aa42c34bdbb2d2f071ed1171412e731a02db18beef",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/camera-bracket-production-v5.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "1857b2f909ca085e451c701c6c6e8406c2349843",
+          "postimageBytes": 140428,
+          "postimageSha256": "4c73cc66aa05fbaa432963e280f79659fd9565dc640168ce527ded92b97868af",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/camera-bracket-prototypes-v4.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "a88e2c0b3ea0074f2ae1c540e4f3b7026e50eb26",
+          "postimageBytes": 117774,
+          "postimageSha256": "8e8c06571c5a2f018d3b9c2b1675748495dfff2af467f7a69be0101fb2f251cd",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/camera-bracket-sketch-v6.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "73056abd985e57b91e624be97f3c66511bb7b21f",
+          "postimageBytes": 91428,
+          "postimageSha256": "f6e37e664e248eefb285387d2f19635ebf43e44c25debc41c5bd1c503dca987e",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-cnc-finished-bracket.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "710449855cb6f1a6c3d46313bf192950559e4597",
+          "postimageBytes": 122640,
+          "postimageSha256": "24cc2d0dd716975a8cd0452066ec87c93c8eaad3ab4b151ebb494f75afadbe59",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-cnc-finished-housing-v2.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "d12e92416d8b750ae0ace51b9061b36a40ee9009",
+          "postimageBytes": 160146,
+          "postimageSha256": "acfcffaf740fb5f37dd1c9d3db8d81221527388e4569290a2e6d96933722ed1b",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-cnc-fusion-cam.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "04317e89e577cc122371a4908bb81dd6f294ab87",
+          "postimageBytes": 146066,
+          "postimageSha256": "010ebdbcec4141712198a56d79fea6080a0f63e7e0e9f87c652bf01d520a254e",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-cnc-vf2-machining.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "2ea7500a2818fbcec45950d351184c86c0a8fe6c",
+          "postimageBytes": 136816,
+          "postimageSha256": "d15945f209ba605001c8857bfbef55c124cbfae1f6b386f138c06bef2aab3e82",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-design-mouse-cad.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "d042da37d4e2d6d568e9aa9e66d6510c5a14806c",
+          "postimageBytes": 79830,
+          "postimageSha256": "ee4e2251fa0b99b950259dd30207b403ebd88f9968b64f31e27c9ded5b95e290",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-design-mouse-revisions.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "62838be9900159c8a2a9e51e9a297a8bf6a30661",
+          "postimageBytes": 72852,
+          "postimageSha256": "7e4698adb858d20be6c09c0f6bf4c6a753021056bc169b69f3aa78b55a473331",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-design-mouse-sketch.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "630944c202aca5685661ef4dd7051e04f30346ce",
+          "postimageBytes": 135502,
+          "postimageSha256": "fb645e34f1516909d5fc879d294f4c38aa9d95c6d191fee6ccd15e8a3489ec5e",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-injection-batch.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "10fdb5f459ed8a5d857ce6e094ca4093b66530eb",
+          "postimageBytes": 132752,
+          "postimageSha256": "2c628e4b08a0f496ee9dfbe72da366615a88b3af2bb9a0a7ea3722ed41d5704d",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-injection-concept.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "bb5e25823d1fd3b77e05c6d412f5406af57860eb",
+          "postimageBytes": 109136,
+          "postimageSha256": "0fad8aaef0b061cca66e0cf43340d35e54e115be63ec076b37d07d9b6f6260a1",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-scan-cad-grey-v2.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "3dac4d3af1cb1634def97c60670afa43167933f1",
+          "postimageBytes": 153954,
+          "postimageSha256": "d8d116b98c71be501adc4724c2311cbe1b1da9e78bbe5885111f231a89cc4c58",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-scan-capture.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "8f21abd2839fb2fd9098cd0c37346cdafce6be93",
+          "postimageBytes": 140976,
+          "postimageSha256": "afbe669b263f91d3011e2c0eb362704c169524c130a1e80a86e80b75073c347a",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-silicone-concept.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "6ff2efbf7f3f12669636a0f417dd12a55ca8c820",
+          "postimageBytes": 104650,
+          "postimageSha256": "f5236d181c525b19d2d17aac0e745441e5ee560cae6ec3619562be7682886ed5",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/capability-silicone-pour.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "67130dcfa1509236141c0284f1266c863352f540",
+          "postimageBytes": 98562,
+          "postimageSha256": "73e9f7c427a35f7bef2b6fb3a06f4426bd51170b2ce060816158e8d0e4cdb2f0",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/home-enclosure-cad.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "cc32a604d1c1522cf53e055b317c66220213d34d",
+          "postimageBytes": 83056,
+          "postimageSha256": "c023c1240c6ea2097f949bd4739c67ca71fba9277846adc7e4a8c4f8698dc346",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/home-enclosure-inspection.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "0fb3c88dc02707f30af6060808cb856fdc283cbf",
+          "postimageBytes": 152208,
+          "postimageSha256": "b057896fd3d5f565889ebae550732dbecc50c5afa9ada39cae2059a92f9e724c",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/home-enclosure-prototypes.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "f608582a7a0da67d9f38beea6101561c933e6b52",
+          "postimageBytes": 142400,
+          "postimageSha256": "4e977fe989d5865d0f7922c976d07c5c3da922efae12c7996ac4b5f70619aad4",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/home-enclosure-sketch.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "eb8108139e3074fe10768cb078de82eb4bbf5d72",
+          "postimageBytes": 137722,
+          "postimageSha256": "cdbdbe0d5d44334383621b25223b899ab3ce3bc8e538dd92e52ae32a303b99f6",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/profile-hybrid-gripper-cutout.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "f1c3e10743fb90b4532b5a81f76e83f5c29681a7",
+          "postimageBytes": 136366,
+          "postimageSha256": "2dbd349c17d56201b57633dc95b2c091409be7a1e45e1fd2ff81853deaa3b80a",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/reverse-engineering-worn-part.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "9c6a793678745434cbef0d57ceefee3630fb5841",
+          "postimageBytes": 177352,
+          "postimageSha256": "b588bc2aa3c9c8768aefa1acdaed72b0436371baaff381c581be5078c77e692a",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/reverse-workpiece-adapter.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "b20111e8ddfd6f8afd885686f4f69cea577796a8",
+          "postimageBytes": 105252,
+          "postimageSha256": "4bcf731434d78132824c22045081fcd6641ca20697057456c2b50818f384c231",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/reverse-workpiece-machinery.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "a0b627027a179f0e32cd19ab12e16bcd3053ae70",
+          "postimageBytes": 135390,
+          "postimageSha256": "b38ade2e691e535e1e7c77d72d28ce9c5d3384837000ab46be48a214470f8259",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/reverse-workpiece-sculpture.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "58b9080625f3ca75735a28538e2d5b45c3f91dc7",
+          "postimageBytes": 93928,
+          "postimageSha256": "cff216adea93dd8bfe5832b11160bfa398de12fc8dd3901b0b8269675829706a",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/images/landing/silicone-owl-sculpture-casting.webp",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "f381c702f8c7daf1cac334dc1df7b4b1d1bd9d24",
+          "postimageBytes": 94692,
+          "postimageSha256": "0f98be43043ecbf65f73c232be880df11c35450a74e17c843e4a06e126b5fec7",
+          "source": "598-606-reviewed-asset"
+        },
+        {
+          "path": ".gitattributes",
+          "preimageGitBlob": "918f01af6957df4b5eaaf27c87fd9e0d0ddf0c85",
+          "postimageGitBlob": "1966dea355f7fae9a348f61f580c3a3428d93788",
+          "postimageBytes": 501,
+          "source": "598-custody"
+        },
+        {
+          "path": "Legacy.Maliev.Web.Tests/AdditiveFxHandlerContractTests.cs",
+          "preimageGitBlob": "1799f462398edfd4c6455d7f13eab955eba63d11",
+          "postimageGitBlob": "065cab9a21e263ba91bb8634c0593ec6921f7cec",
+          "postimageBytes": 27027,
+          "source": "606-FX-diagnostics"
+        },
+        {
+          "path": "docs/migration/company-release-assets.v1.json",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "6b55e8dd05e009b34fcaeadfd1164a88fd189ed3",
+          "postimageBytes": 27262,
+          "source": "598-custody"
+        },
+        {
+          "path": "scripts/verify_company_release_assets.py",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "e1ae5e1f4c7f33e26d585a2d0f885f46e94958e6",
+          "postimageBytes": 8983,
+          "source": "598-custody"
+        },
+        {
+          "path": "tests/CompanyReleaseAssetValidator.Tests.py",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "4828674b4db33f0a94ea58bb805552b0b91eab78",
+          "postimageBytes": 7907,
+          "source": "598-custody"
+        },
+        {
+          "path": ".github/workflows/_build-and-test.yml",
+          "preimageGitBlob": "7488d2c1bbcdd35ead0928360e216a282777d07f",
+          "postimageGitBlob": "25f63b1aa319a1e69d9257fa1d0380556dd99023",
+          "postimageBytes": 30325,
+          "source": "integrated-custody-FX-focus"
+        }
+      ]
+    },
+    {
+      "name": "home-and-material-visibility-with-generated-assets",
+      "meaning": "Stage 29 reviewed non-workflow source postimages, manual final additive workflow and 4 qualified generated dist postimages together; no source-only active runtime.",
+      "paths": [
+        {
+          "path": "Legacy.Maliev.Web/Components/Pages/Home/HomeContent.razor",
+          "preimageGitBlob": "0265db8a154df50b54e85faed2ae487d9c117af1",
+          "postimageGitBlob": "ace551c9eb2b7105641268714788c548e703c3fc",
+          "postimageBytes": 12908,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web/Components/Pages/Home/HomeHero.razor",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "53252f586b706ffb888f66fc2c74cdc1db5d5e0d",
+          "postimageBytes": 1521,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web/Components/Pages/Home/HomeHeroScene.razor",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "e05c722c6304b22248397d43eceb5164b7b489c9",
+          "postimageBytes": 8376,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web/Components/Pages/Home/HomeHeroSelection.cs",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "7f04b5688d3c42f9c014253ad250fa245581b8af",
+          "postimageBytes": 1332,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web/Components/Pages/Home/HomePage.razor",
+          "preimageGitBlob": "3944f0d844b155a6983a1afbc2a8ba0a44009f62",
+          "postimageGitBlob": "a1a38551f573bbe901b4c0c812c36566eba1b563",
+          "postimageBytes": 2249,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web/Pages/Index.cshtml",
+          "preimageGitBlob": "8f6d9b8774f94748fec680d67a5cc9d75bdb0c48",
+          "postimageGitBlob": "47f91738c2de76dbb73db9f514fe4b1e885af8a2",
+          "postimageBytes": 1733,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web/Resources/Components/Pages/Home/HomeContent.resx",
+          "preimageGitBlob": "42283ce98ac5377c1d6e64fc6616f8915a290605",
+          "postimageGitBlob": "664e51410386be887cadc9fdcae0e6d310d20b8a",
+          "postimageBytes": 33720,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web/Resources/Components/Pages/Home/HomeContent.th.resx",
+          "preimageGitBlob": "1cdd54ee209d313d2207020955a7c8a1ba244faa",
+          "postimageGitBlob": "98d3ccd57589d4a34dba5a2a8dd59f3d7087c997",
+          "postimageBytes": 46129,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web/tests/home-hero-callouts.test.cjs",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "03663c20fd3d7138149208208a4bc7115f9a5919",
+          "postimageBytes": 5898,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web/tests/home-hero-carousel.test.cjs",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "409aacb834a41fda9e4a3534f6e7a8a42e2dc0d0",
+          "postimageBytes": 12236,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web.Tests/HomeStaticSsrRouteTests.cs",
+          "preimageGitBlob": "39a341f2e97c36d61482155a6d7dc39deb0ceed3",
+          "postimageGitBlob": "4fff769dcb65c1008908909ec2dc05221175cbd8",
+          "postimageBytes": 19543,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web.Tests/HomeStoryBrowserTests.cs",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "1b000381f7b79af52b811de5ca74b18cdc10cc99",
+          "postimageBytes": 8146,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web.Tests/HomeStorySsrRouteTests.cs",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "6dad6cce16e4503ab375fcbc4109ea267cef6530",
+          "postimageBytes": 5305,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web.Tests/SeoBusinessContractParityTests.cs",
+          "preimageGitBlob": "c45b50214a78bae508522c8b755c6cdbfef489b1",
+          "postimageGitBlob": "693e4569950c0c3914d5ac3784b97bc02314c3c5",
+          "postimageBytes": 11668,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/app/css/home-hero-variants.css",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "155d492d323de3c32e3294a14fb348a8fc1b64e6",
+          "postimageBytes": 8369,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/app/css/landing.css",
+          "preimageGitBlob": "be1d87850625d56460c327decb9bf01df59332ff",
+          "postimageGitBlob": "a781acdff946be7e3b942366c25dd9099dc2a76b",
+          "postimageBytes": 20546,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/app/js/home-hero-callouts.js",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "95269b1414e2fcd887162839a9ad7053f681c4e0",
+          "postimageBytes": 2400,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/app/js/home-hero-carousel.js",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "4fed1e8ccf57cff80d18ac257daae1b02256d243",
+          "postimageBytes": 7331,
+          "source": "599-home"
+        },
+        {
+          "path": "Legacy.Maliev.Web/assets/route-home.js",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "9f544fce0b9f574e74ef9721ef0b5048f6660221",
+          "postimageBytes": 108,
+          "source": "599-pipeline"
+        },
+        {
+          "path": "Legacy.Maliev.Web/assets/route-home.css",
+          "preimageGitBlob": "b89fe487cc220471e42b8a45b5c8ded67358a0df",
+          "postimageGitBlob": "052a33d5ca35d2e62d396cba2fd5ca451f87e2d6",
+          "postimageBytes": 103,
+          "source": "599-pipeline"
+        },
+        {
+          "path": "Legacy.Maliev.Web/build-assets.mjs",
+          "preimageGitBlob": "a7e4bf602966368412eb72f7e02b312b82f31808",
+          "postimageGitBlob": "1b07bc941b06b7593f1bd03c7ec80900f32e9fbf",
+          "postimageBytes": 6005,
+          "source": "599-pipeline"
+        },
+        {
+          "path": "Legacy.Maliev.Web/Components/Layout/PublicRouteAssets.cs",
+          "preimageGitBlob": "4238b49f55ed9ba8484bc16dfa97c0bda28bf977",
+          "postimageGitBlob": "c3a0276cba0a9d88f4a7f98987ee90a7e02165b5",
+          "postimageBytes": 3250,
+          "source": "599-pipeline"
+        },
+        {
+          "path": "Legacy.Maliev.Web/package.json",
+          "preimageGitBlob": "28e31831836227a905f4c2a15958c25aaddfe244",
+          "postimageGitBlob": "ed8002f1e8025533a1dd9d7989a617f6fa4bbeae",
+          "postimageBytes": 1855,
+          "source": "599-pipeline"
+        },
+        {
+          "path": "Legacy.Maliev.Web.Tests/RouteScopedAssetRenderingTests.cs",
+          "preimageGitBlob": "6e534f25c6b5c3c45154d95943b62db134ca655a",
+          "postimageGitBlob": "cf1af6ef87c82420ea1cbf0e199451a9399ec61a",
+          "postimageBytes": 1943,
+          "source": "599-pipeline"
+        },
+        {
+          "path": "Legacy.Maliev.Web.Tests/SharedFrontendBundleContractTests.cs",
+          "preimageGitBlob": "6231274ae2e6d4a23f304a07d86b766409fc3fb9",
+          "postimageGitBlob": "b9258b74b0b7cce69211989af0c2d9a4c666a340",
+          "postimageBytes": 4891,
+          "source": "599-pipeline"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/src/app/js/instant-quotation/material-card-selector.mjs",
+          "preimageGitBlob": "ef9683b44d89274e2abd7082deb7845ccad573a6",
+          "postimageGitBlob": "9545abe2de8541effab2073fa0fc931b4dbceaf4",
+          "postimageBytes": 6557,
+          "source": "600"
+        },
+        {
+          "path": "Legacy.Maliev.Web/tests/material-card-selector.test.mjs",
+          "preimageGitBlob": "557375588bd27da1f63d07fa4aeaab95173f9b49",
+          "postimageGitBlob": "13e75ae2dd118c826df2053036eb63dc1ef641cc",
+          "postimageBytes": 9684,
+          "source": "600"
+        },
+        {
+          "path": "Legacy.Maliev.Web/Components/Pages/InstantQuotation/InstantQuotationMaterialSelector.razor",
+          "preimageGitBlob": "3ff4757fa5ba0c5b78e0bdab22f42a881f584566",
+          "postimageGitBlob": "4cedb8713a298dfc2e410b4cb241bfa4bc633f57",
+          "postimageBytes": 7840,
+          "source": "600"
+        },
+        {
+          "path": "Legacy.Maliev.Web.Tests/MaterialPricingDisplayBrowserTests.cs",
+          "preimageGitBlob": "9fd25f8fc6d816994f7419e85bd91d54fde2f7b0",
+          "postimageGitBlob": "705b0defbb827da0ae01ce944d3ade344e70bfde",
+          "postimageBytes": 42451,
+          "source": "600"
+        },
+        {
+          "path": ".github/workflows/_build-and-test.yml",
+          "preimageGitBlob": "25f63b1aa319a1e69d9257fa1d0380556dd99023",
+          "postimageGitBlob": "2710a5b8f8dfc9054369e4dffe11f3e1769bbbb2",
+          "postimageBytes": 30408,
+          "source": "599-home-focus-addition"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/dist/asset-manifest.json",
+          "preimageGitBlob": "a466445da2b2d6cc05fd5af00ef7287c528c4992",
+          "postimageGitBlob": "91acbd914a2344e155958499d90bb91d66056b10",
+          "postimageBytes": 833,
+          "postimageSha256": "814351cb07d6a2489fe9fc8e8d05653217747b49312cd47853d6acd07d5d0b1a",
+          "source": "qualified-hosted-generated"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/dist/instant-quotation-workflow.mjs",
+          "preimageGitBlob": "5265a53928241a5023d0dc4757ded255012fcd19",
+          "postimageGitBlob": "50e4cf2eb644574c2a803e3d446156f208cbf9b0",
+          "postimageBytes": 24036,
+          "postimageSha256": "c05d58e1a1a450810c8fcdc667c424c8d8ad2498c742f52939a2a66a9f820b1a",
+          "source": "qualified-hosted-generated"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/dist/route-home.css",
+          "preimageGitBlob": "545b668011b43eb049de1d17ea04fa75328b2115",
+          "postimageGitBlob": "a6cea382dfd78cb28e67ecd0d4b926123f03d5f3",
+          "postimageBytes": 24347,
+          "postimageSha256": "b648e7bf317cd33dd21c58513299adad685a794220300c386ca4da9da2a8b9cf",
+          "source": "qualified-hosted-generated"
+        },
+        {
+          "path": "Legacy.Maliev.Web/wwwroot/dist/route-home.js",
+          "preimageGitBlob": null,
+          "postimageGitBlob": "865411e77ea4d0db6eb40de52c0e38cfa580da64",
+          "postimageBytes": 5122,
+          "postimageSha256": "4f3231596a398b8f585736a52fd6d90379079d24f00d1011f5ea97449c530a8d",
+          "source": "qualified-hosted-generated"
+        }
+      ]
+    }
+  ],
+  "binding": {
+    "sourceOriginalCommits": [
+      {
+        "sha": "f981dce7682606b1c13f04b271163447f3f2709e",
+        "owner": "598 asset custody",
+        "disposition": "asset paths only; not whole-source closure"
+      },
+      {
+        "sha": "3c052083d04a46bf36a7e19695ffc5d339300c86",
+        "owner": "598 asset custody",
+        "disposition": "asset paths only; not whole-source closure"
+      },
+      {
+        "sha": "e1edc6de1537712f52c016318e311c8dd3819e5c",
+        "parent": "20ffaee0de3c26a15011f6ab682cf77591ac3964",
+        "owner": "596 Knowledge guides",
+        "disposition": "already in exact 6fb base; separate issue #596 validation/closure"
+      },
+      {
+        "sha": "cb176a6a8944b0f05e2128ef83174be5f5df9a43",
+        "parent": "3c052083d04a46bf36a7e19695ffc5d339300c86",
+        "owner": "599 Home presentation",
+        "disposition": "bounded reviewed #599/#600 behavior only; no whole-source closure"
+      },
+      {
+        "sha": "ce57f9b8991c31ae05ea63a7f275654eb677ee7a",
+        "parent": "cb176a6a8944b0f05e2128ef83174be5f5df9a43",
+        "owner": "599 Home presentation",
+        "disposition": "bounded reviewed #599/#600 behavior only; no whole-source closure"
+      },
+      {
+        "sha": "f2d28a1d984a6cf5429ad26760765f918cc9c69e",
+        "parent": "ce57f9b8991c31ae05ea63a7f275654eb677ee7a",
+        "owner": "600 selected-card visibility",
+        "disposition": "bounded reviewed #599/#600 behavior only; no whole-source closure"
+      },
+      {
+        "sha": "72472c1721efc53cad01df35d0340fd74fffab76",
+        "parent": "a23e9dc155ab6b8eb4794b0c4ac5231e66da8e6f",
+        "owner": "600 observed browser visibility waits",
+        "disposition": "bounded reviewed #599/#600 behavior only; no whole-source closure"
+      }
+    ],
+    "custodySourceHead": "fa3654b39e8a5f9341433b6039a1b7684777ebba",
+    "assetGenerationSourceHead": "92a52e5ab1e21820bd0adef7a0ca5b2509d68380",
+    "custodyInventoryGitBlob": "52aff828aa62d269054b8fa2619d92e3d30f26d9",
+    "reviewedSourcePatchGitBlob": "edd93958766884c54b1cda6670bbb1578b44108d",
+    "reviewedPacketGitBlob": "8c6ac6c278319124a67f069d3fa02d7e4bb8b3d9",
+    "integrationRule": "Reviewed patch's workflow hunk targets original 6fb; do not apply it over Stage A. Use exactly 29 non-workflow postimage rows and separately sealed final workflow. Both stages fail closed on any preimage mismatch.",
+    "intermediateWorkflowGitBlob": "25f63b1aa319a1e69d9257fa1d0380556dd99023",
+    "finalWorkflowGitBlob": "2710a5b8f8dfc9054369e4dffe11f3e1769bbbb2",
+    "packageLockGitBlob": "8c392b351e1c1da0e11807ad7fb9ef79514d0c86",
+    "artifactSourceAssociation": {
+      "reviewArtifactSourceRows": 30,
+      "identicalFinalNonWorkflowRows": 29,
+      "workflowPath": ".github/workflows/_build-and-test.yml",
+      "reviewArtifactWorkflowGitBlob": "9dc15448432887116b234d283984846c31a69196",
+      "integratedFinalWorkflowGitBlob": "2710a5b8f8dfc9054369e4dffe11f3e1769bbbb2",
+      "reason": "Manual additive composition from protected 6fb workflow preserves 608 Knowledge/604 cleanup and introduces 606 custody/FX plus 599 Home focus. Artifact generation used the standalone 599 workflow; it did not test this final composite CI workflow.",
+      "generatedInputs": "All runtime and build-affecting 29 non-workflow source postimages, exact 59 custody assets, package lock and 4 generated postimages are bound; the only artifact source-row divergence is CI workflow.",
+      "requiredFollowUp": "Validate the exact final composite workflow and full normal policy checks on the published candidate head. Do not treat review-only artifact as workflow acceptance."
+    }
+  },
+  "reviewOnlyHostedEvidence": {
+    "runId": "38932087721",
+    "head": "4ad86268bfe8b5d5c21ef1505ea8efeb99294180",
+    "artifactId": "12059441559",
+    "artifactArchiveSha256": "5828e6036a48b4eca679f40d79ea6d8612d839cdebef00322ede0ce709361146",
+    "manifestGitBlob": "a444ac0ac34e6d29d1ebd0b5322b61b1c4e6e6cc",
+    "manifestSha256": "ed7cff630ed84048a6f62a54e3de82e696147a183124589ff69e3b0d441aefa1",
+    "sourcePostimages": 30,
+    "assetCustodyCount": 59,
+    "generatedFileCount": 47,
+    "generatedTotalBytes": 4176702,
+    "generatedFullInventory": [
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/app.min.js",
+        "gitBlob": "3cb82c89550198dbb15f0b834309abffd7ab1a12",
+        "bytes": 14279,
+        "sha256": "facbb170fec60cf6b95da3345cab77fd4e70b38d3afa098c0c37c56e345d3f9d",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/asset-manifest.json",
+        "gitBlob": "91acbd914a2344e155958499d90bb91d66056b10",
+        "bytes": 833,
+        "sha256": "814351cb07d6a2489fe9fc8e8d05653217747b49312cd47853d6acd07d5d0b1a",
+        "unchangedAgainstBase": false
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/fa-brands-400-LA6RBN2H.woff2",
+        "gitBlob": "e5b3ce081207a202aac7407af74696f458887c2a",
+        "bytes": 115420,
+        "sha256": "ff66d1cfb67dbe3da432bbe36572cabfa4eef0e591303c2cba111474ba1d15bc",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/fa-regular-400-NCGHE5NP.woff2",
+        "gitBlob": "d470bd17584b271e1069a6435db5128a8a69f2b7",
+        "bytes": 19512,
+        "sha256": "f4722d10b9e1b41eefe3b51a026312ee1970edb7782f94b0080d3d475945734c",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/fa-solid-900-EFITDVWS.woff2",
+        "gitBlob": "3ffbb19eb1453bc16ad20e7d57febed054e30ff5",
+        "bytes": 119488,
+        "sha256": "24e5fae26b41c08b2df81c91669f5aaae71d81a84a4713fc56b5c621b78dd456",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/fa-v4compatibility-4GXT74DT.woff2",
+        "gitBlob": "971a2b327340c891949b29e53cb519c67173e30b",
+        "bytes": 4168,
+        "sha256": "c776ee1f1fe21cd72195e91de7afd5c9dbd007e9d06016254d65fbcc091398ca",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-400-normal-BXXLFHTJ.woff2",
+        "gitBlob": "b7386c8164a953547cb960712276918674fa219c",
+        "bytes": 9112,
+        "sha256": "57776453076ebf0fa935080e63c0ae656f1f1ecd5172112d59d3b259e0dd8796",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-400-normal-HJOYPAAW.woff",
+        "gitBlob": "4933fe4bf093ae4f1defe0907372bfc7561f79dc",
+        "bytes": 11316,
+        "sha256": "e601a5a91e1b567fb0648ff598923aea68502b048d9e8ee995033f12a373eb09",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-500-normal-DA26WOS3.woff",
+        "gitBlob": "a3e79dec4e3c5c3c021b508e9c473c96a618e7dd",
+        "bytes": 11460,
+        "sha256": "9a2e70dcd30e9f8a9880ea8a53e851a79dcdb17d689612bd1a4796963653fdec",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-500-normal-NLQVN6TL.woff2",
+        "gitBlob": "09fdeab3f7f3f7d0d5ba243f1459f8b9b1df9abe",
+        "bytes": 9224,
+        "sha256": "36aac83971765332c5d79f98bba123a4ed07aacd5f90c4634eecba7d46264014",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-600-normal-FTSWGG55.woff",
+        "gitBlob": "e61b50c40b5c06e3d12e4936f4cd7df8f7ad5a28",
+        "bytes": 11444,
+        "sha256": "d99e288d30c029897e78e737f4ecc0734147c71893af2d8b645e9c1e9d4b68e3",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-600-normal-Q4NFZHYH.woff2",
+        "gitBlob": "32a6baa3bd52eb6184b4f79b6f72a2e8a1c5ad79",
+        "bytes": 9220,
+        "sha256": "8690b63cc8c7090492cce68f57a421be92fee4f682dff7ee06912132ebd2a8fc",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-400-normal-MJX636HN.woff",
+        "gitBlob": "eb2dc3005e3ddc5c4904f4fe47e044bfbbd9ccc6",
+        "bytes": 18232,
+        "sha256": "f329dc36d2d9285431fb8322f5e951def9cac4a42c1cada679747f7c64b04916",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-400-normal-WPZHQ72E.woff2",
+        "gitBlob": "2c401f59f92b53a2d43643a81a4dcb6a35c6947b",
+        "bytes": 14032,
+        "sha256": "71f028fd2349990b3f8aa643abe767e82e0f596be407ae66f0004ff164121bdb",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-500-normal-5NAIAZI7.woff",
+        "gitBlob": "4a072aa2329b707f5600098a7983c586843699ce",
+        "bytes": 17688,
+        "sha256": "40083be5d9c1935c562bfe9be662d5a2798910deee9e8049509142549a995626",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-500-normal-PXR3PSSK.woff2",
+        "gitBlob": "264ce74280afa9bce3b16dbdd77a42754ba52986",
+        "bytes": 13528,
+        "sha256": "fc9bff941def6d924a71632bd8a93190528872eae6414844f3c367ff948d92fd",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-600-normal-7I4OGWZG.woff2",
+        "gitBlob": "aa32da2408ba303cef78ff1c3dc36cbf88983ef1",
+        "bytes": 14140,
+        "sha256": "8cfe15c2c6de6ef8efff3eedbd52a383ac9ef23d6c23f6cd9f9b838f5f37dc36",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-600-normal-SAVBCENJ.woff",
+        "gitBlob": "87b8e187f0431a4c523be6191b66e31c50e0359b",
+        "bytes": 18412,
+        "sha256": "3d1cd1b42cb525acde934764b2adec41dddf7932e1a965392d285efd56f2c148",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/cnc-quotation.min.js",
+        "gitBlob": "9c83def5963192f411fd82783b5e303e4c20ce8a",
+        "bytes": 122674,
+        "sha256": "70f627bbe21875db5f8f242f52c4ee285e0a447fc9d566e1032dd4e69f93ddc0",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/instant-quotation-viewer.mjs",
+        "gitBlob": "58726b50c904bcb525a42df092b5fbae9e6c981b",
+        "bytes": 695800,
+        "sha256": "82ca4cd811acc366701c6de1fac657cf4d50acf45d290d870bb66e57347238ff",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/instant-quotation-workflow.mjs",
+        "gitBlob": "50e4cf2eb644574c2a803e3d446156f208cbf9b0",
+        "bytes": 24036,
+        "sha256": "c05d58e1a1a450810c8fcdc667c424c8d8ad2498c742f52939a2a66a9f820b1a",
+        "unchangedAgainstBase": false
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-about.css",
+        "gitBlob": "42d0d14d6eba0c0ad1d929252f5c42f2be2ca430",
+        "bytes": 8220,
+        "sha256": "51ef3512e48f04cce31d775f3a66df3ca4dab355b25576e2a5cbc9ae78a41732",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-error.css",
+        "gitBlob": "a3f908a270bfa026757822f1a16e7b3f28700715",
+        "bytes": 3737,
+        "sha256": "28e8190b5de1e5958d6aa735d93c2d87ef3d1df0f82aed1e2a581bae1a30d71e",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-error.js",
+        "gitBlob": "074f8749bae9309d53ac7cd7922eb1f61d7c53b8",
+        "bytes": 5634,
+        "sha256": "150833c57587ae0bd34efe2576ac4098aae3524e01c0a0f98f392bd62902ddec",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-home.css",
+        "gitBlob": "a6cea382dfd78cb28e67ecd0d4b926123f03d5f3",
+        "bytes": 24347,
+        "sha256": "b648e7bf317cd33dd21c58513299adad685a794220300c386ca4da9da2a8b9cf",
+        "unchangedAgainstBase": false
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-home.js",
+        "gitBlob": "865411e77ea4d0db6eb40de52c0e38cfa580da64",
+        "bytes": 5122,
+        "sha256": "4f3231596a398b8f585736a52fd6d90379079d24f00d1011f5ea97449c530a8d",
+        "unchangedAgainstBase": false
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-inquiry.css",
+        "gitBlob": "345f27e33b6fa13a1d479abcfe422f6af160f712",
+        "bytes": 13642,
+        "sha256": "c86411c6ede32d15885017f1f1cab9f1eeabd6803e139d07aaa76f0be5f98060",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-inquiry.js",
+        "gitBlob": "e00d8b24e91a3ff50d61bebd310bf967149923fc",
+        "bytes": 5081,
+        "sha256": "0c4fa3da58bedb50aa60c1ba157a72579e1f0fdcfd5aed1e0dd09f6b8cf69898",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-instant-quotation.css",
+        "gitBlob": "1afdfb26c0844e36402f196fb1c1969d1db9f39a",
+        "bytes": 35240,
+        "sha256": "e6d2efe0428659e965e1d446cae1fd91d0c6d0083d9343b9194c7be8d4324fb3",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-instant-quotation.js",
+        "gitBlob": "007a3eb32db02ff56d13937a45472c50ea662b70",
+        "bytes": 26527,
+        "sha256": "0ecf64355301e0365082fd61ddcb2c15120d87e73aa675f450a0ad5bf9e5e274",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-knowledge.js",
+        "gitBlob": "7542949b6633934ce8627f7b949dd44d34b916b2",
+        "bytes": 1851,
+        "sha256": "cbb53e9e6844bb5728700fc05501bd48025a9dd853cf350009a3b62c8f2744e3",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-member-order.js",
+        "gitBlob": "cfaf2f9efd3f1eebe97820cfb2b92736e4609926",
+        "bytes": 1115,
+        "sha256": "eb65c84ffe74fcdf969ba1c5a62a0631a6e3ed18fe63ed04a3db63a021918d7e",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-cnc.js",
+        "gitBlob": "9ae53d446541d609b37a2831acafbccdfef62247",
+        "bytes": 4026,
+        "sha256": "c5bfac697b44f251c987dd8ca082b296a5e341e05e7a7bbd7e746f61a4726657",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-finder.js",
+        "gitBlob": "f67c173bb30d6d6a4b2575f1b0eb310e8c537f61",
+        "bytes": 24690,
+        "sha256": "649ce93a339a6bc987dbc8901cd5e2ef73f59e6584357524f3ee6b01c0ba4485",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-finishing.js",
+        "gitBlob": "e1f06cb141700e92b248ca4d54e42157e2183024",
+        "bytes": 851773,
+        "sha256": "ec3c8ade24fce6e9f32b9ee29b207fb287ab9dd76b16ead0bf64220742ef81ec",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-printing.js",
+        "gitBlob": "2344c3cd2b96c3f5d34f16dfc0c220f56022e51d",
+        "bytes": 16226,
+        "sha256": "a1da2b909fe61a503b8fb2bf4e2e165ef4d04978b869938f4fa615898b834338",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-scanning.js",
+        "gitBlob": "60672f0b3c42d97e6ac7710501cac5cb646c176b",
+        "bytes": 7517,
+        "sha256": "d8b53a3bcf604373c7697a8dd2ffb1b7eab2ef30aea88059df4ee8719b3079fc",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-service-toc.js",
+        "gitBlob": "6956a4a4636d8d0c43ab3cd90216320f8f1e283c",
+        "bytes": 3258,
+        "sha256": "86ecee9fe8d2247f12fc1a033852998da86466eda018873d0badaee2c6042701",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-services-index.css",
+        "gitBlob": "4ac6142e3f5c5f7bf369ef007dc5737d350597eb",
+        "bytes": 99231,
+        "sha256": "928c7e8fffaccc8ad675165f27803031ba6a03fdbc30e44e3d3e994bc874ca0c",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/route-services.css",
+        "gitBlob": "2742d0a7fc1ee9d4690961b1958c579fa12d8aa5",
+        "bytes": 89150,
+        "sha256": "ea0e5a5d6c6ee7c59b678b65619324bca745544d80e1fe44ff4c7ecb679fcd9a",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/site.min.css",
+        "gitBlob": "db82c3734b7b24e1eb562fc052a845683c277650",
+        "bytes": 381079,
+        "sha256": "9e6a1ea0aa2e55178c8e3bbc38fa2e6be3e19f3eb3560a5db83ffaa2bbe6327c",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/dist/vendor.min.js",
+        "gitBlob": "13743ebb61b209f28e1c5805c9a09b33e92055b3",
+        "bytes": 81462,
+        "sha256": "a8fe237359a79aa18713e9bebfd308f7e9309697f515ba4a15270dc7649b0455",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/vendor/three/LICENSE",
+        "gitBlob": "5303437e406ed22d8cb0b4c12398870792a25878",
+        "bytes": 1081,
+        "sha256": "7dddf7c5b8fd10ee654db8857d75d104b5557889aa5a91fc4ca545ea7c07062f",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/vendor/three/OBJLoader.js",
+        "gitBlob": "93e8ba1cc564f55d2074a443588357a6a747c0d2",
+        "bytes": 21560,
+        "sha256": "e3c4cf3a6b061b6956e8e8d5cc360cf95da456dcced32961f859c8be6849a579",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/vendor/three/OrbitControls.js",
+        "gitBlob": "0873097102ca98527d3f2b5132a57b0b9d62ce07",
+        "bytes": 26375,
+        "sha256": "02bb4ade710f3e607329e37a21f098bc3ac70eb6e33daf8a65e79f4db785e7b2",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/vendor/three/STLLoader.js",
+        "gitBlob": "5c50fc2db0065b928e3aaa7e74d9414fdc5c2c18",
+        "bytes": 9847,
+        "sha256": "c392b93d1331e64082cbd76deb850fe5de11385472a3f4c5b7fe82ba216cb49e",
+        "unchangedAgainstBase": true
+      },
+      {
+        "path": "Legacy.Maliev.Web/wwwroot/src/vendor/three/three.js",
+        "gitBlob": "d855ea0aeea1afb894cc8e0c6c6a2b2f3c15aa96",
+        "bytes": 1154893,
+        "sha256": "842f0d84fb0af931cd09bfec7b495d2391f0008f4e8504b071d2d030b6030c37",
+        "unchangedAgainstBase": true
+      }
+    ],
+    "changedGeneratedCount": 4,
+    "hostedChecksObservedByRoot": "Review-only hosted generation: 83 focused Node checks, 16 normal and 16 optimized Python custody controls, 59 exact assets. Does not substitute for normal protected-main CI or full-suite acceptance.",
+    "finalIntegrationIdenticalSourcePostimages": 29,
+    "finalIntegrationWorkflowPostimageDifferent": true
+  },
+  "preserve": [
+    "608 Knowledge route/bundle focused checks and current protected workflow gates",
+    "604 owned-resource cleanup and browser preimage",
+    "606 custody and FX diagnostics with normal and optimized asset checks",
+    "existing raw generated-inclusive coverage, formatting, static/security, Release zero-warning/error, full suite and required browser gates",
+    "no CNC quotation/provider expansion, pricing authority, production data, deployment or cutover"
+  ],
+  "finalAcceptance": "Final integrated candidate may be published only as draft for exact-head normal validation. No merge, issue closure, or whole-source equivalence claim until all required checks and review pass; no deployment.",
+  "sourceAudit": {
+    "mode": "Read-only committed Git objects; source files/references were not modified",
+    "observedSourceMain": "e1edc6de1537712f52c016318e311c8dd3819e5c",
+    "records": [
+      {
+        "sha": "f981dce7682606b1c13f04b271163447f3f2709e",
+        "subject": "Add approved manufacturing illustrations and corporate customer marks",
+        "parents": [
+          "d23065d499333ece5ef73013b085a8aaa062b163"
+        ],
+        "paths": [
+          {
+            "path": ".gitattributes",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/aeon-fantasy.svg",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/air-liquide.svg",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/bangchak.svg",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/bem.svg",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/crown-seal.png",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/fabrinet.png",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/grohe.svg",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/khon-kaen-sugar.png",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/kohler.png",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/kumwell.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/lenso.svg",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/lixil.svg",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/mektec.png",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/mfec.png",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/minor-food.png",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/mitsubishi-materials.png",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/murata.svg",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/olympus.png",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/ptt.png",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/pttep.svg",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/siam-motors.svg",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/siemens-mobility.svg",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/singha-kameda-current.png",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/sp-syndicate.jpg",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/thai-asahi-denso-en.png",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/thai-coconut.jpg",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/thai-optical.png",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/tpi-polene-power-emblem.png",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/yg-1-official-mark.png",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/about-customer-partnership.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/camera-bracket-cad-v5.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/camera-bracket-deployment.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/camera-bracket-production-v5.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/camera-bracket-prototypes-v4.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/camera-bracket-sketch-v6.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/capability-cnc-finished-bracket.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/capability-cnc-finished-housing-v2.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/capability-cnc-fusion-cam.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/capability-cnc-vf2-machining.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/capability-design-mouse-cad.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/capability-design-mouse-revisions.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/capability-design-mouse-sketch.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/capability-injection-batch.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/capability-injection-concept.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/capability-scan-cad-grey-v2.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/capability-scan-capture.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/capability-silicone-concept.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/capability-silicone-pour.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/home-enclosure-cad.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/home-enclosure-inspection.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/home-enclosure-prototypes.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/home-enclosure-sketch.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/profile-hybrid-gripper-cutout.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/reverse-engineering-worn-part.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/reverse-workpiece-adapter.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/reverse-workpiece-machinery.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/reverse-workpiece-sculpture.webp",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/landing/silicone-owl-sculpture-casting.webp",
+            "status": "added"
+          },
+          {
+            "path": "docs/superpowers/verification/2026-10-16-company-release-assets.json",
+            "status": "added"
+          }
+        ],
+        "owner": "Web #598",
+        "disposition": "Bounded owning paths are represented by the reviewed source/custody rows and test adaptations in this candidate; exact-head hosted validation is pending. Original historical verification documents are retained as immutable source references, never treated as current migrated runtime proof.",
+        "wholeSourceAccepted": false
+      },
+      {
+        "sha": "3c052083d04a46bf36a7e19695ffc5d339300c86",
+        "subject": "Present manufacturing portfolios and selected customers on About",
+        "parents": [
+          "72472c1721efc53cad01df35d0340fd74fffab76"
+        ],
+        "paths": [
+          {
+            "path": "Maliev.Web.Tests/Frontend/company-profile-capabilities.test.cjs",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web.Tests/Frontend/company-profile-presentation.test.cjs",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web.Tests/Frontend/company-profile-workpieces.test.cjs",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web.Tests/RemainingApplicationPageMigrationSourceTests.cs",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Pages/About/Index.cshtml",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Pages/Shared/_AboutWorkpieceGallery.cshtml",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/Pages/Shared/_CorporateCustomers.cshtml",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/app/css/company-profile.css",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/app/css/corporate-customers.css",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/app/js/company-profile-capabilities.js",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/app/js/company-profile-presentation.js",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/app/js/company-profile-workpieces.js",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/customers/kobelco.gif",
+            "status": "added"
+          },
+          {
+            "path": "docs/superpowers/verification/2026-10-15-corporate-customer-logos.md",
+            "status": "added"
+          },
+          {
+            "path": "docs/superpowers/verification/2026-10-15-corporate-logo-audit.json",
+            "status": "added"
+          },
+          {
+            "path": "docs/superpowers/verification/2026-10-15-corporate-logo-audit.md",
+            "status": "added"
+          },
+          {
+            "path": "docs/superpowers/verification/2026-10-15-corporate-logo-sources.json",
+            "status": "added"
+          },
+          {
+            "path": "docs/superpowers/verification/2026-10-16-company-release-assets.json",
+            "status": "modified"
+          },
+          {
+            "path": "docs/superpowers/verification/2026-10-16-tpipp-white-tile.json",
+            "status": "added"
+          },
+          {
+            "path": "docs/superpowers/verification/2026-10-16-yg1-official-symbol.json",
+            "status": "added"
+          }
+        ],
+        "owner": "Web #598",
+        "disposition": "PARTIAL: exact Kobelco/custody input included; About runtime, styles/modules and behavioral tests remain unresolved in #598; original verification documentation retained as source reference, not redeployed as current proof.",
+        "wholeSourceAccepted": false
+      },
+      {
+        "sha": "a23e9dc155ab6b8eb4794b0c4ac5231e66da8e6f",
+        "subject": "Keep arrow icons free of link underlines",
+        "parents": [
+          "f981dce7682606b1c13f04b271163447f3f2709e"
+        ],
+        "paths": [
+          {
+            "path": "Maliev.Web/wwwroot/src/app/css/application-shell.css",
+            "status": "modified"
+          }
+        ],
+        "owner": "Web #596",
+        "disposition": "Bounded owning paths are represented by the reviewed source/custody rows and test adaptations in this candidate; exact-head hosted validation is pending. Original historical verification documents are retained as immutable source references, never treated as current migrated runtime proof.",
+        "wholeSourceAccepted": false
+      },
+      {
+        "sha": "72472c1721efc53cad01df35d0340fd74fffab76",
+        "subject": "Wait for observed material scrolling in browser regressions",
+        "parents": [
+          "a23e9dc155ab6b8eb4794b0c4ac5231e66da8e6f"
+        ],
+        "paths": [
+          {
+            "path": "Maliev.Web.Tests/InstantQuotationScrollAffordanceTests.cs",
+            "status": "modified"
+          }
+        ],
+        "owner": "Web #600",
+        "disposition": "Bounded owning paths are represented by the reviewed source/custody rows and test adaptations in this candidate; exact-head hosted validation is pending. Original historical verification documents are retained as immutable source references, never treated as current migrated runtime proof.",
+        "wholeSourceAccepted": false
+      },
+      {
+        "sha": "cb176a6a8944b0f05e2128ef83174be5f5df9a43",
+        "subject": "Rotate approved homepage stories with stable responsive manufacturing callouts",
+        "parents": [
+          "3c052083d04a46bf36a7e19695ffc5d339300c86"
+        ],
+        "paths": [
+          {
+            "path": "Maliev.Web.Tests/Frontend/home-hero-callouts.test.cjs",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web.Tests/Frontend/home-hero-carousel.test.cjs",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web.Tests/LandingPageSourceTests.cs",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web.Tests/OpenSeoSourceTests.cs",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web.Tests/SeoBusinessContractTests.cs",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Pages/Index.cshtml",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Pages/Shared/_HomeHeroCarousel.cshtml",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/Pages/Shared/_HomeHeroVariants.cshtml",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/app/css/home-hero-variants.css",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/app/css/landing.css",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/app/js/home-hero-callouts.js",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/app/js/home-hero-carousel.js",
+            "status": "added"
+          },
+          {
+            "path": "docs/superpowers/verification/2026-10-16-company-production-release.md",
+            "status": "added"
+          }
+        ],
+        "owner": "Web #599",
+        "disposition": "Bounded owning paths are represented by the reviewed source/custody rows and test adaptations in this candidate; exact-head hosted validation is pending. Original historical verification documents are retained as immutable source references, never treated as current migrated runtime proof.",
+        "wholeSourceAccepted": false
+      },
+      {
+        "sha": "ce57f9b8991c31ae05ea63a7f275654eb677ee7a",
+        "subject": "Advance homepage hero scenes after eight seconds",
+        "parents": [
+          "cb176a6a8944b0f05e2128ef83174be5f5df9a43"
+        ],
+        "paths": [
+          {
+            "path": "Maliev.Web.Tests/Frontend/home-hero-carousel.test.cjs",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/app/js/home-hero-carousel.js",
+            "status": "modified"
+          }
+        ],
+        "owner": "Web #599",
+        "disposition": "Bounded owning paths are represented by the reviewed source/custody rows and test adaptations in this candidate; exact-head hosted validation is pending. Original historical verification documents are retained as immutable source references, never treated as current migrated runtime proof.",
+        "wholeSourceAccepted": false
+      },
+      {
+        "sha": "f2d28a1d984a6cf5429ad26760765f918cc9c69e",
+        "subject": "Keep material catalogue scrolling stable during price refreshes",
+        "parents": [
+          "ce57f9b8991c31ae05ea63a7f275654eb677ee7a"
+        ],
+        "paths": [
+          {
+            "path": "Maliev.Web.Tests/JavaScript/material-selection-scroll.test.cjs",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/app/js/model-viewer/model-viewer.js",
+            "status": "modified"
+          }
+        ],
+        "owner": "Web #600",
+        "disposition": "Bounded owning paths are represented by the reviewed source/custody rows and test adaptations in this candidate; exact-head hosted validation is pending. Original historical verification documents are retained as immutable source references, never treated as current migrated runtime proof.",
+        "wholeSourceAccepted": false
+      },
+      {
+        "sha": "20ffaee0de3c26a15011f6ab682cf77591ac3964",
+        "subject": "fix(web): improve Knowledge Center contrast and keyboard navigation",
+        "parents": [
+          "f2d28a1d984a6cf5429ad26760765f918cc9c69e"
+        ],
+        "paths": [
+          {
+            "path": "Maliev.Web.Tests/KnowledgeCenterBrowserTests.cs",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/Areas/Knowledges/Pages/Shared/_LayoutKnowledges.cshtml",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Areas/Knowledges/Pages/Shared/_SidebarPartial.cshtml",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/app/css/application-shell.css",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/app/js/knowledge-navigation.js",
+            "status": "added"
+          }
+        ],
+        "owner": "Web #596",
+        "disposition": "Bounded owning paths are represented by the reviewed source/custody rows and test adaptations in this candidate; exact-head hosted validation is pending. Original historical verification documents are retained as immutable source references, never treated as current migrated runtime proof.",
+        "wholeSourceAccepted": false
+      },
+      {
+        "sha": "e1edc6de1537712f52c016318e311c8dd3819e5c",
+        "subject": "docs(web): add researched bilingual manufacturing knowledge guides",
+        "parents": [
+          "20ffaee0de3c26a15011f6ab682cf77591ac3964"
+        ],
+        "paths": [
+          {
+            "path": "Maliev.Web.Tests/KnowledgePageMigrationSourceTests.cs",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Areas/Knowledges/Pages/Guidelines.cshtml",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Areas/Knowledges/Pages/Index.cshtml",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/3D-Printing.cshtml",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/3D-Scanning.cshtml",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/CNC-Machining.cshtml",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Areas/Knowledges/Pages/Specifications/Index.cshtml",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Areas/Knowledges/Pages/Workflow.cshtml",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Guidelines.th.resx",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Index.th.resx",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/3D-Printing.th.resx",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/3D-Scanning.th.resx",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/CNC-Machining.th.resx",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Specifications/Index.th.resx",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/Resources/Areas/Knowledges/Pages/Workflow.th.resx",
+            "status": "modified"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/knowledge/anodize-dimensional-growth.svg",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/knowledge/cnc-corner-clearance.svg",
+            "status": "added"
+          },
+          {
+            "path": "Maliev.Web/wwwroot/src/images/knowledge/cnc-wall-stiffness.svg",
+            "status": "added"
+          },
+          {
+            "path": "docs/superpowers/verification/2026-10-16-knowledge-center-guides.md",
+            "status": "added"
+          }
+        ],
+        "owner": "Web #596",
+        "disposition": "Bounded owning paths are represented by the reviewed source/custody rows and test adaptations in this candidate; exact-head hosted validation is pending. Original historical verification documents are retained as immutable source references, never treated as current migrated runtime proof.",
+        "wholeSourceAccepted": false
+      }
+    ],
+    "wholeSourceClosure": "Not claimed. #598 About runtime remains unresolved; parent/path intake is not accepted migration completion."
+  }
+}

@@ -28,7 +28,7 @@ public sealed class PublicCopyParityTests
         Assert.Contains("24 July 2026", privacy, StringComparison.Ordinal);
         Assert.Contains("24 กรกฎาคม 2569", privacyThai, StringComparison.Ordinal);
         Assert.Contains("href=\"#transfer\"", privacy, StringComparison.Ordinal);
-        Assert.Contains("<!--email_off-->info@@maliev.com<!--/email_off-->", privacy, StringComparison.Ordinal);
+        Assert.Contains("""@((MarkupString)"<!--email_off-->")info@@maliev.com@((MarkupString)"<!--/email_off-->")""", privacy, StringComparison.Ordinal);
         Assert.Contains("LegalEffectiveDate", terms, StringComparison.Ordinal);
         Assert.Contains("href=\"#hyperlinking\"", terms, StringComparison.Ordinal);
         Assert.Contains("href=\"#disclaimer\"", terms, StringComparison.Ordinal);

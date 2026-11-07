@@ -196,6 +196,32 @@ public sealed class MaterialCompletionObservationForwardingTests
         finally { await ReleaseAndObserveAsync(release, invocation); }
     }
 
+    [Fact]
+    public async Task SaturatedComparisonCounters_DoNotHideAnActualInFlightCallback()
+    {
+        using var fixture = new Fixture(false);
+        for (int index = 0; index < 129; index++)
+        {
+            Assert.Same(fixture.Quote, await fixture.Service.QuoteAsync(
+                fixture.Session, "synthetic-owner", true, (_, _) => ValueTask.CompletedTask, default));
+        }
+
+        var release = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var invocation = fixture.Service.QuoteAsync(fixture.Session, "synthetic-owner", true,
+            (_, _) => new ValueTask(release.Task), default);
+        try
+        {
+            Assert.False(invocation.IsCompleted);
+            Assert.Contains("comparisonCallbackEntered=128", fixture.Observation.Describe());
+            Assert.Contains("comparisonCallbackReturned=128", fixture.Observation.Describe());
+            Assert.Contains("comparisonCallbackInFlight=True", fixture.Observation.Describe());
+            release.TrySetResult(true);
+            Assert.Same(fixture.Quote, await invocation);
+            Assert.Contains("comparisonCallbackInFlight=False", fixture.Observation.Describe());
+        }
+        finally { await ReleaseAndObserveAsync(release, invocation); }
+    }
+
     private static async Task ReleaseAndObserveAsync(TaskCompletionSource<bool> release, Task invocation)
     {
         release.TrySetResult(true);

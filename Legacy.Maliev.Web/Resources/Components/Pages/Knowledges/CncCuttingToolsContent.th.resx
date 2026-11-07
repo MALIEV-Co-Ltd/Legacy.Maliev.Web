@@ -1,0 +1,146 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+  <data name="CNC cutting tools: select the whole cutting system" xml:space="preserve">
+    <value>เครื่องมือตัด CNC: เลือกให้เหมาะทั้งระบบการตัด</value>
+  </data>
+  <data name="Match tool material, geometry, coating and holding to the workpiece and operation. A useful selection balances edge strength, chip space, access and a stable cutting process." xml:space="preserve">
+    <value>เลือกวัสดุเครื่องมือ รูปทรงคมตัด สารเคลือบ และการจับยึดให้เหมาะกับชิ้นงานและลักษณะงาน โดยพิจารณาความแข็งแรงคมตัด พื้นที่ระบายเศษ การเข้าถึง และความเสถียรของกระบวนการร่วมกัน</value>
+  </data>
+  <data name="Choose for a defined operation" xml:space="preserve">
+    <value>เลือกโดยระบุลักษณะงานให้ชัด</value>
+  </data>
+  <data name="Start with material grade, hardness or temper, feature dimensions and required finish. Separate roughing, finishing, slotting, drilling and profiling requirements. Confirm the tool’s permitted entry method: an end mill that cuts on its periphery is not automatically suitable for plunging. Record diameter, usable cutting length, neck clearance and holder envelope before considering a faster cutting recipe." xml:space="preserve">
+    <value>เริ่มจากเกรดวัสดุ ความแข็งหรือสภาพอบชุบ ขนาดรูปทรง และผิวที่ต้องการ แยกความต้องการงานหยาบ เก็บผิว กัดร่อง เจาะ และกัดรูปทรง ตรวจวิธีเข้าตัดที่เครื่องมือรองรับ เอ็นมิลล์ที่ตัดด้านข้างได้ไม่ได้หมายความว่าจะป้อนลงตรงได้เสมอ บันทึกเส้นผ่านศูนย์กลาง ความยาวคมที่ใช้ได้ ระยะหลบคอ และขอบเขตหัวจับ ก่อนพิจารณาเพิ่มความเร็วตัด</value>
+  </data>
+  <data name="These are general selection principles, not a list of MALIEV stock tools or guaranteed machining capabilities. Validate the exact tool, machine and workholding combination with current manufacturer data." xml:space="preserve">
+    <value>แนวทางนี้เป็นหลักการเลือกทั่วไป ไม่ใช่รายการเครื่องมือที่ MALIEV มีในคลังหรือคำรับประกันความสามารถการผลิต ต้องตรวจสอบชุดเครื่องมือ เครื่องจักร และการจับยึดจริงด้วยข้อมูลผู้ผลิตฉบับปัจจุบัน</value>
+  </data>
+  <data name="Carbide and high-speed steel" xml:space="preserve">
+    <value>คาร์ไบด์กับเหล็กกล้าความเร็วสูง (HSS)</value>
+  </data>
+  <data name="Carbide generally offers greater stiffness and hot wear resistance, supporting productive cutting in a rigid setup. It is also sensitive to impact and poor alignment. High-speed steel, including cobalt-alloyed HSS grades, can offer useful toughness where flexibility or interrupted loading matters, usually at lower cutting speeds. Neither label determines the whole result: substrate grade, edge preparation, diameter and application still matter." xml:space="preserve">
+    <value>คาร์ไบด์โดยทั่วไปมีความแข็งเกร็งและต้านการสึกหรอขณะร้อนได้ดี เหมาะกับการตัดที่มีประสิทธิภาพในระบบจับยึดแข็งแรง แต่ไวต่อแรงกระแทกและการเยื้องแนว เหล็กกล้าความเร็วสูงหรือ HSS รวมเกรดผสมโคบอลต์มีความเหนียวที่เป็นประโยชน์เมื่อต้องรับการยืดหยุ่นหรือแรงไม่ต่อเนื่อง โดยมักใช้ความเร็วตัดต่ำกว่า อย่างไรก็ดีชื่อวัสดุอย่างเดียวไม่ตัดสินผล ต้องดูเกรดพื้นฐาน การเตรียมคม ขนาด และงานที่ใช้ด้วย</value>
+  </data>
+  <data name="Dormer Pramet: tool materials and cutting-data selection" xml:space="preserve">
+    <value>Dormer Pramet: วัสดุเครื่องมือตัดและการเลือกข้อมูลการตัด</value>
+  </data>
+  <data name="Geometry and coating follow the material" xml:space="preserve">
+    <value>รูปทรงคมและสารเคลือบต้องสอดคล้องกับวัสดุ</value>
+  </data>
+  <data name="For aluminium, a sharp edge, generous chip space and a surface that discourages adhesion can help prevent built-up edge. Harvey describes TiB2 as one option with low affinity for aluminium. This is a material-specific choice, not a rule that every coated tool suits aluminium. For steels and harder materials, select the maker’s matching substrate, coating and edge-strength recommendation rather than choosing by coating colour." xml:space="preserve">
+    <value>สำหรับอลูมิเนียม คมที่คมชัด พื้นที่ระบายเศษเพียงพอ และผิวที่ลดการเกาะติดช่วยลดการพอกตัวที่คมตัดได้ Harvey อธิบาย TiB2 ว่าเป็นทางเลือกหนึ่งที่มีแนวโน้มเกาะติดอลูมิเนียมต่ำ นี่เป็นการเลือกเฉพาะวัสดุ ไม่ได้แปลว่าเครื่องมือเคลือบทุกชนิดเหมาะกับอลูมิเนียม สำหรับเหล็กและวัสดุแข็ง ควรเลือกวัสดุพื้นฐาน สารเคลือบ และความแข็งแรงคมตามที่ผู้ผลิตแนะนำ แทนการเลือกจากสีสารเคลือบ</value>
+  </data>
+  <data name="Harvey Performance: TiB2 coating for aluminium applications" xml:space="preserve">
+    <value>Harvey Performance: สารเคลือบ TiB2 สำหรับงานอลูมิเนียม</value>
+  </data>
+  <data name="Stainless steel, titanium and heat-resistant alloys each require their own tool family and data. A stronger honed edge can resist damage but may raise cutting forces; a keen edge can lower forces but sacrifice strength. Ask how the geometry manages the actual material’s adhesion, heat and work-hardening behaviour. A coating cannot compensate for unsuitable geometry, chatter or recutting trapped chips." xml:space="preserve">
+    <value>สเตนเลส ไทเทเนียม และโลหะผสมทนความร้อนต้องเลือกกลุ่มเครื่องมือและข้อมูลเฉพาะของแต่ละวัสดุ การลบคมให้แข็งแรงช่วยต้านความเสียหายแต่อาจเพิ่มแรงตัด ส่วนคมที่คมมากอาจลดแรงแต่มีความแข็งแรงน้อยลง ควรตรวจว่ารูปทรงจัดการการเกาะติด ความร้อน และการแข็งตัวจากการแปรรูปของวัสดุจริงอย่างไร สารเคลือบไม่สามารถชดเชยรูปทรงที่ไม่เหมาะ การสั่น หรือการตัดเศษที่ค้างซ้ำได้</value>
+  </data>
+  <data name="Sandvik Coromant: milling different material groups" xml:space="preserve">
+    <value>Sandvik Coromant: การกัดวัสดุกลุ่มต่าง ๆ</value>
+  </data>
+  <data name="Flute count is also a chip-space decision" xml:space="preserve">
+    <value>จำนวนฟันเป็นเรื่องพื้นที่ระบายเศษด้วย</value>
+  </data>
+  <data name="More flutes can support a higher table feed at the same RPM and feed per tooth, but leave less space for chips in a comparable diameter. Fewer flutes can help with bulky chips and full-width slots. Light radial finishing permits different choices from deep slotting. Use the specified effective tooth count in feed calculations; do not increase feed simply because another cutter has more flutes." xml:space="preserve">
+    <value>จำนวนฟันมากขึ้นอาจเพิ่มอัตราป้อนได้เมื่อรอบและระยะป้อนต่อฟันเท่าเดิม แต่ในขนาดใกล้กันจะเหลือพื้นที่เก็บเศษน้อยลง จำนวนฟันน้อยอาจช่วยกับเศษขนาดใหญ่และการกัดร่องเต็มหน้า งานเก็บผิวที่กินแนวรัศมีน้อยจึงเลือกต่างจากร่องลึกได้ ใช้จำนวนฟันที่มีผลตามข้อกำหนดในการคำนวณ และอย่าเพิ่มอัตราป้อนเพียงเพราะหัวกัดอีกตัวมีฟันมากกว่า</value>
+  </data>
+  <data name="Harvey Performance: flute count and chip evacuation" xml:space="preserve">
+    <value>Harvey Performance: จำนวนฟันและการระบายเศษ</value>
+  </data>
+  <data name="Runout, overhang and holder clearance" xml:space="preserve">
+    <value>การส่าย ระยะยื่น และระยะหลบหัวจับ</value>
+  </data>
+  <data name="Tool runout makes edge loading unequal, especially when the intended chip load is small. Inspect the clean tool shank, collet, holder and spindle interface, and measure the assembled system using an appropriate method. Keep overhang only as long as access requires. Extra flute length is not a substitute for a relieved neck; check that non-cutting portions and the holder clear the part throughout the path." xml:space="preserve">
+    <value>การส่ายทำให้แต่ละคมรับภาระไม่เท่ากัน โดยเฉพาะเมื่อกำหนดเศษต่อฟันไว้เล็ก ตรวจความสะอาดของก้าน คอลเล็ต หัวจับ และผิวต่อสปินเดิล แล้ววัดชุดประกอบด้วยวิธีที่เหมาะสม ใช้ระยะยื่นเท่าที่จำเป็นต่อการเข้าถึง ความยาวฟันที่เพิ่มขึ้นไม่ได้แทนคอหลบ ต้องตรวจว่าส่วนที่ไม่ตัดและหัวจับไม่ชนชิ้นงานตลอดเส้นทาง</value>
+  </data>
+  <data name="Harvey Performance: measuring and reducing assembled tool runout" xml:space="preserve">
+    <value>Harvey Performance: การวัดและลดการส่ายของชุดเครื่องมือ</value>
+  </data>
+  <data name="Ball nose tools need the effective diameter" xml:space="preserve">
+    <value>บอลโนสต้องใช้เส้นผ่านศูนย์กลางตัดจริง</value>
+  </data>
+  <data name="On a ball nose, contact near the tip occurs at a smaller diameter than the nominal tool size. Surface speed approaches zero at the centre. Use the effective diameter for the actual contact position and cutting depth when setting RPM. Surface slope, tool tilt and path direction change that contact. Check the CAM strategy and supplier guidance rather than increasing RPM without checking the tool and holder limits." xml:space="preserve">
+    <value>สำหรับบอลโนส จุดสัมผัสใกล้ปลายมีเส้นผ่านศูนย์กลางเล็กกว่าขนาดระบุ และความเร็วผิวเข้าใกล้ศูนย์ที่จุดศูนย์กลาง ใช้เส้นผ่านศูนย์กลางตัดจริงตามตำแหน่งสัมผัสและความลึกเพื่อกำหนดรอบ ความลาดผิว มุมเอียงเครื่องมือ และทิศทางเดินมีดเปลี่ยนตำแหน่งสัมผัสได้ ตรวจกลยุทธ์ CAM และคำแนะนำผู้ผลิต แทนการเพิ่มรอบโดยไม่ตรวจพิกัดเครื่องมือและหัวจับ</value>
+  </data>
+  <data name="Sandvik Coromant: profile milling and ball nose contact" xml:space="preserve">
+    <value>Sandvik Coromant: การกัดรูปทรงและการสัมผัสของบอลโนส</value>
+  </data>
+  <data name="Climb or conventional milling?" xml:space="preserve">
+    <value>กัดตามหรือกัดสวนทิศหมุน?</value>
+  </data>
+  <data name="Climb milling produces a chip that generally thins toward exit in peripheral cutting. It is often preferred where the machine, fixture and workpiece allow it. Backlash can permit the cutter to pull into the work unexpectedly; conventional milling may be appropriate on equipment that cannot control this movement. Review machine condition and cutting forces before selecting a direction. A CAM default is not evidence of mechanical suitability." xml:space="preserve">
+    <value>การกัดตามทิศหมุนทำให้เศษในงานกัดรอบนอกโดยทั่วไปบางลงจนออกจากการตัด จึงมักเหมาะเมื่อเครื่อง การจับยึด และชิ้นงานรองรับได้ แต่ระยะคลอนอาจทำให้หัวกัดดึงเข้าชิ้นงานโดยไม่คาดคิด เครื่องที่ควบคุมการเคลื่อนนี้ไม่ได้อาจเหมาะกับการกัดสวนมากกว่า ตรวจสภาพเครื่องและทิศทางแรงก่อนเลือก ค่าเริ่มต้นใน CAM ไม่ได้ยืนยันความเหมาะสมทางกล</value>
+  </data>
+  <data name="Sandvik Coromant: down milling, up milling and backlash" xml:space="preserve">
+    <value>Sandvik Coromant: การกัดตาม การกัดสวน และระยะคลอน</value>
+  </data>
+  <data name="Plan chip removal and read the wear" xml:space="preserve">
+    <value>วางแผนระบายเศษและอ่านลักษณะสึกหรอ</value>
+  </data>
+  <data name="Choose coolant or dry machining from the tool’s application guidance. Lubrication, chip removal and thermal cycling all matter; intermittent or poorly directed coolant can create problems. Check delivery into the actual cutting zone, especially in deep pockets and holes. Follow the material and machine requirements for dust, mist and chip management." xml:space="preserve">
+    <value>เลือกหล่อเย็นหรือตัดแห้งตามแนวทางของเครื่องมือ การหล่อลื่น การพาเศษออก และวัฏจักรอุณหภูมิล้วนสำคัญ น้ำหล่อเย็นที่มาไม่ต่อเนื่องหรือฉีดผิดตำแหน่งอาจสร้างปัญหา ตรวจการส่งถึงจุดตัดจริง โดยเฉพาะโพรงและรูลึก และปฏิบัติตามข้อกำหนดวัสดุกับเครื่องสำหรับฝุ่น ละออง และการจัดการเศษ</value>
+  </data>
+  <data name="Sandvik Coromant: coolant and temperature cycling in milling" xml:space="preserve">
+    <value>Sandvik Coromant: น้ำหล่อเย็นและวัฏจักรอุณหภูมิในงานกัด</value>
+  </data>
+  <data name="Wear observations and first checks" xml:space="preserve">
+    <value>อาการสึกหรอและจุดตรวจเบื้องต้น</value>
+  </data>
+  <data name="Observation" xml:space="preserve">
+    <value>สิ่งที่พบ</value>
+  </data>
+  <data name="Investigate before changing settings" xml:space="preserve">
+    <value>ตรวจหาสาเหตุก่อนปรับค่า</value>
+  </data>
+  <data name="Uneven edge wear" xml:space="preserve">
+    <value>คมสึกไม่เท่ากัน</value>
+  </data>
+  <data name="Runout, seating and uneven engagement" xml:space="preserve">
+    <value>การส่าย การนั่งแนบ และการกินงานที่ไม่เท่ากัน</value>
+  </data>
+  <data name="Built-up material on the edge" xml:space="preserve">
+    <value>วัสดุพอกที่คม</value>
+  </data>
+  <data name="Material adhesion, geometry, lubrication and cutting data" xml:space="preserve">
+    <value>การเกาะติด รูปทรงคม การหล่อลื่น และค่าตัด</value>
+  </data>
+  <data name="Chipping or rapid failure" xml:space="preserve">
+    <value>คมบิ่นหรือเสียหายเร็ว</value>
+  </data>
+  <data name="Stability, entry load, trapped chips and tool suitability" xml:space="preserve">
+    <value>ความเสถียร แรงตอนเข้าตัด เศษค้าง และความเหมาะสมเครื่องมือ</value>
+  </data>
+  <data name="Stop for sudden damage or instability. Photograph the edge, note cutting time and retain the exact tool code and settings. Compare symptoms with the tool maker’s troubleshooting guide, then change one cause at a time. Replace damaged tooling before evaluating surface finish or dimensions." xml:space="preserve">
+    <value>หยุดเมื่อเสียหายฉับพลันหรือไม่เสถียร ถ่ายภาพคม บันทึกเวลาตัด และเก็บรหัสเครื่องมือกับค่าที่ใช้ให้ครบ เทียบอาการกับคู่มือแก้ปัญหาของผู้ผลิต แล้วปรับสาเหตุทีละอย่าง เปลี่ยนเครื่องมือที่เสียหายก่อนประเมินผิวหรือขนาด</value>
+  </data>
+  <data name="Sandvik Coromant: examples of wear mechanisms and troubleshooting" xml:space="preserve">
+    <value>Sandvik Coromant: ตัวอย่างกลไกสึกหรอและแนวทางหาสาเหตุ</value>
+  </data>
+  <data name="Example: if just one flute chips repeatedly, inspect runout and seating before buying a harder grade. Record what changed and whether the same wear pattern returns." xml:space="preserve">
+    <value>ตัวอย่าง: หากมีเพียงฟันเดียวบิ่นซ้ำ ให้ตรวจการส่ายและการนั่งแนบก่อนซื้อเกรดที่แข็งกว่า บันทึกสิ่งที่ปรับและตรวจว่าอาการสึกเดิมกลับมาหรือไม่</value>
+  </data>
+  <data name="On this page" xml:space="preserve">
+    <value>เนื้อหาในหน้านี้</value>
+  </data>
+  <data name="In this guide" xml:space="preserve">
+    <value>หัวข้อในคู่มือนี้</value>
+  </data>
+  <data name="A selection of cutting tools and precision tool holders on a setting bench." xml:space="preserve"><value>เครื่องมือตัดหลายรูปแบบและหัวจับความเที่ยงตรงบนโต๊ะตั้งเครื่องมือ</value></data>
+  <data name="Tool geometry, coating, reach and holder support are separate selection decisions. Illustrative image." xml:space="preserve"><value>รูปทรงเครื่องมือ สารเคลือบ ระยะเข้าถึง และการรองรับของหัวจับเป็นเงื่อนไขที่ต้องเลือกให้สัมพันธ์กัน ภาพประกอบ</value></data>
+  <data name="A tool section distinguishes exposed overhang, cutting length, smooth shank and flutes." xml:space="preserve"><value>ภาพตัดเครื่องมือแยกระยะยื่นนอกหัวจับ ความยาวคมตัด ก้านเรียบ และร่องคมตัด</value></data>
+  <data name="1: Lₒ is exposed tool overhang from the holder face to the tip. 2: Lc is the cutting length. 3: the smooth shank is not a cutting edge. 4: flutes remove material and evacuate chips. Keep overhang only as long as access requires; check the holder and non-cutting surfaces throughout the path. Proportions are schematic." xml:space="preserve"><value>1: Lₒ คือระยะยื่นจากหน้าหัวจับถึงปลายเครื่องมือ 2: Lc คือความยาวคมตัด 3: ก้านเรียบไม่ใช่คมตัด 4: ร่องคมตัดใช้ตัดวัสดุและระบายเศษ ใช้ระยะยื่นเท่าที่จำเป็นต่อการเข้าถึง และตรวจสอบการหลบของหัวจับกับส่วนที่ไม่ใช่คมตัดตลอดแนวเดิน ภาพไม่ได้แสดงสัดส่วนจริง</value></data>
+  <data name="Open full-size diagram" xml:space="preserve"><value>เปิดแผนภาพขนาดเต็ม</value></data>
+</root>

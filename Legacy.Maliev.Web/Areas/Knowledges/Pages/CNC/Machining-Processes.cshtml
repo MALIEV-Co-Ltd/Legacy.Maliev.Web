@@ -1,0 +1,7 @@
+@page
+@inject IStringLocalizer<CncMachiningProcessesContent> MetadataLocalizer
+@{
+    ViewData["Title"] = MetadataLocalizer["3-axis, 5-axis, EDM and grinding | MALIEV"];
+    ViewData["Description"] = MetadataLocalizer["Choose a process because it solves a specific access, material or surface requirement. Review combinations of operations and confirm the route for the actual part."];
+}
+<component type="typeof(CncMachiningProcessesContent)" render-mode="Static" />

@@ -1,0 +1,22 @@
+@page "/knowledges/materials/metals"
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IStringLocalizer<MaterialsMetalsContent> ContentLocalizer
+@inject IStringLocalizer<KnowledgeIndexPage> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = ContentLocalizer["Metals for machined parts: grades and tradeoffs | MALIEV"].Value;
+    var description = ContentLocalizer["Compare aluminium, stainless steel, engineering steel, tool steel, and brass by application, condition, joining, corrosion, and inspection needs."].Value;
+    var documentLinks = PublicDocumentLinksDisplayModel.Create(context);
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="documentLinks" />
+</HeadContent>
+<KnowledgeShell CurrentPage="/Materials/Metals" RouteOwner="blazor-static-ssr">
+    <MaterialsMetalsContent RouteOwner="blazor-static-ssr" />
+</KnowledgeShell>

@@ -4,6 +4,7 @@ using Legacy.Maliev.Web.Components.Layout;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -11,10 +12,12 @@ public sealed class PublicBrowserCompatibilityNoticeMigrationTests : IClassFixtu
 {
     private const string MigrationMarker = "data-migration-component=\"public-browser-compatibility-notice\"";
     private readonly WebApplicationFactory<Program> factory;
+    private readonly ITestOutputHelper output;
 
-    public PublicBrowserCompatibilityNoticeMigrationTests(TestingWebApplicationFactory factory)
+    public PublicBrowserCompatibilityNoticeMigrationTests(TestingWebApplicationFactory factory, ITestOutputHelper output)
     {
         this.factory = factory;
+        this.output = output;
     }
 
     [Fact]
@@ -165,7 +168,8 @@ public sealed class PublicBrowserCompatibilityNoticeMigrationTests : IClassFixtu
         });
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
         Assert.True(request.Headers.TryAddWithoutValidation("User-Agent", userAgent));
-        using var response = await client.SendAsync(request);
+        using var response = await TestResponseFailureEvidence.SendAsync(
+            factory.Services, client, request, TestResponseRequestLabel.CompatibilityNotice, output.WriteLine);
         var source = await response.Content.ReadAsStringAsync();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

@@ -97,7 +97,7 @@ public sealed class SourceParityThrough7c416ccTests
         Assert.Equal("169e7c130507a43a8eab5df9c3d907b6f6a6422126eb7a9946c4e12d85710fb8", sequenceHash);
         Assert.Equal(sequenceHash, root.GetProperty("sequenceSha256").GetString());
         string semanticHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(semantic.ToString()))).ToLowerInvariant();
-        Assert.Equal("087ed874e3594dbb2822a21ede4eb0807aed1ef52f352debfe2441d6b2584b7a", semanticHash);
+        Assert.Equal("c4ca895813ceb8cf0dc68afe630d4d6c912e42eb2e08d2872b76d04b745ccdea", semanticHash);
         Assert.Equal(semanticHash, root.GetProperty("semanticSha256").GetString());
     }
 

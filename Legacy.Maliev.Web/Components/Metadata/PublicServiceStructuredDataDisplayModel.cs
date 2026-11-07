@@ -3,6 +3,10 @@ using System.Text.Json;
 
 namespace Legacy.Maliev.Web.Components.Metadata;
 
+/// <summary>
+/// Carries localized service JSON-LD for the public manufacturing service pages.
+/// </summary>
+/// <param name="ServiceJson">The serialized service metadata including provider, service area, and selected service details.</param>
 public sealed record PublicServiceStructuredDataDisplayModel(string ServiceJson)
 {
     private sealed record ServiceDefinition(
@@ -74,6 +78,11 @@ public sealed record PublicServiceStructuredDataDisplayModel(string ServiceJson)
                 "https://www.maliev.com/src/images/services/printing/printing-finish-color-approval.webp")
         };
 
+    /// <summary>
+    /// Builds localized structured data using the selected service definition or the CNC fallback.
+    /// </summary>
+    /// <param name="serviceName">The public service lookup name; null or an unknown name selects the CNC definition.</param>
+    /// <returns>The serialized localized service metadata.</returns>
     public static PublicServiceStructuredDataDisplayModel Create(string? serviceName)
     {
         var normalizedServiceName = serviceName ?? "CNC Machining";

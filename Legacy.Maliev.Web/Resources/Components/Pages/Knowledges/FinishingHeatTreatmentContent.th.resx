@@ -1,0 +1,140 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+  <data name="Planning heat treatment for manufactured parts | MALIEV" xml:space="preserve">
+    <value>วางแผนอบชุบความร้อนชิ้นงาน | MALIEV</value>
+  </data>
+  <data name="Specify material condition, hardness, case depth, distortion allowances, machining sequence, and acceptance evidence for heat-treated parts." xml:space="preserve">
+    <value>กำหนดสภาพวัสดุ ความแข็ง ความลึกชั้นแข็ง การเผื่อบิดตัว ลำดับตัดเฉือน และหลักฐานตรวจรับชิ้นงานอบชุบ</value>
+  </data>
+  <data name="Plan heat treatment before final machining" xml:space="preserve">
+    <value>วางแผนอบชุบก่อนตัดเฉือนขั้นสุดท้าย</value>
+  </data>
+  <data name="Heat treatment changes the properties of a suitable metal through controlled processing. Choose it together with the alloy, starting condition, geometry, and acceptance requirements. A note saying only heat treated leaves important decisions unresolved and can make the finished dimension difficult to achieve." xml:space="preserve">
+    <value>การอบชุบเปลี่ยนสมบัติของโลหะที่เหมาะสมด้วยกระบวนการควบคุม ต้องเลือกร่วมกับโลหะผสม สภาพเริ่มต้น รูปทรง และข้อกำหนดตรวจรับ หมายเหตุเพียงว่าอบชุบยังทิ้งการตัดสินใจสำคัญไว้ และอาจทำให้ได้มิติสำเร็จตามต้องการยาก</value>
+  </data>
+  <data name="On this page" xml:space="preserve">
+    <value>เนื้อหาในหน้านี้</value>
+  </data>
+  <data name="Choose the property change you need" xml:space="preserve">
+    <value>เลือกการเปลี่ยนสมบัติที่ต้องการ</value>
+  </data>
+  <data name="Distinguish a hard case from a coating" xml:space="preserve">
+    <value>แยกชั้นผิวแข็งออกจากชั้นเคลือบ</value>
+  </data>
+  <data name="Allow for distortion and finishing stock" xml:space="preserve">
+    <value>เผื่อการบิดตัวและเนื้อเก็บงาน</value>
+  </data>
+  <data name="Define certificates and acceptance evidence" xml:space="preserve">
+    <value>กำหนดใบรับรองและหลักฐานตรวจรับ</value>
+  </data>
+  <data name="Annealing commonly softens steel, restores ductility, or prepares material for further processing. Stress relieving focuses on reducing residual stresses that could cause movement during later work or service. They serve different objectives; neither should be substituted for a specified hardening treatment merely because all involve a furnace." xml:space="preserve">
+    <value>การอบอ่อนมักใช้ลดความแข็งเหล็ก คืนความเหนียวสำหรับขึ้นรูป หรือเตรียมวัสดุให้ทำงานต่อ การอบคลายเค้นมุ่งลดความเค้นตกค้างที่อาจทำให้ชิ้นงานเคลื่อนรูปในขั้นตอนต่อไปหรือระหว่างใช้งาน ทั้งสองมีเป้าหมายต่างกัน ไม่ควรใช้แทนการชุบแข็งที่กำหนดเพียงเพราะใช้เตาเหมือนกัน</value>
+  </data>
+  <data name="Source: Bodycote annealing" xml:space="preserve">
+    <value>แหล่งข้อมูล: การอบอ่อนของ Bodycote</value>
+  </data>
+  <data name="Source: Bodycote stress relieving and machining sequence" xml:space="preserve">
+    <value>แหล่งข้อมูล: การอบคลายเค้นและลำดับตัดเฉือนของ Bodycote</value>
+  </data>
+  <data name="Heat treatment objectives" xml:space="preserve">
+    <value>ตารางเป้าหมายการอบชุบ</value>
+  </data>
+  <data name="Treatment family" xml:space="preserve">
+    <value>กลุ่มกระบวนการ</value>
+  </data>
+  <data name="Main distinction" xml:space="preserve">
+    <value>จุดแตกต่างหลัก</value>
+  </data>
+  <data name="What to define" xml:space="preserve">
+    <value>สิ่งที่ต้องกำหนด</value>
+  </data>
+  <data name="Quench and temper" xml:space="preserve">
+    <value>ชุบแข็งและอบคืนไฟ</value>
+  </data>
+  <data name="Hardening followed by tempering to obtain the required balance of properties in a responsive alloy." xml:space="preserve">
+    <value>ชุบแข็งแล้วอบคืนไฟเพื่อให้โลหะผสมที่ตอบสนองได้สมดุลสมบัติตามต้องการ</value>
+  </data>
+  <data name="Grade, section size, final hardness range, and any required mechanical tests." xml:space="preserve">
+    <value>เกรด ขนาดหน้าตัด ช่วงความแข็งสุดท้าย และการทดสอบเชิงกลที่จำเป็น</value>
+  </data>
+  <data name="Precipitation hardening" xml:space="preserve">
+    <value>เพิ่มความแข็งด้วยการตกตะกอน</value>
+  </data>
+  <data name="Strengthening through a controlled precipitation response in suitable alloys." xml:space="preserve">
+    <value>เพิ่มความแข็งแรงด้วยการควบคุมการตกตะกอนในโลหะผสมที่เหมาะสม</value>
+  </data>
+  <data name="Exact alloy, incoming condition, required final condition, and governing specification." xml:space="preserve">
+    <value>โลหะผสมที่แน่นอน สภาพรับเข้า สภาพสุดท้าย และข้อกำหนดอ้างอิง</value>
+  </data>
+  <data name="Case hardening" xml:space="preserve">
+    <value>ทำผิวแข็ง</value>
+  </data>
+  <data name="A hardened surface region with requirements distinct from the core." xml:space="preserve">
+    <value>ชั้นผิวแข็งซึ่งมีข้อกำหนดต่างจากเนื้อแกน</value>
+  </data>
+  <data name="Method, treated areas, hardness, case-depth definition, and core requirements." xml:space="preserve">
+    <value>วิธี พื้นที่ทำ ความแข็ง นิยามความลึกชั้นแข็ง และข้อกำหนดเนื้อแกน</value>
+  </data>
+  <data name="Quenching can leave steel brittle; tempering is a separate step used to adjust that condition. Precipitation hardening is a different mechanism used in suitable aluminum, stainless, and other alloys. Do not apply a steel hardening assumption to every metal, or assume all conditions of one alloy have the same strength and toughness." xml:space="preserve">
+    <value>การชุบเย็นอาจทำให้เหล็กเปราะ การอบคืนไฟเป็นอีกขั้นตอนเพื่อปรับสภาพนั้น ส่วนการเพิ่มความแข็งด้วยการตกตะกอนเป็นกลไกต่างกัน ใช้กับอะลูมิเนียม สเตนเลส และโลหะผสมที่เหมาะสม อย่านำสมมติฐานการชุบแข็งเหล็กไปใช้กับโลหะทุกชนิด หรือถือว่าทุกสภาพของเกรดเดียวกันแข็งแรงและเหนียวเท่ากัน</value>
+  </data>
+  <data name="Source: Bodycote hardening and tempering" xml:space="preserve">
+    <value>แหล่งข้อมูล: การชุบแข็งและอบคืนไฟของ Bodycote</value>
+  </data>
+  <data name="Source: Bodycote precipitation hardening of stainless steels" xml:space="preserve">
+    <value>แหล่งข้อมูล: การเพิ่มความแข็งด้วยการตกตะกอนในสเตนเลสของ Bodycote</value>
+  </data>
+  <data name="Source: Bodycote solution treatment and aging of aluminum alloys" xml:space="preserve">
+    <value>แหล่งข้อมูล: การอบละลายและบ่มแข็งอะลูมิเนียมของ Bodycote</value>
+  </data>
+  <data name="Carburizing introduces carbon into a suitable steel surface and is followed by hardening. Nitriding introduces nitrogen and has a different treatment route. These diffusion treatments are not equivalent to adding a plated or sprayed coating. Choose the method for the material and duty, then specify which surfaces require treatment and which must be protected." xml:space="preserve">
+    <value>คาร์บูไรซิงเพิ่มคาร์บอนเข้าสู่ผิวเหล็กที่เหมาะสมแล้วตามด้วยการชุบแข็ง ไนไตรดิงเพิ่มไนโตรเจนและมีเส้นทางกระบวนการต่างกัน การแพร่ธาตุเหล่านี้ไม่เท่ากับการเพิ่มชั้นชุบหรือพ่นเคลือบ เลือกวิธีตามวัสดุและหน้าที่ แล้วระบุผิวที่ต้องทำและผิวที่ต้องป้องกัน</value>
+  </data>
+  <data name="A hardness number alone does not define a case. Agree the hardness scale and test location, effective or total case depth as applicable, its measurement method, and core hardness if required. Different depth definitions are not interchangeable. Account for material removed by final grinding so the remaining treated layer still satisfies the drawing." xml:space="preserve">
+    <value>ตัวเลขความแข็งเพียงอย่างเดียวไม่ได้นิยามชั้นผิวแข็ง ตกลงสเกลและจุดทดสอบ ความลึกชั้นแข็งประสิทธิผลหรือความลึกรวมตามงาน วิธีวัด และความแข็งแกนหากจำเป็น นิยามความลึกต่างชนิดใช้แทนกันไม่ได้ ต้องคำนึงถึงเนื้อที่เจียระไนออก เพื่อให้ชั้นที่เหลือยังตรงแบบ</value>
+  </data>
+  <data name="Source: Bodycote atmospheric carburizing" xml:space="preserve">
+    <value>แหล่งข้อมูล: คาร์บูไรซิงในบรรยากาศควบคุมของ Bodycote</value>
+  </data>
+  <data name="Source: Bodycote gas nitriding" xml:space="preserve">
+    <value>แหล่งข้อมูล: แก๊สไนไตรดิงของ Bodycote</value>
+  </data>
+  <data name="Discuss distortion before releasing the machining plan. Thin walls, asymmetric stock removal, sharp transitions, and residual stresses deserve attention. A low-distortion process is not a promise of zero movement. Agree allowable bow, runout, and dimensional change; confirm whether straightening is permitted and how it will be inspected afterward." xml:space="preserve">
+    <value>หารือการบิดตัวก่อนปล่อยแผนตัดเฉือน ผนังบาง การตัดเนื้อไม่สมมาตร จุดเปลี่ยนหน้าตัดฉับพลัน และความเค้นตกค้างต้องพิจารณา กระบวนการบิดตัวต่ำไม่ได้รับรองว่าไม่เคลื่อนรูปเลย ตกลงการโก่ง รันเอาต์ และการเปลี่ยนมิติที่ยอมรับได้ พร้อมยืนยันว่าอนุญาตให้ดัดตรงหรือไม่ และจะตรวจหลังดัดอย่างไร</value>
+  </data>
+  <data name="A possible route is rough machining, an agreed stress-relief step, semi-finishing, hardening, then final grinding of critical interfaces. It is a planning example rather than a universal sequence. The metallurgist and machinist must agree stock allowances, support and hanging locations, protected features, and which dimensions are verified at each stage." xml:space="preserve">
+    <value>เส้นทางหนึ่งที่อาจใช้คือตัดเฉือนหยาบ อบคลายเค้นตามที่ตกลง เก็บกึ่งสำเร็จ ชุบแข็ง แล้วเจียระไนผิวประกอบสำคัญ นี่คือตัวอย่างวางแผน ไม่ใช่ลำดับที่ใช้ได้ทุกงาน ผู้เชี่ยวชาญโลหะและผู้ตัดเฉือนต้องตกลงเนื้อเผื่อ จุดรองรับหรือแขวน จุดป้องกัน และมิติที่ตรวจแต่ละขั้น</value>
+  </data>
+  <data name="Example: a precision shaft" xml:space="preserve">
+    <value>ตัวอย่าง: เพลาความเที่ยงตรงสูง</value>
+  </data>
+  <data name="For a shaft requiring hardened bearing seats, resolve the final hardness, journal size, runout datum, grinding allowance, and inspection sequence together. If the drawing demands both a hard case and a finished diameter, ask how post-treatment stock removal affects the remaining case. Do not leave that conflict for final inspection." xml:space="preserve">
+    <value>สำหรับเพลาที่ต้องทำบ่าแบริ่งแข็ง ให้กำหนดความแข็งสุดท้าย ขนาดคอเพลา ดาตัมรันเอาต์ เนื้อเผื่อเจียระไน และลำดับตรวจร่วมกัน หากแบบต้องการทั้งผิวแข็งและเส้นผ่านศูนย์กลางสำเร็จ ต้องถามว่าการตัดเนื้อหลังอบชุบกระทบชั้นที่เหลืออย่างไร อย่าปล่อยข้อขัดแย้งนี้ไปถึงขั้นตรวจสุดท้าย</value>
+  </data>
+  <data name="Send the material specification, heat or batch identity, incoming condition, drawing revision, required treatment standard, final property limits, and inspection scope. Request confirmation of any proposed substitution. Avoid generic temperature recipes: a suitable cycle depends on alloy, prior history, section, equipment, and the governing specification." xml:space="preserve">
+    <value>ส่งข้อกำหนดวัสดุ รหัสฮีตหรือล็อต สภาพรับเข้า รุ่นแบบ มาตรฐานอบชุบ ขีดจำกัดสมบัติสุดท้าย และขอบเขตตรวจสอบ ขอการยืนยันเมื่อเสนอสิ่งทดแทน หลีกเลี่ยงสูตรอุณหภูมิทั่วไป เพราะรอบที่เหมาะขึ้นกับโลหะ ประวัติเดิม หน้าตัด อุปกรณ์ และข้อกำหนดอ้างอิง</value>
+  </data>
+  <data name="Agree whether delivery requires a certificate of conformity, recorded hardness results, case-depth testing, mechanical tests, dimensional inspection, or crack inspection. Define sampling, test locations, permitted test marks, and any sacrificial coupons before production. Confirm whether coupons represent the same material batch and treatment load and whether destructive testing consumes a production part." xml:space="preserve">
+    <value>ตกลงว่าต้องส่งใบรับรองความสอดคล้อง ผลความแข็ง ผลความลึกชั้นแข็ง การทดสอบเชิงกล ตรวจมิติ หรือตรวจรอยร้าวหรือไม่ กำหนดการสุ่ม จุดทดสอบ รอยกดที่ยอมรับได้ และคูปองทดสอบก่อนผลิต ยืนยันว่าคูปองเป็นตัวแทนวัสดุล็อตเดียวกันและโหลดอบเดียวกันหรือไม่ และการทดสอบทำลายใช้ชิ้นผลิตจริงหรือไม่</value>
+  </data>
+  <data name="Keep the treatment certificate linked to the accepted parts and revision. A furnace record describes processing; it does not replace every required property or dimensional result. Resolve missing evidence and out-of-limit results through the agreed disposition process before assembly, rather than assuming that a completed treatment makes the component acceptable." xml:space="preserve">
+    <value>เชื่อมใบรับรองอบชุบกับชิ้นงานและรุ่นแบบที่รับไว้ บันทึกเตาบอกกระบวนการ แต่ไม่แทนผลสมบัติหรือมิติที่ต้องตรวจทั้งหมด จัดการหลักฐานขาดและค่าที่เกินขีดจำกัดด้วยกระบวนการพิจารณาที่ตกลงก่อนประกอบ แทนการถือว่าอบชุบเสร็จแล้วแปลว่ารับชิ้นงานได้</value>
+  </data>
+  <data name="Steel shafts, rings and a tool insert on a rack near a closed industrial furnace." xml:space="preserve"><value>เพลา แหวน และอินเสิร์ตเหล็กบนชั้นงานใกล้เตาอุตสาหกรรมที่ปิดอยู่</value></data>
+  <data name="Plan treatment, remaining machining stock and final inspection in the same process sequence. Illustrative image." xml:space="preserve"><value>วางแผนการอบชุบ เนื้อเผื่อสำหรับการตัดเฉือนขั้นสุดท้าย และการตรวจสอบไว้ในลำดับผลิตเดียวกัน ภาพประกอบ</value></data>
+  <data name="Three schematic stages show rough stock with allowance, exaggerated bow after treatment, and a final ground straight feature." xml:space="preserve"><value>สามขั้นตอนแสดงเนื้อเผื่อหลังกลึงหยาบ การโก่งหลังอบชุบที่วาดเกินจริง และผิวสำคัญหลังเจียระไนขั้นสุดท้าย</value></data>
+  <data name="1: leave an agreed machining allowance a around the final profile (dashed). 2: treatment may cause distortion; the bow is exaggerated. 3: finish critical surfaces and inspect. This planning sketch is not a universal treatment sequence or an allowance value." xml:space="preserve"><value>1: ตกลงเนื้อเผื่อตัดเฉือน a รอบรูปทรงสุดท้ายที่แสดงด้วยเส้นประ 2: อบชุบอาจทำให้เสียรูป โดยภาพขยายการโก่งเกินจริง 3: เก็บผิวสำคัญและตรวจสอบ ภาพนี้ไม่ใช่ลำดับอบชุบหรือค่าเนื้อเผื่อที่ใช้ได้กับทุกงาน</value></data>
+  <data name="Open full-size diagram" xml:space="preserve"><value>เปิดแผนภาพขนาดเต็ม</value></data>
+</root>

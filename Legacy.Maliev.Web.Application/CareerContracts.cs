@@ -13,7 +13,10 @@ public sealed record CareerLevel(
     string? Name,
     string? Description,
     DateTime? CreatedDate,
-    DateTime? ModifiedDate);
+    DateTime? ModifiedDate)
+{
+    public IReadOnlyList<CareerOffer>? Offers { get; init; } = [];
+}
 
 public sealed record CareerOffer(
     int Id,
@@ -58,5 +61,14 @@ public interface ICareerClient
         int pageSize,
         CancellationToken cancellationToken);
 
+    Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
+        CareerSort sort,
+        string? search,
+        int pageIndex,
+        int pageSize,
+        CancellationToken cancellationToken);
+
     Task<ServiceResponse<CareerOffer>> GetOfferAsync(int offerId, CancellationToken cancellationToken);
+
+    Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(CancellationToken cancellationToken);
 }

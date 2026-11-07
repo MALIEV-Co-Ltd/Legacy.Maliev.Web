@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
-          ref: 4ffba0639620e7e923d331317f3f28501526b573
+          ref: c9f21151639f1911c780f2084dd2d757b4fb3e73
           path: .dependencies/Legacy.Maliev.ServiceDefaults
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -183,7 +183,7 @@ jobs:
           -p:CI=false -p:VSTestCollect= -p:RunSettingsFilePath=
           --filter "FullyQualifiedName~BillingProofLifetimeTests"
           --logger trx --results-directory ./billing-lifetime-test-results
-      - name: Require all thirty-one exact unique passed lifecycle control rows
+      - name: Require all fifty exact unique passed lifecycle control rows
         run: |
           python3 -B - <<'PY'
           from pathlib import Path
@@ -221,6 +221,26 @@ jobs:
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkCreationIdUnavailable_RefusesNameBasedAdoptionAndCleanup',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendSdkIdentityLostBeforeDisposal_RefusesMutation',
               'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.BackendUnsettledRemoval_RefusesAbsenceAndSdkRelease',
+              # All thirty-one original identities remain above; accepted PR723 adds these nineteen.
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: "graceful-stop", stage: "request-graceful-stop", exceptionType: "IOException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: "handle-close", stage: "close-handle", exceptionType: "IOException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: "identity", stage: "capture-identity", exceptionType: "IOException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: "kill", stage: "kill-exact", exceptionType: "IOException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: "reader-close", stage: "close-readers", exceptionType: "IOException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: "readers", stage: "join-readers", exceptionType: "TimeoutException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.ChildCleanupFailure_ReportsOnlyItsBoundedStageAndRetainsDependencies(failure: "reap", stage: "wait-exit", exceptionType: "TimeoutException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_DiscardsMalformedForeignOversizedAndArbitraryText',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_DrainRetainsOnlyFixedStderrClassificationAcrossChunks(observeStartupFailure: False, expected: "NotObserved")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_DrainRetainsOnlyFixedStderrClassificationAcrossChunks(observeStartupFailure: True, expected: "IOException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_ReaderFailureCannotReplaceTheOriginalExitedChildAssertion(cancelled: False)',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_ReaderFailureCannotReplaceTheOriginalExitedChildAssertion(cancelled: True)',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Microsoft.AspNetCore.Connections.AddressInUseExcep"\xb7\xb7\xb7, expected: "AddressInUseException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Microsoft.Extensions.Options.OptionsValidationExce"\xb7\xb7\xb7, expected: "OptionsValidationException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Npgsql.NpgsqlException", expected: "NpgsqlException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "Npgsql.PostgresException", expected: "PostgresException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "System.IO.IOException", expected: "IOException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "System.InvalidOperationException", expected: "InvalidOperationException")',
+              'Legacy.Maliev.Web.Tests.BillingProofLifetimeTests.StartupFailure_RecognizesOnlyTheExistingPrivateBoundary(exceptionType: "System.Net.Sockets.SocketException", expected: "SocketException")',
           }
           files = list(Path('billing-lifetime-test-results').glob('*.trx'))
           if len(files) != 1:
@@ -228,16 +248,17 @@ jobs:
           root = ET.parse(files[0]).getroot()
           rows = root.findall('.//t:UnitTestResult', ns)
           names = [row.get('testName') for row in rows]
-          if len(rows) != 31 or len(set(names)) != 31 or set(names) != expected or any(row.get('outcome') != 'Passed' for row in rows):
+          if len(rows) != 50 or len(set(names)) != 50 or set(names) != expected or any(row.get('outcome') != 'Passed' for row in rows):
               raise SystemExit('Missing, duplicate, foreign or unsuccessful lifecycle control row')
           counters = root.find('.//t:Counters', ns)
-          required = {'total': '31', 'executed': '31', 'passed': '31', 'failed': '0', 'error': '0', 'timeout': '0',
+          required = {'total': '50', 'executed': '50', 'passed': '50', 'failed': '0', 'error': '0', 'timeout': '0',
               'aborted': '0', 'inconclusive': '0', 'passedButRunAborted': '0', 'notRunnable': '0', 'notExecuted': '0',
               'disconnected': '0', 'warning': '0', 'completed': '0', 'inProgress': '0', 'pending': '0'}
           if counters is None or any(counters.get(key) != value for key, value in required.items()):
-              raise SystemExit('Lifecycle TRX counters do not match thirty-one completed Passed rows')
-          print('Verified thirty-one exact unique Passed lifecycle controls; no skipped or unsuccessful rows')
+              raise SystemExit('Lifecycle TRX counters do not match fifty completed Passed rows')
+          print('Verified fifty exact unique Passed lifecycle controls; no skipped or unsuccessful rows')
           PY
+          python3 -B acceptance/MemberCompanyCatalogPersistence/test_lifecycle.py
       - name: Retain only bounded synthetic receipt and strict exact-row metadata
         if: always()
         run: python3 -B acceptance/MemberCompanyCatalogPersistence/retain.py

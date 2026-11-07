@@ -1,5 +1,5 @@
 // Keep the normal-ray engine off the UI thread. No pricing or upload decision uses this result.
-importScripts('/src/app/js/instant-quotation/wall-thickness.worker.js?v=2');
+importScripts('/src/app/js/instant-quotation/wall-thickness.worker.js?v=3');
 
 self.onmessage = function ({ data }) {
     try {

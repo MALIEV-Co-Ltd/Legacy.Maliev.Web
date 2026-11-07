@@ -1,7 +1,7 @@
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
 const { webcrypto } = require('node:crypto');
 const webRoot = path.resolve(__dirname, '../../Legacy.Maliev.Web/wwwroot');
-function runtime() {
+function runtime({ additiveApi } = {}) {
     const imports = [], fetches = [], factories = [], diagnostics = [];
     const state = { corrupt: null, missing: null, mutateSource: false, mutatePolicy: false, captureMalformed: false, nativeImports: 0 };
     const c = vm.createContext({ console, TextEncoder, TextDecoder, crypto: webcrypto, setTimeout, clearTimeout });
@@ -10,6 +10,10 @@ function runtime() {
         imports.push(url);
         if (url.endsWith('/occt-import-js.js')) {
             const native = url.includes('/occt-cnc/');
+            if (!native && additiveApi) {
+                c.occtimportjs = async () => additiveApi;
+                return;
+            }
             const factory = require(path.join(webRoot, url));
             c.occtimportjs = async options => {
                 factories.push(native ? 'cnc' : 'additive');

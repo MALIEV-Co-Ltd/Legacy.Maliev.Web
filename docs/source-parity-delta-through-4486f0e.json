@@ -4,7 +4,7 @@
   "sourceHead": "4486f0e964e508e5eb7b43a59eeaec46cc052c67",
   "commitCount": 159,
   "sequenceSha256": "13fdab8b1cbfd8327e0603ea04d891e38dbbab4dca420803a6d74ff57be9b0da",
-  "semanticSha256": "5c3c36b5e6b3d224677e7acb1624fab035c585f6cc35de24b7f06ad8576fa0ae",
+  "semanticSha256": "052b3d3cb7d64a7bfaf0f028c4b6d27728637012a59404ee831abc204c9b7a4e",
   "canonicalSemanticForm": "source-parity-semantic-stream-v1: UTF-8 length-prefixed root boundary, allowlists, and entry fields in schema order, including array counts and target repository/commit pairs",
   "allowedOwners": [
     "Legacy.Maliev.AccountingService",
@@ -3562,7 +3562,7 @@
       "sequence": 134,
       "sourceCommit": "18c9f126bbbb2aab33b9b46f069f6d6225348053",
       "subject": "Keep contact page available during country lookup failures",
-      "classification": "already-satisfied-stricter",
+      "classification": "migrated-or-architecture-equivalent",
       "owners": [
         "Legacy.Maliev.Web"
       ],
@@ -3575,11 +3575,11 @@
       "targetEvidence": [
         {
           "repository": "Legacy.Maliev.Web",
-          "commit": "1d58887f44c5d0300bb1c24d05d89c4a68f74bfa"
+          "commit": "0147483985f1dc76f1c57a02fbe3e1f4d377e10f"
         }
       ],
-      "validationEvidence": "docs/source-parity-daily-checkpoint.md#source-parity-through-4486f0e",
-      "classificationRationale": "The source outcome 'Keep contact page available during country lookup failures' is preserved by Legacy.Maliev.Web through the validated .NET 10 architecture and immutable protected-main evidence."
+      "validationEvidence": "https://github.com/MALIEV-Co-Ltd/Legacy.Maliev.Web/actions/runs/40355247961/job/121685834954",
+      "classificationRationale": "The active Blazor Contact and retained Razor Contact routes keep country-transport failures renderable with localized safe unavailable presentation and no downstream writes, qualified by the referenced protected commit and active/retained transport-failure cases. Country404 available-empty behavior remains the approved target adaptation."
     },
     {
       "sequence": 135,

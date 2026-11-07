@@ -1,15 +1,67 @@
 @inject IStringLocalizer<CncMachiningContent> Localizer
 
 <article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
-    <p class="maliev-eyebrow">@Localizer["CNC machining preparation"]</p>
-    <h1>@Localizer["Files and requirements for CNC machining"]</h1>
+    <p class="maliev-eyebrow">@Localizer["CNC machining design guide"]</p>
+    <h1>@Localizer["Design decisions that make CNC parts easier to manufacture"]</h1>
     <p class="docs-lead">@Localizer["A solid 3D model defines nominal geometry; a drawing communicates requirements that geometry alone cannot describe."]</p>
-    <div class="docs-step-list">
-        <section><span>1</span><div><h2>@Localizer["Provide the model"]</h2><p>@Localizer["STEP or another solid CAD format is preferred. Include separate files for each part and identify the revision."]</p></div></section>
-        <section><span>2</span><div><h2>@Localizer["Add the drawing"]</h2><p>@Localizer["Call out tolerances, datums, threads, fits, surface finish, heat treatment, coatings, deburring, and inspection requirements."]</p></div></section>
-        <section><span>3</span><div><h2>@Localizer["Confirm production details"]</h2><p>@Localizer["Specify material grade, quantity, repeat-order expectations, supplied components, packaging, and target date."]</p></div></section>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/cnc-overview.webp" srcset="/src/images/knowledge/photos/cnc-overview-small.webp 768w, /src/images/knowledge/photos/cnc-overview.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["An end mill cuts a shallow pocket in an aluminium block held in a machine vise."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Review the functional faces, tool access and workholding as one machining plan. Illustrative image."]</figcaption>
+</figure>
+    <p>@Localizer["Start with how the part must work: where it locates, what it carries, which surfaces mate, and what must be inspected. Then choose geometry and requirements that support that function. This guide explains common machining tradeoffs so you can prepare a clear quotation package and discuss useful changes before production."]</p>
+    <aside class="docs-note">@Localizer["All dimensions and calculations below are illustrative design examples, not MALIEV capability limits or acceptance criteria. Feasibility, production route, inspection and any specialist process must be confirmed for the actual material, geometry, quantity and drawing revision. Agree the applicable standard and edition wherever a standard governs acceptance."]</aside>
+    <section class="docs-section" id="files">
+        <h2>@Localizer["Files and quotation checklist"]</h2>
+        <p>@Localizer["Supply a solid CAD model such as STEP and a readable dimensioned drawing for each part. Identify units, part number and revision consistently across both files. A model describes nominal shape; it does not reliably communicate every thread, fit, cosmetic requirement or inspection condition. If model and drawing disagree, identify which requirement governs before machining begins."]</p>
+        <p>@Localizer["Separate functional requirements from preferences. A sealing face may need controlled flatness and texture, while a hidden relief pocket may only need clearance. Mark features that can change after discussion and those fixed by an existing assembly. Include mating-part information or a simple assembly view when a dimension alone does not explain why a feature matters."]</p>
+        <ul class="docs-checklist">
+            <li>@Localizer["Material grade, temper or condition; supplied stock or material certification requirements."]</li>
+            <li>@Localizer["Quantity, prototype or repeat production, target date and supplied mating components."]</li>
+            <li>@Localizer["Threads, datums, critical fits, tolerances, surface texture, deburring and edge requirements."]</li>
+            <li>@Localizer["Heat treatment and coating sequence, masked areas, cosmetic faces and packaging."]</li>
+            <li>@Localizer["Inspection characteristics, measurement condition, sampling and required reports."]</li>
+        </ul>
+        <aside class="docs-example">@Localizer["Illustrative example: a housing may need a controlled bearing bore and mounting face without assigning the same tight tolerance to every exterior dimension. Explain which features locate the bearing and how the housing mounts, then review the drawing around those relationships."]</aside>
+        <p class="docs-source"><a href="https://www.asme.org/codes-standards/find-codes-standards/dimensioning-and-tolerancing">@Localizer["ASME: communicating drawing requirements with GD&T"]</a></p>
+    <figure class="docs-figure knowledge-diagram">
+    <div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["Model, critical requirements and a supported machining setup are considered together."]">
+        <img src="/src/images/knowledge/visual-cnc-preparation.svg" alt="@Localizer["Model, critical requirements and a supported machining setup are considered together."]" width="960" height="480" loading="lazy" decoding="async" />
     </div>
-    <div class="maliev-actions"><a class="maliev-button" href="/services/cnc-machining">@Localizer["View CNC machining service"]</a></div>
+    <figcaption>@Localizer["1: communicate nominal shape. 2: identify functional dimensions, datums, threads and finish requirements. 3: review how the stock is supported and how the cutter reaches the feature. This schematic is a planning concept, not a production fixture design."] <a class="knowledge-diagram-link" href="/src/images/knowledge/visual-cnc-preparation.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
+</section>
+    <section class="docs-section" id="topic-geometry">
+        <span class="knowledge-legacy-anchor" id="thin-walls" aria-hidden="true"></span>
+        <span class="knowledge-legacy-anchor" id="radii-pockets" aria-hidden="true"></span>
+        <span class="knowledge-legacy-anchor" id="size-fixturing" aria-hidden="true"></span>
+        <span class="knowledge-legacy-anchor" id="warpage" aria-hidden="true"></span>
+        <span class="knowledge-legacy-anchor" id="chatter" aria-hidden="true"></span>
+        <h2>@Localizer["Geometry, rigidity and workholding"]</h2>
+        <p>@Localizer["Consider tool access and how the part is supported throughout the cut, not only the final shape. These design reviews connect thin features and deep pockets to fixturing, distortion and vibration."]</p>
+        <p><a href="/knowledges/cnc/geometry-and-workholding">@Localizer["Continue reading"]</a></p>
+    </section>
+    <section class="docs-section" id="topic-holes">
+        <span class="knowledge-legacy-anchor" id="holes-threads" aria-hidden="true"></span>
+        <span class="knowledge-legacy-anchor" id="tolerances" aria-hidden="true"></span>
+        <h2>@Localizer["Holes, threads and tolerances"]</h2>
+        <p>@Localizer["Specify the feature that the assembly actually needs. Hole depth, full-thread engagement, size, position and inspection conditions describe different requirements."]</p>
+        <p><a href="/knowledges/cnc/holes-and-tolerances">@Localizer["Continue reading"]</a></p>
+    </section>
+    <section class="docs-section" id="topic-processes">
+        <span class="knowledge-legacy-anchor" id="axes" aria-hidden="true"></span>
+        <span class="knowledge-legacy-anchor" id="edm" aria-hidden="true"></span>
+        <span class="knowledge-legacy-anchor" id="grinding" aria-hidden="true"></span>
+        <h2>@Localizer["3-axis, 5-axis, EDM and grinding"]</h2>
+        <p>@Localizer["Choose a process because it solves a specific access, material or surface requirement. Review combinations of operations and confirm the route for the actual part."]</p>
+        <p><a href="/knowledges/cnc/machining-processes">@Localizer["Continue reading"]</a></p>
+    </section>
+    <section class="docs-section" id="topic-finishes">
+        <span class="knowledge-legacy-anchor" id="finishing" aria-hidden="true"></span>
+        <h2>@Localizer["Surface finishes and coatings"]</h2>
+        <p>@Localizer["Plan the supplied surface and final dimensions before machining. Coating, preparation, masking and cosmetic acceptance belong in the same project discussion."]</p>
+        <p><a href="/knowledges/finishing/surface-finishes">@Localizer["Continue reading"]</a></p>
+    </section>
+    <aside class="docs-next"><ul><li><a href="/knowledges/cnc/feeds-and-speeds">@Localizer["Learn how to calculate feeds and speeds"]</a></li><li><a href="/knowledges/cnc/cutting-tools">@Localizer["Choose tools for the operation"]</a></li><li><a href="/knowledges/materials/selection">@Localizer["Explore materials and applications"]</a></li></ul></aside>
 </article>
 
 @code {

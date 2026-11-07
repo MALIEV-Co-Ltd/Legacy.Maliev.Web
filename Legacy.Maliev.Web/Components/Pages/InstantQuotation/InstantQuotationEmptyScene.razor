@@ -1,0 +1,110 @@
+@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<span class="iq-empty-scene" data-empty-scene aria-hidden="true" @ref="sceneRoot">
+    <canvas class="iq-empty-scene__hex" data-empty-hex aria-hidden="true"></canvas>
+    <span class="iq-empty-scene__veil" aria-hidden="true"></span>
+    <canvas class="iq-empty-scene__cube" data-empty-cube aria-hidden="true"></canvas>
+    <span class="iq-empty-dropzone__icon iq-empty-scene__fallback" aria-hidden="true">📦</span>
+</span>
+
+@code {
+    private ElementReference sceneRoot;
+    private IJSObjectReference? module;
+    private IJSObjectReference? scene;
+    private bool disposed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || disposed)
+        {
+            return;
+        }
+
+        try
+        {
+            var imported = await JS.InvokeAsync<IJSObjectReference>("import", "/dist/instant-quotation-viewer.mjs");
+            if (disposed)
+            {
+                await imported.DisposeAsync();
+                return;
+            }
+
+            module = imported;
+            var created = await imported.InvokeAsync<IJSObjectReference>("createEmptyScene", sceneRoot);
+            if (disposed)
+            {
+                await ReleaseSceneAsync(created);
+                return;
+            }
+
+            scene = created;
+        }
+        catch (JSException)
+        {
+            // Optional decoration leaves the ordinary file label and fallback usable.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (disposed)
+        {
+            return;
+        }
+
+        disposed = true;
+        var ownedScene = scene;
+        var ownedModule = module;
+        scene = null;
+        module = null;
+        try
+        {
+            if (ownedScene is not null)
+            {
+                await ReleaseSceneAsync(ownedScene);
+            }
+        }
+        finally
+        {
+            if (ownedModule is not null)
+            {
+                try
+                {
+                    await ownedModule.DisposeAsync();
+                }
+                catch (JSException)
+                {
+                    // A disconnected document already owns no live browser context.
+                }
+            }
+        }
+    }
+
+    private static async ValueTask ReleaseSceneAsync(IJSObjectReference ownedScene)
+    {
+        try
+        {
+            try
+            {
+                await ownedScene.InvokeVoidAsync("dispose");
+            }
+            catch (JSException)
+            {
+                // The JS release attempts every layer before surfacing any release error.
+            }
+        }
+        finally
+        {
+            try
+            {
+                await ownedScene.DisposeAsync();
+            }
+            catch (JSException)
+            {
+                // Navigation may already have disconnected this optional reference.
+            }
+        }
+    }
+}

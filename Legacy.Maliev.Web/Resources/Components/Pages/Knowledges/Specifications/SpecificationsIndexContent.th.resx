@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -119,4 +119,35 @@
   </resheader>
   <data name="Service specifications | MALIEV" xml:space="preserve"><value>ข้อแนะนำเฉพาะบริการ | MALIEV</value></data><data name="Technical guidance" xml:space="preserve"><value>คำแนะนำทางเทคนิค</value></data><data name="Service specifications" xml:space="preserve"><value>ข้อแนะนำเฉพาะบริการ</value></data><data name="Choose a process for concise preparation guidance, then use the service page for current materials, pricing, lead-time, and FAQ information." xml:space="preserve"><value>เลือกกระบวนการเพื่อดูแนวทางเตรียมงาน และดูหน้าบริการสำหรับวัสดุ ราคา ระยะเวลา และคำถามที่พบบ่อยล่าสุด</value></data>
   <data name="CNC machining" xml:space="preserve"><value>งาน CNC</value></data><data name="CAD, drawings, tolerances, threads, and finishes." xml:space="preserve"><value>CAD แบบ ค่าความคลาดเคลื่อน เกลียว และผิว</value></data><data name="3D printing" xml:space="preserve"><value>งานพิมพ์ 3 มิติ</value></data><data name="Watertight models, process choice, orientation, and support considerations." xml:space="preserve"><value>โมเดลปิดสนิท การเลือกกระบวนการ ทิศทาง และซัพพอร์ต</value></data><data name="3D scanning" xml:space="preserve"><value>งานสแกน 3 มิติ</value></data><data name="Part condition, surface preparation, access, and deliverables." xml:space="preserve"><value>สภาพชิ้นงาน การเตรียมผิว การเข้าถึง และไฟล์ส่งมอบ</value></data>
+  <data name="Walls, radii, pockets, workholding, tolerances, machining axes, EDM, grinding, and coatings." xml:space="preserve"><value>ผนัง รัศมี โพรง การจับยึด ค่าความคลาดเคลื่อน แกนเครื่องจักร EDM เจียระไน และเคลือบผิว</value></data>
+  <data name="Material choice, clean geometry, orientation, supports, fit, and post-processing." xml:space="preserve"><value>การเลือกวัสดุ โมเดลสมบูรณ์ ทิศทางพิมพ์ ซัพพอร์ต การสวมประกอบ และการตกแต่ง</value></data>
+  <data name="Surface access, preparation, measurement requirements, mesh, and reverse-engineered CAD." xml:space="preserve"><value>การเข้าถึงผิว การเตรียมงาน ข้อกำหนดการวัด เมช และ CAD จากวิศวกรรมย้อนกลับ</value></data>
+  <data name="What should you send?" xml:space="preserve"><value>ควรส่งข้อมูลอะไรบ้าง?</value></data>
+  <data name="Submission information by manufacturing process" xml:space="preserve"><value>ข้อมูลขอราคาแยกตามกระบวนการผลิต</value></data>
+  <data name="A starting checklist; additional information depends on the actual part." xml:space="preserve"><value>รายการเริ่มต้น ข้อมูลเพิ่มเติมขึ้นกับชิ้นงานจริง</value></data>
+  <data name="Process" xml:space="preserve"><value>กระบวนการ</value></data>
+  <data name="Starting information" xml:space="preserve"><value>ข้อมูลเริ่มต้น</value></data>
+  <data name="Decisions to resolve" xml:space="preserve"><value>ประเด็นที่ควรตกลง</value></data>
+  <data name="Solid CAD, matching drawing, material grade and condition, quantity, and finish." xml:space="preserve"><value>CAD ทรงตัน แบบรุ่นเดียวกัน เกรดและสภาพวัสดุ จำนวน และการตกแต่ง</value></data>
+  <data name="Critical datums and fits, tool access, clamping, coating allowances, and inspection scope." xml:space="preserve"><value>ดาตัมและการสวมสำคัญ การเข้าถึงของเครื่องมือ การจับยึด ระยะเผื่อเคลือบ และขอบเขตตรวจสอบ</value></data>
+  <data name="A clean model at the intended scale, quantity, application, and material requirements." xml:space="preserve"><value>โมเดลสมบูรณ์ในขนาดที่ต้องการ จำนวน การใช้งาน และคุณสมบัติวัสดุ</value></data>
+  <data name="Load direction, support-contact areas, hollow regions, mating clearances, and supplied finish." xml:space="preserve"><value>ทิศทางแรง จุดสัมผัสซัพพอร์ต โพรง ระยะเผื่อประกอบ และสภาพผิวส่งมอบ</value></data>
+  <data name="Photos, dimensions, approximate weight, surface condition, and intended use of the data." xml:space="preserve"><value>ภาพถ่าย ขนาด น้ำหนักโดยประมาณ สภาพผิว และการนำข้อมูลไปใช้</value></data>
+  <data name="Preparation permissions, mesh versus CAD, accuracy needs, and treatment of missing areas." xml:space="preserve"><value>การอนุญาตเตรียมผิว เมชหรือ CAD ความแม่นยำที่ต้องการ และวิธีจัดการบริเวณที่เก็บข้อมูลไม่ได้</value></data>
+  <data name="Design, casting, or molding instead?" xml:space="preserve"><value>ต้องการออกแบบ หล่อ หรือฉีดขึ้นรูปแทนหรือไม่?</value></data>
+  <data name="These service pages explain the starting information for additional processes. Confirm material, tooling, quantity, and deliverables during review." xml:space="preserve"><value>หน้าบริการเหล่านี้อธิบายข้อมูลเริ่มต้นของกระบวนการอื่น ควรยืนยันวัสดุ เครื่องมือหรือแม่พิมพ์ จำนวน และรายการส่งมอบเมื่อประเมินงาน</value></data>
+  <data name="3D design: sketches, references, or an existing part" xml:space="preserve"><value>ออกแบบ 3 มิติ: ภาพร่าง ข้อมูลอ้างอิง หรือชิ้นงานเดิม</value></data>
+  <data name="Silicone casting: master, flexible material, and required copies" xml:space="preserve"><value>หล่อซิลิโคน: ต้นแบบ วัสดุยืดหยุ่น และจำนวนที่ต้องการ</value></data>
+  <data name="Low-volume injection molding: part, resin, mold, and batch quantity" xml:space="preserve"><value>ฉีดพลาสติกจำนวนน้อย: ชิ้นงาน เม็ดพลาสติก แม่พิมพ์ และจำนวนต่อชุด</value></data>
+  <data name="There is no single wall thickness, part size, or tolerance for every material and process. The quotation defines the agreed manufacturing and inspection scope." xml:space="preserve"><value>ไม่มีค่าความหนาผนัง ขนาดชิ้นงาน หรือความคลาดเคลื่อนเดียวที่ใช้ได้กับทุกวัสดุและกระบวนการ ใบเสนอราคาจะกำหนดขอบเขตการผลิตและตรวจสอบที่ตกลงร่วมกัน</value></data>
+  <data name="Prepare a complete request" xml:space="preserve"><value>เตรียมข้อมูลขอราคาให้ครบ</value></data>
+  <data name="Discuss an uncertain requirement" xml:space="preserve"><value>ปรึกษาข้อกำหนดที่ยังไม่แน่ใจ</value></data>
+  <data name="Compare the information needed for CNC machining, 3D printing, and 3D scanning before requesting a quotation." xml:space="preserve"><value>เปรียบเทียบข้อมูลที่ควรเตรียมก่อนขอราคางาน CNC พิมพ์ 3 มิติ และสแกน 3 มิติ</value></data>
+  <data name="Manufacturing preparation guides" xml:space="preserve"><value>คู่มือเตรียมงานผลิต</value></data>
+  <data name="Start with the result you need, then prepare the files and requirements that let an engineer choose a suitable process." xml:space="preserve"><value>เริ่มจากผลลัพธ์ที่ต้องการ แล้วเตรียมไฟล์และข้อกำหนดเพื่อให้วิศวกรเลือกกระบวนการที่เหมาะสม</value></data>
+  <data name="Turned, milled, printed and cast samples beside engineering drawings." xml:space="preserve"><value>ตัวอย่างงานกลึง กัด พิมพ์ และหล่อ วางข้างแบบงานวิศวกรรม</value></data>
+  <data name="The starting information depends on the part and the intended process. Illustrative image." xml:space="preserve"><value>ข้อมูลเริ่มต้นขึ้นอยู่กับชิ้นงานและกระบวนการที่ต้องการ ภาพประกอบ</value></data>
+  <data name="Three panels distinguish digital geometry, a dimensioned drawing and a physical sample." xml:space="preserve"><value>ภาพสามส่วนแยกข้อมูลจากโมเดลดิจิทัล แบบระบุขนาด และชิ้นงานจริง</value></data>
+  <data name="1: a model communicates nominal geometry and units. 2: a drawing specifies tolerances and requirements that shape alone cannot express. 3: an existing sample reveals actual condition, including wear or damage; it does not automatically establish the original nominal dimensions. Submit the inputs relevant to the required service and identify unresolved differences." xml:space="preserve"><value>1: โมเดลสื่อสารรูปทรงตามแบบและหน่วย 2: แบบระบุค่าความคลาดเคลื่อนและข้อกำหนดที่รูปทรงอย่างเดียวบอกไม่ได้ 3: ชิ้นงานเดิมแสดงสภาพจริง รวมถึงการสึกหรือความเสียหาย แต่ไม่ได้ยืนยันขนาดเดิมตามแบบโดยอัตโนมัติ ส่งข้อมูลให้เหมาะกับบริการและแจ้งจุดที่ยังไม่ตรงกัน</value></data>
+  <data name="Open full-size diagram" xml:space="preserve"><value>เปิดแผนภาพขนาดเต็ม</value></data>
 </root>

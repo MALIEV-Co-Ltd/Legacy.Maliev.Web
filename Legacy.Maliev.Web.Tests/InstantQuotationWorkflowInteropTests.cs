@@ -7,6 +7,24 @@ public sealed class InstantQuotationWorkflowInteropTests
     private static readonly string RepositoryRoot = FindRepositoryRoot();
 
     [Fact]
+    public void IntentDiagnostics_UseActualUploadStateAndExistingTypedConsentSink()
+    {
+        var markup = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflow.razor");
+        var form = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationCustomerForm.razor");
+        var code = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflow.razor.cs");
+        var script = Read("Legacy.Maliev.Web", "wwwroot", "src", "app", "js", "instant-quotation-submission.mjs");
+
+        Assert.Contains("HasFiles=\"@(workflow?.Uploads.Count > 0)\"", markup, StringComparison.Ordinal);
+        Assert.Contains("workflow.Uploads.All(upload => upload.Status is InstantQuotationWorkflowUploadStatus.Uploaded)", markup, StringComparison.Ordinal);
+        Assert.Contains("Parts.Count == workflow.Uploads.Count", markup, StringComparison.Ordinal);
+        Assert.Contains("HasFiles && FileUploadCompleted", form, StringComparison.Ordinal);
+        Assert.Contains("analytics.RecordQuoteStartedAsync(analyticsWorkflowId)", code, StringComparison.Ordinal);
+        Assert.Contains("defaultView?.malievAnalytics?.emit?.(payload)", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("dataLayer", script, StringComparison.Ordinal);
+        Assert.DoesNotContain("request_quote", script, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Workflow_renders_accessible_canvas_and_wired_controls()
     {
         var markup = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflow.razor");
@@ -78,7 +96,7 @@ public sealed class InstantQuotationWorkflowInteropTests
         var code = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflow.razor.cs");
         var coordinator = Read("Legacy.Maliev.Web", "Components", "Pages", "InstantQuotation", "InstantQuotationWorkflowCoordinator.cs");
         var beginPreview = code.IndexOf("BeginPreviewSelectionAsync", StringComparison.Ordinal);
-        var getClaim = code.IndexOf("getGeometryClaim", beginPreview, StringComparison.Ordinal);
+        var getClaim = code.IndexOf("var claim = await claims[index]", beginPreview, StringComparison.Ordinal);
         var reserve = code.IndexOf("ReserveUploads", getClaim, StringComparison.Ordinal);
 
         Assert.Contains("SemaphoreSlim", code, StringComparison.Ordinal);
@@ -87,7 +105,9 @@ public sealed class InstantQuotationWorkflowInteropTests
         Assert.Contains("discardSelection", code, StringComparison.Ordinal);
         Assert.True(beginPreview >= 0 && getClaim > beginPreview && reserve > getClaim);
         Assert.Contains("InstantQuotationGeometryClaim", code, StringComparison.Ordinal);
-        Assert.Contains("item.Claim", code, StringComparison.Ordinal);
+        Assert.Contains("file.Name, file.ContentType, file.Size, claim", code, StringComparison.Ordinal);
+        Assert.Contains("keys.Select(ReadGeometryClaimAsync)", code, StringComparison.Ordinal);
+        Assert.Contains("InvokeAsync<InstantQuotationGeometryClaim>(\"getGeometryClaim\", key)", code, StringComparison.Ordinal);
         Assert.Contains("ReserveUploads", coordinator, StringComparison.Ordinal);
         Assert.Contains("UploadReservedAsync", coordinator, StringComparison.Ordinal);
     }
