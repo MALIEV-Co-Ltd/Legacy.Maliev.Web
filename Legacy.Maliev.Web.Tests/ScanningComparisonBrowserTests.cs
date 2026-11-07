@@ -289,6 +289,64 @@ public sealed class ScanningComparisonBrowserTests(PublicContactBrowserFixture f
         Assert.InRange(int.Parse((await comparison.Locator("[data-comparison-handle]").GetAttributeAsync("aria-valuenow"))!), 74, 76);
         Assert.InRange(Math.Abs(await page.EvaluateAsync<double>("scrollY") - scrollBefore), 0, 1);
     }
+    /// <summary>Checks the onsite cards retain their accessible dark-section presentation.</summary>
+    [Theory]
+    [InlineData("en", 390)]
+    [InlineData("th", 390)]
+    [InlineData("en", 1440)]
+    [InlineData("th", 1440)]
+    public async Task OnsiteCards_RetainDarkSectionStyles(string culture, int width)
+    {
+        await using IBrowserContext context = await CreateContextAsync(width);
+        await context.RouteAsync("**/*", async route =>
+        {
+            if (Uri.TryCreate(route.Request.Url, UriKind.Absolute, out var uri) && uri.Host == "127.0.0.1")
+            {
+                await route.ContinueAsync();
+            }
+            else
+            {
+                await route.AbortAsync();
+            }
+        });
+        IPage page = await OpenPageAsync(context, culture);
+        ILocator section = page.Locator("#scanning-service-modes");
+        ILocator cards = section.Locator("article.service-card.service-card-visual");
+        Assert.Equal(3, await cards.CountAsync());
+        string[] headings = culture == "en"
+            ? ["Site access", "Environment", "Pre-visit planning"]
+            : ["การเข้าถึงพื้นที่", "สภาพแวดล้อม", "วางแผนก่อนเข้าพื้นที่"];
+
+        for (int index = 0; index < headings.Length; index++)
+        {
+            ILocator card = cards.Nth(index);
+            ILocator image = card.Locator("img.service-card-media");
+            ILocator heading = card.Locator(".service-card-body h3");
+            ILocator description = card.Locator(".service-card-body p");
+            await image.ScrollIntoViewIfNeededAsync();
+            string imagePath = (await image.GetAttributeAsync("src"))!;
+            var imageResponse = await context.APIRequest.GetAsync(new Uri(fixture.Origin, imagePath).ToString());
+            Assert.True(imageResponse.Ok, $"Onsite image {imagePath} returned {imageResponse.Status}.");
+            Assert.Equal("image/webp", imageResponse.Headers["content-type"]);
+            Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString((await imageResponse.BodyAsync())[..4]));
+            await image.EvaluateAsync("image => new Promise((resolve, reject) => { if (image.complete) { image.naturalWidth > 0 ? resolve() : reject(new Error('Image failed to load')); } else { image.addEventListener('load', resolve, { once: true }); image.addEventListener('error', reject, { once: true }); } })");
+            await image.EvaluateAsync("image => image.decode()");
+            Assert.True(await image.EvaluateAsync<bool>("image => image.complete && image.naturalWidth > 0"));
+            Assert.Equal(headings[index], await heading.InnerTextAsync());
+            Assert.False(string.IsNullOrWhiteSpace(await image.GetAttributeAsync("alt")));
+            Assert.False(string.IsNullOrWhiteSpace(await description.InnerTextAsync()));
+            Assert.Equal("rgba(255, 255, 255, 0.18)", await card.EvaluateAsync<string>("element => getComputedStyle(element).borderColor"));
+            Assert.Equal("rgb(11, 36, 66)", await card.EvaluateAsync<string>("element => getComputedStyle(element).backgroundColor"));
+            Assert.Equal("none", await card.EvaluateAsync<string>("element => getComputedStyle(element).boxShadow"));
+            Assert.Equal("rgba(255, 255, 255, 0.18)", await image.EvaluateAsync<string>("element => getComputedStyle(element).borderBottomColor"));
+            Assert.Equal("rgb(11, 36, 66)", await image.EvaluateAsync<string>("element => getComputedStyle(element).backgroundColor"));
+            Assert.Equal("rgb(255, 255, 255)", await heading.EvaluateAsync<string>("element => getComputedStyle(element).color"));
+            Assert.Equal("rgb(217, 230, 244)", await description.EvaluateAsync<string>("element => getComputedStyle(element).color"));
+        }
+
+        await cards.First.ScreenshotAsync(new LocatorScreenshotOptions { Path = ScreenshotPath($"scanning-onsite-{culture}-{width}.png") });
+    }
+
     private Task<IBrowserContext> CreateContextAsync(int width, bool javaScript = true) =>
         fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
