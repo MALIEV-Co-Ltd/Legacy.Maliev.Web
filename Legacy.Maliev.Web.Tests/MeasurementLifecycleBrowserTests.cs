@@ -3,9 +3,12 @@ using System.Net;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
+using Legacy.Maliev.Web.Pages.Shared;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Playwright;
@@ -159,6 +162,58 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
         await session.Page.GotoAsync(new Uri(fixture.Origin, "/services/3d-printing?culture=en").ToString());
         await session.Page.GoBackAsync(new PageGoBackOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
         Assert.Equal(0, await CountLeadEventsAsync(session.Page));
+    }
+
+    [Theory]
+    [InlineData(390)]
+    [InlineData(1440)]
+    public async Task InstantQuotation_DuplicateConsentFlushesOnceWithoutReplay(int width)
+    {
+        await using var session = await OpenFreshAsync(width);
+        var quotationCount = fixture.QuotationClient.SubmissionCount;
+        var contactCount = fixture.ContactClient.SubmissionCount;
+        await session.Page.GotoAsync(new Uri(fixture.Origin, "/__tests/measurement/persisted-instant-quote").ToString(),
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        Assert.Equal(0, await CountLeadEventsAsync(session.Page));
+        Assert.DoesNotContain(session.BlockedUrls, IsExternalAnalyticsUrl);
+
+        await session.Page.Locator("#cookieConsent [data-consent-action='accept']")
+            .EvaluateAsync("button => { button.click(); button.click(); }");
+
+        Assert.Equal(1, await CountConsentUpdatesAsync(session.Page, "granted"));
+        Assert.Equal(0, await session.Page.Locator("#cookieConsent").CountAsync());
+        var eventsJson = await session.Page.EvaluateAsync<string>(
+            "() => JSON.stringify(dataLayer.filter(item => item.event === 'maliev_lead_submitted' || item.event === 'generate_lead'))");
+        using var events = JsonDocument.Parse(eventsJson);
+        Assert.Equal(2, events.RootElement.GetArrayLength());
+        Assert.Equal("maliev_lead_submitted", events.RootElement[0].GetProperty("event").GetString());
+        Assert.Equal("generate_lead", events.RootElement[1].GetProperty("event").GetString());
+        foreach (var item in events.RootElement.EnumerateArray())
+        {
+            Assert.Equal("instant_3d_quote", item.GetProperty("lead_type").GetString());
+            Assert.Equal("3d_printing", item.GetProperty("service").GetString());
+            Assert.Equal("request-42", item.GetProperty("transaction_id").GetString());
+            Assert.Equal("11111111-2222-3333-4444-555555555555", item.GetProperty("journey_id").GetString());
+            Assert.Equal("persisted", item.GetProperty("lead_status").GetString());
+            Assert.True(item.GetProperty("has_files").GetBoolean());
+            foreach (var forbidden in new[] { "email", "phone", "telephone", "name", "company", "message" })
+            {
+                Assert.DoesNotContain(forbidden, item.GetRawText(), StringComparison.OrdinalIgnoreCase);
+            }
+        }
+        await session.Page.EvaluateAsync("() => window.malievAnalytics.setConsent('granted')");
+        Assert.Equal(2, await CountLeadEventsAsync(session.Page));
+        await session.ExternalAnalyticsBlocked.WaitAsync(TimeSpan.FromSeconds(30));
+        Assert.Contains(session.BlockedUrls, IsExternalAnalyticsUrl);
+
+        await session.Page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        Assert.Equal(0, await session.Page.Locator("#cookieConsent").CountAsync());
+        Assert.Equal(0, await CountLeadEventsAsync(session.Page));
+        await session.Page.GotoAsync(new Uri(fixture.Origin, "/services/3d-printing?culture=en").ToString());
+        await session.Page.GoBackAsync(new PageGoBackOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        Assert.Equal(0, await CountLeadEventsAsync(session.Page));
+        Assert.Equal(quotationCount, fixture.QuotationClient.SubmissionCount);
+        Assert.Equal(contactCount, fixture.ContactClient.SubmissionCount);
     }
 
     [Theory]
@@ -529,6 +584,7 @@ public sealed class MeasurementLifecycleBrowserFixture : IAsyncLifetime
             base.ConfigureWebHost(builder);
             builder.ConfigureServices(services =>
             {
+                services.AddSingleton<IStartupFilter>(new InstantMeasurementFixtureStartupFilter());
                 services.RemoveAll<ICountryClient>();
                 services.AddSingleton<ICountryClient, StubCountryClient>();
                 services.RemoveAll<IQuotationClient>();
@@ -545,6 +601,32 @@ public sealed class MeasurementLifecycleBrowserFixture : IAsyncLifetime
                 services.AddSingleton<INotificationClient, StubNotificationClient>();
             });
         }
+    }
+
+    private sealed class InstantMeasurementFixtureStartupFilter : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use(async (context, forward) =>
+            {
+                if (!context.Request.Path.Equals("/__tests/measurement/persisted-instant-quote"))
+                {
+                    await forward(context);
+                    return;
+                }
+
+                var tempData = context.RequestServices.GetRequiredService<ITempDataDictionaryFactory>().GetTempData(context);
+                if (!LeadAnalyticsEventQueue.TryQueueInstantQuotation(tempData, "request-42", true,
+                    "11111111-2222-3333-4444-555555555555", out var failure))
+                {
+                    throw new InvalidOperationException("Unable to queue synthetic instant quotation.", failure);
+                }
+
+                tempData.Save();
+                context.Response.Redirect("/Quotation?culture=en");
+            });
+            next(app);
+        };
     }
 
     private sealed class AnonymousContactCustomerLoader : IContactTrustedCustomerLoader
