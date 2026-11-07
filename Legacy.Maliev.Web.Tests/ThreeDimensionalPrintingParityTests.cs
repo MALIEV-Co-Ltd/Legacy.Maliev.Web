@@ -145,7 +145,7 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
     {
         using var client = factory.CreateClient();
         var html = WebUtility.HtmlDecode(await client.GetStringAsync($"/services/3d-printing?culture={culture}"));
-        var quickFacts = html.IndexOf("<section class=\"service-quick\">", StringComparison.Ordinal);
+        var quickFacts = html.IndexOf("<div class=\"service-quick\">", StringComparison.Ordinal);
         var inPageToc = html.IndexOf("<nav class=\"service-page-toc\" aria-label=", StringComparison.Ordinal);
         var quoteGuide = html.IndexOf("<section id=\"printing-quote-guide\"", StringComparison.Ordinal);
 
@@ -267,7 +267,7 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         Assert.Contains("ไฟล์สามมิติที่รับรองสำหรับงาน 3D Printing", component, StringComparison.Ordinal);
         Assert.DoesNotMatch(@"<i\s", Regex.Match(component, "<section id=\"printing-processes\"[\\s\\S]*?</section>").Value);
         Assert.DoesNotMatch(@"<i\s", Regex.Match(component, "<section id=\"printing-file-guide\"[\\s\\S]*?</section>").Value);
-        var quickFacts = component.IndexOf("<section class=\"service-quick\">", StringComparison.Ordinal);
+        var quickFacts = component.IndexOf("<div class=\"service-quick\">", StringComparison.Ordinal);
         var inPageToc = component.IndexOf("<nav class=\"service-page-toc\" aria-label=", StringComparison.Ordinal);
         var quoteGuide = component.IndexOf("<section id=\"printing-quote-guide\"", StringComparison.Ordinal);
         Assert.True(quickFacts >= 0 && inPageToc > quickFacts && quoteGuide > inPageToc);
@@ -276,6 +276,7 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         var fileCardEnd = component.IndexOf("</article>", fileCardStart, StringComparison.Ordinal);
         Assert.True(fileCardEnd > fileCardStart);
         var fileCard = component[fileCardStart..fileCardEnd];
+        Assert.Contains("<ul class=\"printing-file-badges\">", fileCard, StringComparison.Ordinal);
         foreach (var supportedFormat in new[] { "STL", "OBJ", "3MF", "GLB", "GLTF", "STEP / STP", "IGES / IGS" })
         {
             Assert.Contains($"<li>{supportedFormat}</li>", fileCard, StringComparison.Ordinal);

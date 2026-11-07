@@ -2688,8 +2688,8 @@ public sealed class WebSurfaceTests : IDisposable
     }
 
     [Theory]
-    [InlineData("/services", "en", "Manufacturing services", "/services/cnc-machining")]
-    [InlineData("/services", "th", "บริการผลิตชิ้นส่วน", "/services/cnc-machining")]
+    [InlineData("/services", "en", "Find the right manufacturing service for your project", "/services/cnc-machining")]
+    [InlineData("/services", "th", "ค้นหาบริการผลิตที่เหมาะกับโปรเจ็คของคุณ", "/services/cnc-machining")]
     [InlineData("/about/socialmedia", "en", "MALIEV on social media", "https://www.youtube.com")]
     [InlineData("/about/socialmedia", "th", "MALIEV บนโซเชียลมีเดีย", "https://www.youtube.com")]
     public async Task ReadOnlyPublicRoute_RendersLocalizedBlazorStaticSsrContent(
@@ -2704,7 +2704,7 @@ public sealed class WebSurfaceTests : IDisposable
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
-        Assert.Contains($"<h1>{heading}</h1>", decodedSource, StringComparison.Ordinal);
+        Assert.Matches($"<h1(?: [^>]*)?>{Regex.Escape(heading)}</h1>", decodedSource);
         Assert.Contains($"href=\"{expectedLinkPrefix}", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
         Assert.Contains("hreflang=\"en\"", source, StringComparison.Ordinal);
