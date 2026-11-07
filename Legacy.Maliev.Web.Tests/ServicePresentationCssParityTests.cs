@@ -33,7 +33,7 @@ public sealed class ServicePresentationCssParityTests
         Assert.Contains(".service-material-controls input:focus-visible, .service-material-controls select:focus-visible, .service-material-reset:focus-visible", services, StringComparison.Ordinal);
 
         var landing = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "wwwroot", "src", "app", "css", "landing.css"));
-        Assert.Contains(".landing-service-card--injection > img { aspect-ratio: 16 / 9; object-fit: cover; object-position: 70% center; padding: 0;", landing, StringComparison.Ordinal);
+        Assert.Contains(".landing-service-card--injection > img { aspect-ratio: 16 / 9; object-fit: cover; object-position: 50% 28%; padding: 0;", landing, StringComparison.Ordinal);
         Assert.Contains(".landing-section + .landing-section { padding-top: clamp(5.5rem, 8vw, 8rem); }", landing, StringComparison.Ordinal);
         Assert.Contains(".landing-service-card a { display: inline-flex; align-items: center; gap: .6rem;", landing, StringComparison.Ordinal);
 
