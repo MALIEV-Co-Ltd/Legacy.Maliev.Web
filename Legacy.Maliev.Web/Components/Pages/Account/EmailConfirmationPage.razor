@@ -53,6 +53,7 @@
         context.Response.Headers["Referrer-Policy"] = "no-referrer";
         if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Token))
         {
+            showInvalidResult = true;
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             return;
         }
