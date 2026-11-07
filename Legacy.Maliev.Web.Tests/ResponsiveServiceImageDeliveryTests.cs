@@ -17,14 +17,14 @@ public sealed class ResponsiveServiceImageDeliveryTests : IClassFixture<TestingW
     }
 
     [Theory]
-    [InlineData("ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingContent.razor", "printing/printing-hero.webp", "printing/printing-hero", 1672)]
-    [InlineData("CncMachiningPage.razor", "CncMachiningContent.razor", "cnc/cnc-hero.webp", "cnc/cnc-hero", 1672)]
-    [InlineData("ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningContent.razor", "scanning/scanning-hero.webp", "scanning/scanning-hero", 1672)]
-    [InlineData("CustomManufacturingPage.razor", "CustomManufacturingContent.razor", "custom-manufacturing/custom-manufacturing-story.webp", "custom-manufacturing/custom-manufacturing-story", 1536)]
-    [InlineData("ThreeDimensionalDesignPage.razor", "ThreeDimensionalDesignContent.razor", "design/design-workflow.webp", "design/design-workflow", 1536)]
-    [InlineData("SiliconeCastingPage.razor", "SiliconeCastingContent.razor", "silicone-casting/silicone-casting-workflow.webp", "silicone-casting/silicone-casting-workflow", 1536)]
-    [InlineData("FinishingAndColorPage.razor", "FinishingAndColorPage.razor", "printing/printing-finish-color-approval.webp", "printing/printing-finish-color-approval", 1536)]
-    [InlineData("LowVolumeInjectionMoldingPage.razor", "LowVolumeInjectionMoldingContent.razor", "injection-molding/injection-service-hero-wide.webp", "injection-molding/injection-service-hero-wide", 2172)]
+    [InlineData("ThreeDimensionalPrintingPage.razor", "ThreeDimensionalPrintingContent.razor", "printing/printing-hero-prototypes-transparent.webp", "printing/printing-hero-prototypes-transparent", 1536)]
+    [InlineData("CncMachiningPage.razor", "CncMachiningContent.razor", "hero-illustrations/cnc-hero-light.webp", "hero-illustrations/cnc-hero-light", 1536)]
+    [InlineData("ThreeDimensionalScanningPage.razor", "ThreeDimensionalScanningContent.razor", "hero-illustrations/scanning-hero-raptor-x-unbranded.webp", "hero-illustrations/scanning-hero-raptor-x-unbranded", 1536)]
+    [InlineData("CustomManufacturingPage.razor", "CustomManufacturingContent.razor", "hero-illustrations/custom-hero-light.webp", "hero-illustrations/custom-hero-light", 1536)]
+    [InlineData("ThreeDimensionalDesignPage.razor", "ThreeDimensionalDesignContent.razor", "hero-illustrations/design-hero-light.webp", "hero-illustrations/design-hero-light", 1774)]
+    [InlineData("SiliconeCastingPage.razor", "SiliconeCastingContent.razor", "hero-illustrations/silicone-hero-light.webp", "hero-illustrations/silicone-hero-light", 1536)]
+    [InlineData("FinishingAndColorPage.razor", "FinishingAndColorPage.razor", "hero-illustrations/finishing-hero-light.webp", "hero-illustrations/finishing-hero-light", 1774)]
+    [InlineData("LowVolumeInjectionMoldingPage.razor", "LowVolumeInjectionMoldingContent.razor", "hero-illustrations/injection-hero-light.webp", "hero-illustrations/injection-hero-light", 1536)]
     public void ServiceHero_ProvidesResponsivePreloadAndImageSources(
         string pageName,
         string contentName,
@@ -39,9 +39,9 @@ public sealed class ResponsiveServiceImageDeliveryTests : IClassFixture<TestingW
 
         Assert.Contains($"href=\"/src/images/services/{originalImage}\"", page, StringComparison.Ordinal);
         Assert.Contains($"imagesrcset=\"{responsiveSet}\"", page, StringComparison.Ordinal);
-        Assert.Contains("imagesizes=\"100vw\"", page, StringComparison.Ordinal);
+        Assert.Contains("imagesizes=\"(max-width: 767px) 100vw, 50vw\"", page, StringComparison.Ordinal);
         Assert.Contains($"srcset=\"{responsiveSet}\"", content, StringComparison.Ordinal);
-        Assert.Contains("sizes=\"100vw\"", content, StringComparison.Ordinal);
+        Assert.Contains("sizes=\"(max-width: 767px) 100vw, 50vw\"", content, StringComparison.Ordinal);
 
         var imageRoot = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web", "wwwroot", "src", "images", "services");
         var originalPath = Path.Combine(imageRoot, originalImage.Replace('/', Path.DirectorySeparatorChar));
@@ -84,10 +84,10 @@ public sealed class ResponsiveServiceImageDeliveryTests : IClassFixture<TestingW
     }
 
     [Theory]
-    [InlineData("3D-Printing.cshtml", "printing/printing-hero")]
-    [InlineData("CNC-Machining.cshtml", "cnc/cnc-hero")]
-    [InlineData("3D-Scanning.cshtml", "scanning/scanning-hero")]
-    [InlineData("Custom-Manufacturing.cshtml", "custom-manufacturing/custom-manufacturing-story")]
+    [InlineData("3D-Printing.cshtml", "printing/printing-hero-prototypes-transparent")]
+    [InlineData("CNC-Machining.cshtml", "hero-illustrations/cnc-hero-light")]
+    [InlineData("3D-Scanning.cshtml", "hero-illustrations/scanning-hero-raptor-x-unbranded")]
+    [InlineData("Custom-Manufacturing.cshtml", "hero-illustrations/custom-hero-light")]
     public void RetainedRazorFallbacks_ProvideRootRelative768HeroSources(string pageName, string responsiveStem)
     {
         var page = File.ReadAllText(Path.Combine(
@@ -105,14 +105,14 @@ public sealed class ResponsiveServiceImageDeliveryTests : IClassFixture<TestingW
     }
 
     [Theory]
-    [InlineData("/services/3d-printing", "printing/printing-hero")]
-    [InlineData("/services/cnc-machining", "cnc/cnc-hero")]
-    [InlineData("/services/3d-scanning", "scanning/scanning-hero")]
-    [InlineData("/services/custom-manufacturing", "custom-manufacturing/custom-manufacturing-story")]
-    [InlineData("/services/3d-design", "design/design-workflow")]
-    [InlineData("/services/silicone-casting", "silicone-casting/silicone-casting-workflow")]
-    [InlineData("/services/finishing-and-color", "printing/printing-finish-color-approval")]
-    [InlineData("/services/low-volume-injection-molding", "injection-molding/injection-service-hero-wide")]
+    [InlineData("/services/3d-printing", "printing/printing-hero-prototypes-transparent")]
+    [InlineData("/services/cnc-machining", "hero-illustrations/cnc-hero-light")]
+    [InlineData("/services/3d-scanning", "hero-illustrations/scanning-hero-raptor-x-unbranded")]
+    [InlineData("/services/custom-manufacturing", "hero-illustrations/custom-hero-light")]
+    [InlineData("/services/3d-design", "hero-illustrations/design-hero-light")]
+    [InlineData("/services/silicone-casting", "hero-illustrations/silicone-hero-light")]
+    [InlineData("/services/finishing-and-color", "hero-illustrations/finishing-hero-light")]
+    [InlineData("/services/low-volume-injection-molding", "hero-illustrations/injection-hero-light")]
     public async Task ServiceRoute_RendersResponsiveHeroSources(string route, string responsiveStem)
     {
         using var response = await client.GetAsync($"{route}?culture=en&tracking=excluded");
@@ -122,7 +122,7 @@ public sealed class ResponsiveServiceImageDeliveryTests : IClassFixture<TestingW
         Assert.Contains($"/src/images/services/{responsiveStem}-640.webp 640w", html, StringComparison.Ordinal);
         Assert.Contains($"/src/images/services/{responsiveStem}-768.webp 768w", html, StringComparison.Ordinal);
         Assert.Contains($"/src/images/services/{responsiveStem}-960.webp 960w", html, StringComparison.Ordinal);
-        Assert.Contains("sizes=\"100vw\"", html, StringComparison.Ordinal);
+        Assert.Contains("sizes=\"(max-width: 767px) 100vw, 50vw\"", html, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

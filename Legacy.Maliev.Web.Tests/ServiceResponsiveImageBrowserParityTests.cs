@@ -7,14 +7,14 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class ServiceResponsiveImageBrowserParityTests(CncNativeBrowserFixture fixture)
 {
     [Theory]
-    [InlineData("/services/3d-printing", 1672, 941)]
-    [InlineData("/services/cnc-machining", 1672, 941)]
-    [InlineData("/services/3d-scanning", 1672, 941)]
+    [InlineData("/services/3d-printing", 1536, 1024)]
+    [InlineData("/services/cnc-machining", 1536, 1024)]
+    [InlineData("/services/3d-scanning", 1536, 1024)]
     [InlineData("/services/custom-manufacturing", 1536, 1024)]
-    [InlineData("/services/3d-design", 1536, 1024)]
+    [InlineData("/services/3d-design", 1774, 887)]
     [InlineData("/services/silicone-casting", 1536, 1024)]
-    [InlineData("/services/finishing-and-color", 1536, 1024)]
-    [InlineData("/services/low-volume-injection-molding", 2172, 724)]
+    [InlineData("/services/finishing-and-color", 1774, 887)]
+    [InlineData("/services/low-volume-injection-molding", 1536, 1024)]
     public async Task MobileServiceImages_SelectResponsiveCandidatesThatResolveFromSiteRoot(string route, int width, int height)
     {
         var origin = new Uri(fixture.CncQuotationUrl).GetLeftPart(UriPartial.Authority);
@@ -73,8 +73,8 @@ public sealed class ServiceResponsiveImageBrowserParityTests(CncNativeBrowserFix
             Assert.Equal(width, result.GetProperty("width").GetInt32());
             Assert.Equal(height, result.GetProperty("height").GetInt32());
             Assert.Equal(result.GetProperty("imageSet").GetString(), result.GetProperty("preloadSet").GetString());
-            Assert.Equal("100vw", result.GetProperty("imageSizes").GetString());
-            Assert.Equal("100vw", result.GetProperty("preloadSizes").GetString());
+            Assert.Equal("(max-width: 767px) 100vw, 50vw", result.GetProperty("imageSizes").GetString());
+            Assert.Equal("(max-width: 767px) 100vw, 50vw", result.GetProperty("preloadSizes").GetString());
             Assert.Equal("high", result.GetProperty("preloadPriority").GetString());
             string[] rawCandidates = result.GetProperty("rawCandidates").EnumerateArray()
                 .Select(value => value.GetString()!).ToArray();

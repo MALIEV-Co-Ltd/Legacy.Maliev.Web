@@ -167,7 +167,7 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         Assert.Contains($"<meta name=\"keywords\" content=\"{keywords}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
-        Assert.Contains("<link rel=\"preload\" as=\"image\" href=\"/src/images/services/scanning/scanning-hero.webp\"", source, StringComparison.Ordinal);
+        Assert.Contains("<link rel=\"preload\" as=\"image\" href=\"/src/images/services/hero-illustrations/scanning-hero-raptor-x-unbranded.webp\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
         Assert.Contains($">{lead}<", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);

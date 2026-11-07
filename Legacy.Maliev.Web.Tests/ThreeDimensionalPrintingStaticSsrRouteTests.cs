@@ -167,7 +167,7 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         Assert.Contains($"<meta name=\"keywords\" content=\"{keywords}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
-        Assert.Contains("<link rel=\"preload\" as=\"image\" href=\"/src/images/services/printing/printing-hero.webp\"", source, StringComparison.Ordinal);
+        Assert.Contains("<link rel=\"preload\" as=\"image\" href=\"/src/images/services/printing/printing-hero-prototypes-transparent.webp\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
         Assert.Contains($">{lead}<", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
@@ -377,7 +377,7 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         foreach (var section in new[] { hero, standards })
         {
             var image = Assert.Single(Regex.Matches(section.Groups["body"].Value,
-                "<img\\b(?=[^>]*src=\"/src/images/services/printing/printing-finish-color-approval.webp\")(?=[^>]*alt=\"(?<alt>[^\"]*)\")[^>]*>",
+                "<img\\b(?=[^>]*src=\"/src/images/services/hero-illustrations/finishing-hero-light.webp\")(?=[^>]*alt=\"(?<alt>[^\"]*)\")[^>]*>",
                 RegexOptions.CultureInvariant).Cast<Match>());
             Assert.Equal(culture == "th" ? "ช่างกำลังเทียบสีชิ้นงานพิมพ์ 3 มิติกับแผ่นเทียบสีและภาพอ้างอิง" : "Technician comparing a 3D-printed part with color swatches and a reference image",
                 image.Groups["alt"].Value);
