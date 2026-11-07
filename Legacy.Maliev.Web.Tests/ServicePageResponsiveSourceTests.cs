@@ -47,8 +47,10 @@ public sealed class ServicePageResponsiveSourceTests
     {
         var source = Read("Legacy.Maliev.Web", "Components", "Pages", "Services", fileName);
         Assert.Contains("<ServiceBreadcrumb", source, StringComparison.Ordinal);
+        var hero = System.Text.RegularExpressions.Regex.Match(source, "<section\\b(?=[^>]*\\bclass=\"[^\"]*\\bservice-hero\\b[^\"]*\")[^>]*>");
+        Assert.True(hero.Success);
         Assert.True(
-            source.IndexOf("<ServiceBreadcrumb", StringComparison.Ordinal) < source.IndexOf("<section class=\"service-hero\"", StringComparison.Ordinal),
+            source.IndexOf("<ServiceBreadcrumb", StringComparison.Ordinal) < hero.Index,
             "The service breadcrumb must precede its hero.");
         Assert.Contains("<ServicePageToc />", source, StringComparison.Ordinal);
         Assert.Contains($"ServiceKey=\"{service}\"", source, StringComparison.Ordinal);

@@ -374,14 +374,16 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         var standards = Assert.Single(Regex.Matches(main.Groups["body"].Value,
             "<section\\b(?=[^>]*id=\"finishing-standards\")[^>]*>(?<body>(?:(?<nested><section\\b[^>]*>)|(?<-nested></section>)|(?!</?section\\b)[\\s\\S])*)(?(nested)(?!))</section>",
             RegexOptions.CultureInvariant).Cast<Match>());
-        foreach (var section in new[] { hero, standards })
-        {
-            var image = Assert.Single(Regex.Matches(section.Groups["body"].Value,
-                "<img\\b(?=[^>]*src=\"/src/images/services/hero-illustrations/finishing-hero-light.webp\")(?=[^>]*alt=\"(?<alt>[^\"]*)\")[^>]*>",
-                RegexOptions.CultureInvariant).Cast<Match>());
-            Assert.Equal(culture == "th" ? "ช่างกำลังเทียบสีชิ้นงานพิมพ์ 3 มิติกับแผ่นเทียบสีและภาพอ้างอิง" : "Technician comparing a 3D-printed part with color swatches and a reference image",
-                image.Groups["alt"].Value);
-        }
+        var heroImage = Assert.Single(Regex.Matches(hero.Groups["body"].Value,
+            "<img\\b(?=[^>]*src=\"/src/images/services/hero-illustrations/finishing-hero-light.webp\")(?=[^>]*alt=\"(?<alt>[^\"]*)\")[^>]*>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Equal(culture == "th" ? "ภาพประกอบกล่องชิ้นงานที่พ่นสีและเก็บผิวต่างกัน" : "Illustration of painted enclosures with different surface finishes",
+            heroImage.Groups["alt"].Value);
+        var standardsImage = Assert.Single(Regex.Matches(standards.Groups["body"].Value,
+            "<img\\b(?=[^>]*src=\"/src/images/services/printing/printing-finish-color-approval.webp\")(?=[^>]*alt=\"(?<alt>[^\"]*)\")[^>]*>",
+            RegexOptions.CultureInvariant).Cast<Match>());
+        Assert.Equal(culture == "th" ? "ช่างกำลังเทียบสีชิ้นงานพิมพ์ 3 มิติกับแผ่นเทียบสีและภาพอ้างอิง" : "Technician comparing a 3D-printed part with color swatches and a reference image",
+            standardsImage.Groups["alt"].Value);
     }
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) =>
