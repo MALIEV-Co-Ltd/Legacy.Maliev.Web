@@ -1,5 +1,14 @@
 namespace Legacy.Maliev.Web.Components.Pages.Member;
 
+/// <summary>
+/// Carries the signed-in member's account summary, address reminders, and recent activity.
+/// </summary>
+/// <param name="FirstName">The member's given name, or null when the profile is unavailable.</param>
+/// <param name="Notices">Account-completion reminders and unavailable-service notices.</param>
+/// <param name="BillingAddress">The saved billing address summary, or null when absent.</param>
+/// <param name="ShippingAddress">The saved shipping address summary, or null when absent.</param>
+/// <param name="RecentOrders">The recent orders selected for the member overview.</param>
+/// <param name="RecentQuotations">The recent quotations selected for the member overview.</param>
 public sealed record MemberOverviewDisplayModel(
     string? FirstName,
     IReadOnlyList<string> Notices,
@@ -11,11 +20,28 @@ public sealed record MemberOverviewDisplayModel(
     /// <summary>Gets source-assigned notice severities; legacy string-only callers remain supported.</summary>
     public IReadOnlyList<MemberOverviewNotice> NoticeDetails { get; init; } = [];
 
+    /// <summary>
+    /// Provides an account overview without profile or recent-activity data.
+    /// </summary>
     public static MemberOverviewDisplayModel Empty { get; } = new(null, [], null, null, [], []);
 }
 
+/// <summary>
+/// Carries an order link and creation timestamp for the member overview.
+/// </summary>
+/// <param name="Id">The order identifier used to open its details.</param>
+/// <param name="Name">The optional order name displayed in recent activity.</param>
+/// <param name="CreatedDate">The invariant order creation instant or unavailable placeholder.</param>
 public sealed record MemberOrderSummaryDisplayModel(int Id, string? Name, string CreatedDate);
 
+/// <summary>
+/// Carries a recent quotation's value, decision state, and validity for the member overview.
+/// </summary>
+/// <param name="Id">The quotation identifier used to open its details.</param>
+/// <param name="Period">The quotation period supplied by the quotation service.</param>
+/// <param name="Total">The quotation total supplied by the service.</param>
+/// <param name="Accepted">The customer's acceptance decision, or null before a decision.</param>
+/// <param name="ExpirationDate">The invariant quotation expiration date.</param>
 public sealed record MemberQuotationSummaryDisplayModel(
     int Id,
     int Period,
@@ -23,6 +49,17 @@ public sealed record MemberQuotationSummaryDisplayModel(
     bool? Accepted,
     string ExpirationDate);
 
+/// <summary>
+/// Carries the saved postal-address summary displayed on the member overview.
+/// </summary>
+/// <param name="CompanyName">The optional company name associated with this address summary.</param>
+/// <param name="Building">The optional building or organization-specific address line.</param>
+/// <param name="AddressLine1">The first street-address line.</param>
+/// <param name="AddressLine2">The optional additional street-address line.</param>
+/// <param name="City">The optional city or district.</param>
+/// <param name="State">The optional province or region.</param>
+/// <param name="PostalCode">The optional postal delivery code.</param>
+/// <param name="CountryName">The resolved country label, or null when lookup data is unavailable.</param>
 public sealed record MemberAddressSummaryDisplayModel(
     string? CompanyName,
     string? Building,

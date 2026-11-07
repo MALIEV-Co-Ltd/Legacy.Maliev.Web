@@ -3,10 +3,22 @@ using System.Text.Json.Serialization;
 
 namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
+/// <summary>Defines best-effort, privacy-bounded observations for the additive quotation workflow.</summary>
 public interface IInstantQuotationAnalyticsTracker
 {
+    /// <summary>Records the start of a quotation workflow without requiring delivery.</summary>
+    /// <param name="workflowId">The workflow identity used to bound duplicate starts.</param>
+    /// <param name="cancellationToken">Token to cancel delivery.</param>
+    /// <returns>A value task representing the observation attempt.</returns>
     ValueTask RecordQuoteStartedAsync(string workflowId, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
 
+    /// <summary>Records a bounded stage outcome; the default implementation performs no delivery.</summary>
+    /// <param name="stage">The quotation stage being observed.</param>
+    /// <param name="result">Whether the stage succeeded or failed.</param>
+    /// <param name="failure">The failure category, or null for a successful outcome.</param>
+    /// <param name="fileType">An optional short file extension, not a file name.</param>
+    /// <param name="cancellationToken">Token to cancel delivery of the observation.</param>
+    /// <returns>A value task representing the observation attempt.</returns>
     ValueTask RecordStageResultAsync(
         InstantQuotationStage stage,
         InstantQuotationStageResult result,
@@ -14,59 +26,101 @@ public interface IInstantQuotationAnalyticsTracker
         string? fileType,
         CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
 
+    /// <summary>Records that a selected batch has entered the upload workflow.</summary>
+    /// <param name="batchId">The local deduplication identifier; it is not an analytics payload field.</param>
+    /// <param name="fileCount">The number of selected files in the batch.</param>
+    /// <param name="cancellationToken">Token to cancel delivery of the observation.</param>
+    /// <returns>A value task representing the observation attempt.</returns>
     ValueTask RecordUploadStartAsync(
         string batchId,
         int fileCount,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Records an upload attempt's bounded failure without emitting its identifier.</summary>
+    /// <param name="operationId">The local upload-attempt deduplication key.</param>
+    /// <param name="category">The allowlisted upload problem category.</param>
+    /// <param name="fileCount">The number of affected files.</param>
+    /// <param name="cancellationToken">Token to cancel delivery of the observation.</param>
+    /// <returns>A value task representing the observation attempt.</returns>
     ValueTask RecordUploadFailureAsync(
         string operationId,
         InstantQuotationProblemCategory category,
         int fileCount,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Records that a complete estimate for a quote revision is visibly presented.</summary>
+    /// <param name="revision">The positive local quote revision used only for deduplication.</param>
+    /// <param name="cancellationToken">Token to cancel delivery of the observation.</param>
+    /// <returns>A value task representing the observation attempt.</returns>
     ValueTask RecordEstimateShownAsync(
         long revision,
         CancellationToken cancellationToken = default);
 
+    /// <summary>Records that review of a complete quote revision is visibly presented.</summary>
+    /// <param name="revision">The positive local quote revision used only for deduplication.</param>
+    /// <param name="cancellationToken">Token to cancel delivery of the observation.</param>
+    /// <returns>A value task representing the observation attempt.</returns>
     ValueTask RecordReviewReachedAsync(
         long revision,
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>Identifies the bounded quotation stage recorded without customer or file identifiers.</summary>
 public enum InstantQuotationStage
 {
+    /// <summary>Validation of selected file type and size.</summary>
     FileValidation,
+    /// <summary>Parsing and advisory geometry extraction.</summary>
     Parse,
+    /// <summary>Transfer and server admission of the selected file.</summary>
     Upload,
+    /// <summary>Creation of a part preview thumbnail.</summary>
     Thumbnail,
+    /// <summary>Calculation of the part estimate.</summary>
     Pricing,
+    /// <summary>Calculation of the combined order total.</summary>
     OrderTotal,
 }
 
+/// <summary>Identifies whether a quotation stage completed successfully or failed.</summary>
 public enum InstantQuotationStageResult
 {
+    /// <summary>The observed stage completed successfully.</summary>
     Success,
+    /// <summary>The observed stage failed.</summary>
     Failure,
 }
 
+/// <summary>Classifies quotation-stage failures using the closed analytics vocabulary.</summary>
 public enum InstantQuotationStageFailure
 {
+    /// <summary>The selected file type is outside the allowed formats.</summary>
     UnsupportedType,
+    /// <summary>The selected file exceeds the upload size limit.</summary>
     FileTooLarge,
+    /// <summary>The selected model could not be read for quotation.</summary>
     UnreadableModel,
+    /// <summary>A preview snapshot could not be produced.</summary>
     SnapshotUnavailable,
+    /// <summary>The server refused the attempted operation.</summary>
     ServerRejected,
+    /// <summary>A network or dependency failure interrupted the stage.</summary>
     Network,
 }
 
+/// <summary>Delivers a typed quotation analytics payload without controlling quotation success.</summary>
 public interface IInstantQuotationAnalyticsSink
 {
+    /// <summary>Attempts to deliver the typed observation to the configured analytics destination.</summary>
+    /// <param name="payload">The closed quotation analytics payload to deliver.</param>
+    /// <param name="cancellationToken">Token to cancel delivery of the observation.</param>
+    /// <returns>A value task representing delivery.</returns>
     ValueTask EmitAsync(
         InstantQuotationAnalyticsPayload payload,
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>Carries the event and service fields shared by privacy-bounded additive analytics.</summary>
 public abstract class InstantQuotationAnalyticsPayload
 {
     private protected InstantQuotationAnalyticsPayload(string eventName)
@@ -74,13 +128,16 @@ public abstract class InstantQuotationAnalyticsPayload
         Event = eventName;
     }
 
+    /// <summary>Gets the closed event name serialized for this quotation observation.</summary>
     [JsonPropertyName("event")]
     public string Event { get; }
 
+    /// <summary>Gets the additive-printing service label shared by these payloads.</summary>
     [JsonPropertyName("service")]
     public string Service => "3d_printing";
 }
 
+/// <summary>Carries the bounded quotation-started analytics event.</summary>
 public sealed class InstantQuotationQuoteStartedPayload : InstantQuotationAnalyticsPayload
 {
     internal InstantQuotationQuoteStartedPayload() : base("quote_started")
@@ -88,6 +145,7 @@ public sealed class InstantQuotationQuoteStartedPayload : InstantQuotationAnalyt
     }
 }
 
+/// <summary>Carries a bounded upload failure category and affected file count, without the upload identifier.</summary>
 public sealed class InstantQuotationUploadFailurePayload : InstantQuotationAnalyticsPayload
 {
     internal InstantQuotationUploadFailurePayload(string failureCategory, int fileCount)
@@ -97,13 +155,16 @@ public sealed class InstantQuotationUploadFailurePayload : InstantQuotationAnaly
         FileCount = fileCount;
     }
 
+    /// <summary>Gets the allowlisted upload problem category emitted to analytics.</summary>
     [JsonPropertyName("failure_category")]
     public string FailureCategory { get; }
 
+    /// <summary>Gets the number of files represented by the upload failure.</summary>
     [JsonPropertyName("file_count")]
     public int FileCount { get; }
 }
 
+/// <summary>Carries the selected batch size without exposing its local deduplication identifier.</summary>
 public sealed class InstantQuotationUploadStartPayload : InstantQuotationAnalyticsPayload
 {
     internal InstantQuotationUploadStartPayload(int fileCount)
@@ -112,10 +173,12 @@ public sealed class InstantQuotationUploadStartPayload : InstantQuotationAnalyti
         FileCount = fileCount;
     }
 
+    /// <summary>Gets the number of files in the accepted upload batch.</summary>
     [JsonPropertyName("file_count")]
     public int FileCount { get; }
 }
 
+/// <summary>Marks a visible, complete quotation estimate without including its amount or revision.</summary>
 public sealed class InstantQuotationEstimateShownPayload : InstantQuotationAnalyticsPayload
 {
     internal InstantQuotationEstimateShownPayload()
@@ -124,6 +187,7 @@ public sealed class InstantQuotationEstimateShownPayload : InstantQuotationAnaly
     }
 }
 
+/// <summary>Marks a visible review milestone without transmitting its local quote revision.</summary>
 public sealed class InstantQuotationReviewReachedPayload : InstantQuotationAnalyticsPayload
 {
     internal InstantQuotationReviewReachedPayload()
@@ -132,6 +196,7 @@ public sealed class InstantQuotationReviewReachedPayload : InstantQuotationAnaly
     }
 }
 
+/// <summary>Carries a validated stage outcome and optional bounded failure and file-type labels.</summary>
 public sealed class InstantQuotationStageResultPayload : InstantQuotationAnalyticsPayload
 {
     internal InstantQuotationStageResultPayload(
@@ -147,31 +212,39 @@ public sealed class InstantQuotationStageResultPayload : InstantQuotationAnalyti
         FileType = fileType;
     }
 
+    /// <summary>Gets the allowlisted stage label, such as parsing or order-total pricing.</summary>
     [JsonPropertyName("stage")]
     public string Stage { get; }
 
+    /// <summary>Gets the success or failure label for the observed stage.</summary>
     [JsonPropertyName("result")]
     public string Result { get; }
 
+    /// <summary>Gets the bounded failure label, omitted from serialization when absent.</summary>
     [JsonPropertyName("failure_category")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? FailureCategory { get; }
 
+    /// <summary>Gets the normalized short file-type label, omitted when no file type applies.</summary>
     [JsonPropertyName("file_type")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? FileType { get; }
 }
 
+/// <summary>Accepts analytics calls without emitting observations or changing the quotation flow.</summary>
 public sealed class NoOpInstantQuotationAnalyticsTracker : IInstantQuotationAnalyticsTracker
 {
     private NoOpInstantQuotationAnalyticsTracker()
     {
     }
 
+    /// <summary>Gets the shared disabled tracker used when analytics is not configured.</summary>
     public static NoOpInstantQuotationAnalyticsTracker Instance { get; } = new();
 
+    /// <inheritdoc />
     public ValueTask RecordQuoteStartedAsync(string workflowId, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
 
+    /// <inheritdoc />
     public ValueTask RecordStageResultAsync(
         InstantQuotationStage stage,
         InstantQuotationStageResult result,
@@ -179,26 +252,31 @@ public sealed class NoOpInstantQuotationAnalyticsTracker : IInstantQuotationAnal
         string? fileType,
         CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
 
+    /// <inheritdoc />
     public ValueTask RecordUploadStartAsync(
         string batchId,
         int fileCount,
         CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
 
+    /// <inheritdoc />
     public ValueTask RecordUploadFailureAsync(
         string operationId,
         InstantQuotationProblemCategory category,
         int fileCount,
         CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
 
+    /// <inheritdoc />
     public ValueTask RecordEstimateShownAsync(
         long revision,
         CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
 
+    /// <inheritdoc />
     public ValueTask RecordReviewReachedAsync(
         long revision,
         CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
 }
 
+/// <summary>Validates and deduplicates workflow observations before sending best-effort analytics.</summary>
 public sealed class InstantQuotationAnalyticsTracker : IInstantQuotationAnalyticsTracker
 {
     private readonly IInstantQuotationAnalyticsSink sink;
@@ -210,11 +288,14 @@ public sealed class InstantQuotationAnalyticsTracker : IInstantQuotationAnalytic
     private readonly HashSet<long> reviewRevisions = [];
     private readonly HashSet<string> stageResults = new(StringComparer.Ordinal);
 
+    /// <summary>Creates a tracker that sends typed observations through the supplied analytics sink.</summary>
+    /// <param name="sink">The destination for typed quotation observations.</param>
     public InstantQuotationAnalyticsTracker(IInstantQuotationAnalyticsSink sink)
     {
         this.sink = sink ?? throw new ArgumentNullException(nameof(sink));
     }
 
+    /// <inheritdoc />
     public ValueTask RecordQuoteStartedAsync(string workflowId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(workflowId) || !TryReserve(startedWorkflows, workflowId))
@@ -225,6 +306,7 @@ public sealed class InstantQuotationAnalyticsTracker : IInstantQuotationAnalytic
         return EmitWithoutBreakingFlowAsync(new InstantQuotationQuoteStartedPayload(), cancellationToken);
     }
 
+    /// <inheritdoc />
     public ValueTask RecordStageResultAsync(
         InstantQuotationStage stage,
         InstantQuotationStageResult result,
@@ -262,6 +344,7 @@ public sealed class InstantQuotationAnalyticsTracker : IInstantQuotationAnalytic
             cancellationToken);
     }
 
+    /// <inheritdoc />
     public ValueTask RecordUploadStartAsync(
         string batchId,
         int fileCount,
@@ -279,6 +362,7 @@ public sealed class InstantQuotationAnalyticsTracker : IInstantQuotationAnalytic
             cancellationToken);
     }
 
+    /// <inheritdoc />
     public ValueTask RecordUploadFailureAsync(
         string operationId,
         InstantQuotationProblemCategory category,
@@ -299,6 +383,7 @@ public sealed class InstantQuotationAnalyticsTracker : IInstantQuotationAnalytic
             cancellationToken);
     }
 
+    /// <inheritdoc />
     public ValueTask RecordEstimateShownAsync(
         long revision,
         CancellationToken cancellationToken = default)
@@ -313,6 +398,7 @@ public sealed class InstantQuotationAnalyticsTracker : IInstantQuotationAnalytic
             cancellationToken);
     }
 
+    /// <inheritdoc />
     public ValueTask RecordReviewReachedAsync(
         long revision,
         CancellationToken cancellationToken = default)

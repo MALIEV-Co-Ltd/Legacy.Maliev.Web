@@ -19,6 +19,13 @@ public static partial class FinishingColorQuotePrefill
     /// <summary>
     /// Builds a localized finishing reference after validating every query value.
     /// </summary>
+    /// <param name="culture">The requested language; Thai is selected only for the th culture value.</param>
+    /// <param name="hex">The hexadecimal screen-colour reference to validate.</param>
+    /// <param name="hlc">The HLC colour reference to validate.</param>
+    /// <param name="lab">The CIELAB colour reference to validate.</param>
+    /// <param name="pantone">The optional customer-supplied Pantone reference, bounded before inclusion.</param>
+    /// <param name="sheen">The allowlisted matte, satin, or gloss finish identifier.</param>
+    /// <returns>The localized advisory finishing note, or an empty string when required colour or sheen inputs are invalid.</returns>
     public static string Build(
         string? culture,
         string? hex,

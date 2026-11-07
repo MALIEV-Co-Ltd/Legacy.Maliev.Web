@@ -12,6 +12,17 @@ using Microsoft.Extensions.Options;
 
 namespace Legacy.Maliev.Web.Pages.Quotation;
 
+/// <summary>Loads and submits manual quotation requests with trusted customer details, validated finder attribution, and attachment follow-up.</summary>
+/// <param name="countryClient">The typed country client supplying form country options.</param>
+/// <param name="quotationClient">The typed client reading or submitting quotation operations for this page.</param>
+/// <param name="quotationFileClient">The typed client uploading and linking quotation attachments.</param>
+/// <param name="sessionManager">The server-side account session manager used to resolve identity and manage sign-in state.</param>
+/// <param name="customerAccountClient">The typed customer account client used to load trusted quotation contact details.</param>
+/// <param name="notificationClient">The typed notification client used for customer and staff messages.</param>
+/// <param name="antiBotVerifier">The verifier for the browser's anti-bot challenge.</param>
+/// <param name="recaptchaOptions">The configured public browser challenge settings.</param>
+/// <param name="localizer">The localizer supplying this page's validation and outcome messages.</param>
+/// <param name="logger">The logger instance for diagnostic output.</param>
 public sealed class Index(
     ICountryClient countryClient,
     IQuotationClient quotationClient,
@@ -30,105 +41,133 @@ public sealed class Index(
     /// <summary>Gets the service item selected by the public quotation GET route.</summary>
     public string? RequestedItem { get; private set; }
 
+    /// <summary>The optional company name associated with the submitted customer request.</summary>
     [BindProperty]
     [StringLength(50)]
     public string? Company { get; set; }
 
+    /// <summary>The service finder's file-input category carried to quotation attribution validation.</summary>
     [BindProperty]
     [StringLength(80)]
     public string? FinderFiles { get; set; }
 
+    /// <summary>The service finder's selected service carried to quotation attribution validation.</summary>
     [BindProperty]
     [StringLength(80)]
     public string? FinderService { get; set; }
 
+    /// <summary>The service finder's selected material carried to quotation attribution validation.</summary>
     [BindProperty]
     [StringLength(80)]
     public string? FinderMaterial { get; set; }
 
+    /// <summary>The service finder's quantity category carried to quotation attribution validation.</summary>
     [BindProperty]
     [StringLength(80)]
     public string? FinderQuantity { get; set; }
 
+    /// <summary>The service finder's intended-use category carried to quotation attribution validation.</summary>
     [BindProperty]
     [StringLength(80)]
     public string? FinderEndUse { get; set; }
 
+    /// <summary>The service finder's performance requirements carried to quotation attribution validation.</summary>
     [BindProperty]
     [StringLength(80)]
     public string? FinderPerformance { get; set; }
 
+    /// <summary>The service finder's operating-environment category carried to quotation attribution validation.</summary>
     [BindProperty]
     [StringLength(80)]
     public string? FinderEnvironment { get; set; }
 
+    /// <summary>The service finder's recommendation identifiers carried to quotation attribution validation.</summary>
     [BindProperty]
     [StringLength(400)]
     public string? FinderRecommendations { get; set; }
 
+    /// <summary>The service finder's decision path carried to quotation attribution validation.</summary>
     [BindProperty]
     [StringLength(400)]
     public string? FinderPath { get; set; }
 
+    /// <summary>The country options returned by the country service for this form.</summary>
     public IReadOnlyList<Country> Countries { get; private set; } = [];
 
+    /// <summary>The customer's country name used for the submitted contact or billing details.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Please select your country")]
     [StringLength(50)]
     public string Country { get; set; } = string.Empty;
 
+    /// <summary>The customer's email address used by this account or request workflow.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Email address is required")]
     [EmailAddress(ErrorMessage = "Please enter a valid email address")]
     [StringLength(50)]
     public string Email { get; set; } = string.Empty;
 
+    /// <summary>The uploaded request files validated before submission or attachment follow-up.</summary>
     [BindProperty]
     public IReadOnlyList<IFormFile> Files { get; set; } = [];
 
+    /// <summary>The customer's given name used in the account or request contact details.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Please enter your first name")]
     [StringLength(50)]
     public string FirstName { get; set; } = string.Empty;
 
+    /// <summary>The customer's family name used in the account or request contact details.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Please enter your last name")]
     [StringLength(50)]
     public string LastName { get; set; } = string.Empty;
 
+    /// <summary>The customer's request text submitted for staff review.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Please describe what you need")]
     [StringLength(10000)]
     public string Message { get; set; } = string.Empty;
 
+    /// <summary>The one-time outcome message carried across this workflow's post/redirect/get boundary.</summary>
     [TempData]
     public string? Notification { get; set; }
 
+    /// <summary>The optional contact telephone number submitted with the request.</summary>
     [BindProperty]
     [StringLength(50)]
     public string? Phone { get; set; }
 
+    /// <summary>The browser's anti-bot challenge response, verified before the request is persisted.</summary>
     [BindProperty(Name = "g-recaptcha-response")]
     public string? RecaptchaToken { get; set; }
 
+    /// <summary>The configured public site key used to obtain a browser anti-bot challenge.</summary>
     public string RecaptchaSiteKey => recaptchaOptions.Value.SiteKey;
 
+    /// <summary>The manufacturing-service context used for the manual quotation request and its controlled analytics.</summary>
     [BindProperty]
     public string ServiceContext { get; set; } = "custom_manufacturing";
 
+    /// <summary>The per-form identifier used to correlate an idempotent quotation request and attachment follow-up.</summary>
     [BindProperty]
     public Guid SubmissionId { get; set; }
 
+    /// <summary>The optional tax identifier associated with the customer's billing or company details.</summary>
     [BindProperty]
     [StringLength(50)]
     public string? TaxNumber { get; set; }
 
+    /// <summary>Whether the country lookup succeeded for the current form request.</summary>
     public bool CountryServiceAvailable { get; private set; } = true;
 
+    /// <summary>Whether the form is using a customer identity resolved from the server-managed session.</summary>
     public bool IsAuthenticatedCustomer { get; private set; }
 
+    /// <summary>Whether trusted customer profile details were available for the authenticated quotation request.</summary>
     public bool CustomerProfileAvailable { get; private set; } = true;
 
+    /// <summary>The quotation form values, trusted-customer state, finder handoff, and localized validation feedback.</summary>
     public QuotationFormDisplayModel DisplayModel => new(
         SubmissionId,
         ServiceContext,
@@ -173,6 +212,27 @@ public sealed class Index(
             : localized.Value;
     }
 
+    /// <summary>Loads form dependencies and applies trusted customer, finder, and finishing-context prefills.</summary>
+    /// <param name="culture">The requested supported UI culture.</param>
+    /// <param name="item">The item context used to prefill the quotation request.</param>
+    /// <param name="process">The manufacturing-process context used in quotation request prefill.</param>
+    /// <param name="material">The material context used in quotation request prefill.</param>
+    /// <param name="finder_files">The service finder's file-input category supplied in the incoming handoff.</param>
+    /// <param name="finder_service">The service finder's selected service supplied in the incoming handoff.</param>
+    /// <param name="finder_material">The service finder's selected material supplied in the incoming handoff.</param>
+    /// <param name="finder_quantity">The service finder's quantity category supplied in the incoming handoff.</param>
+    /// <param name="finder_end_use">The service finder's intended-use category supplied in the incoming handoff.</param>
+    /// <param name="finder_performance">The service finder's performance requirements supplied in the incoming handoff.</param>
+    /// <param name="finder_environment">The service finder's environment category supplied in the incoming handoff.</param>
+    /// <param name="finder_recommendations">The service finder's recommendation identifiers supplied in the incoming handoff.</param>
+    /// <param name="finder_path">The service finder's decision path supplied in the incoming handoff.</param>
+    /// <param name="finish_hex">The optional hexadecimal finish colour used in quotation prefill.</param>
+    /// <param name="finish_hlc">The optional HLC finish colour used in quotation prefill.</param>
+    /// <param name="finish_lab">The optional Lab finish colour used in quotation prefill.</param>
+    /// <param name="finish_pantone">The optional Pantone finish reference used in quotation prefill.</param>
+    /// <param name="finish_sheen">The optional finish sheen used in quotation prefill.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The quotation form with a new submission identifier and current dependency feedback.</returns>
     public async Task<IActionResult> OnGetAsync(
         string? culture,
         string? item,
@@ -222,6 +282,9 @@ public sealed class Index(
         return Page();
     }
 
+    /// <summary>Validates ownership, anti-bot and finder input, persists the quotation request, and performs attachment and notification follow-up.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The form with controlled errors or a localized redirect referencing the persisted quotation request.</returns>
     public async Task<IActionResult> OnPostSubmitRequestAsync(CancellationToken cancellationToken)
     {
         await LoadCountriesAsync(cancellationToken);
