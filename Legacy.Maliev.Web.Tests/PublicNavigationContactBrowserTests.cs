@@ -10,6 +10,8 @@ public sealed class PublicNavigationContactBrowserTests(PublicContactBrowserFixt
     [InlineData("th", 1600, "ติดต่อเรา")]
     [InlineData("en", 390, "Contact")]
     [InlineData("th", 390, "ติดต่อเรา")]
+    [InlineData("en", 320, "Contact")]
+    [InlineData("th", 320, "ติดต่อเรา")]
     public async Task ContactMenu_KeyboardAndOutsideClickCloseWithoutExternalNavigation(string culture, int width, string label)
     {
         await using var context = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = width, Height = 900 } });
@@ -32,6 +34,7 @@ public sealed class PublicNavigationContactBrowserTests(PublicContactBrowserFixt
         await toggle.FocusAsync();
         await page.Keyboard.PressAsync("Enter");
         await Assertions.Expect(menu).ToHaveAttributeAsync("open", "");
+        Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
         await CaptureAsync(page, $"contact-{culture}-{width}.png");
         await page.Keyboard.PressAsync("Escape");
         await Assertions.Expect(menu).Not.ToHaveAttributeAsync("open", "");
@@ -47,6 +50,8 @@ public sealed class PublicNavigationContactBrowserTests(PublicContactBrowserFixt
     [InlineData("th", 1600, "en")]
     [InlineData("en", 390, "th")]
     [InlineData("th", 390, "en")]
+    [InlineData("en", 320, "th")]
+    [InlineData("th", 320, "en")]
     public async Task LanguageMenu_KeyboardSelectsTheOtherCulture(string culture, int width, string target)
     {
         await using var context = await fixture.Browser.NewContextAsync(new() { ViewportSize = new() { Width = width, Height = 900 } });
@@ -79,6 +84,8 @@ public sealed class PublicNavigationContactBrowserTests(PublicContactBrowserFixt
     [InlineData("th", "en", "/legal?culture=en", 1600)]
     [InlineData("en", "th", "/legal", 390)]
     [InlineData("th", "en", "/legal?culture=en", 390)]
+    [InlineData("en", "th", "/legal", 320)]
+    [InlineData("th", "en", "/legal?culture=en", 320)]
     public async Task LanguageSelector_NoJavaScriptSubmitsProtectedLocalReturn(string culture, string target, string expectedPath, int width)
     {
         await using var context = await fixture.Browser.NewContextAsync(new() { JavaScriptEnabled = false, ViewportSize = new() { Width = width, Height = 900 } });
@@ -91,6 +98,7 @@ public sealed class PublicNavigationContactBrowserTests(PublicContactBrowserFixt
         });
         var page = await context.NewPageAsync();
         await page.GotoAsync(new Uri(fixture.Origin, $"/legal?culture={culture}").ToString());
+        Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
         var selector = page.Locator("#maliev-navbar-language");
         var submit = page.Locator(".maliev-language-form noscript button");
         Assert.Equal(width < 1440 ? "block" : "flex", await page.Locator(".landing-nav-content").EvaluateAsync<string>("element => getComputedStyle(element).display"));

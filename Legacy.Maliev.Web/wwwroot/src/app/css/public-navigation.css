@@ -75,3 +75,8 @@
 .landing-contact-menu a:hover, .landing-contact-menu a:focus-visible { background: #edf4ff; color: #075de8; }
 @media (min-width: 90rem) { .landing-contact { order: 2; flex: 0 0 auto; } .landing-nav-content { order: 1; } }
 @media (max-width: 89.99rem) { .landing-contact { margin-left: auto; } .landing-nav-toggle { margin-left: 0; } .landing-contact-menu { right: -3rem; max-width: calc(100vw - 2rem); } }
+
+@media (max-width: 22.5rem) {
+    .landing-nav { gap: .25rem; }
+    .landing-brand img { max-width: 5.5rem; height: auto; }
+}

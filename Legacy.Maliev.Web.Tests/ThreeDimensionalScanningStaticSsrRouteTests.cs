@@ -234,7 +234,7 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         Assert.Equal(faqQuestion, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("name").GetString());
         Assert.Equal(
             culture == "th"
-                ? "งานสแกนอย่างเดียวโดยทั่วไปส่งมอบเป็นเมชสามเหลี่ยม เช่น STL ส่วน DWG เป็นแบบเขียน 2D จึงต้องมีขอบเขตงาน Reverse Engineering และเขียนแบบเพิ่ม ไม่มีตัวเลขลดราคาแบบตายตัว เพราะงาน CAD/DWG ขึ้นกับรูปทรงและรายละเอียดของแบบ เราสามารถแยกราคาเป็นงานสแกนอย่างเดียวกับงาน CAD/DWG ได้"
+                ? "งานสแกนอย่างเดียวโดยทั่วไปส่งมอบเป็น mesh สามเหลี่ยม เช่น STL ส่วน DWG เป็นแบบเขียน 2D จึงต้องมีขอบเขตงาน Reverse Engineering และเขียนแบบเพิ่ม ไม่มีตัวเลขลดราคาแบบตายตัว เพราะงาน CAD/DWG ขึ้นกับรูปทรงและรายละเอียดของแบบ เราสามารถแยกราคาเป็นงานสแกนอย่างเดียวกับงาน CAD/DWG ได้"
                 : "A scan-only scope normally delivers a triangular mesh such as STL. DWG is a 2D engineering drawing, so it requires an additional reverse-engineering and drafting scope. There is no fixed reduction because CAD/DWG effort depends on the geometry and drawing requirements; we can quote scan-only and CAD/DWG as separate line items.",
             faq.RootElement.GetProperty("mainEntity")[5].GetProperty("acceptedAnswer").GetProperty("text").GetString());
         Assert.Equal(
@@ -252,7 +252,7 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         var pricing = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Shared", "ServicePricing.razor"));
 
         Assert.Contains("Scan-only normally delivers STL mesh data.", content, StringComparison.Ordinal);
-        Assert.Contains("งานสแกนอย่างเดียวโดยทั่วไปส่งมอบเป็นเมช STL", content, StringComparison.Ordinal);
+        Assert.Contains("งานสแกนอย่างเดียวโดยทั่วไปส่งมอบเป็น mesh STL", content, StringComparison.Ordinal);
         Assert.Contains("Raw 3D scanning with STL output starts at THB 2,500.", content, StringComparison.Ordinal);
         Assert.Contains("งานสแกน 3D พร้อมไฟล์ STL ดิบเริ่มต้น 2,500 บาท", content, StringComparison.Ordinal);
         Assert.Contains("Scan-only normally delivers a triangular mesh such as STL.", content, StringComparison.Ordinal);
@@ -261,7 +261,7 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         Assert.Contains("Can you scan at our factory or site?", content, StringComparison.Ordinal);
         Assert.Contains("We provide onsite scanning when a part is very large", content, StringComparison.Ordinal);
         Assert.Contains("Direct scan mesh", pricing, StringComparison.Ordinal);
-        Assert.Contains("เมชจากการสแกนโดยตรง", pricing, StringComparison.Ordinal);
+        Assert.Contains("mesh จากการสแกนโดยตรง", pricing, StringComparison.Ordinal);
         Assert.Contains("Quoted after site review", pricing, StringComparison.Ordinal);
     }
 

@@ -120,7 +120,14 @@ public sealed class ScanningComparisonBrowserTests(PublicContactBrowserFixture f
         Assert.Contains(culture == "en" ? "true surface color" : "สีพื้นผิวจริง", comparisonNote, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(culture == "en" ? "deviation color map" : "แผนที่สีความคลาดเคลื่อน", comparisonNote, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, await sample.Locator("canvas, model-viewer, iframe, object, a[download]").CountAsync());
-        Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
+        var overflow = await page.EvaluateAsync<string>("""
+            () => JSON.stringify({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth,
+                offenders: [...document.querySelectorAll('body *')].map(element => ({
+                    tag: element.tagName, id: element.id, className: String(element.className),
+                    right: Math.round(element.getBoundingClientRect().right)
+                })).filter(element => element.right > innerWidth + 1).slice(0, 12) })
+            """);
+        Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"), overflow);
         Assert.Equal(0, await sample.Locator("a.service-button").CountAsync());
         await sample.ScreenshotAsync(new LocatorScreenshotOptions { Path = ScreenshotPath($"scanning-comparison-{culture}-{width}.png") });
     }
@@ -144,7 +151,9 @@ public sealed class ScanningComparisonBrowserTests(PublicContactBrowserFixture f
         Assert.Contains(culture == "en" ? "scan mesh and reconstructed CAD" : "Mesh กับ CAD", await sample.Locator("#scanning-cad-title").InnerTextAsync(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal(2, await cad.Locator("img").CountAsync());
         Assert.Equal("compare", await cad.GetAttributeAsync("data-mode"));
-        Assert.Equal(culture == "en" ? "Scan mesh" : "เมชสแกน", await cad.Locator(".scanning-comparison-scan figcaption").InnerTextAsync());
+        Assert.Equal(culture == "en" ? "Scan mesh" : "mesh สแกน", await cad.Locator(".scanning-comparison-scan figcaption").InnerTextAsync());
+        Assert.Equal(culture == "en" ? "Scan mesh and CAD comparison" : "เปรียบเทียบ mesh สแกนและ CAD",
+            await cad.Locator("[data-comparison-handle]").GetAttributeAsync("aria-label"));
 
         foreach (string mode in new[] { "scan", "cad", "side", "compare" })
         {
@@ -347,13 +356,18 @@ public sealed class ScanningComparisonBrowserTests(PublicContactBrowserFixture f
         await cards.First.ScreenshotAsync(new LocatorScreenshotOptions { Path = ScreenshotPath($"scanning-onsite-{culture}-{width}.png") });
     }
 
-    private Task<IBrowserContext> CreateContextAsync(int width, bool javaScript = true) =>
-        fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+    private async Task<IBrowserContext> CreateContextAsync(int width, bool javaScript = true)
+    {
+        var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
             Locale = "th-TH",
             ViewportSize = new ViewportSize { Width = width, Height = 1000 },
             JavaScriptEnabled = javaScript,
         });
+        await context.RouteAsync("**/*", route => new Uri(route.Request.Url).GetLeftPart(UriPartial.Authority)
+            == fixture.Origin.GetLeftPart(UriPartial.Authority) ? route.ContinueAsync() : route.AbortAsync());
+        return context;
+    }
 
     private async Task<IPage> OpenPageAsync(IBrowserContext context, string culture, bool javaScript = true)
     {
