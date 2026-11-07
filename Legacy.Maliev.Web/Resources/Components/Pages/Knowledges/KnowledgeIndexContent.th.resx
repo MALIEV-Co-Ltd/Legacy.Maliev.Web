@@ -139,7 +139,7 @@
   <data name="Design for 3D printing" xml:space="preserve"><value>ออกแบบสำหรับพิมพ์ 3 มิติ</value></data>
   <data name="FDM and resin, orientation, supports, hollow parts, fit, and finishing requirements." xml:space="preserve"><value>FDM และเรซิน ทิศทางพิมพ์ ซัพพอร์ต ชิ้นงานกลวง การสวมประกอบ และการตกแต่ง</value></data>
   <data name="Plan a 3D scan" xml:space="preserve"><value>วางแผนงานสแกน 3 มิติ</value></data>
-  <data name="Choose mesh or CAD deliverables and agree access, accuracy, datums, and reconstructed areas." xml:space="preserve"><value>เลือกรูปแบบเมชหรือ CAD และตกลงการเข้าถึง ความแม่นยำ ดาตัม และบริเวณที่ต้องสร้างรูปทรงเพิ่ม</value></data>
+  <data name="Choose mesh or CAD deliverables and agree access, accuracy, datums, and reconstructed areas." xml:space="preserve"><value>เลือกรูปแบบ mesh หรือ CAD และตกลงการเข้าถึง ความแม่นยำ ดาตัม และบริเวณที่ต้องสร้างรูปทรงเพิ่ม</value></data>
   <data name="Build a complete quotation package" xml:space="preserve"><value>เตรียมชุดข้อมูลสำหรับขอราคา</value></data>
   <data name="Files, units, revisions, quantities, functional requirements, and confidentiality." xml:space="preserve"><value>ไฟล์ หน่วย รุ่นแก้ไข จำนวน ข้อกำหนดการใช้งาน และการรักษาความลับ</value></data>
   <data name="Before you send a part" xml:space="preserve"><value>ตรวจข้อมูลก่อนส่งชิ้นงาน</value></data>
@@ -265,7 +265,7 @@
     <value>สแกนและวิศวกรรมย้อนกลับ</value>
   </data>
 <data name="Specify mesh or CAD deliverables, access, datums, and reconstructed areas." xml:space="preserve">
-    <value>กำหนดไฟล์เมชหรือ CAD การเข้าถึง ดาตัม และบริเวณที่ต้องสร้างรูปทรงเพิ่มเติม</value>
+    <value>กำหนดไฟล์ mesh หรือ CAD การเข้าถึง ดาตัม และบริเวณที่ต้องสร้างรูปทรงเพิ่มเติม</value>
   </data>
 <data name="Finishing and inspection" xml:space="preserve">
     <value>ปรับสภาพผิวและตรวจสอบ</value>
