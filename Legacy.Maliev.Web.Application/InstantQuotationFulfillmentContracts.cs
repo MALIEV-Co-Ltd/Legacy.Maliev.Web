@@ -5,13 +5,23 @@ public sealed record InstantQuotationCustomerProvisionResult(
     int? CustomerId,
     bool CustomerCreated,
     bool ServiceAvailable,
-    bool Authorized);
+    bool Authorized)
+{
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? FailureExceptionType { get; init; }
+}
 
 /// <summary>Result of selecting or provisioning the customer's authentication identity.</summary>
 public sealed record InstantQuotationIdentityProvisionResult(
     bool IdentityCreated,
     bool ServiceAvailable,
-    bool Authorized);
+    bool Authorized)
+{
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? FailureExceptionType { get; init; }
+}
 
 /// <summary>Result of replay-safe creation, initial-status assignment, and file linking for one part.</summary>
 public sealed record InstantQuotationOrderProvisionResult(
@@ -19,13 +29,39 @@ public sealed record InstantQuotationOrderProvisionResult(
     bool Succeeded,
     bool ServiceAvailable,
     bool Authorized,
-    bool Conflict);
+    bool Conflict)
+{
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? FailureExceptionType { get; init; }
+
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public int? FailureStatusCode { get; init; }
+
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? FailureStage { get; init; }
+
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool DefiniteHttpRejection { get; init; }
+
+    /// <summary>Gets whether an attempted order creation returned without a known positive ID.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool CreationUnconfirmed { get; init; }
+}
 
 /// <summary>Prepared, protected confirmation material used to reproduce an exact welcome email on retry.</summary>
 public sealed record InstantQuotationWelcomePreparationResult(
     string? ConfirmationToken,
     bool ServiceAvailable,
-    bool Authorized);
+    bool Authorized)
+{
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? FailureExceptionType { get; init; }
+}
 
 /// <summary>Exact protected quotation messages and their conservative signed-link validity bound.</summary>
 public sealed record InstantQuotationNotificationPayload(

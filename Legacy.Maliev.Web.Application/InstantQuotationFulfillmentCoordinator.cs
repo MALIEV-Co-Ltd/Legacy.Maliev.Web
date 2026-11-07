@@ -34,20 +34,32 @@ internal sealed class InstantQuotationFulfillmentCoordinator(IInstantQuotationFu
                 return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
             }
 
-            var provisioned = await client.ProvisionCustomerAsync(ownerIdentity, customer, cancellationToken);
+            InstantQuotationCustomerProvisionResult provisioned;
+            try
+            {
+                provisioned = await client.ProvisionCustomerAsync(ownerIdentity, customer, cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+            {
+                return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected,
+                    Failure(checkpoint, "customer-provisioning", exception.GetType().Name));
+            }
             if (!provisioned.ServiceAvailable)
             {
-                return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
+                return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable,
+                    Failure(checkpoint, "customer-provisioning", provisioned.FailureExceptionType));
             }
 
             if (!provisioned.Authorized)
             {
-                return Partial(checkpoint, InstantQuotationProblemCategory.Authorization);
+                return Partial(checkpoint, InstantQuotationProblemCategory.Authorization,
+                    Failure(checkpoint, "customer-provisioning", provisioned.FailureExceptionType));
             }
 
             if (provisioned.CustomerId is not > 0)
             {
-                return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected);
+                return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected,
+                    Failure(checkpoint, "customer-provisioning", provisioned.FailureExceptionType));
             }
 
             var next = checkpoint with
@@ -116,20 +128,33 @@ internal sealed class InstantQuotationFulfillmentCoordinator(IInstantQuotationFu
                     quote.LeadTimeMaximumDays,
                     file,
                     cancellationToken);
-                if (!order.ServiceAvailable)
+                var knownOrderIds = orderIds.ToList();
+                if (order.OrderId is > 0 && !knownOrderIds.Contains(order.OrderId.Value))
+                    knownOrderIds.Add(order.OrderId.Value);
+                var orderProblem = !order.ServiceAvailable ? InstantQuotationProblemCategory.DependencyUnavailable
+                    : !order.Authorized ? InstantQuotationProblemCategory.Authorization
+                    : order.Conflict ? InstantQuotationProblemCategory.Conflict : InstantQuotationProblemCategory.Unexpected;
+                var failure = order.FailureStage is "order-creation" or "order-status" or "order-file-link"
+                    ? new InstantQuotationFulfillmentFailure(order.FailureStage, order.FailureExceptionType,
+                        false, knownOrderIds.Count, checkpoint.CustomerId.HasValue) : null;
+                if (order.DefiniteHttpRejection && order.FailureStatusCode is >= 400 and <= 599
+                    && order.Authorized && !order.Conflict && order.OrderId is > 0
+                    && order.FailureStage is "order-status" or "order-file-link")
                 {
-                    return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
+                    var compensation = checkpoint with
+                    {
+                        OrderIds = knownOrderIds.ToArray(),
+                        CompensationRequired = true,
+                    };
+                    if (!await TryAdvanceAsync(lease, checkpoint, compensation, cancellationToken))
+                        return Partial(checkpoint, InstantQuotationProblemCategory.Conflict, failure);
+                    var compensated = await TryCompensateAsync(client, lease, compensation, cancellationToken);
+                    return Partial(checkpoint, orderProblem,
+                        failure is null ? null : failure with { RetrySafe = compensated });
                 }
 
-                if (!order.Authorized)
-                {
-                    return Partial(checkpoint, InstantQuotationProblemCategory.Authorization);
-                }
-
-                if (order.Conflict)
-                {
-                    return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
-                }
+                if (order.CreationUnconfirmed || !order.ServiceAvailable || !order.Authorized || order.Conflict)
+                    return Partial(checkpoint, orderProblem, failure);
 
                 if (!order.Succeeded || order.OrderId is not > 0)
                 {
@@ -148,8 +173,9 @@ internal sealed class InstantQuotationFulfillmentCoordinator(IInstantQuotationFu
                         return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
                     }
 
-                    await TryCompensateAsync(client, lease, compensation, cancellationToken);
-                    return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected);
+                    var compensated = await TryCompensateAsync(client, lease, compensation, cancellationToken);
+                    return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected,
+                        failure is null ? null : failure with { RetrySafe = compensated });
                 }
 
                 orderIds.Add(order.OrderId.Value);
@@ -199,14 +225,24 @@ internal sealed class InstantQuotationFulfillmentCoordinator(IInstantQuotationFu
                     return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
                 }
 
-                var identity = await client.ProvisionIdentityAsync(
-                    checkpoint.CustomerId!.Value,
-                    customer,
-                    checkpoint.TemporaryPassword!,
-                    cancellationToken);
+                InstantQuotationIdentityProvisionResult identity;
+                try
+                {
+                    identity = await client.ProvisionIdentityAsync(
+                        checkpoint.CustomerId!.Value,
+                        customer,
+                        checkpoint.TemporaryPassword!,
+                        cancellationToken);
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+                {
+                    return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected,
+                        Failure(checkpoint, "customer-provisioning", exception.GetType().Name));
+                }
                 if (!identity.Authorized)
                 {
-                    return Partial(checkpoint, InstantQuotationProblemCategory.Authorization);
+                    return Partial(checkpoint, InstantQuotationProblemCategory.Authorization,
+                        Failure(checkpoint, "customer-provisioning", identity.FailureExceptionType));
                 }
 
                 // Auth availability must not discard a persisted manufacturing request.
@@ -235,20 +271,32 @@ internal sealed class InstantQuotationFulfillmentCoordinator(IInstantQuotationFu
                 return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
             }
 
-            var prepared = await client.PrepareWelcomeAsync(customer, cancellationToken);
+            InstantQuotationWelcomePreparationResult prepared;
+            try
+            {
+                prepared = await client.PrepareWelcomeAsync(customer, cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+            {
+                return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected,
+                    Failure(checkpoint, "welcome-email", exception.GetType().Name));
+            }
             if (!prepared.ServiceAvailable)
             {
-                return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
+                return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable,
+                    Failure(checkpoint, "welcome-email", prepared.FailureExceptionType));
             }
 
             if (!prepared.Authorized)
             {
-                return Partial(checkpoint, InstantQuotationProblemCategory.Authorization);
+                return Partial(checkpoint, InstantQuotationProblemCategory.Authorization,
+                    Failure(checkpoint, "welcome-email", prepared.FailureExceptionType));
             }
 
             if (string.IsNullOrWhiteSpace(prepared.ConfirmationToken))
             {
-                return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected);
+                return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected,
+                    Failure(checkpoint, "welcome-email", prepared.FailureExceptionType));
             }
 
             var next = checkpoint with
@@ -272,25 +320,37 @@ internal sealed class InstantQuotationFulfillmentCoordinator(IInstantQuotationFu
                 return Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
             }
 
-            var notification = await client.SendWelcomeAsync(
-                customer,
-                checkpoint.TemporaryPassword!,
-                checkpoint.WelcomeConfirmationToken!,
-                CreateOperationId(session.SubmissionId, "welcome"),
-                cancellationToken);
+            NotificationResult notification;
+            try
+            {
+                notification = await client.SendWelcomeAsync(
+                    customer,
+                    checkpoint.TemporaryPassword!,
+                    checkpoint.WelcomeConfirmationToken!,
+                    CreateOperationId(session.SubmissionId, "welcome"),
+                    cancellationToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+            {
+                return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected,
+                    Failure(checkpoint, "welcome-email", exception.GetType().Name));
+            }
             if (!notification.ServiceAvailable)
             {
-                return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
+                return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable,
+                    Failure(checkpoint, "welcome-email", notification.FailureExceptionType));
             }
 
             if (!notification.Authorized)
             {
-                return Partial(checkpoint, InstantQuotationProblemCategory.Authorization);
+                return Partial(checkpoint, InstantQuotationProblemCategory.Authorization,
+                    Failure(checkpoint, "welcome-email", notification.FailureExceptionType));
             }
 
             if (!notification.Sent)
             {
-                return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected);
+                return Partial(checkpoint, InstantQuotationProblemCategory.Unexpected,
+                    Failure(checkpoint, "welcome-email", notification.FailureExceptionType));
             }
 
             var next = checkpoint with
@@ -413,6 +473,7 @@ internal sealed class InstantQuotationFulfillmentCoordinator(IInstantQuotationFu
         IInstantQuotationSubmissionLease lease,
         CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         try
         {
             return await lease.RenewAsync(cancellationToken);
@@ -430,47 +491,62 @@ internal sealed class InstantQuotationFulfillmentCoordinator(IInstantQuotationFu
         InstantQuotationSubmissionCheckpoint checkpoint,
         CancellationToken cancellationToken)
     {
-        if (!await HasWriteFenceAsync(lease, cancellationToken))
+        try
         {
-            return false;
-        }
-
-        foreach (var orderId in (checkpoint.OrderIds ?? []).Reverse())
-        {
-            if (!await client.CompensateOrderAsync(orderId, cancellationToken))
+            if (!await HasWriteFenceAsync(lease, cancellationToken))
             {
                 return false;
             }
-        }
 
-        if (checkpoint.CustomerCreated
-            && checkpoint.CustomerId is int customerId
-            && customerId > 0
-            && !await client.CompensateCustomerAsync(customerId, cancellationToken))
+            foreach (var orderId in (checkpoint.OrderIds ?? []).Reverse())
+            {
+                if (!await HasWriteFenceAsync(lease, cancellationToken)
+                    || !await client.CompensateOrderAsync(orderId, cancellationToken))
+                {
+                    return false;
+                }
+            }
+
+            if (checkpoint.CustomerCreated
+                && checkpoint.CustomerId is int customerId
+                && customerId > 0
+                && (!await HasWriteFenceAsync(lease, cancellationToken)
+                    || !await client.CompensateCustomerAsync(customerId, cancellationToken)))
+            {
+                return false;
+            }
+
+            var rolledBack = checkpoint with
+            {
+                Status = InstantQuotationSubmissionCheckpointStatus.FilesLinked,
+                CustomerId = null,
+                CustomerCreated = false,
+                TemporaryPassword = null,
+                IdentityCreated = false,
+                OrderIds = null,
+                WelcomeConfirmationToken = null,
+                CompensationRequired = false,
+            };
+            return await TryAdvanceAsync(lease, checkpoint, rolledBack, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return false;
         }
-
-        var rolledBack = checkpoint with
-        {
-            Status = InstantQuotationSubmissionCheckpointStatus.FilesLinked,
-            CustomerId = null,
-            CustomerCreated = false,
-            TemporaryPassword = null,
-            IdentityCreated = false,
-            OrderIds = null,
-            WelcomeConfirmationToken = null,
-            CompensationRequired = false,
-        };
-        return await TryAdvanceAsync(lease, checkpoint, rolledBack, cancellationToken);
     }
+
+    private static InstantQuotationFulfillmentFailure Failure(
+        InstantQuotationSubmissionCheckpoint checkpoint, string stage, string? exceptionType) =>
+        new(stage, exceptionType, false, checkpoint.OrderIds?.Count ?? 0, checkpoint.CustomerId.HasValue);
 
     private static InstantQuotationSubmissionResult Partial(
         InstantQuotationSubmissionCheckpoint checkpoint,
-        InstantQuotationProblemCategory category) => new(
+        InstantQuotationProblemCategory category,
+        InstantQuotationFulfillmentFailure? failure = null) => new(
             InstantQuotationSubmissionOutcome.Partial,
             checkpoint.RequestReference,
             category,
             checkpoint.TransactionId,
-            checkpoint.JourneyId);
+            checkpoint.JourneyId)
+        { FulfillmentFailure = failure };
 }

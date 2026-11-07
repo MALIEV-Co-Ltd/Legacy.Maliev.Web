@@ -55,7 +55,12 @@ public sealed record CustomerOrderCreateResult(
     int? OrderId,
     bool ServiceAvailable,
     bool Authorized,
-    bool Conflict);
+    bool Conflict)
+{
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? FailureExceptionType { get; init; }
+}
 
 /// <summary>Represents the FileService upload outcome.</summary>
 public sealed record CustomerOrderUploadResult(

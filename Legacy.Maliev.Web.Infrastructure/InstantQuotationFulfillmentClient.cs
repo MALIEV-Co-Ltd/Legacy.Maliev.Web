@@ -43,7 +43,8 @@ internal sealed class InstantQuotationFulfillmentClient(
         if (!countries.ServiceAvailable)
         {
             LogStageFailure("customer-country", "dependency_unavailable");
-            return new(null, false, false, true);
+            return new(null, false, false, true)
+            { FailureExceptionType = countries.FailureExceptionType };
         }
 
         var billingCountryId = ResolveCountryId(countries.Value ?? [], customer.Country);
@@ -95,7 +96,8 @@ internal sealed class InstantQuotationFulfillmentClient(
         return new(
             registered.Succeeded && registered.DatabaseId == customerId && registered.Created,
             registered.ServiceAvailable,
-            registered.Authorized);
+            registered.Authorized)
+        { FailureExceptionType = registered.FailureExceptionType };
     }
 
     public async Task<InstantQuotationOrderProvisionResult> ProvisionOrderAsync(
@@ -109,130 +111,164 @@ internal sealed class InstantQuotationFulfillmentClient(
         InstantQuotationFinalizedFile file,
         CancellationToken cancellationToken)
     {
-        var materialInfo = PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey);
-        if (materialInfo is null || part.Configuration.Quantity <= 0)
+        var stage = "order-creation";
+        int? ownedOrderId = null;
+        try
         {
-            LogStageFailure("order-input", "unexpected");
-            return UnexpectedOrderFailure();
-        }
+            var materialInfo = PricingCatalog.ResolveMaterial(part.Configuration.MaterialKey);
+            if (materialInfo is null || part.Configuration.Quantity <= 0)
+            {
+                LogStageFailure("order-input", "unexpected");
+                return UnexpectedOrderFailure();
+            }
 
-        var catalogResult = await catalogClient.GetAsync(CustomerOrderKind.Additive, cancellationToken);
-        if (!catalogResult.ServiceAvailable || catalogResult.Catalog is null)
+            var catalogResult = await catalogClient.GetAsync(CustomerOrderKind.Additive, cancellationToken);
+            if (!catalogResult.ServiceAvailable || catalogResult.Catalog is null)
+            {
+                LogStageFailure("order-catalog", "dependency_unavailable");
+                return new(null, false, false, catalogResult.Authorized, false)
+                { FailureStage = stage, FailureExceptionType = catalogResult.FailureExceptionType };
+            }
+
+            if (!catalogResult.Authorized)
+            {
+                LogStageFailure("order-catalog", "authorization");
+                return new(null, false, true, false, false) { FailureStage = stage };
+            }
+
+            var processTerms = materialInfo.Process == PrintProcess.Resin
+                ? new[] { "resin", "sla", "dlp", "lcd" }
+                : new[] { "fdm", "fff", "filament", "fused" };
+            var process = catalogResult.Catalog.Processes.FirstOrDefault(candidate =>
+                processTerms.Any(term => candidate.Name.Contains(term, StringComparison.OrdinalIgnoreCase)));
+            if (process is null && catalogResult.Catalog.Processes.Count == 1)
+            {
+                process = catalogResult.Catalog.Processes[0];
+            }
+
+            var databaseMaterialName = DatabaseMaterialName(part.Configuration.MaterialKey);
+            var material = catalogResult.Catalog.Materials.FirstOrDefault(candidate =>
+                string.Equals(candidate.Name, part.Configuration.MaterialKey, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(candidate.Name, databaseMaterialName, StringComparison.OrdinalIgnoreCase)
+                || candidate.Name.StartsWith(part.Configuration.MaterialKey + " ", StringComparison.OrdinalIgnoreCase)
+                || candidate.Name.StartsWith(part.Configuration.MaterialKey + " —", StringComparison.OrdinalIgnoreCase));
+            if (process is null || material is null)
+            {
+                LogStageFailure("order-catalog-mapping", "unexpected");
+                return UnexpectedOrderFailure();
+            }
+
+            var options = await catalogClient.GetMaterialOptionsAsync(material.Id, cancellationToken);
+            if (!options.ServiceAvailable || options.Options is null)
+            {
+                LogStageFailure("order-material-options", "dependency_unavailable");
+                return new(null, false, false, options.Authorized, false)
+                { FailureStage = stage, FailureExceptionType = options.FailureExceptionType };
+            }
+
+            if (!options.Authorized)
+            {
+                LogStageFailure("order-material-options", "authorization");
+                return new(null, false, true, false, false);
+            }
+
+            var colorName = DatabaseColorName(part.Configuration.Color);
+            var color = options.Options.Colors.FirstOrDefault(candidate =>
+                string.Equals(candidate.Name, colorName, StringComparison.OrdinalIgnoreCase));
+            var finish = options.Options.SurfaceFinishes.FirstOrDefault(candidate =>
+                string.Equals(candidate.Name, "As printed", StringComparison.OrdinalIgnoreCase));
+            var currency = await catalogClient.GetCurrencyAsync("THB", cancellationToken);
+            if (!currency.ServiceAvailable)
+            {
+                LogStageFailure("order-currency", "dependency_unavailable");
+                return new(null, false, false, true, false)
+                { FailureStage = stage, FailureExceptionType = currency.FailureExceptionType };
+            }
+
+            if (currency.Value is not { Id: > 0 } thb || color is null || finish is null)
+            {
+                LogStageFailure("order-catalog-mapping", "unexpected");
+                return UnexpectedOrderFailure();
+            }
+
+            var draft = new CustomerOrderDraft(
+                CustomerOrderKind.Additive,
+                OrderName(part.DisplayFileName),
+                $"3D printing: {materialInfo.DisplayName}; {BuildPreferenceDescription(materialInfo.Process, part.Configuration.BuildPreference)}",
+                process.Id,
+                material.Id,
+                finish.Id,
+                color.Id,
+                part.Configuration.Quantity,
+                AllowSocialMedia: false,
+                Files: [],
+                UnitPrice: Convert.ToDecimal(quote.UnitPrice, CultureInfo.InvariantCulture),
+                CurrencyId: thb.Id,
+                LeadTime: leadTimeDays,
+                Comment: BuildOrderComment(submissionId, partIndex, part, quote, leadTimeDays, customerDescription),
+                AllowCancellation: false);
+            var orderKey = OperationKey(submissionId, partIndex, "order");
+            var created = await orderTransport.CreateAsync(customerId, draft, orderKey, cancellationToken);
+            if (created.OrderId is not > 0)
+            {
+                LogStageFailure("order-create", FailureCategory(created.ServiceAvailable, created.Authorized, created.Conflict));
+                return new(null, false, created.ServiceAvailable, created.Authorized, created.Conflict)
+                { FailureStage = stage, FailureExceptionType = created.FailureExceptionType, CreationUnconfirmed = true };
+            }
+
+            ownedOrderId = created.OrderId;
+            stage = "order-status";
+            var status = await orderTransport.AddNewStatusAsync(
+                created.OrderId.Value,
+                OperationKey(submissionId, partIndex, "status"),
+                cancellationToken);
+            if (!status.Succeeded)
+            {
+                LogStageFailure("order-status", FailureCategory(status.ServiceAvailable, status.Authorized, status.Conflict));
+                if (status.DefiniteHttpRejection)
+                    throw new InstantQuotationDefiniteFailureException(stage, created.OrderId, status);
+                return new(created.OrderId, false, status.ServiceAvailable, status.Authorized, status.Conflict)
+                { FailureStage = stage, FailureExceptionType = status.FailureExceptionType, FailureStatusCode = status.FailureStatusCode };
+            }
+
+            stage = "order-file-link";
+            var linked = await orderTransport.LinkAsync(
+                customerId,
+                created.OrderId.Value,
+                new CustomerOrderUploadedObject(file.Bucket, file.ObjectName),
+                cancellationToken);
+            var result = new InstantQuotationOrderProvisionResult(
+                created.OrderId,
+                linked.Succeeded,
+                linked.ServiceAvailable,
+                linked.Authorized,
+                linked.Conflict)
+            { FailureStage = linked.Succeeded ? null : stage, FailureExceptionType = linked.FailureExceptionType, FailureStatusCode = linked.FailureStatusCode };
+            if (!result.Succeeded)
+            {
+                LogStageFailure("order-file", FailureCategory(result.ServiceAvailable, result.Authorized, result.Conflict));
+                if (linked.DefiniteHttpRejection)
+                    throw new InstantQuotationDefiniteFailureException(stage, created.OrderId, linked);
+            }
+
+            return result;
+        }
+        catch (InstantQuotationDefiniteFailureException exception)
         {
-            LogStageFailure("order-catalog", "dependency_unavailable");
-            return new(null, false, false, catalogResult.Authorized, false);
+            return new(exception.OrderId, false, exception.Operation.ServiceAvailable,
+                exception.Operation.Authorized, exception.Operation.Conflict)
+            {
+                FailureStage = exception.Stage,
+                FailureExceptionType = exception.GetType().Name,
+                FailureStatusCode = exception.Operation.FailureStatusCode,
+                DefiniteHttpRejection = exception.Operation.DefiniteHttpRejection,
+            };
         }
-
-        if (!catalogResult.Authorized)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            LogStageFailure("order-catalog", "authorization");
-            return new(null, false, true, false, false);
+            return new(ownedOrderId, false, false, true, false)
+            { FailureStage = stage, FailureExceptionType = exception.GetType().Name };
         }
-
-        var processTerms = materialInfo.Process == PrintProcess.Resin
-            ? new[] { "resin", "sla", "dlp", "lcd" }
-            : new[] { "fdm", "fff", "filament", "fused" };
-        var process = catalogResult.Catalog.Processes.FirstOrDefault(candidate =>
-            processTerms.Any(term => candidate.Name.Contains(term, StringComparison.OrdinalIgnoreCase)));
-        if (process is null && catalogResult.Catalog.Processes.Count == 1)
-        {
-            process = catalogResult.Catalog.Processes[0];
-        }
-
-        var databaseMaterialName = DatabaseMaterialName(part.Configuration.MaterialKey);
-        var material = catalogResult.Catalog.Materials.FirstOrDefault(candidate =>
-            string.Equals(candidate.Name, part.Configuration.MaterialKey, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(candidate.Name, databaseMaterialName, StringComparison.OrdinalIgnoreCase)
-            || candidate.Name.StartsWith(part.Configuration.MaterialKey + " ", StringComparison.OrdinalIgnoreCase)
-            || candidate.Name.StartsWith(part.Configuration.MaterialKey + " —", StringComparison.OrdinalIgnoreCase));
-        if (process is null || material is null)
-        {
-            LogStageFailure("order-catalog-mapping", "unexpected");
-            return UnexpectedOrderFailure();
-        }
-
-        var options = await catalogClient.GetMaterialOptionsAsync(material.Id, cancellationToken);
-        if (!options.ServiceAvailable || options.Options is null)
-        {
-            LogStageFailure("order-material-options", "dependency_unavailable");
-            return new(null, false, false, options.Authorized, false);
-        }
-
-        if (!options.Authorized)
-        {
-            LogStageFailure("order-material-options", "authorization");
-            return new(null, false, true, false, false);
-        }
-
-        var colorName = DatabaseColorName(part.Configuration.Color);
-        var color = options.Options.Colors.FirstOrDefault(candidate =>
-            string.Equals(candidate.Name, colorName, StringComparison.OrdinalIgnoreCase));
-        var finish = options.Options.SurfaceFinishes.FirstOrDefault(candidate =>
-            string.Equals(candidate.Name, "As printed", StringComparison.OrdinalIgnoreCase));
-        var currency = await catalogClient.GetCurrencyAsync("THB", cancellationToken);
-        if (!currency.ServiceAvailable)
-        {
-            LogStageFailure("order-currency", "dependency_unavailable");
-            return new(null, false, false, true, false);
-        }
-
-        if (currency.Value is not { Id: > 0 } thb || color is null || finish is null)
-        {
-            LogStageFailure("order-catalog-mapping", "unexpected");
-            return UnexpectedOrderFailure();
-        }
-
-        var draft = new CustomerOrderDraft(
-            CustomerOrderKind.Additive,
-            OrderName(part.DisplayFileName),
-            $"3D printing: {materialInfo.DisplayName}; {BuildPreferenceDescription(materialInfo.Process, part.Configuration.BuildPreference)}",
-            process.Id,
-            material.Id,
-            finish.Id,
-            color.Id,
-            part.Configuration.Quantity,
-            AllowSocialMedia: false,
-            Files: [],
-            UnitPrice: Convert.ToDecimal(quote.UnitPrice, CultureInfo.InvariantCulture),
-            CurrencyId: thb.Id,
-            LeadTime: leadTimeDays,
-            Comment: BuildOrderComment(submissionId, partIndex, part, quote, leadTimeDays, customerDescription),
-            AllowCancellation: false);
-        var orderKey = OperationKey(submissionId, partIndex, "order");
-        var created = await orderTransport.CreateAsync(customerId, draft, orderKey, cancellationToken);
-        if (created.OrderId is not > 0)
-        {
-            LogStageFailure("order-create", FailureCategory(created.ServiceAvailable, created.Authorized, created.Conflict));
-            return new(null, false, created.ServiceAvailable, created.Authorized, created.Conflict);
-        }
-
-        var status = await orderTransport.AddNewStatusAsync(
-            created.OrderId.Value,
-            OperationKey(submissionId, partIndex, "status"),
-            cancellationToken);
-        if (!status.Succeeded)
-        {
-            LogStageFailure("order-status", FailureCategory(status.ServiceAvailable, status.Authorized, status.Conflict));
-            return new(created.OrderId, false, status.ServiceAvailable, status.Authorized, status.Conflict);
-        }
-
-        var linked = await orderTransport.LinkAsync(
-            customerId,
-            created.OrderId.Value,
-            new CustomerOrderUploadedObject(file.Bucket, file.ObjectName),
-            cancellationToken);
-        var result = new InstantQuotationOrderProvisionResult(
-            created.OrderId,
-            linked.Succeeded,
-            linked.ServiceAvailable,
-            linked.Authorized,
-            linked.Conflict);
-        if (!result.Succeeded)
-        {
-            LogStageFailure("order-file", FailureCategory(result.ServiceAvailable, result.Authorized, result.Conflict));
-        }
-
-        return result;
     }
 
     public async Task<bool> CompensateOrderAsync(int orderId, CancellationToken cancellationToken)
@@ -256,7 +292,8 @@ internal sealed class InstantQuotationFulfillmentClient(
         var challenge = await authenticationClient.RequestEmailConfirmationAsync(
             customer.Email.Trim(),
             cancellationToken);
-        return new(challenge.Token, challenge.ServiceAvailable, challenge.Authorized);
+        return new(challenge.Token, challenge.ServiceAvailable, challenge.Authorized)
+        { FailureExceptionType = challenge.FailureExceptionType };
     }
 
     public async Task<NotificationResult> SendWelcomeAsync(
@@ -414,14 +451,33 @@ internal sealed class InstantQuotationFulfillmentClient(
             $"instant-quotation-{purpose}:{submissionId.ToLowerInvariant()}:{partIndex}")));
 
     private static InstantQuotationOrderProvisionResult UnexpectedOrderFailure() =>
-        new(null, false, true, true, false);
+        throw new InstantQuotationDefiniteFailureException("order-creation", null, new(false, true, true, false));
 
     private static string FailureCategory(bool available, bool authorized, bool conflict) =>
         !available ? "dependency_unavailable" : !authorized ? "authorization" : conflict ? "conflict" : "unexpected";
 
-    private void LogStageFailure(string stage, string category) =>
-        logger.LogWarning(
-            "Instant quotation fulfillment stage {Stage} did not complete; category {Category}.",
-            stage,
-            category);
+    private void LogStageFailure(string stage, string category)
+    {
+        try
+        {
+            logger.LogWarning(
+                "Instant quotation fulfillment stage {Stage} did not complete; category {Category}.",
+                stage,
+                category);
+        }
+        catch (Exception)
+        {
+            // Preserve the operation's actual failure facts when a diagnostic sink fails.
+        }
+    }
+
+    private sealed class InstantQuotationDefiniteFailureException(
+        string stage, int? orderId, CustomerOrderOperationResult operation)
+        : Exception("A fulfillment operation was rejected.")
+    {
+        internal string Stage { get; } = stage;
+        internal int? OrderId { get; } = orderId;
+        internal CustomerOrderOperationResult Operation { get; } = operation;
+    }
+
 }

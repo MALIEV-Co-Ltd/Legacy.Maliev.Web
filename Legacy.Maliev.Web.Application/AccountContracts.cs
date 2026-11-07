@@ -24,13 +24,23 @@ public sealed record CustomerIdentityRegistration(
     bool ServiceAvailable = true,
     bool Authorized = true,
     bool Conflict = false,
-    bool Created = false);
+    bool Created = false)
+{
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? FailureExceptionType { get; init; }
+}
 
 public sealed record CustomerActionChallenge(
     bool Accepted,
     string? Token,
     bool ServiceAvailable,
-    bool Authorized);
+    bool Authorized)
+{
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? FailureExceptionType { get; init; }
+}
 
 public sealed record CustomerCredentialOperationResult(
     bool Succeeded,

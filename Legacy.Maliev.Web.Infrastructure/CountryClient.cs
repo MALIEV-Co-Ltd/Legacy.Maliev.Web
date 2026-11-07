@@ -36,7 +36,8 @@ internal sealed class CountryClient(
             {
                 logger.LogWarning("Country service was unavailable while loading the contact form.");
             }
-            return new ServiceResponse<IReadOnlyList<Country>>([], false);
+            return new ServiceResponse<IReadOnlyList<Country>>([], false)
+            { FailureExceptionType = exception.GetType().Name };
         }
     }
 

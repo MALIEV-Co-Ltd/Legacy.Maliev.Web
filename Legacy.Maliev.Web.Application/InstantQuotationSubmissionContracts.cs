@@ -103,7 +103,12 @@ public sealed record InstantQuotationSubmissionResult(
     int? RequestReference,
     InstantQuotationProblemCategory ProblemCategory,
     string? TransactionId = null,
-    Guid? JourneyId = null);
+    Guid? JourneyId = null)
+{
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public InstantQuotationFulfillmentFailure? FulfillmentFailure { get; init; }
+}
 
 public interface IInstantQuotationSubmissionService
 {
@@ -113,3 +118,11 @@ public interface IInstantQuotationSubmissionService
         InstantQuotationCustomerSubmission customer,
         CancellationToken cancellationToken);
 }
+
+/// <summary>Metadata-only snapshot of one source-equivalent fulfillment failure before cleanup.</summary>
+public sealed record InstantQuotationFulfillmentFailure(
+    string Stage,
+    string? ExceptionType,
+    bool RetrySafe,
+    int OrderCount,
+    bool CustomerCommitted);

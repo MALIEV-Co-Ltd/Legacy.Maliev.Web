@@ -71,7 +71,7 @@ internal sealed class CustomerOrderSubmissionTransport(
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
             logger.LogWarning("Order service was unavailable while creating a customer order.");
-            return new(null, false, true, false);
+            return new(null, false, true, false) { FailureExceptionType = exception.GetType().Name };
         }
     }
 
@@ -91,12 +91,12 @@ internal sealed class CustomerOrderSubmissionTransport(
             using var request = Authorized(HttpMethod.Post, $"orderstatuses/histories/{orderId}/new", token);
             request.Headers.TryAddWithoutValidation("Idempotency-Key", idempotencyKey);
             using var response = await clientFactory.CreateClient("orders").SendAsync(request, cancellationToken);
-            return Operation(response.StatusCode, token);
+            return Operation(response.StatusCode, token) with { DefiniteHttpRejection = !response.IsSuccessStatusCode };
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
             logger.LogWarning("Order service was unavailable while adding the initial customer order status.");
-            return new(false, false, true, false);
+            return new(false, false, true, false) { FailureExceptionType = exception.GetType().Name };
         }
     }
 
@@ -228,12 +228,12 @@ internal sealed class CustomerOrderSubmissionTransport(
             using var linkRequest = Authorized(HttpMethod.Post, route, token);
             using var linkResponse = await clientFactory.CreateClient("orders")
                 .SendAsync(linkRequest, cancellationToken);
-            return Operation(linkResponse.StatusCode, token);
+            return Operation(linkResponse.StatusCode, token) with { DefiniteHttpRejection = !linkResponse.IsSuccessStatusCode };
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
             logger.LogWarning("Order or file service was unavailable while linking a customer order file.");
-            return new(false, false, true, false);
+            return new(false, false, true, false) { FailureExceptionType = exception.GetType().Name };
         }
     }
 
@@ -247,7 +247,8 @@ internal sealed class CustomerOrderSubmissionTransport(
         (int)statusCode is >= 200 and < 300,
         (int)statusCode < 500,
         IsAuthorized(statusCode, token),
-        statusCode == HttpStatusCode.Conflict);
+        statusCode == HttpStatusCode.Conflict)
+    { FailureStatusCode = (int)statusCode is >= 200 and < 300 ? null : (int)statusCode };
 
     private bool IsAuthorized(HttpStatusCode statusCode, string token)
     {

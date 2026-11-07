@@ -34,13 +34,23 @@ public sealed record CustomerOrderMaterialOptions(
 public sealed record CustomerOrderCatalogResult(
     CustomerOrderCatalog? Catalog,
     bool ServiceAvailable,
-    bool Authorized);
+    bool Authorized)
+{
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? FailureExceptionType { get; init; }
+}
 
 /// <summary>Represents a selected-material option lookup outcome.</summary>
 public sealed record CustomerOrderMaterialOptionsResult(
     CustomerOrderMaterialOptions? Options,
     bool ServiceAvailable,
-    bool Authorized);
+    bool Authorized)
+{
+    /// <summary>Gets source-owned in-process failure metadata; excluded from JSON contracts.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? FailureExceptionType { get; init; }
+}
 
 /// <summary>Reads the existing Legacy Order and Catalog service contracts for member order forms.</summary>
 public interface ICustomerOrderCatalogClient

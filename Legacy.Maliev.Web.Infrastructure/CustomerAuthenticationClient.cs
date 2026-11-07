@@ -202,14 +202,15 @@ internal sealed class CustomerAuthenticationClient(
         string password,
         CancellationToken cancellationToken)
     {
+        string? actualFailureType = null;
         using var response = await SendServiceRequestAsync(
             HttpMethod.Post,
             "auth/v1/customer-self-service/register",
             new RegisterRequest(databaseId, email, password),
-            cancellationToken);
+            cancellationToken, type => actualFailureType = type);
         if (response is null)
         {
-            return new(false, null, null, null, ServiceAvailable: false);
+            return new(false, null, null, null, ServiceAvailable: false) { FailureExceptionType = actualFailureType };
         }
 
         if (!response.IsSuccessStatusCode)
@@ -234,8 +235,8 @@ internal sealed class CustomerAuthenticationClient(
         return await ReadJsonOrNullAsync<CustomerIdentityRegistration>(
                 response.Content,
                 "customer identity registration",
-                cancellationToken)
-            ?? new(false, null, null, null);
+                cancellationToken, type => actualFailureType = type)
+            ?? new(false, null, null, null) { FailureExceptionType = actualFailureType };
     }
 
     public async Task<CustomerIdentityRegistration> ResolveRegistrationAsync(
@@ -244,14 +245,15 @@ internal sealed class CustomerAuthenticationClient(
         string password,
         CancellationToken cancellationToken)
     {
+        string? actualFailureType = null;
         using var response = await SendServiceRequestAsync(
             HttpMethod.Post,
             "auth/v1/customer-self-service/register/resolve",
             new ResolveRegistrationRequest(databaseId, email, password),
-            cancellationToken);
+            cancellationToken, type => actualFailureType = type);
         if (response is null)
         {
-            return new(false, null, null, null, ServiceAvailable: false);
+            return new(false, null, null, null, ServiceAvailable: false) { FailureExceptionType = actualFailureType };
         }
 
         if (!response.IsSuccessStatusCode)
@@ -268,8 +270,8 @@ internal sealed class CustomerAuthenticationClient(
         return await ReadJsonOrNullAsync<CustomerIdentityRegistration>(
                 response.Content,
                 "customer identity registration resolution",
-                cancellationToken)
-            ?? new(false, null, null, null, ServiceAvailable: false);
+                cancellationToken, type => actualFailureType = type)
+            ?? new(false, null, null, null, ServiceAvailable: false) { FailureExceptionType = actualFailureType };
     }
 
     public Task<CustomerActionChallenge> RequestEmailConfirmationAsync(
@@ -482,14 +484,15 @@ internal sealed class CustomerAuthenticationClient(
         string email,
         CancellationToken cancellationToken)
     {
+        string? actualFailureType = null;
         using var response = await SendServiceRequestAsync(
             HttpMethod.Post,
             $"auth/v1/customer-self-service/{action}",
             new ActionRequest(email),
-            cancellationToken);
+            cancellationToken, type => actualFailureType = type);
         if (response is null)
         {
-            return new(false, null, false, false);
+            return new(false, null, false, false) { FailureExceptionType = actualFailureType };
         }
 
         var authorized = response.StatusCode is not HttpStatusCode.Unauthorized and not HttpStatusCode.Forbidden;
@@ -509,9 +512,9 @@ internal sealed class CustomerAuthenticationClient(
         var challenge = await ReadJsonOrNullAsync<ChallengeResponse>(
             response.Content,
             "customer action challenge",
-            cancellationToken);
+            cancellationToken, type => actualFailureType = type);
         return challenge is null
-            ? new(false, null, false, true)
+            ? new(false, null, false, true) { FailureExceptionType = actualFailureType }
             : new(challenge.Accepted, challenge.Token, true, true);
     }
 
@@ -562,7 +565,8 @@ internal sealed class CustomerAuthenticationClient(
         HttpMethod method,
         string path,
         object content,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<string>? recordFailureType = null)
     {
         var token = await serviceTokenProvider.GetAccessTokenAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(token))
@@ -588,6 +592,7 @@ internal sealed class CustomerAuthenticationClient(
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
+            recordFailureType?.Invoke(exception.GetType().Name);
             logger.LogWarning(exception, "Auth service was unavailable during customer self-service.");
             return null;
         }
@@ -600,7 +605,8 @@ internal sealed class CustomerAuthenticationClient(
     private async Task<T?> ReadJsonOrNullAsync<T>(
         HttpContent content,
         string operation,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<string>? recordFailureType = null)
     {
         try
         {
@@ -608,6 +614,7 @@ internal sealed class CustomerAuthenticationClient(
         }
         catch (Exception exception) when (exception is JsonException or NotSupportedException)
         {
+            recordFailureType?.Invoke(exception.GetType().Name);
             logger.LogWarning(exception, "Auth service returned an invalid response during {Operation}.", operation);
             return default;
         }

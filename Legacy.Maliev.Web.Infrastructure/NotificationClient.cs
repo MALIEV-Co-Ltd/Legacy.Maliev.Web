@@ -78,7 +78,7 @@ internal sealed class NotificationClient(
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
             logger.LogWarning(exception, "Notification service was unavailable while sending email.");
-            return new NotificationResult(false, false, true);
+            return new NotificationResult(false, false, true) { FailureExceptionType = exception.GetType().Name };
         }
     }
 
