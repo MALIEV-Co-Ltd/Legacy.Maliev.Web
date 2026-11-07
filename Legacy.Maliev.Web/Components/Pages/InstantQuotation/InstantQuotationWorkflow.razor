@@ -921,7 +921,7 @@
             <span class="instant-quote__submission-icon @(CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.CompletedStatus ? null : "instant-quote__submission-icon--warning")" aria-hidden="true">
                 @(CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.CompletedStatus ? "✓" : "!")
             </span>
-            <h3 id="instant-quote-submitted-heading">@SubmittedHeading</h3>
+            <h2 id="instant-quote-submitted-heading" class="h3">@SubmittedHeading</h2>
             @if (CustomerModel.SubmissionStatus is InstantQuotationCustomerDisplayModel.PartialStatus)
             {
                 <p role="status">@Localizer["Your request was saved. File processing is pending. Do not resubmit."]</p>
