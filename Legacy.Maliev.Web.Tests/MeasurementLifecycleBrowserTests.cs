@@ -316,6 +316,23 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
         Assert.DoesNotContain(session.BlockedUrls, IsExternalAnalyticsUrl);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task FileCompletion_RespectsConsentAndDoesNotReplay(bool grant)
+    {
+        await using var session = await OpenFreshAsync(390);
+        await session.Page.GotoAsync(new Uri(fixture.Origin, "/__tests/measurement/file-completion").ToString(),
+            new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        const string count = "() => dataLayer.filter(item => item.event === 'file_upload_complete').length";
+        Assert.Equal(0, await session.Page.EvaluateAsync<int>(count));
+        Assert.DoesNotContain(session.BlockedUrls, IsExternalAnalyticsUrl);
+        await session.Page.Locator(grant ? "#cookieConsent [data-consent-action='accept']" : "#cookieConsent [data-consent-action='reject']").ClickAsync();
+        Assert.Equal(grant ? 1 : 0, await session.Page.EvaluateAsync<int>(count));
+        await session.Page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.DOMContentLoaded });
+        Assert.Equal(0, await session.Page.EvaluateAsync<int>(count));
+    }
+
     private static bool IsExternalAnalyticsUrl(string url) =>
         url.Contains("googletagmanager.com", StringComparison.OrdinalIgnoreCase)
         || url.Contains("google-analytics.com", StringComparison.OrdinalIgnoreCase)
@@ -615,13 +632,21 @@ public sealed class MeasurementLifecycleBrowserFixture : IAsyncLifetime
         {
             app.Use(async (context, forward) =>
             {
-                if (!context.Request.Path.Equals("/__tests/measurement/persisted-instant-quote"))
+                var fileCompletion = context.Request.Path.Equals("/__tests/measurement/file-completion");
+                if (!fileCompletion && !context.Request.Path.Equals("/__tests/measurement/persisted-instant-quote"))
                 {
                     await forward(context);
                     return;
                 }
 
                 var tempData = context.RequestServices.GetRequiredService<ITempDataDictionaryFactory>().GetTempData(context);
+                if (fileCompletion)
+                {
+                    LeadAnalyticsEventQueue.TryQueueFileCompletion(tempData, 42, "request-42");
+                    tempData.Save();
+                    context.Response.Redirect("/Quotation?culture=en");
+                    return;
+                }
                 if (!LeadAnalyticsEventQueue.TryQueueInstantQuotation(tempData, "request-42", true,
                     "11111111-2222-3333-4444-555555555555", out var failure))
                 {

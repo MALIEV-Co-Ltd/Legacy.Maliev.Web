@@ -762,6 +762,8 @@ public sealed class ThreeDimensionalPrinting : PageModel
         {
             TempData[SubmissionStatusTempDataKey] = SubmissionStatusCompleted;
             TempData[RequestReferenceTempDataKey] = result.RequestReference.Value;
+            if (result.FilesLinkedVerified)
+                LeadAnalyticsEventQueue.TryQueueFileCompletion(TempData, result.RequestReference.Value, result.TransactionId);
             if (result.TransactionId is { Length: > 0 } && result.JourneyId is Guid journeyId)
             {
                 _ = LeadAnalyticsEventQueue.TryQueueInstantQuotation(
