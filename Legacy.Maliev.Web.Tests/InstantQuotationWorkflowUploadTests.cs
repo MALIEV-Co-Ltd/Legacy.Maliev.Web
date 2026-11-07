@@ -1202,7 +1202,7 @@ public sealed class InstantQuotationWorkflowUploadTests
 
         var updated = Assert.Single(workflow.Parts);
         Assert.Equal(new InstantQuotationPartConfiguration("PETG", "Blue", 10), updated.Configuration);
-        Assert.Equal(["Any", "Black", "White", "Gray", "Silver", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink"], workflow.GetColors("PETG"));
+        Assert.Equal(["Any", "Black", "White", "Gray", "Clear", "Red", "Orange", "Yellow", "Green", "Blue"], workflow.GetColors("PETG"));
         Assert.Equal(2, pricing.QuoteCalls);
         Assert.Equal(updated.PartId, Assert.Single(store.LastSavedState!.Parts).PartId);
         Assert.Equal("PETG", Assert.Single(store.LastSavedState.Parts).Configuration.MaterialKey);
@@ -1290,7 +1290,7 @@ public sealed class InstantQuotationWorkflowUploadTests
         var updated = Assert.Single(workflow.Parts);
         Assert.Equal(BuildPreference.Quality, updated.Configuration.BuildPreference);
         Assert.Equal("PLA", updated.Configuration.MaterialKey);
-        Assert.Equal("Black", updated.Configuration.Color);
+        Assert.Equal("Any", updated.Configuration.Color);
         Assert.Equal(1, updated.Configuration.Quantity);
         Assert.Equal(2, pricing.QuoteCalls);
         Assert.Equal(BuildPreference.Quality, Assert.Single(store.LastSavedState!.Parts).Configuration.BuildPreference);
@@ -2006,7 +2006,7 @@ public sealed class InstantQuotationWorkflowUploadTests
     }
 
     [Fact]
-    public async Task Upload_MultipleBodiesPersistAnyWhileSingleBodyKeepsDefaultColor()
+    public async Task Upload_SingleAndMultipleBodiesPersistSourceDefaultAny()
     {
         var client = new ControlledUploadClient();
         var store = new RecordingSessionStore();
@@ -2021,12 +2021,12 @@ public sealed class InstantQuotationWorkflowUploadTests
         await uploading;
 
         Assert.Equal("Any", Assert.Single(workflow.Parts, part => part.DisplayFileName == "multi.stl").Configuration.Color);
-        Assert.Equal("Black", Assert.Single(workflow.Parts, part => part.DisplayFileName == "single.stl").Configuration.Color);
+        Assert.Equal("Any", Assert.Single(workflow.Parts, part => part.DisplayFileName == "single.stl").Configuration.Color);
         Assert.Equal("Any", Assert.Single(store.LastSavedState!.Parts, part => part.DisplayFileName == "multi.stl").Configuration.Color);
-        Assert.Equal("Black", Assert.Single(store.LastSavedState.Parts, part => part.DisplayFileName == "single.stl").Configuration.Color);
+        Assert.Equal("Any", Assert.Single(store.LastSavedState.Parts, part => part.DisplayFileName == "single.stl").Configuration.Color);
         Assert.NotNull(workflow.OrderQuote);
         Assert.Equal("Any", Assert.Single(workflow.Parts, part => part.DisplayFileName == "multi.stl").Quote!.Color);
-        Assert.Equal("Black", Assert.Single(workflow.Parts, part => part.DisplayFileName == "single.stl").Quote!.Color);
+        Assert.Equal("Any", Assert.Single(workflow.Parts, part => part.DisplayFileName == "single.stl").Quote!.Color);
     }
 
     [Theory]
@@ -2112,6 +2112,30 @@ public sealed class InstantQuotationWorkflowUploadTests
         Assert.Equal(2, restored.Configuration.Quantity);
         Assert.Equal(bodies, restored.Geometry.BodyCount);
         Assert.Equal(0, store.CreateCalls);
+    }
+
+    [Fact]
+    public async Task Initialize_SavedSingleBodyBlackDefaultRemainsConfiguredWithoutBecomingAny()
+    {
+        var part = PersistedPart("saved-black.stl", "opaque-saved-black") with
+        {
+            Configuration = new("PLA", "Black", 1),
+        };
+        var store = new RecordingSessionStore { ExistingSession = Session("saved-black-session", part) };
+        await using var workflow = CreateWorkflow(store: store);
+
+        await workflow.InitializeAsync("saved-black-session", default);
+
+        var restored = Assert.Single(workflow.Parts);
+        Assert.Equal(part.PartId, restored.PartId);
+        Assert.Equal(1, restored.Geometry.BodyCount);
+        Assert.Equal(part.Configuration, restored.Configuration);
+        Assert.Equal(part.Configuration, Assert.Single(store.LastSavedState!.Parts).Configuration);
+        Assert.Equal("Black", restored.Quote!.Color);
+        Assert.Equal(InstantQuotationWorkflowState.Configured, workflow.State);
+        Assert.Equal(0, store.CreateCalls);
+        workflow.EnterReview();
+        Assert.Equal(InstantQuotationWorkflowState.Review, workflow.State);
     }
 
     private static InstantQuotationWorkflowCoordinator CreateWorkflow(

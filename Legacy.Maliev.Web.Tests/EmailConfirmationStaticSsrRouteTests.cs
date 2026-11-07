@@ -1,11 +1,11 @@
-using Legacy.Maliev.Web.Infrastructure;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using System.Net;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Legacy.Maliev.Web.Tests;
 

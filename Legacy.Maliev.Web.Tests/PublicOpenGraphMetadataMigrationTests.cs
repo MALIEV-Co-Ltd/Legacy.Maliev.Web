@@ -62,7 +62,7 @@ public sealed class PublicOpenGraphMetadataMigrationTests : IClassFixture<Testin
     }
 
     [Theory]
-    [InlineData("en", "Legal information | MALIEV", "Review MALIEV policies for website use, privacy, and confidential manufacturing project information.", "https://www.maliev.com/legal?culture=en", "en_US")]
+    [InlineData("en", "Legal information | MALIEV", "Review MALIEV website terms, privacy information, and non-disclosure guidance before sharing or managing a manufacturing project.", "https://www.maliev.com/legal?culture=en", "en_US")]
     [InlineData("th", "ข้อมูลทางกฎหมาย | MALIEV", "รวมข้อมูลด้านกฎหมาย นโยบายความเป็นส่วนตัว ข้อกำหนดการใช้งาน และข้อตกลงรักษาความลับสำหรับการติดต่อและโปรเจ็คงานผลิตกับ MALIEV", "https://www.maliev.com/legal", "th_TH")]
     public async Task OpenGraphMetadata_PreservesValuesAndUsesCanonicalLocalizedUrl(
         string culture,

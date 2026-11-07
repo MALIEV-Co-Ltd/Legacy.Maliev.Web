@@ -3,10 +3,13 @@ using Legacy.Maliev.Web.Application.Pricing;
 
 namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 
+/// <summary>Serves the retained estimate and order-total compatibility handlers using server pricing rules.</summary>
 public static class InstantQuotationCalculator
 {
     private const int MaximumProfileSamples = 512;
 
+    /// <summary>Builds the material selector from the pricing catalog with PLA initially selected.</summary>
+    /// <returns>The ordered material choices for the quotation page.</returns>
     public static InstantQuotationDisplayModel CreateDisplayModel() => new(
         PricingCatalog.Materials.Values
             .OrderBy(material => material.Process)
@@ -17,6 +20,17 @@ public static class InstantQuotationCalculator
                 string.Equals(material.Key, "PLA", StringComparison.Ordinal)))
             .ToArray());
 
+    /// <summary>Validates normalized geometry and produces the retained THB estimate response.</summary>
+    /// <param name="material">The pricing-catalog material key.</param>
+    /// <param name="dimensionZ">The reported model height in millimetres.</param>
+    /// <param name="volume">The reported model volume in cubic millimetres.</param>
+    /// <param name="footprint">The reported footprint area in square millimetres.</param>
+    /// <param name="areaProfile">Comma-separated cross-sectional areas in square millimetres.</param>
+    /// <param name="perimeterProfile">Comma-separated cross-sectional perimeters in millimetres.</param>
+    /// <param name="currency">The compatibility currency input; this calculator always returns THB.</param>
+    /// <param name="quantity">The requested number of identical parts.</param>
+    /// <param name="unsupportedAreaProfile">Optional comma-separated unsupported areas in square millimetres.</param>
+    /// <returns>The compatibility success payload with price tiers, or a bounded material or geometry failure.</returns>
     public static object GetEstimate(
         string? material,
         double dimensionZ,
@@ -83,6 +97,14 @@ public static class InstantQuotationCalculator
         };
     }
 
+    /// <summary>Combines bounded line subtotals with destination-aware shipping, minimum-order rules and VAT.</summary>
+    /// <param name="processes">Comma-separated process labels paired with the submitted subtotals.</param>
+    /// <param name="subtotals">Comma-separated THB line subtotals parsed with invariant culture.</param>
+    /// <param name="totalWeightGrams">The combined shipment weight in grams.</param>
+    /// <param name="totalBoundingCm3">The combined bounding volume in cubic centimetres.</param>
+    /// <param name="currency">The compatibility currency input; this calculator always returns THB.</param>
+    /// <param name="destinationCountry">The optional destination used to determine shipping availability.</param>
+    /// <returns>The compatibility order-total payload in THB, including shipping state.</returns>
     public static object GetOrderTotal(
         string? processes,
         string? subtotals,

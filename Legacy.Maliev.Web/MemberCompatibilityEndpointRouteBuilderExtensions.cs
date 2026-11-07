@@ -2,8 +2,16 @@ using Legacy.Maliev.Web.Application;
 
 namespace Legacy.Maliev.Web;
 
+/// <summary>
+/// Maps retained member URLs to customer-scoped catalog responses and quotation navigation.
+/// </summary>
 public static class MemberCompatibilityEndpointRouteBuilderExtensions
 {
+    /// <summary>
+    /// Registers protected material-option and payment-success compatibility endpoints.
+    /// </summary>
+    /// <param name="endpoints">The endpoint builder to which the retained member routes are added.</param>
+    /// <returns>The original endpoint builder with compatibility routes registered.</returns>
     public static IEndpointRouteBuilder MapMemberCompatibilityEndpoints(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGet(

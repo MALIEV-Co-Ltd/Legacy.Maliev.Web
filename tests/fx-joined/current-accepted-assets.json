@@ -1,0 +1,178 @@
+{
+  "acceptedCommit": "a01c586e3355d9e451b7aa5aa95c9347d82a2014",
+  "assetTree": "72d3d8ebfdfe6e1420baaf0f32b106934f869d34",
+  "assets": {
+    "Legacy.Maliev.Web/wwwroot/dist/app.min.js": [
+      "100644",
+      "c3547cd3b7c8483189ed54ba364682ac135e86d3"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/asset-manifest.json": [
+      "100644",
+      "2363145c71dd34a9b20f53f9b0e536a3c0217a33"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/fa-brands-400-LA6RBN2H.woff2": [
+      "100644",
+      "e5b3ce081207a202aac7407af74696f458887c2a"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/fa-regular-400-NCGHE5NP.woff2": [
+      "100644",
+      "d470bd17584b271e1069a6435db5128a8a69f2b7"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/fa-solid-900-EFITDVWS.woff2": [
+      "100644",
+      "3ffbb19eb1453bc16ad20e7d57febed054e30ff5"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/fa-v4compatibility-4GXT74DT.woff2": [
+      "100644",
+      "971a2b327340c891949b29e53cb519c67173e30b"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-400-normal-BXXLFHTJ.woff2": [
+      "100644",
+      "b7386c8164a953547cb960712276918674fa219c"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-400-normal-HJOYPAAW.woff": [
+      "100644",
+      "4933fe4bf093ae4f1defe0907372bfc7561f79dc"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-500-normal-DA26WOS3.woff": [
+      "100644",
+      "a3e79dec4e3c5c3c021b508e9c473c96a618e7dd"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-500-normal-NLQVN6TL.woff2": [
+      "100644",
+      "09fdeab3f7f3f7d0d5ba243f1459f8b9b1df9abe"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-600-normal-FTSWGG55.woff": [
+      "100644",
+      "e61b50c40b5c06e3d12e4936f4cd7df8f7ad5a28"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/noto-sans-thai-thai-600-normal-Q4NFZHYH.woff2": [
+      "100644",
+      "32a6baa3bd52eb6184b4f79b6f72a2e8a1c5ad79"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-400-normal-MJX636HN.woff": [
+      "100644",
+      "eb2dc3005e3ddc5c4904f4fe47e044bfbbd9ccc6"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-400-normal-WPZHQ72E.woff2": [
+      "100644",
+      "2c401f59f92b53a2d43643a81a4dcb6a35c6947b"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-500-normal-5NAIAZI7.woff": [
+      "100644",
+      "4a072aa2329b707f5600098a7983c586843699ce"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-500-normal-PXR3PSSK.woff2": [
+      "100644",
+      "264ce74280afa9bce3b16dbdd77a42754ba52986"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-600-normal-7I4OGWZG.woff2": [
+      "100644",
+      "aa32da2408ba303cef78ff1c3dc36cbf88983ef1"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/assets/outfit-latin-600-normal-SAVBCENJ.woff": [
+      "100644",
+      "87b8e187f0431a4c523be6191b66e31c50e0359b"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/cnc-quotation.min.js": [
+      "100644",
+      "9c83def5963192f411fd82783b5e303e4c20ce8a"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/instant-quotation-viewer.mjs": [
+      "100644",
+      "7ce2b5a7a78d11f61610671739c904326a04c3ac"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/instant-quotation-workflow.mjs": [
+      "100644",
+      "b8afb53e98fb45b4446822383ac768d80c4431f0"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-about.css": [
+      "100644",
+      "4a83c1e2e01a0969cbd89765b59650b90351cd6c"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-about.js": [
+      "100644",
+      "ea21785daadb0827559d8a173c1b673e3f4db2ce"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-error.css": [
+      "100644",
+      "a3f908a270bfa026757822f1a16e7b3f28700715"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-error.js": [
+      "100644",
+      "074f8749bae9309d53ac7cd7922eb1f61d7c53b8"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-home.css": [
+      "100644",
+      "a6cea382dfd78cb28e67ecd0d4b926123f03d5f3"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-home.js": [
+      "100644",
+      "7ce06d8bcdba8f655d00b644231a025f0f9b8811"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-inquiry.css": [
+      "100644",
+      "345f27e33b6fa13a1d479abcfe422f6af160f712"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-inquiry.js": [
+      "100644",
+      "f01fdfa1a9bd6d2ca6a8b02fcbedee169d4eedf1"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-instant-quotation.css": [
+      "100644",
+      "d97d3c1562109cbd3c46f8e8a71349954101136b"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-instant-quotation.js": [
+      "100644",
+      "87c4ad266325551e781383f30a479430aa370c1b"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-knowledge.js": [
+      "100644",
+      "c9e336063aef412a51ece6322e236747093cbb27"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-member-order.js": [
+      "100644",
+      "cfaf2f9efd3f1eebe97820cfb2b92736e4609926"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-service-cnc.js": [
+      "100644",
+      "3b0439291f34abc9f1239cf572338751988c9961"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-service-finder.js": [
+      "100644",
+      "e30f4dd20ad5d188c4b1c5cbd886c3d3cb0e9c9c"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-service-finishing.js": [
+      "100644",
+      "1ee8bba32d823cc36873a9a2b1c5af6699af2c48"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-service-printing.js": [
+      "100644",
+      "c49827953022fdbaf068251cbf96d0fa188db2ba"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-service-scanning.js": [
+      "100644",
+      "4ced3c895ad858f741630aeae45bbea5db177c02"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-service-toc.js": [
+      "100644",
+      "3531777663d62f592f0ea396b4307875d0a1e272"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-services-index.css": [
+      "100644",
+      "c50f46ad8075f72e80663687cfc13f6ea9349a7c"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/route-services.css": [
+      "100644",
+      "50741b70e59f0322a484e769a908bd99c6d193ef"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/site.min.css": [
+      "100644",
+      "798f7d559eeb2da90c95dca929d71b3f6f680b07"
+    ],
+    "Legacy.Maliev.Web/wwwroot/dist/vendor.min.js": [
+      "100644",
+      "13743ebb61b209f28e1c5805c9a09b33e92055b3"
+    ]
+  }
+}

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Legacy.Maliev.Web.Pages;
 using Xunit;
@@ -142,6 +143,35 @@ public sealed class SeoBusinessContractParityTests
             Assert.DoesNotContain("กรุงเทพ", titleBoundary, StringComparison.Ordinal);
             Assert.DoesNotContain("นนทบุรี", titleBoundary, StringComparison.Ordinal);
         }
+    }
+
+    [Fact]
+    public void PublicSearchRouteCatalog_MatchesProductionVerifierInventoryAndCanonicalUrls()
+    {
+        var routes = PublicSearchRouteCatalog.Routes.ToArray();
+        var paths = routes.Select(route => route.Path).ToArray();
+
+        Assert.NotEmpty(routes);
+        Assert.Equal(paths.Length, paths.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.All(routes, route =>
+        {
+            Assert.StartsWith("/", route.Path, StringComparison.Ordinal);
+            Assert.True(route.Path == "/" || !route.Path.EndsWith("/", StringComparison.Ordinal));
+            Assert.StartsWith(CanonicalUrlPolicy.CanonicalOrigin, route.Location, StringComparison.Ordinal);
+            Assert.DoesNotContain("?", route.Location, StringComparison.Ordinal);
+        });
+
+        var verifier = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "tests", "ProductionSeoVerifier.psm1"));
+        var inventory = Regex.Match(
+            verifier,
+            @"function\s+Get-ExpectedPublicSearchPaths\s*\{.*?return\s+@\((?<paths>.*?)\)\s*\}",
+            RegexOptions.Singleline | RegexOptions.CultureInvariant);
+        Assert.True(inventory.Success, "The production SEO verifier must declare its public route inventory.");
+        var verifierPaths = Regex.Matches(inventory.Groups["paths"].Value, @"'(?<path>/[^']*)'", RegexOptions.CultureInvariant)
+            .Cast<Match>()
+            .Select(match => match.Groups["path"].Value)
+            .ToArray();
+        Assert.Equal(paths, verifierPaths);
     }
 
     [Fact]
