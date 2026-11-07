@@ -720,6 +720,9 @@ await Program.RunHostAsync(async () =>
     await app.RunAsync();
 }, preserveTestingException: () => preserveTestingException);
 
+/// <summary>
+/// Exposes the web application's entry-point type to integration hosts and compiled-assembly checks.
+/// </summary>
 public partial class Program
 {
     internal static void ResolveStartupEnvironment(ConfigurationManager configuration, string[]? args,

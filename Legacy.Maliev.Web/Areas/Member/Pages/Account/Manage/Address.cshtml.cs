@@ -9,6 +9,10 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Legacy.Maliev.Web.Areas.Member.Pages.Account.Manage;
 
+/// <summary>Loads and updates the signed-in customer's billing and shipping addresses using the available country catalogue.</summary>
+/// <param name="sessionManager">The server-side account session manager used to resolve identity and manage sign-in state.</param>
+/// <param name="customerClient">The typed customer client used by this page to read or update customer details.</param>
+/// <param name="countryClient">The typed country client supplying form country options.</param>
 [Authorize]
 public sealed class Address(
     IAccountSessionManager sessionManager,
@@ -19,53 +23,72 @@ public sealed class Address(
 
     private bool CountrySelectionReady { get; set; }
 
+    /// <summary>The optional building name for the customer's billing address, separate from street and locality fields.</summary>
     [BindProperty, StringLength(256)]
     public string? BillingBuilding { get; set; }
 
+    /// <summary>The required first street-address line used for customer billing.</summary>
     [BindProperty, StringLength(256)]
     public string BillingAddress1 { get; set; } = string.Empty;
 
+    /// <summary>The optional second street-address line used for customer billing.</summary>
     [BindProperty, StringLength(256)]
     public string? BillingAddress2 { get; set; }
 
+    /// <summary>The city or district used for customer billing.</summary>
     [BindProperty, StringLength(128)]
     public string? BillingCity { get; set; }
 
+    /// <summary>The state or province used for customer billing.</summary>
     [BindProperty, StringLength(128)]
     public string? BillingState { get; set; }
 
+    /// <summary>The postal code used for customer billing.</summary>
     [BindProperty, StringLength(50)]
     public string? BillingPostalCode { get; set; }
 
+    /// <summary>The billing country's identifier selected from the loaded country catalogue.</summary>
     [BindProperty]
     public int BillingCountryId { get; set; }
 
+    /// <summary>The optional building name for the shipping destination, separate from street and locality fields.</summary>
     [BindProperty, StringLength(256)]
     public string? ShippingBuilding { get; set; }
 
+    /// <summary>The first street-address line for the customer's shipping destination.</summary>
     [BindProperty, StringLength(256)]
     public string ShippingAddress1 { get; set; } = string.Empty;
 
+    /// <summary>The optional second street-address line for the customer's shipping destination.</summary>
     [BindProperty, StringLength(256)]
     public string? ShippingAddress2 { get; set; }
 
+    /// <summary>The city or district of the shipping destination.</summary>
     [BindProperty, StringLength(128)]
     public string? ShippingCity { get; set; }
 
+    /// <summary>The state or province of the shipping destination.</summary>
     [BindProperty, StringLength(128)]
     public string? ShippingState { get; set; }
 
+    /// <summary>The postal code of the shipping destination.</summary>
     [BindProperty, StringLength(50)]
     public string? ShippingPostalCode { get; set; }
 
+    /// <summary>The shipping country's identifier selected from the loaded country catalogue.</summary>
     [BindProperty]
     public int ShippingCountryId { get; set; }
 
+    /// <summary>The one-time outcome message carried across this workflow's post/redirect/get boundary.</summary>
     [TempData]
     public string? Notification { get; set; }
 
+    /// <summary>The billing and shipping fields, country options, and safe address-validation feedback.</summary>
     public MemberAddressDisplayModel DisplayModel { get; private set; } = MemberAddressDisplayModel.Empty;
 
+    /// <summary>Loads the owned address profile and country options for editing.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The populated address page or an authentication challenge.</returns>
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         var customerId = await sessionManager.GetCustomerDatabaseIdAsync(HttpContext, cancellationToken);
@@ -97,6 +120,9 @@ public sealed class Address(
         return Page();
     }
 
+    /// <summary>Validates both addresses against the current country catalogue and submits the owned address update.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A redirect after success, the form with safe errors, or an authentication challenge.</returns>
     public async Task<IActionResult> OnPostUpdateAddressAsync(CancellationToken cancellationToken)
     {
         var customerId = await sessionManager.GetCustomerDatabaseIdAsync(HttpContext, cancellationToken);
