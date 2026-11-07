@@ -1187,7 +1187,7 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     margin-bottom: 1rem;
 }
 
-.instant-quote__panel-header h3 {
+.instant-quote__panel-header :is(h2, h3) {
     margin: 0;
 }
 
