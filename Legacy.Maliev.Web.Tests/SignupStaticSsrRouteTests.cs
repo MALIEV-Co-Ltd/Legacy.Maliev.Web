@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -41,6 +42,30 @@ public sealed class SignupStaticSsrRouteTests : IClassFixture<TestingWebApplicat
 
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ThaiDescription_PreservesSourceCopyOnActiveAndFallbackRoutes(bool rendererEnabled)
+    {
+        await using var routeFactory = factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:Signup", rendererEnabled ? "true" : "false"));
+        using var client = routeFactory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        using var response = await client.GetAsync("/account/signup?culture=th");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("<meta name=\"description\" content=\"สมัครบัญชี MALIEV เพื่อจัดการใบเสนอราคา คำสั่งซื้อ ไฟล์งาน และโปรเจ็คผลิตของคุณออนไลน์อย่างปลอดภัย\"", source, StringComparison.Ordinal);
+        if (rendererEnabled)
+        {
+            Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        }
     }
 
     private static string FindRepositoryRoot()
