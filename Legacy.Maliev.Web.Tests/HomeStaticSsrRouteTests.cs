@@ -103,8 +103,9 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.Contains($"href=\"/Contact?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(culture == "th" ? "ดูบริการทั้งหมด" : "View all services", source, StringComparison.Ordinal);
         Assert.Contains("landing-service-card--injection", source, StringComparison.Ordinal);
-        Assert.Contains("injection-mold-and-parts-photo.webp", source, StringComparison.Ordinal);
-        Assert.Contains("width=\"4016\" height=\"4016\" loading=\"lazy\" decoding=\"async\"", source, StringComparison.Ordinal);
+        Assert.Contains("injection-mold-and-parts-photo-640.webp", source, StringComparison.Ordinal);
+        Assert.Contains("injection-mold-and-parts-photo-1280.webp 1280w", source, StringComparison.Ordinal);
+        Assert.Contains("width=\"640\" height=\"640\" loading=\"lazy\" decoding=\"async\"", source, StringComparison.Ordinal);
         Assert.Contains(culture == "th" ? "ชิ้นงานฉีดพลาสติกสีน้ำเงินพร้อมแม่พิมพ์" : "Blue injection-molded components beside their mold", source, StringComparison.Ordinal);
         Assert.Contains("landing-service-card--directory-link", source, StringComparison.Ordinal);
         Assert.Contains(

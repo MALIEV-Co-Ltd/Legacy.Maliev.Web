@@ -26,8 +26,9 @@ public sealed class HomeSourceShowcaseHttpTests(TestingWebApplicationFactory fac
         Assert.Contains("feature-cnc-title", html, StringComparison.Ordinal);
         Assert.Contains("feature-scan-title", html, StringComparison.Ordinal);
         Assert.Contains("feature-design-title", html, StringComparison.Ordinal);
-        Assert.Contains("/src/images/services/injection-molding/injection-mold-and-parts-photo.webp", html, StringComparison.Ordinal);
-        Assert.Contains("width=\"4016\" height=\"4016\"", html, StringComparison.Ordinal);
+        Assert.Contains("/src/images/services/injection-molding/injection-mold-and-parts-photo-640.webp", html, StringComparison.Ordinal);
+        Assert.Contains("injection-mold-and-parts-photo-1280.webp 1280w", html, StringComparison.Ordinal);
+        Assert.Contains("width=\"640\" height=\"640\"", html, StringComparison.Ordinal);
         Assert.Contains(culture == "th" ? "ชิ้นงานฉีดพลาสติกสีน้ำเงินพร้อมแม่พิมพ์" : "Blue injection-molded components beside their mold", html, StringComparison.Ordinal);
         Assert.Contains(culture == "th" ? "สูงสุด 1,000 ชิ้น น้ำหนักฉีดสูงสุด 50 กรัม" : "Up to 1,000 parts; shot weights up to 50 g.", html, StringComparison.Ordinal);
         Assert.Contains(culture == "th" ? "พลาสติกที่หลอมไม่เกิน 350 °C เสนอราคาหลังประเมิน" : "Plastics melting at up to 350 °C; project quote after review.", html, StringComparison.Ordinal);
@@ -44,15 +45,16 @@ public sealed class HomeSourceShowcaseHttpTests(TestingWebApplicationFactory fac
 public sealed class HomeSourceShowcaseBrowserTests(PublicContactBrowserFixture fixture)
 {
     [Theory]
-    [InlineData("en", 390)]
-    [InlineData("th", 390)]
-    [InlineData("en", 1440)]
-    [InlineData("th", 1440)]
-    public async Task Showcase_IsResponsiveAndFactsWorkWithReducedMotion(string culture, int width)
+    [InlineData("en", 390, 1, 640)]
+    [InlineData("th", 390, 2, 1280)]
+    [InlineData("en", 1440, 1, 640)]
+    [InlineData("th", 1440, 2, 1280)]
+    public async Task Showcase_IsResponsiveAndFactsWorkWithReducedMotion(string culture, int width, int scale, int expectedImageWidth)
     {
         await using var context = await fixture.Browser.NewContextAsync(new()
         {
             ViewportSize = new() { Width = width, Height = 900 },
+            DeviceScaleFactor = scale,
             ReducedMotion = ReducedMotion.Reduce,
         });
         await context.RouteAsync("**/*", route => new Uri(route.Request.Url).GetLeftPart(UriPartial.Authority)
@@ -83,12 +85,13 @@ public sealed class HomeSourceShowcaseBrowserTests(PublicContactBrowserFixture f
         var injectionCard = page.Locator(".landing-service-card--injection");
         await injectionCard.ScrollIntoViewIfNeededAsync();
         var injectionImage = injectionCard.Locator("img");
-        Assert.EndsWith("/injection-mold-and-parts-photo.webp", await injectionImage.GetAttributeAsync("src"), StringComparison.Ordinal);
+        Assert.EndsWith("/injection-mold-and-parts-photo-640.webp", await injectionImage.GetAttributeAsync("src"), StringComparison.Ordinal);
         Assert.Equal(culture == "th" ? "ชิ้นงานฉีดพลาสติกสีน้ำเงินพร้อมแม่พิมพ์" : "Blue injection-molded components beside their mold", await injectionImage.GetAttributeAsync("alt"));
         await injectionImage.ScrollIntoViewIfNeededAsync();
         await page.WaitForFunctionAsync("() => { const image = document.querySelector('.landing-service-card--injection img'); return image?.complete && image.naturalWidth > 0; }");
         await injectionImage.EvaluateAsync("image => image.decode()");
-        Assert.True(await injectionImage.EvaluateAsync<bool>("image => image.naturalWidth === 4016 && image.naturalHeight === 4016"));
+        Assert.EndsWith($"/injection-mold-and-parts-photo-{expectedImageWidth}.webp", await injectionImage.EvaluateAsync<string>("image => image.currentSrc"), StringComparison.Ordinal);
+        Assert.True(await injectionImage.EvaluateAsync<bool>("image => image.naturalWidth > 0 && image.naturalWidth === image.naturalHeight"));
         Assert.Equal("50% 50%", await injectionImage.EvaluateAsync<string>("image => getComputedStyle(image).objectPosition"));
         Assert.Equal(2, await injectionCard.Locator(".landing-service-facts > div").CountAsync());
         Assert.Equal($"/Services/Low-Volume-Injection-Molding?culture={culture}", await injectionCard.Locator("a").GetAttributeAsync("href"));
