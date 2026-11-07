@@ -64,8 +64,8 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         "พัฒนาต้นแบบและวิศวกรรมย้อนกลับ | MALIEV",
         "จากไอเดียและชิ้นงานตัวอย่าง สู่แบบ CAD และต้นแบบที่ใช้งานได้ ด้วยงานออกแบบ 3 มิติ CNC, 3D Printing, 3D Scanning และการขึ้นรูปที่เหมาะกับงาน โดย MALIEV นนทบุรี",
         "พัฒนาต้นแบบ, วิศวกรรมย้อนกลับ, ออกแบบ 3 มิติ, CNC, พิมพ์ 3 มิติ, สแกน 3 มิติ, ชิ้นส่วนทดแทน",
-        "ชิ้นส่วนสั่งผลิต",
-        "จาก CAD ถึงงานประกอบ",
+        "บริการผลิตชิ้นงานตามแบบ",
+        "จากไอเดียสู่ชิ้นงานที่ใช้งานได้จริง",
         "บริการของเรา",
         "ขั้นตอนการสั่งงาน",
         "ทำไมต้องเลือก MALIEV",
@@ -103,9 +103,9 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
         Assert.Contains($"href=\"/Contact?culture={culture}\"", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(culture == "th" ? "ดูบริการทั้งหมด" : "View all services", source, StringComparison.Ordinal);
         Assert.Contains("landing-service-card--injection", source, StringComparison.Ordinal);
-        Assert.Contains("pp-injection-molded-component.webp", source, StringComparison.Ordinal);
-        Assert.Contains("width=\"1700\" height=\"925\" loading=\"lazy\" decoding=\"async\"", source, StringComparison.Ordinal);
-        Assert.Contains(culture == "th" ? "ชิ้นงานฉีดโพลีโพรพิลีนสีน้ำเงิน" : "Blue polypropylene injection-molded mounting component", source, StringComparison.Ordinal);
+        Assert.Contains("injection-mold-and-parts-photo.webp", source, StringComparison.Ordinal);
+        Assert.Contains("width=\"4016\" height=\"4016\" loading=\"lazy\" decoding=\"async\"", source, StringComparison.Ordinal);
+        Assert.Contains(culture == "th" ? "ชิ้นงานฉีดพลาสติกสีน้ำเงินพร้อมแม่พิมพ์" : "Blue injection-molded components beside their mold", source, StringComparison.Ordinal);
         Assert.Contains("landing-service-card--directory-link", source, StringComparison.Ordinal);
         Assert.Contains(
             culture == "th"
@@ -120,8 +120,6 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
             source,
             StringComparison.Ordinal);
         Assert.Contains("profile-hybrid-gripper-cutout.webp", source, StringComparison.Ordinal);
-        Assert.Contains("camera-bracket-deployment.webp", source, StringComparison.Ordinal);
-        Assert.Contains("camera-bracket-production-v5.webp", source, StringComparison.Ordinal);
         Assert.Contains("width=\"1200\" height=\"800\" fetchpriority=\"high\" loading=\"eager\"", source, StringComparison.Ordinal);
         Assert.Contains("rel=\"preload\" as=\"image\" href=\"/src/images/landing/profile-hybrid-gripper-cutout.webp\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-website-structured-data\"", source, StringComparison.Ordinal);
@@ -331,11 +329,11 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
             Assert.Contains("data-migration-component=\"service-breadcrumb\"", services, StringComparison.Ordinal);
         }
 
-        // The accepted carousel replaces the old secondary Services CTA with scene-specific destinations.
+        // The source assembly default retains its culture-specific destinations.
         var scenes = Regex.Matches(home,
             "<section\\b(?=[^>]*\\bclass=\"home-hero-option hero-(?<scene>assembly|partnership|journey)\")[^>]*>(?<body>.*?)</section>",
             RegexOptions.Singleline | RegexOptions.CultureInvariant).Cast<Match>().ToArray();
-        Assert.Equal(new[] { "assembly", "partnership", "journey" }, scenes.Select(scene => scene.Groups["scene"].Value));
+        Assert.Equal(new[] { "assembly" }, scenes.Select(scene => scene.Groups["scene"].Value));
         foreach (var scene in scenes)
         {
             var paths = scene.Groups["scene"].Value == "assembly"

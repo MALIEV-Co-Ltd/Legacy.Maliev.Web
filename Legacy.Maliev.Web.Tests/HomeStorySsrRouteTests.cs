@@ -12,7 +12,7 @@ public sealed class HomeStorySsrRouteTests(StartupDataProtectionMigrationFixture
     [InlineData("th", true)]
     [InlineData("en", false)]
     [InlineData("th", false)]
-    public async Task HomeStories_RenderThreeCrawlableScenesAndCulturePreservingLinks(string culture, bool active)
+    public async Task HomeStories_RenderSourceAssemblyAndCulturePreservingLinks(string culture, bool active)
     {
         await using var ownedHost = fixture.CreateFactory("Production");
         await using var host = ownedHost.WithWebHostBuilder(builder => builder
@@ -26,18 +26,10 @@ public sealed class HomeStorySsrRouteTests(StartupDataProtectionMigrationFixture
         var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Single(Regex.Matches(html, "<h1\\b", RegexOptions.IgnoreCase).Cast<Match>());
-        Assert.Equal(3, Regex.Matches(html, "data-hero-scene=").Count);
-        var assembly = html.IndexOf("data-hero-scene=\"assembly\"", StringComparison.Ordinal);
-        var partnership = html.IndexOf("data-hero-scene=\"partnership\"", StringComparison.Ordinal);
-        var journey = html.IndexOf("data-hero-scene=\"journey\"", StringComparison.Ordinal);
-        Assert.True(assembly >= 0 && partnership > assembly && journey > partnership);
-        Assert.Contains("aria-live=\"off\"", html, StringComparison.Ordinal);
-        var controls = Regex.Match(html, "<div[^>]*data-hero-controls[^>]*>", RegexOptions.CultureInvariant);
-        Assert.True(controls.Success);
-        Assert.Matches(@"\bhidden(?:\s|=|>)", controls.Value);
-        Assert.Contains("data-hero-toggle", html, StringComparison.Ordinal);
-        Assert.Contains("aria-controls=\"home-hero-panels\"", html, StringComparison.Ordinal);
-        Assert.Contains(culture == "th" ? "หยุดเปลี่ยนสไลด์อัตโนมัติ" : "Pause automatic slides", html, StringComparison.Ordinal);
+        Assert.Contains("class=\"home-hero-option hero-assembly\"", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-home-hero-carousel", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("hero-partnership", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("hero-journey", html, StringComparison.Ordinal);
         Assert.DoesNotContain("Hero previews", html, StringComparison.Ordinal);
         foreach (var path in new[] { "/Contact", "/About", "/InstantQuotation/3D-Printing", "/Services/Index" })
         {
@@ -71,10 +63,6 @@ public sealed class HomeStorySsrRouteTests(StartupDataProtectionMigrationFixture
             Assert.Matches("<path[^>]*data-tech-leader=\\\"" + key + "\\\"[^>]*pathLength=\\\"1\\\"", html);
             Assert.Matches("<circle[^>]*data-tech-point=\\\"" + key + "\\\"", html);
         }
-        Assert.Contains("camera-bracket-sketch-v6.webp", html, StringComparison.Ordinal);
-        Assert.Contains("camera-bracket-cad-v5.webp", html, StringComparison.Ordinal);
-        Assert.Contains("camera-bracket-prototypes-v4.webp", html, StringComparison.Ordinal);
-        Assert.Contains("camera-bracket-production-v5.webp", html, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", html, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -97,12 +85,13 @@ public sealed class HomeStorySsrRouteTests(StartupDataProtectionMigrationFixture
     [Theory]
     [InlineData("unknown", "1")]
     [InlineData("partnership", "0")]
-    public async Task InvalidDevelopmentPreview_FallsBackToProductionCarousel(string hero, string preview)
+    public async Task InvalidDevelopmentPreview_FallsBackToProductionAssembly(string hero, string preview)
     {
         await using var host = fixture.CreateFactory("Development");
         using var client = host.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
         var html = await client.GetStringAsync($"/?culture=en&hero={hero}&preview={preview}");
-        Assert.Contains("data-home-hero-carousel", html, StringComparison.Ordinal);
+        Assert.Contains("hero-assembly", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("data-home-hero-carousel", html, StringComparison.Ordinal);
         Assert.DoesNotContain("Hero previews", html, StringComparison.Ordinal);
     }
 }
