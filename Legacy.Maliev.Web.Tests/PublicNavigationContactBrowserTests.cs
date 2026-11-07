@@ -6,6 +6,23 @@ namespace Legacy.Maliev.Web.Tests;
 public sealed class PublicNavigationContactBrowserTests(PublicContactBrowserFixture fixture)
 {
     [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
+    public async Task LoginSubmit_RemainsDistinctFromHiddenLanguageOptions(string culture)
+    {
+        await using var context = await fixture.Browser.NewContextAsync();
+        await context.RouteAsync("**/*", route => new Uri(route.Request.Url).GetLeftPart(UriPartial.Authority)
+            == fixture.Origin.GetLeftPart(UriPartial.Authority) ? route.ContinueAsync() : route.AbortAsync());
+        var page = await context.NewPageAsync();
+        await page.GotoAsync(new Uri(fixture.Origin, $"/Account/Login?culture={culture}").ToString());
+        var login = page.Locator("#customer-login button[type=submit]");
+        await Assertions.Expect(login).ToHaveCountAsync(1);
+        await Assertions.Expect(login).ToBeVisibleAsync();
+        Assert.True(await page.Locator(".maliev-language-option[type=submit]").CountAsync() > 0);
+        await Assertions.Expect(page.Locator(".maliev-language-option[type=submit]").First).ToBeHiddenAsync();
+    }
+
+    [Theory]
     [InlineData("en", 1600, "Contact")]
     [InlineData("th", 1600, "ติดต่อเรา")]
     [InlineData("en", 390, "Contact")]
