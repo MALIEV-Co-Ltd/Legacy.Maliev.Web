@@ -23,6 +23,7 @@ public sealed class ServicePresentationCssParityTests
         Assert.Contains(".service-location-section .service-actions", services, StringComparison.Ordinal);
         Assert.Contains(".injection-gallery-grid", services, StringComparison.Ordinal);
         Assert.Contains(".injection-volume-grid", services, StringComparison.Ordinal);
+        Assert.Contains(".injection-hero-media { position: relative; inset: auto; grid-area: 1 / 1; align-self: stretch; z-index: 0; width: 100%; height: 100%; aspect-ratio: auto;", services, StringComparison.Ordinal);
 
         Assert.Contains(".service-material-controls {", services, StringComparison.Ordinal);
         Assert.Contains(".service-material-compare {", services, StringComparison.Ordinal);
