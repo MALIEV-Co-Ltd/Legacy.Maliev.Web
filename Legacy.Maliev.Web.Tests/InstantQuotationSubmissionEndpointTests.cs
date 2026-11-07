@@ -422,6 +422,43 @@ public sealed partial class InstantQuotationSubmissionEndpointTests : IClassFixt
     }
 
     [Fact]
+    public async Task VerifiedCompletedFiles_EmitCompletionOnceAfterRedirect()
+    {
+        var result = Completed(724);
+        result = result with { FilesLinkedVerified = true };
+        var service = new RecordingSubmissionService(result);
+        await using var application = CreateFactory(service);
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
+
+        using var post = await client.PostAsync(SubmitRoute, CustomerForm(new() { ["__RequestVerificationToken"] = token }));
+        var first = WebUtility.HtmlDecode(await client.GetStringAsync("/InstantQuotation/3D-Printing?culture=en"));
+        var second = WebUtility.HtmlDecode(await client.GetStringAsync("/InstantQuotation/3D-Printing?culture=en"));
+
+        Assert.Equal(HttpStatusCode.Redirect, post.StatusCode);
+        Assert.Contains("{\"event\":\"file_upload_complete\",\"service\":\"3d_printing\",\"transaction_id\":\"request-724\"}", first, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"event\":\"file_upload_complete\"", second, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(InstantQuotationSubmissionOutcome.Completed, false, "request-724")]
+    [InlineData(InstantQuotationSubmissionOutcome.Completed, true, "request-725")]
+    [InlineData(InstantQuotationSubmissionOutcome.Partial, true, "request-724")]
+    [InlineData(InstantQuotationSubmissionOutcome.Persisted, true, "request-724")]
+    public async Task UnverifiedOrPartialFiles_DoNotEmitCompletion(
+        InstantQuotationSubmissionOutcome outcome, bool proof, string transactionId)
+    {
+        var result = Completed(724) with { Outcome = outcome, FilesLinkedVerified = proof, TransactionId = transactionId };
+        await using var application = CreateFactory(new RecordingSubmissionService(result));
+        using var client = CreateClient(application);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
+        using var post = await client.PostAsync(SubmitRoute, CustomerForm(new() { ["__RequestVerificationToken"] = token }));
+        var page = WebUtility.HtmlDecode(await client.GetStringAsync("/InstantQuotation/3D-Printing?culture=en"));
+        Assert.Equal(HttpStatusCode.Redirect, post.StatusCode);
+        Assert.DoesNotContain("\"event\":\"file_upload_complete\"", page, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task RejectedPost_StoresOnlyTheControlledProblemCategory()
     {
         var service = new RecordingSubmissionService(new(

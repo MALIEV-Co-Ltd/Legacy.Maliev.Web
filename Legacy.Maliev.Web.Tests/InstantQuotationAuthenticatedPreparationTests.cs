@@ -4,6 +4,37 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class InstantQuotationAuthenticatedPreparationTests
 {
+    [Theory]
+    [InlineData("matched", true)]
+    [InlineData("missing", false)]
+    [InlineData("mismatched", false)]
+    [InlineData("partial", false)]
+    [InlineData("wrong-submission", false)]
+    public async Task DurableReplay_PropagatesCompletionProofOnlyForMatchedFiles(string scenario, bool proof)
+    {
+        var session = InstantQuotationSubmissionTests.ProfileContractSession("session");
+        var file = InstantQuotationSubmissionTests.SuccessfulFinalization().Files.Single();
+        var files = scenario switch
+        {
+            "missing" => null,
+            "mismatched" => new[] { file with { Sha256 = new string('b', 64) } },
+            _ => new[] { file },
+        };
+        var status = scenario == "partial" ? InstantQuotationSubmissionCheckpointStatus.FilesLinked
+            : InstantQuotationSubmissionCheckpointStatus.Completed;
+        var checkpoint = new InstantQuotationSubmissionCheckpoint(scenario == "wrong-submission" ? new string('b', 64) : session.SubmissionId, 717, status, "digest", files,
+            TransactionId: "request-717");
+        var profiles = new Profiles();
+        var service = new InstantQuotationAuthenticatedPreparationService(new Sessions(session), new Store(checkpoint), profiles, new Countries());
+
+        var prepared = await service.PrepareAsync("session", "customer:7", Posted(), null, default);
+
+        var result = Assert.IsType<InstantQuotationSubmissionResult>(prepared.TerminalResult);
+        Assert.Equal(scenario == "partial" ? InstantQuotationSubmissionOutcome.Partial : InstantQuotationSubmissionOutcome.Completed, result.Outcome);
+        Assert.Equal(proof, result.FilesLinkedVerified);
+        Assert.Equal(0, profiles.Reads);
+    }
+
     [Fact]
     public async Task FreshPost_RereadsOwnerGraphAndMergesBeforeBuildingTypedOperation()
     {
@@ -126,10 +157,10 @@ public sealed class InstantQuotationAuthenticatedPreparationTests
         public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken cancellationToken) =>
             Task.FromResult(new ServiceResponse<IReadOnlyList<Country>>([new(66, "Thailand", null, null, null, null, null, null)], true));
     }
-    private sealed class Sessions : IInstantQuotationSessionStore
+    private sealed class Sessions(InstantQuotationSessionState? session = null) : IInstantQuotationSessionStore
     {
         public Task<InstantQuotationSessionState?> GetAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken) =>
-            Task.FromResult<InstantQuotationSessionState?>(new(sessionId, new string('a', 64), new([]), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow));
+            Task.FromResult<InstantQuotationSessionState?>(session ?? new(sessionId, new string('a', 64), new([]), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow));
         public Task<InstantQuotationSessionState> CreateAsync(string? ownerIdentity, InstantQuotationOrderState requestState, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<bool> PutAsync(InstantQuotationSessionState session, string? ownerIdentity, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<bool> RemoveAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken) => throw new NotSupportedException();

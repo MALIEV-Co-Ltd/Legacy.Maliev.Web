@@ -78,6 +78,12 @@ public sealed record PublicGoogleTagManagerDisplayModel(
             }
         }
 
+        if (LeadAnalyticsEventQueue.TryConsumeFileCompletion(tempData, out var transactionId))
+        {
+            var completion = new { @event = "file_upload_complete", service = "3d_printing", transaction_id = transactionId };
+            scripts.Add($"window.malievAnalytics.emit({JsonSerializer.Serialize(completion)});");
+        }
+
         if (CustomerJourneyAnalyticsEventQueue.TryConsume(tempData, out var journeyEvent)
             && journeyEvent is not null)
         {
