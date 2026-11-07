@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Infrastructure;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -74,6 +75,38 @@ public sealed class CustomerProfileClientTests
         Assert.True(result.CustomerCreated);
         Assert.True(result.ServiceAvailable);
         Assert.True(result.Authorized);
+    }
+
+    [Fact]
+    public async Task ProvisionInstantQuotation_ServerFailureDoesNotExposePrivateResponse()
+    {
+        const string privateMarker = "private-response-canary@example.test";
+        var handler = new RecordingHandler(request => Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)
+        {
+            Content = new StringContent(privateMarker, Encoding.UTF8, "text/plain")
+        }));
+        var logger = new RecordingLogger();
+        var client = new CustomerProfileClient(
+            new NamedHttpClientFactory(new HttpClient(handler) { BaseAddress = new Uri("http://customers/") }),
+            new StubTokenProvider(), logger);
+        var customer = new InstantQuotationCustomerSubmission(
+            "Synthetic", "Customer", "customer@example.test", "000", "TH", null, null, null,
+            "000", null, "Synthetic Road", null, "City", "Province", "00000");
+
+        var result = await client.ProvisionInstantQuotationAsync(customer, 218, 218, CancellationToken.None);
+
+        Assert.Equal(new InstantQuotationCustomerProvisionResult(null, false, false, true), result);
+        Assert.DoesNotContain(logger.Messages, message => message.Contains(privateMarker, StringComparison.Ordinal)
+            || message.Contains(customer.Email, StringComparison.Ordinal));
+    }
+
+    private sealed class RecordingLogger : ILogger<CustomerProfileClient>
+    {
+        public List<string> Messages { get; } = [];
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter) => Messages.Add(formatter(state, exception) + exception);
     }
 
     private sealed class StubTokenProvider : IServiceAccessTokenProvider

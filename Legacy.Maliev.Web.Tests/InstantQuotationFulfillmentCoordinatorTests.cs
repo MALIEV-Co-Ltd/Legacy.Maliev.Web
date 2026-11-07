@@ -139,6 +139,30 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
     }
 
     [Fact]
+    public async Task Fulfill_CustomerServiceFailureDoesNotAdvanceOrStartDownstreamWork()
+    {
+        var checkpoint = FilesLinkedCheckpoint();
+        var lease = new RecordingLease(checkpoint);
+        var client = new RecordingClient { CustomerServiceAvailable = false };
+
+        var placeholderQuote = new InstantQuotationOrderQuote([], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        var result = await new InstantQuotationFulfillmentCoordinator(client).FulfillAsync(
+            Session(Part(1)), placeholderQuote, null, Customer(), lease, checkpoint, CancellationToken.None);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Partial, result.Outcome);
+        Assert.Equal(InstantQuotationProblemCategory.DependencyUnavailable, result.ProblemCategory);
+        Assert.Single(client.CustomerCalls);
+        Assert.Same(checkpoint, lease.Checkpoint);
+        Assert.Empty(lease.Writes);
+        Assert.Empty(client.OrderPartIndexes);
+        Assert.Empty(client.IdentityPasswords);
+        Assert.Empty(client.WelcomePreparationTokens);
+        Assert.Empty(client.WelcomeOperationIds);
+        Assert.Equal(0, client.QuotationPreparations);
+        Assert.Empty(client.QuotationNotifications);
+    }
+
+    [Fact]
     public async Task Fulfill_GuestSubmission_CheckpointsEveryBoundaryAndCreatesOneOrderPerPart()
     {
         var checkpoint = FilesLinkedCheckpoint();
@@ -435,6 +459,7 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
         public List<string> WelcomePreparationTokens { get; } = [];
         public List<string> SentConfirmationTokens { get; } = [];
         public List<Guid> WelcomeOperationIds { get; } = [];
+        public bool CustomerServiceAvailable { get; set; } = true;
         public bool IdentityServiceAvailable { get; set; } = true;
         public bool WelcomeServiceAvailable { get; set; } = true;
         public int? UnavailableOrderPartIndex { get; set; }
@@ -474,7 +499,9 @@ public sealed class InstantQuotationFulfillmentCoordinatorTests
             CancellationToken cancellationToken)
         {
             CustomerCalls.Add(ownerIdentity);
-            return Task.FromResult(new InstantQuotationCustomerProvisionResult(71, true, true, true));
+            return Task.FromResult(CustomerServiceAvailable
+                ? new InstantQuotationCustomerProvisionResult(71, true, true, true)
+                : new InstantQuotationCustomerProvisionResult(null, false, false, true));
         }
 
         public Task<InstantQuotationIdentityProvisionResult> ProvisionIdentityAsync(
