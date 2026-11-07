@@ -182,6 +182,12 @@ public sealed class MeasurementLifecycleBrowserTests(MeasurementLifecycleBrowser
 
         Assert.Equal(1, await CountConsentUpdatesAsync(session.Page, "granted"));
         Assert.Equal(0, await session.Page.Locator("#cookieConsent").CountAsync());
+        Assert.True(await session.Page.EvaluateAsync<bool>(@"() => {
+            const grant = dataLayer.findIndex(item => item[0] === 'consent' && item[1] === 'update' && item[2].analytics_storage === 'granted');
+            const lead = dataLayer.findIndex(item => item.event === 'maliev_lead_submitted');
+            const conversion = dataLayer.findIndex(item => item.event === 'generate_lead');
+            return grant >= 0 && grant < lead && lead < conversion;
+        }"));
         var eventsJson = await session.Page.EvaluateAsync<string>(
             "() => JSON.stringify(dataLayer.filter(item => item.event === 'maliev_lead_submitted' || item.event === 'generate_lead'))");
         using var events = JsonDocument.Parse(eventsJson);
