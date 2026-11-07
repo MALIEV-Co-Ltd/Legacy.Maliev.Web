@@ -202,7 +202,7 @@ public sealed class InstantQuotationResinPresentationTests
             return (await renderer.RenderComponentAsync<InstantQuotationReview>(parameters)).ToHtmlString();
         });
 
-        var heading = Assert.Single(Regex.Matches(html, "<h3\\b[^>]*>([\\s\\S]*?)</h3>").Cast<Match>());
+        var heading = Assert.Single(Regex.Matches(html, "<h2\\b[^>]*>([\\s\\S]*?)</h2>").Cast<Match>());
         Assert.Contains("id=\"instant-quote-review-heading\"", heading.Value, StringComparison.Ordinal);
         Assert.Equal(culture == "th" ? "ตรวจสอบรายการ" : "Review order items",
             WebUtility.HtmlDecode(heading.Groups[1].Value));
