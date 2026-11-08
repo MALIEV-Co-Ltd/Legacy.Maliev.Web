@@ -19,4 +19,6 @@
   <data name="Account" xml:space="preserve"><value>บัญชีส่วนตัว</value></data>
   <data name="Logout" xml:space="preserve"><value>ออกจากระบบ</value></data>
   <data name="Login" xml:space="preserve"><value>เข้าสู่ระบบ</value></data>
+  <data name="Select language" xml:space="preserve"><value>เลือกภาษา</value></data>
+  <data name="Go" xml:space="preserve"><value>ไป</value></data>
 </root>

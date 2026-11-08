@@ -23,7 +23,7 @@
 <HeadContent>
     <meta name="description" content="@description" />
     <meta name="keywords" content="@keywords" />
-    <link rel="preload" as="image" href="/src/images/services/scanning/scanning-hero.webp" imagesrcset="/src/images/services/scanning/scanning-hero-640.webp 640w, /src/images/services/scanning/scanning-hero-768.webp 768w, /src/images/services/scanning/scanning-hero-960.webp 960w, /src/images/services/scanning/scanning-hero.webp 1672w" imagesizes="100vw" fetchpriority="high" />
+    <link rel="preload" as="image" href="/src/images/services/hero-illustrations/scanning-hero-raptor-x-unbranded.webp" imagesrcset="/src/images/services/hero-illustrations/scanning-hero-raptor-x-unbranded-640.webp 640w, /src/images/services/hero-illustrations/scanning-hero-raptor-x-unbranded-768.webp 768w, /src/images/services/hero-illustrations/scanning-hero-raptor-x-unbranded-960.webp 960w, /src/images/services/hero-illustrations/scanning-hero-raptor-x-unbranded.webp 1536w" imagesizes="(max-width: 767px) 100vw, 50vw" fetchpriority="high" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
     <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
     <PublicServiceStructuredData Model="@(PublicServiceStructuredDataDisplayModel.Create("3D Scanning"))" />
@@ -46,12 +46,12 @@
                     T("How much does 3D scanning cost?", "สแกน 3D ราคาเท่าไร?"),
                     T(
                         "Cost depends on object size and complexity, preparation, scan positions, site access, travel, cleanup, alignment, and whether the deliverable is a mesh, reverse-engineered CAD, or deviation report.",
-                        "ราคาขึ้นกับขนาดและความซับซ้อน การเตรียม จำนวนตำแหน่งสแกน การเข้าพื้นที่ การเดินทาง การเก็บเมช การจัดแนว และผลลัพธ์ว่าเป็นเมช CAD หรือรายงาน")),
+                        "ราคาขึ้นกับขนาดและความซับซ้อน การเตรียม จำนวนตำแหน่งสแกน การเข้าพื้นที่ การเดินทาง การเก็บ mesh การจัดแนว และผลลัพธ์ว่าเป็น mesh CAD หรือรายงาน")),
                 CreateQuestion(
                     T("How long does 3D scanning take?", "งานสแกน 3D ใช้เวลานานเท่าไร?"),
                     T(
                         "Simple scanning work can be completed within the same day. Lead time increases with part complexity, surface preparation, the number of scan positions, mesh cleanup, reverse engineering, inspection, and reporting requirements.",
-                        "งานสแกนที่ไม่ซับซ้อนอาจเสร็จภายในวันเดียว ระยะเวลาจะเพิ่มตามความซับซ้อนของชิ้นงาน การเตรียมผิว จำนวนตำแหน่งสแกน การเก็บเมช งาน Reverse Engineering การตรวจสอบ และรูปแบบรายงาน")),
+                        "งานสแกนที่ไม่ซับซ้อนอาจเสร็จภายในวันเดียว ระยะเวลาจะเพิ่มตามความซับซ้อนของชิ้นงาน การเตรียมผิว จำนวนตำแหน่งสแกน การเก็บ mesh งาน Reverse Engineering การตรวจสอบ และรูปแบบรายงาน")),
                 CreateQuestion(
                     T("Which part should I bring for scanning, and can broken parts be repaired digitally?", "ควรนำชิ้นงานสภาพใดมาสแกน และซ่อมชิ้นงานที่แตกในโมเดลได้หรือไม่?"),
                     T(
@@ -71,7 +71,7 @@
                     T("Can I order only 3D scanning and receive a DWG?", "ถ้าต้องการแค่สแกน 3D กับไฟล์ DWG ต้องทำอย่างไร?"),
                     T(
                         "A scan-only scope normally delivers a triangular mesh such as STL. DWG is a 2D engineering drawing, so it requires an additional reverse-engineering and drafting scope. There is no fixed reduction because CAD/DWG effort depends on the geometry and drawing requirements; we can quote scan-only and CAD/DWG as separate line items.",
-                        "งานสแกนอย่างเดียวโดยทั่วไปส่งมอบเป็นเมชสามเหลี่ยม เช่น STL ส่วน DWG เป็นแบบเขียน 2D จึงต้องมีขอบเขตงาน Reverse Engineering และเขียนแบบเพิ่ม ไม่มีตัวเลขลดราคาแบบตายตัว เพราะงาน CAD/DWG ขึ้นกับรูปทรงและรายละเอียดของแบบ เราสามารถแยกราคาเป็นงานสแกนอย่างเดียวกับงาน CAD/DWG ได้")),
+                        "งานสแกนอย่างเดียวโดยทั่วไปส่งมอบเป็น mesh สามเหลี่ยม เช่น STL ส่วน DWG เป็นแบบเขียน 2D จึงต้องมีขอบเขตงาน Reverse Engineering และเขียนแบบเพิ่ม ไม่มีตัวเลขลดราคาแบบตายตัว เพราะงาน CAD/DWG ขึ้นกับรูปทรงและรายละเอียดของแบบ เราสามารถแยกราคาเป็นงานสแกนอย่างเดียวกับงาน CAD/DWG ได้")),
                 CreateQuestion(
                     T("What is the scanner's volumetric accuracy?", "ความแม่นยำเชิงปริมาตรของเครื่องสแกนเท่าไร?"),
                     T(
@@ -91,7 +91,7 @@
                     T("Is an STL file editable CAD?", "ไฟล์ STL เป็น CAD ที่แก้ไขได้หรือไม่?"),
                     T(
                         "An STL is normally a triangular surface mesh. It can be measured and edited with mesh tools, but it does not contain the parametric features, sketches, dimensions, and design intent of a native CAD model. Reverse engineering adds that reconstruction work.",
-                        "STL เป็นผิวสามเหลี่ยม สามารถวัดและแก้ด้วยเครื่องมือเมช แต่ไม่มีฟีเจอร์พาราเมตริก สเก็ตช์ ขนาด และเจตนาการออกแบบแบบ CAD งาน Reverse Engineering คือการสร้างข้อมูลเหล่านี้ใหม่")),
+                        "STL เป็นผิวสามเหลี่ยม สามารถวัดและแก้ด้วยเครื่องมือ mesh แต่ไม่มีฟีเจอร์พาราเมตริก สเก็ตช์ ขนาด และเจตนาการออกแบบแบบ CAD งาน Reverse Engineering คือการสร้างข้อมูลเหล่านี้ใหม่")),
                 CreateQuestion(
                     T("Does reverse engineering recover the original CAD exactly?", "Reverse Engineering กู้ CAD ต้นฉบับได้เหมือนเดิมหรือไม่?"),
                     T(

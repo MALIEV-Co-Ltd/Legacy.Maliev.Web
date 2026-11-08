@@ -21,7 +21,7 @@
 <HeadContent>
     <meta name="description" content="@description" />
     <meta name="keywords" content="@T("3D design service Thailand, CAD modeling, product design, DFM, reverse engineering design", "รับออกแบบ 3 มิติ, เขียนแบบ CAD, ออกแบบผลิตภัณฑ์, DFM, reverse engineering")" />
-    <link rel="preload" as="image" href="/src/images/services/design/design-workflow.webp" imagesrcset="/src/images/services/design/design-workflow-640.webp 640w, /src/images/services/design/design-workflow-768.webp 768w, /src/images/services/design/design-workflow-960.webp 960w, /src/images/services/design/design-workflow.webp 1536w" imagesizes="100vw" fetchpriority="high" />
+    <link rel="preload" as="image" href="/src/images/services/hero-illustrations/design-hero-light.webp" imagesrcset="/src/images/services/hero-illustrations/design-hero-light-640.webp 640w, /src/images/services/hero-illustrations/design-hero-light-768.webp 768w, /src/images/services/hero-illustrations/design-hero-light-960.webp 960w, /src/images/services/hero-illustrations/design-hero-light.webp 1774w" imagesizes="(max-width: 767px) 100vw, 50vw" fetchpriority="high" />
     <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
     <PublicDocumentLinks Model="@(PublicDocumentLinksDisplayModel.Create(context))" />
     <PublicServiceStructuredData Model="@(PublicServiceStructuredDataDisplayModel.Create("3D Design"))" />
@@ -45,7 +45,7 @@
             {
                 CreateQuestion(
                     T("Can you create a CAD model from a sketch or photo?", "สามารถสร้างแบบ CAD จากภาพร่างหรือรูปถ่ายได้หรือไม่?"),
-                    T("Yes. Send the sketch, reference photos, dimensions, sample part, or scanned mesh. We confirm what can be measured and which design assumptions must be agreed before modeling.", "ได้ กรุณาส่งภาพร่าง รูปถ่ายอ้างอิง ขนาด ชิ้นงานตัวอย่าง หรือเมชจากการสแกน เราจะยืนยันข้อมูลที่วัดได้และสมมติฐานที่ต้องตกลงก่อนขึ้นแบบ")),
+                    T("Yes. Send the sketch, reference photos, dimensions, sample part, or scanned mesh. We confirm what can be measured and which design assumptions must be agreed before modeling.", "ได้ กรุณาส่งภาพร่าง รูปถ่ายอ้างอิง ขนาด ชิ้นงานตัวอย่าง หรือ mesh จากการสแกน เราจะยืนยันข้อมูลที่วัดได้และสมมติฐานที่ต้องตกลงก่อนขึ้นแบบ")),
                 CreateQuestion(
                     T("Will the model be ready for manufacturing?", "แบบที่ได้พร้อมผลิตหรือไม่?"),
                     T("The model is developed around the agreed process, material, tolerances, interfaces, and use. DFM review helps identify risks, but final production suitability is confirmed with the selected manufacturing route.", "แบบจะพัฒนาตามกระบวนการ วัสดุ ค่าความคลาดเคลื่อน จุดประกอบ และการใช้งานที่ตกลงกัน การตรวจ DFM ช่วยหาความเสี่ยง แต่ต้องยืนยันความเหมาะสมกับกระบวนการผลิตสุดท้ายอีกครั้ง")),
