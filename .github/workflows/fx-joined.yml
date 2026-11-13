@@ -72,7 +72,7 @@ jobs:
           ref: 78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7
           path: .dependencies/Legacy.Maliev.CompatibilityContracts
           persist-credentials: false
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
         with:
           dotnet-version: '10.0.x'
       - name: Require committed baseline browser assets
@@ -100,7 +100,7 @@ jobs:
           --catalog-runtime-root .dependencies/fx/catalog-runtime --output .dependencies/fx/native-evidence
       - name: Preserve exact native evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: fx-joined-${{ github.event.pull_request.head.sha }}
           path: .dependencies/fx/native-evidence

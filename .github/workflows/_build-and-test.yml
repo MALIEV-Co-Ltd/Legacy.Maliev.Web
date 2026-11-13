@@ -50,7 +50,7 @@ jobs:
         run: ./tests/SearchConsoleCohortReport.Tests.ps1
       - name: Set up original Career oracle runtime
         timeout-minutes: 5
-        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
         with:
           dotnet-version: 8.0.x
       - name: Verify Career focused identity parser controls
@@ -78,11 +78,11 @@ jobs:
           --assembly acceptance/CareerOriginalMaterialization/bin/Release/net8.0/CareerOriginalMaterialization.Tests.dll
       - name: Select .NET 10 for migration builds and tests
         timeout-minutes: 5
-        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73
         with:
           dotnet-version: '10.0.x'
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 24
           cache: npm
@@ -274,7 +274,7 @@ jobs:
       - name: Preserve retained quantity and terminal browser native evidence
         if: always()
         timeout-minutes: 3
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: web-wall-thickness-terminal-${{ github.sha }}
           path: wall-thickness-terminal-test-results/**/*.trx
@@ -348,7 +348,7 @@ jobs:
           python3 scripts/verify-comparison-callback-regression.py
       - name: Preserve separate expected-failure pricing regression control
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: pricing-regression-parent-control-${{ github.sha }}
           path: pricing-regression-parent-control/**
@@ -450,7 +450,7 @@ jobs:
           --assembly Legacy.Maliev.Web.Tests/bin/Release/net10.0/Legacy.Maliev.Web.Tests.dll
       - name: Preserve successful Career focus and original oracle before the full suite
         timeout-minutes: 3
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: career-focused-${{ github.event.pull_request.head.sha || github.sha }}-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
@@ -632,7 +632,7 @@ jobs:
           [[ ! -e "$proof_directory" && ! -L "$proof_directory" ]]
       - name: Preserve independent focused groups and full raw coverage evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: web-combined-native-${{ github.sha }}
           path: |
