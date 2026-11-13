@@ -12,7 +12,7 @@ public sealed class MaterialInitialNavigationDiagnosticsTests
     public async Task SuccessfulNavigationReturnsTheSameResultWithoutEmittingAndDetachesAllHandlers()
     {
         var (page, events) = Page();
-        using var observer = new MaterialInitialNavigationDiagnostics(page, new("http://127.0.0.1:40001"));
+        using var observer = new MaterialInitialNavigationDiagnostics(page, new("http://127.0.0.1:40001"), waitState: "profile-ready");
         var expected = new object();
         var calls = 0;
         var output = new List<string>();
@@ -32,7 +32,7 @@ public sealed class MaterialInitialNavigationDiagnosticsTests
     public async Task FailureRetainsExactPrimaryAndIndependentObservedMilestones(bool dom, bool loaded)
     {
         var (page, events) = Page();
-        using var observer = new MaterialInitialNavigationDiagnostics(page, new("http://127.0.0.1:40001"));
+        using var observer = new MaterialInitialNavigationDiagnostics(page, new("http://127.0.0.1:40001"), waitState: "profile-ready");
         var primary = new TimeoutException("private-navigation-text");
         var output = new List<string>();
         var request = Request("http://127.0.0.1:40001/instantquotation/3d-printing?token=private", "document");
@@ -45,6 +45,7 @@ public sealed class MaterialInitialNavigationDiagnosticsTests
         }, output.Add));
         Assert.Same(primary, actual);
         using var receipt = Parse(Assert.Single(output));
+        Assert.Equal("profile-ready", receipt.RootElement.GetProperty("WaitState").GetString());
         Assert.Equal(dom, receipt.RootElement.GetProperty("Snapshot").GetProperty("DomContentLoadedObserved").GetBoolean());
         Assert.Equal(loaded, receipt.RootElement.GetProperty("Snapshot").GetProperty("LoadObserved").GetBoolean());
         var row = Assert.Single(receipt.RootElement.GetProperty("Snapshot").GetProperty("Network").GetProperty("Requests").EnumerateArray());
