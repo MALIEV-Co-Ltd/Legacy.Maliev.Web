@@ -50,7 +50,39 @@ public sealed record CareerListing(
     bool ServiceAvailable);
 
 public sealed record ServiceResponse<T>(T? Value, bool ServiceAvailable)
-    where T : class;
+    where T : class
+{
+    private bool upstreamNotFound;
+
+    /// <summary>Returns a copy carrying the Country lookup's not-found provenance.</summary>
+    public ServiceResponse<T> WithUpstreamNotFound() => this with { upstreamNotFound = true };
+
+    /// <summary>Returns whether the upstream Country lookup returned not found.</summary>
+    public bool IsUpstreamNotFound() => upstreamNotFound;
+
+    public bool Equals(ServiceResponse<T>? other) => other is not null
+        && EqualityComparer<T?>.Default.Equals(Value, other.Value)
+        && ServiceAvailable == other.ServiceAvailable;
+
+    public override int GetHashCode()
+    {
+        unchecked
+        {
+            var hash = EqualityComparer<Type>.Default.GetHashCode(typeof(ServiceResponse<T>));
+            hash = (hash * -1521134295) + (Value is null ? 0 : EqualityComparer<T>.Default.GetHashCode(Value));
+            return (hash * -1521134295) + EqualityComparer<bool>.Default.GetHashCode(ServiceAvailable);
+        }
+    }
+
+    private bool PrintMembers(System.Text.StringBuilder builder)
+    {
+        builder.Append("Value = ");
+        builder.Append(Value);
+        builder.Append(", ServiceAvailable = ");
+        builder.Append(ServiceAvailable);
+        return true;
+    }
+}
 
 public interface ICareerClient
 {
