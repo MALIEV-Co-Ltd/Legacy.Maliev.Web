@@ -17,6 +17,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Playwright;
 using Xunit.Abstractions;
 using ContactPage = Legacy.Maliev.Web.Pages.Contact.Index;
 using CareerView = Legacy.Maliev.Web.Pages.About.Career.View;
@@ -247,6 +248,50 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
             Assert.Contains("no-store", response.Headers.CacheControl?.ToString(), StringComparison.OrdinalIgnoreCase);
             Assert.True(Guid.TryParseExact(Assert.Single(response.Headers.GetValues("X-Incident-Id")), "N", out _));
         }
+    }
+
+    [Theory]
+    [InlineData("en", 390)]
+    [InlineData("th", 390)]
+    [InlineData("en", 1440)]
+    [InlineData("th", 1440)]
+    public async Task ContactCountryFailure_RendersBlankLocalizedFormOnLoopback(string culture, int width)
+    {
+        using var upstream = new Upstream(ResponseMode.Transport, countries: true);
+        await using var host = CreateFactory(upstream, "Contact", enabled: true);
+        var port = BrowserTestServerPort.Reserve();
+        var origin = new Uri($"http://127.0.0.1:{port}");
+        host.UseKestrel(options => options.Listen(IPAddress.Loopback, port));
+        host.StartServer();
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        await using var context = await browser.NewContextAsync(new() { ViewportSize = new() { Width = width, Height = 900 } });
+        context.SetDefaultTimeout(10000);
+        await context.RouteAsync("**/*", route =>
+            route.Request.Method == "GET" && new Uri(route.Request.Url).GetLeftPart(UriPartial.Authority) == origin.GetLeftPart(UriPartial.Authority)
+                ? route.ContinueAsync() : route.AbortAsync());
+        var page = await context.NewPageAsync();
+        var response = await page.GotoAsync(new Uri(origin, $"/contact?culture={culture}").ToString(), new() { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 15000 });
+        Assert.NotNull(response);
+        Assert.True(response.Ok);
+        var reject = page.Locator("#cookieConsent [data-consent-action='reject']");
+        if (await reject.IsVisibleAsync()) await reject.ClickAsync();
+        var form = page.Locator("#contact-us");
+        await Assertions.Expect(form).ToBeVisibleAsync();
+        await Assertions.Expect(form.GetByText(culture == "th" ? "ไม่สามารถดึงรายชื่อประเทศจากเซิร์ฟเวอร์ได้" : CountryError, new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(form.Locator("#Country")).ToBeVisibleAsync();
+        Assert.True(await form.Locator("#Country").IsDisabledAsync());
+        Assert.Equal(string.Empty, await form.Locator("#FirstName").InputValueAsync());
+        Assert.Equal(string.Empty, await form.Locator("#Email").InputValueAsync());
+        var screenshots = Environment.GetEnvironmentVariable("MALIEV_CONTACT_ERROR_SCREENSHOTS");
+        if (!string.IsNullOrWhiteSpace(screenshots))
+        {
+            await form.Locator("h2").First.ClickAsync();
+            await form.ScrollIntoViewIfNeededAsync();
+            await page.EvaluateAsync("() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+            await form.ScreenshotAsync(new() { Path = Path.Combine(screenshots, $"contact-country-error-{culture}-{width}.png") });
+        }
+        Assert.Equal("/Countries", Assert.Single(upstream.Paths));
     }
 
     [Theory]
