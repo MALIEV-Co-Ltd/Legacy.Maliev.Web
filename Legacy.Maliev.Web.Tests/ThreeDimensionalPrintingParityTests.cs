@@ -114,9 +114,9 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
     }
 
     [Theory]
-    [InlineData("en")]
-    [InlineData("th")]
-    public async Task ThreeDimensionalPrintingRoute_AdvertisesOnlySupportedQuotationFileFormats(string culture)
+    [InlineData("en", "Instant estimates require a format supported for automated analysis. STEP/STP and IGES/IGS may require engineering review.")]
+    [InlineData("th", "การประเมินราคาออนไลน์ต้องใช้ไฟล์ที่รองรับการวิเคราะห์อัตโนมัติ ส่วน STEP/STP และ IGES/IGS อาจต้องให้วิศวกรตรวจสอบ")]
+    public async Task ThreeDimensionalPrintingRoute_AdvertisesOnlySupportedQuotationFileFormats(string culture, string clarification)
     {
         using var client = factory.CreateClient();
         var html = WebUtility.HtmlDecode(await client.GetStringAsync($"/services/3d-printing?culture={culture}"));
@@ -127,6 +127,7 @@ public sealed partial class ThreeDimensionalPrintingParityTests : IClassFixture<
         var cardEnd = html.IndexOf("</article>", cardStart, StringComparison.Ordinal);
         Assert.True(cardEnd > cardStart);
         var fileCard = html[cardStart..cardEnd];
+        Assert.Contains(clarification, fileCard, StringComparison.Ordinal);
 
         foreach (var format in new[] { "STL", "OBJ", "3MF", "GLB", "GLTF", "STEP / STP", "IGES / IGS" })
         {

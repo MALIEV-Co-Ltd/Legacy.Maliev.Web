@@ -30,6 +30,11 @@ public sealed class PrintingGuidePresentationBrowserTests(PublicContactBrowserFi
         var badges = page.Locator("#printing-quote-guide ul.printing-file-badges");
         Assert.True(await badges.IsVisibleAsync());
         Assert.Equal(new[] { "STL", "OBJ", "3MF", "GLB", "GLTF", "STEP / STP", "IGES / IGS" }, await badges.Locator("li").AllTextContentsAsync());
+        var clarification = badges.Locator("xpath=following-sibling::p");
+        Assert.True(await clarification.IsVisibleAsync());
+        Assert.Equal(culture == "th"
+            ? "การประเมินราคาออนไลน์ต้องใช้ไฟล์ที่รองรับการวิเคราะห์อัตโนมัติ ส่วน STEP/STP และ IGES/IGS อาจต้องให้วิศวกรตรวจสอบ"
+            : "Instant estimates require a format supported for automated analysis. STEP/STP and IGES/IGS may require engineering review.", await clarification.InnerTextAsync());
         Assert.Equal("flex", await badges.EvaluateAsync<string>("element => getComputedStyle(element).display"));
         Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
         var action = page.Locator("#printing-quote-guide [data-quote-route='instant']").First;

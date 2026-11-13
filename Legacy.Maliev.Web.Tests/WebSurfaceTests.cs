@@ -2931,7 +2931,9 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("data-migration-component=\"three-dimensional-printing-content\"", source, StringComparison.Ordinal);
         Assert.Contains(eyebrow, decodedSource, StringComparison.Ordinal);
-        Assert.Contains(heading, decodedSource, StringComparison.Ordinal);
+        var title = Regex.Match(decodedSource, "<h1 id=\"printing-title\">(?<text>.*?)</h1>", RegexOptions.Singleline);
+        Assert.True(title.Success);
+        Assert.Equal(heading, Regex.Replace(title.Groups["text"].Value, "<[^>]+>", string.Empty));
         Assert.Contains(faqQuestion, decodedSource, StringComparison.Ordinal);
         Assert.Contains("href=\"/InstantQuotation/3D-Printing\"", source, StringComparison.Ordinal);
         Assert.Contains("href=\"/Quotation?item=3D-Printing\"", source, StringComparison.Ordinal);
