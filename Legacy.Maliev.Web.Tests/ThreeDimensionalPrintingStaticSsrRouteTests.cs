@@ -168,7 +168,9 @@ public sealed partial class ThreeDimensionalPrintingStaticSsrRouteTests : IClass
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains("<link rel=\"preload\" as=\"image\" href=\"/src/images/services/printing/printing-hero-prototypes-transparent.webp\"", source, StringComparison.Ordinal);
-        Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
+        var headingElement = Regex.Match(source, "<h1 id=\"printing-title\">(?<text>.*?)</h1>", RegexOptions.Singleline);
+        Assert.True(headingElement.Success);
+        Assert.Equal(heading, Regex.Replace(headingElement.Groups["text"].Value, "<[^>]+>", string.Empty));
         Assert.Contains($">{lead}<", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"three-dimensional-printing-content\"", source, StringComparison.Ordinal);

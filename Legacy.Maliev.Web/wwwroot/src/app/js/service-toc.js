@@ -48,7 +48,7 @@
             const isPanelOpen = () => toc.dataset.tocOpen === 'true';
 
             const sections = Array.from(page.querySelectorAll(':scope > section'))
-                .filter((section) => !section.classList.contains('service-quick') && !section.classList.contains('service-cta-wrap'))
+                .filter((section) => !section.classList.contains('service-hero') && !section.classList.contains('service-quick') && !section.classList.contains('service-cta-wrap'))
                 .filter((section) => section.querySelector('h2')?.textContent?.trim());
             const sectionTargets = new Map();
             const sectionPreviews = new Map();

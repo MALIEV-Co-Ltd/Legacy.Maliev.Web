@@ -887,3 +887,38 @@
     .printing-hero-light .service-hero-copy { order: 0; padding-bottom: 1.25rem; }
     .printing-hero-light .service-hero-media { position: relative; inset: auto; order: 1; width: min(100%, 36rem); height: auto; transform: none; opacity: 1; }
 }
+
+/* Keep breadcrumb and service summary within the responsive light hero. */
+.service-hero > .service-breadcrumb { position: absolute; top: 0; left: 50%; transform: translateX(-50%); color: var(--service-muted); text-align: left; }
+.service-hero.printing-hero-light > .service-breadcrumb a { color: var(--service-blue-dark); }
+.service-hero .service-quick, .injection-molding-page .service-hero .service-quick { order: 2; width: 100%; margin: 0; padding-block: 0 2rem; text-align: left; }
+.service-hero .service-quick-grid { box-shadow: none; }
+.service-hero .service-quick article { padding: 1rem 1.25rem; }
+.service-hero .service-quick .service-quick-title { margin: 0 0 .25rem; color: var(--service-ink); font-size: .9rem; font-weight: 600; }
+.service-hero .service-quick i, .service-hero .service-quick .svg-inline--fa { display: none; }
+
+.printing-title-nowrap { white-space: nowrap; }
+.printing-file-badges { display: flex; flex-wrap: wrap; gap: .5rem; margin: .75rem 0 0; padding: 0; list-style: none; }
+.printing-file-badges li { padding: .3rem .6rem; border-radius: .3rem; background: #e9e3fa; color: #283451; font-size: .875rem; font-weight: 600; }
+.service-copy ul.printing-file-badges { padding: 0; margin: .75rem 0 0; }
+#printing-quote-guide .printing-route-card { padding: 1.5rem; }
+#printing-quote-guide .printing-route-card p { margin-bottom: 1.25rem; }
+
+/* Match source viewport sizing while preserving the existing hero content and actions. */
+.service-page[data-quote-service-id="3d_printing"],
+.service-page[data-quote-service-id="3d_printing"] > .service-page-toc,
+.service-page[data-quote-service-id="3d_printing"] > #printing-quote-guide { background: #f4f7fb; }
+@media (min-width: 48rem) {
+    .service-hero.printing-hero-light { min-height: min(calc(100svh - 4.5rem), 58rem); grid-template-rows: 1fr auto; }
+    .printing-hero-light .service-hero-copy { padding-block: clamp(5rem, 8svh, 7rem) 3rem; }
+    .printing-hero-light .service-hero-media { max-height: min(75svh, 38rem); }
+}
+@media (min-width: 48rem) and (max-width: 860px) {
+    .service-hero.printing-hero-light { justify-content: center; padding-block: 3rem 0; }
+    .printing-hero-light .service-hero-copy { flex: 0 0 auto; padding-block: 2.5rem 1rem; }
+    .printing-hero-light .service-hero-media { width: min(76%, 32rem); max-height: clamp(12rem, 34svh, 23rem); }
+}
+@media (min-width: 120rem) {
+    .service-page { --service-width: min(92vw, 96rem); }
+    .printing-hero-light .service-hero-media { right: max(4vw, calc((100% - 96rem) / 2)); width: min(44.16vw, 46.08rem); }
+}

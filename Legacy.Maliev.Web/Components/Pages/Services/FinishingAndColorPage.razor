@@ -24,10 +24,10 @@
     <PublicServiceStructuredData Model="@(PublicServiceStructuredDataDisplayModel.Create("Finishing and Color"))" />
     <script type="application/ld+json">@((MarkupString)FaqJson)</script>
 </HeadContent>
-<ServiceBreadcrumb ServiceKey="Finishing and Color" />
 
 <main class="service-page" data-migration-route-owner="blazor-static-ssr" data-migration-component="finishing-and-color-content">
     <section class="service-hero printing-hero-light" aria-labelledby="finishing-title">
+        <ServiceBreadcrumb ServiceKey="Finishing and Color" />
         <img class="service-hero-media" src="/src/images/services/hero-illustrations/finishing-hero-light.webp" srcset="/src/images/services/hero-illustrations/finishing-hero-light-640.webp 640w, /src/images/services/hero-illustrations/finishing-hero-light-768.webp 768w, /src/images/services/hero-illustrations/finishing-hero-light-960.webp 960w, /src/images/services/hero-illustrations/finishing-hero-light.webp 1774w" sizes="(max-width: 767px) 100vw, 50vw" width="1774" height="887" loading="eager" fetchpriority="high" decoding="async" alt="@T("Illustration of painted enclosures with different surface finishes", "ภาพประกอบกล่องชิ้นงานที่พ่นสีและเก็บผิวต่างกัน")" />
         <div class="service-container service-hero-copy">
             <h1 id="finishing-title">@T("Finishing and colour standards", "การเก็บผิวและมาตรฐานสี")</h1>
