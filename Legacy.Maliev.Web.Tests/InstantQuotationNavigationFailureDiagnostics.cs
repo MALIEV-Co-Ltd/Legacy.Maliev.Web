@@ -91,33 +91,45 @@ internal sealed class NavigationRequestLedger(Uri origin)
     private readonly object gate = new();
     private readonly Stopwatch elapsed = Stopwatch.StartNew();
     private readonly Dictionary<object, NavigationRequestObservation> requests = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<object, NavigationRequestObservation> outstanding = new(ReferenceEqualityComparer.Instance);
     private int observed;
     private int omitted;
+    // Cumulative overflow; omitted requests may have completed, so absence is not proof of idleness.
+    private int outstandingOmitted;
 
     internal void Start(object identity, string url, string method, string resourceType)
     {
         lock (gate)
         {
             observed++;
-            if (requests.Count == MaximumRequests) { omitted++; return; }
-            requests.TryAdd(identity, new(observed, SafePath(origin, url),
+            var observation = new NavigationRequestObservation(observed, SafePath(origin, url),
                 method is "GET" or "POST" or "HEAD" or "OPTIONS" ? method : "other",
                 resourceType is "document" or "stylesheet" or "script" or "image" or "font" or "xhr" or "fetch"
                     or "websocket" or "eventsource" or "manifest" or "media" ? resourceType : "other",
-                elapsed.ElapsedMilliseconds, null, null, "pending", null));
+                elapsed.ElapsedMilliseconds, null, null, "pending", null);
+            if (outstanding.Count < MaximumRequests) outstanding.TryAdd(identity, observation);
+            else outstandingOmitted++;
+            if (requests.Count < MaximumRequests) requests.TryAdd(identity, observation);
+            else omitted++;
         }
     }
 
     internal void Respond(object identity, int status)
     {
         lock (gate)
+        {
             if (requests.TryGetValue(identity, out var item))
                 requests[identity] = item with { Status = status is >= 100 and <= 599 ? status : null };
+            if (outstanding.TryGetValue(identity, out var pending))
+                outstanding[identity] = pending with { Status = status is >= 100 and <= 599 ? status : null };
+        }
     }
 
     internal void End(object identity, string outcome, string? failure = null)
     {
         lock (gate)
+        {
+            outstanding.Remove(identity);
             if (requests.TryGetValue(identity, out var item))
                 requests[identity] = item with
                 {
@@ -125,12 +137,14 @@ internal sealed class NavigationRequestLedger(Uri origin)
                     Outcome = outcome == "finished" ? "finished" : "failed",
                     FailureCode = outcome == "finished" ? null : SafeFailureCode(failure),
                 };
+        }
     }
 
     internal NavigationNetworkSnapshot Snapshot()
     {
         lock (gate)
-            return new(observed, omitted, requests.Values.OrderBy(item => item.Number).ToArray());
+            return new(observed, omitted, requests.Values.OrderBy(item => item.Number).ToArray(),
+                outstanding.Values.Where(item => item.Number > MaximumRequests).OrderBy(item => item.Number).ToArray(), outstandingOmitted);
     }
 
     internal static string SafeFailureCode(string? failure) => failure switch
@@ -159,6 +173,7 @@ internal sealed class NavigationRequestLedger(Uri origin)
     }
 }
 
-internal sealed record NavigationNetworkSnapshot(int Observed, int Omitted, NavigationRequestObservation[] Requests);
+internal sealed record NavigationNetworkSnapshot(int Observed, int Omitted, NavigationRequestObservation[] Requests,
+    NavigationRequestObservation[] OutstandingRequests, int OutstandingOmittedCumulative);
 internal sealed record NavigationRequestObservation(int Number, string Path, string Method, string ResourceType,
     long StartedMs, long? EndedMs, int? Status, string Outcome, string? FailureCode);

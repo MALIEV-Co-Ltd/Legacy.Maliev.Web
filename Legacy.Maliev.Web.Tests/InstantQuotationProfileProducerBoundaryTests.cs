@@ -27,12 +27,16 @@ using Npgsql;
 using StackExchange.Redis;
 using Testcontainers.PostgreSql;
 using Testcontainers.Redis;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 /// <summary>Actual separately pinned CustomerService Program, normal RS256 auth, disposable PG/Redis and Web HTTP.</summary>
 public sealed partial class InstantQuotationProfileProducerBoundaryTests
 {
+    private readonly ITestOutputHelper output;
+
+    public InstantQuotationProfileProducerBoundaryTests(ITestOutputHelper output) => this.output = output;
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, System.Collections.Concurrent.ConcurrentQueue<string>> ChildErrors = new();
     [Fact]
     public async Task RetryEnabledProgram_ReadWriteReplayAndCopyOnWrite()
@@ -313,10 +317,21 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                 await context.RouteAsync("**/*", route => route.Request.Url.StartsWith(webOrigin.ToString(), StringComparison.Ordinal)
                     ? route.ContinueAsync() : route.AbortAsync());
                 await using var page = await context.NewPageAsync();
+                using var readinessDiagnostics = new MaterialInitialNavigationDiagnostics(page, webOrigin, waitState: "profile-ready");
                 await page.GotoAsync($"{webOrigin}InstantQuotation/3D-Printing?culture={variant.Item2}");
                 var rejectCookies = page.Locator("#cookieConsent [data-consent-action='reject']");
                 if (await rejectCookies.IsVisibleAsync()) await rejectCookies.ClickAsync();
-                await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+                await readinessDiagnostics.RunAsync(async () =>
+                {
+                    var deadline = Stopwatch.StartNew();
+                    float Remaining() => Math.Max(1, 30_000 - (float)deadline.Elapsed.TotalMilliseconds);
+                    await Assertions.Expect(page.Locator("[data-workflow-customer-details-content]")).ToBeVisibleAsync(new() { Timeout = Remaining() });
+                    await Assertions.Expect(page.Locator("#instant-quote-firstname")).ToHaveValueAsync("Owner", new() { Timeout = Remaining() });
+                    await Assertions.Expect(page.Locator("#instant-quote-firstname")).ToHaveJSPropertyAsync("readOnly", true, new() { Timeout = Remaining() });
+                    await Assertions.Expect(page.Locator("#instant-quote-ship-to-billing")).ToBeDisabledAsync(new() { Timeout = Remaining() });
+                    await Assertions.Expect(page.Locator("#instant-quote-shipping-street1")).ToHaveValueAsync("Distinct shipping", new() { Timeout = Remaining() });
+                    return true;
+                }, receipt => output.WriteLine($"profile-readiness width={variant.Item1} culture={variant.Item2} scheme={variant.Item3} stage=profile-ready {receipt}"));
                 Assert.Equal("Owner", await page.Locator("#instant-quote-firstname").InputValueAsync());
                 Assert.True(await page.Locator("#instant-quote-firstname").EvaluateAsync<bool>("element => element.readOnly"));
                 Assert.True(await page.Locator("#instant-quote-ship-to-billing").IsDisabledAsync());
