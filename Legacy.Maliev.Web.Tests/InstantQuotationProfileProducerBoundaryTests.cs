@@ -317,15 +317,21 @@ public sealed partial class InstantQuotationProfileProducerBoundaryTests
                 await context.RouteAsync("**/*", route => route.Request.Url.StartsWith(webOrigin.ToString(), StringComparison.Ordinal)
                     ? route.ContinueAsync() : route.AbortAsync());
                 await using var page = await context.NewPageAsync();
-                using var idleDiagnostics = new MaterialInitialNavigationDiagnostics(page, webOrigin);
+                using var readinessDiagnostics = new MaterialInitialNavigationDiagnostics(page, webOrigin, waitState: "profile-ready");
                 await page.GotoAsync($"{webOrigin}InstantQuotation/3D-Printing?culture={variant.Item2}");
                 var rejectCookies = page.Locator("#cookieConsent [data-consent-action='reject']");
                 if (await rejectCookies.IsVisibleAsync()) await rejectCookies.ClickAsync();
-                await idleDiagnostics.RunAsync(async () =>
+                await readinessDiagnostics.RunAsync(async () =>
                 {
-                    await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
+                    var deadline = Stopwatch.StartNew();
+                    float Remaining() => Math.Max(1, 30_000 - (float)deadline.Elapsed.TotalMilliseconds);
+                    await Assertions.Expect(page.Locator("[data-workflow-customer-details-content]")).ToBeVisibleAsync(new() { Timeout = Remaining() });
+                    await Assertions.Expect(page.Locator("#instant-quote-firstname")).ToHaveValueAsync("Owner", new() { Timeout = Remaining() });
+                    await Assertions.Expect(page.Locator("#instant-quote-firstname")).ToHaveJSPropertyAsync("readOnly", true, new() { Timeout = Remaining() });
+                    await Assertions.Expect(page.Locator("#instant-quote-ship-to-billing")).ToBeDisabledAsync(new() { Timeout = Remaining() });
+                    await Assertions.Expect(page.Locator("#instant-quote-shipping-street1")).ToHaveValueAsync("Distinct shipping", new() { Timeout = Remaining() });
                     return true;
-                }, receipt => output.WriteLine($"profile-network-idle width={variant.Item1} culture={variant.Item2} scheme={variant.Item3} stage=networkidle {receipt}"));
+                }, receipt => output.WriteLine($"profile-readiness width={variant.Item1} culture={variant.Item2} scheme={variant.Item3} stage=profile-ready {receipt}"));
                 Assert.Equal("Owner", await page.Locator("#instant-quote-firstname").InputValueAsync());
                 Assert.True(await page.Locator("#instant-quote-firstname").EvaluateAsync<bool>("element => element.readOnly"));
                 Assert.True(await page.Locator("#instant-quote-ship-to-billing").IsDisabledAsync());
