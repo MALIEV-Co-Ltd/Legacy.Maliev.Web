@@ -19,14 +19,10 @@
           "Legacy.Maliev.Web/Components/Pages/Contact/ContactPage.razor",
           "Legacy.Maliev.Web/Resources/Components/Pages/Contact/ContactContent.th.resx"
         ],
-        "regression": "Legacy.Maliev.Web.Tests/PublicReadFailureParityTests.cs",
-        "statusProvenance": [
-          "Legacy.Maliev.Web.Application/CareerContracts.cs",
-          "Legacy.Maliev.Web.Infrastructure/CountryClient.cs"
-        ]
+        "regression": "Legacy.Maliev.Web.Tests/PublicReadFailureParityTests.cs"
       },
-      "assertion": "Empty Countries and exact empty-key ModelState error on transport,503 and404; real EN/TH active/fallback renderer and success empty/nonempty controls; other Country consumers retain404availableempty",
-      "disposition": "Implemented source non-success404 error through Contact-only private provenance; exact-head focused/full/main acceptance pending. No whole-original disposition yet."
+      "assertion": "Transport and 503 show localized Contact error; accepted Country 404 and successful empty list remain available-empty without form error; EN/TH active and fallback renderers are covered.",
+      "disposition": "Preserve the previously accepted 404 available-empty adaptation in Workflows #234; source 18c was previously credited, with no duplicate credit. Corrected candidate validation pending."
     },
     {
       "sourceSha": "8777004f1014707401ee150d548cf08e0923efa0",
@@ -47,9 +43,9 @@
         "regression": "Legacy.Maliev.Web.Tests/PublicReadFailureParityTests.cs"
       },
       "assertion": "Direct NotFoundResult at2147483647; real Jobs/2147483647 HTTP404 renders EN/TH404 safely; original levels200 fixture retained; detail requests both the offer and levels, as the original source does",
-      "disposition": "Await native qualification and Root complete two-path acceptance; existing guard reused without duplicate production change"
+      "disposition": "Previously accepted in Web #650 and Workflows #234; no duplicate source credit. Candidate regression and integration remain pending exact-head and protected-main validation."
     }
   ],
-  "nativeQualification": "Candidate local Release build 0 warnings/errors and 108 focused cases passed; exact integrated head and protected main validation pending. Full suite, formatting, security, browser, contract and coverage checks remain required.",
+  "nativeQualification": "Corrected 404-preserving candidate validation pending; earlier candidate results are historical. Full hosted and exact protected-main gates remain required.",
   "wholeOriginalClosure": false
 }

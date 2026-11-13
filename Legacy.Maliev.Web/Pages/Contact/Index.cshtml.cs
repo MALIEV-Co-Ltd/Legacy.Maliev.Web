@@ -269,7 +269,7 @@ public sealed class Index(
     {
         var result = await countryClient.GetCountriesAsync(cancellationToken);
         Countries = result.Value ?? [];
-        CountryServiceAvailable = result.ServiceAvailable && !result.IsUpstreamNotFound();
+        CountryServiceAvailable = result.ServiceAvailable;
         if (!CountryServiceAvailable)
         {
             ModelState.AddModelError(string.Empty, "Could not retrieve countries from the server");

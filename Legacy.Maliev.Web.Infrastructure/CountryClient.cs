@@ -22,7 +22,7 @@ internal sealed class CountryClient(
                     HttpCompletionOption.ResponseContentRead);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
-                return new ServiceResponse<IReadOnlyList<Country>>([], true).WithUpstreamNotFound();
+                return new ServiceResponse<IReadOnlyList<Country>>([], true);
             }
 
             response.EnsureSuccessStatusCode();

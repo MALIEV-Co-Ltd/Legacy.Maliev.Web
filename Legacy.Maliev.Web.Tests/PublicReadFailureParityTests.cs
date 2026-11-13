@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.Contact;
 using Legacy.Maliev.Web.Infrastructure;
@@ -37,46 +38,6 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
         this.output = output;
     }
 
-    [Theory]
-    [InlineData(null, true)]
-    [InlineData(null, false)]
-    [InlineData("available", true)]
-    [InlineData("available", false)]
-    public void PrivateStatus_PreservesRecordEqualityHashTextDeconstructionAndJson(string? value, bool available)
-    {
-        var baseline = new ServiceResponse<string>(value, available);
-        // This unchanged two-position record is the pre-metadata declaration witness.
-        var original = new OriginalServiceResponse<string>(value, available);
-        var provenance = baseline.WithUpstreamNotFound();
-        Assert.True(baseline == provenance);
-        Assert.True(provenance == baseline);
-        Assert.True(baseline.Equals((object)provenance));
-        Assert.Equal(baseline.GetHashCode(), provenance.GetHashCode());
-        var typeHashDifference = unchecked(EqualityComparer<Type>.Default.GetHashCode(typeof(ServiceResponse<string>))
-            - EqualityComparer<Type>.Default.GetHashCode(typeof(OriginalServiceResponse<string>)));
-        var expectedOldHashWithCurrentType = unchecked(original.GetHashCode()
-            + (typeHashDifference * -1521134295 * -1521134295));
-        Assert.Equal(expectedOldHashWithCurrentType, provenance.GetHashCode());
-        Assert.Contains(provenance, new HashSet<ServiceResponse<string>> { baseline });
-        var (actualValue, actualAvailable) = provenance;
-        Assert.Equal(value, actualValue);
-        Assert.Equal(available, actualAvailable);
-        Assert.Equal($"ServiceResponse {{ Value = {value}, ServiceAvailable = {available} }}", provenance.ToString());
-        Assert.Equal(baseline.ToString(), provenance.ToString());
-        Assert.Equal(original.ToString().Replace("OriginalServiceResponse", "ServiceResponse", StringComparison.Ordinal), provenance.ToString());
-        var json = JsonSerializer.Serialize(provenance);
-        Assert.Equal(JsonSerializer.Serialize(baseline), json);
-        Assert.Equal(JsonSerializer.Serialize(original), json);
-        Assert.DoesNotContain("upstreamNotFound", json, StringComparison.OrdinalIgnoreCase);
-        Assert.False(JsonSerializer.Deserialize<ServiceResponse<string>>(json)!.IsUpstreamNotFound());
-        var newtonsoft = Newtonsoft.Json.JsonConvert.SerializeObject(provenance);
-        Assert.Equal(Newtonsoft.Json.JsonConvert.SerializeObject(baseline), newtonsoft);
-        Assert.Equal(Newtonsoft.Json.JsonConvert.SerializeObject(original), newtonsoft);
-        Assert.False(Newtonsoft.Json.JsonConvert.DeserializeObject<ServiceResponse<string>>(newtonsoft)!.IsUpstreamNotFound());
-        Assert.NotEqual(baseline, baseline with { ServiceAvailable = !available });
-        Assert.NotEqual(baseline, baseline with { Value = "different" });
-    }
-
     [Fact]
     public async Task ContactComponent_CallerCancellationEscapesWithoutManufacturingIncident()
     {
@@ -94,21 +55,6 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
         Assert.Equal(1, countries.Calls);
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
         Assert.False(context.Response.Headers.ContainsKey("X-Incident-Id"));
-    }
-
-    [Fact]
-    public void PrivateStatus_CannotBeSuppliedThroughJson()
-    {
-        var result = JsonSerializer.Deserialize<ServiceResponse<string>>(
-            "{\"Value\":null,\"ServiceAvailable\":true,\"upstreamNotFound\":true}")!;
-        Assert.True(result.ServiceAvailable);
-        Assert.Null(result.Value);
-        Assert.False(result.IsUpstreamNotFound());
-        var other = Newtonsoft.Json.JsonConvert.DeserializeObject<ServiceResponse<string>>(
-            "{\"Value\":null,\"ServiceAvailable\":true,\"upstreamNotFound\":true}")!;
-        Assert.True(other.ServiceAvailable);
-        Assert.Null(other.Value);
-        Assert.False(other.IsUpstreamNotFound());
     }
 
     [Theory]
@@ -129,7 +75,7 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
         else
         {
             Assert.IsType<PageResult>(await page.OnGetAsync(CancellationToken.None));
-            var failed = mode is ResponseMode.Transport or ResponseMode.Unavailable or ResponseMode.Missing;
+            var failed = mode is ResponseMode.Transport or ResponseMode.Unavailable;
             Assert.Equal(!failed, page.CountryServiceAvailable);
             if (mode == ResponseMode.Success)
             {
@@ -208,18 +154,19 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
             new object[] { culture, enabled, ResponseMode.EmptySuccess })));
 
     [Fact]
-    public async Task Country404AndSuccessfulEmptyCatalogue_RetainAvailabilityWithDistinctPrivateProvenance()
+    public async Task Country404AndEmptySuccessRemainAvailableWhile503IsUnavailable()
     {
         using var missing = new Upstream(ResponseMode.Missing, countries: true);
         using var empty = new Upstream(ResponseMode.EmptySuccess, countries: true);
+        using var unavailable = new Upstream(ResponseMode.Unavailable, countries: true);
         var missingResult = await missing.Country.GetCountriesAsync(CancellationToken.None);
         var emptyResult = await empty.Country.GetCountriesAsync(CancellationToken.None);
+        var unavailableResult = await unavailable.Country.GetCountriesAsync(CancellationToken.None);
         Assert.True(missingResult.ServiceAvailable);
         Assert.True(emptyResult.ServiceAvailable);
+        Assert.False(unavailableResult.ServiceAvailable);
         Assert.Empty(missingResult.Value!);
         Assert.Empty(emptyResult.Value!);
-        Assert.True(missingResult.IsUpstreamNotFound());
-        Assert.False(emptyResult.IsUpstreamNotFound());
     }
 
     [Theory]
@@ -340,7 +287,7 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
         else
         {
             Assert.Contains("data-migration-component=\"contact-form-fields\"", html, StringComparison.Ordinal);
-            if (mode is ResponseMode.Transport or ResponseMode.Unavailable or ResponseMode.Missing)
+            if (mode is ResponseMode.Transport or ResponseMode.Unavailable)
             {
                 Assert.Contains(culture == "th" ? "ไม่สามารถดึงรายชื่อประเทศจากเซิร์ฟเวอร์ได้" : CountryError, html, StringComparison.Ordinal);
                 Assert.DoesNotContain("<option value=\"Thailand\"", html, StringComparison.Ordinal);
@@ -357,7 +304,11 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
             else
             {
                 Assert.DoesNotContain(CountryError, html, StringComparison.Ordinal);
+                Assert.DoesNotContain("ไม่สามารถดึงรายชื่อประเทศจากเซิร์ฟเวอร์ได้", html, StringComparison.Ordinal);
                 Assert.DoesNotContain("<option value=\"Thailand\"", html, StringComparison.Ordinal);
+                var countrySelect = Regex.Match(html, "<select\\b[^>]*\\bid=\"Country\"[^>]*>", RegexOptions.IgnoreCase);
+                Assert.True(countrySelect.Success);
+                Assert.DoesNotContain("disabled", countrySelect.Value, StringComparison.OrdinalIgnoreCase);
             }
         }
         Assert.Equal("/Countries", Assert.Single(upstream.Paths));
@@ -546,5 +497,4 @@ public sealed class PublicReadFailureParityTests : IClassFixture<TestingWebAppli
 
     private sealed record BoundaryEvent(string Category, int EventId, string? EventName, string? ExceptionType);
 
-    private sealed record OriginalServiceResponse<T>(T? Value, bool ServiceAvailable) where T : class;
 }

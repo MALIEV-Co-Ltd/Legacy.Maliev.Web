@@ -133,7 +133,7 @@ else
         }
         var countryValues = countries.Value ?? [];
         var trustedCustomer = await TrustedCustomerLoader.LoadAsync(context, countryValues, context.RequestAborted);
-        var serviceAvailable = countries.ServiceAvailable && !countries.IsUpstreamNotFound();
+        var serviceAvailable = countries.ServiceAvailable;
         var errors = serviceAvailable
             ? new Dictionary<string, IReadOnlyList<string>>()
             : new Dictionary<string, IReadOnlyList<string>>
