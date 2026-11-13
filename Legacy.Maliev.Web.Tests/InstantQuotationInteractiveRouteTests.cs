@@ -522,6 +522,8 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<Testin
     [Theory]
     [InlineData("en", InstantQuotationWorkflowState.Review, "instant-quote-review-heading")]
     [InlineData("th", InstantQuotationWorkflowState.Review, "instant-quote-review-heading")]
+    [InlineData("en", InstantQuotationWorkflowState.CustomerDetails, "instant-quote-customer-heading")]
+    [InlineData("th", InstantQuotationWorkflowState.CustomerDetails, "instant-quote-customer-heading")]
     [InlineData("en", InstantQuotationWorkflowState.Submitted, "instant-quote-submitted-heading")]
     [InlineData("th", InstantQuotationWorkflowState.Submitted, "instant-quote-submitted-heading")]
     public async Task ReviewAndSubmittedStates_ExposeTopLevelSectionHeadings(string culture, InstantQuotationWorkflowState state, string headingId)
@@ -532,11 +534,25 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<Testin
         {
             CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
             CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
-            var html = WebUtility.HtmlDecode(await RenderWorkflowAsync(state));
+            var customer = state is InstantQuotationWorkflowState.CustomerDetails
+                ? InstantQuotationCustomerDisplayModel.Empty with { InvalidFields = ["TaxNumber"] }
+                : null;
+            var html = WebUtility.HtmlDecode(await RenderWorkflowAsync(state, customer));
             Assert.Contains("<h1 id=\"instant-quote-workflow-heading\"", html, StringComparison.Ordinal);
             Assert.Contains($"<h2 id=\"{headingId}\"", html, StringComparison.Ordinal);
             Assert.Contains($"aria-labelledby=\"{headingId}\"", html, StringComparison.Ordinal);
             Assert.DoesNotContain("role=\"dialog\"", html, StringComparison.Ordinal);
+            if (state is InstantQuotationWorkflowState.CustomerDetails)
+            {
+                foreach (var childId in new[] { "instant-quote-contact-title", "instant-quote-company-title", "instant-quote-project-title" })
+                {
+                    Assert.Contains($"<h3 id=\"{childId}\"", html, StringComparison.Ordinal);
+                    Assert.Contains($"aria-labelledby=\"{childId}\"", html, StringComparison.Ordinal);
+                }
+                Assert.Contains("<h3 class=\"h4\" data-instant-quote-submit-heading", html, StringComparison.Ordinal);
+                Assert.Contains("<h3 class=\"h4\">", html, StringComparison.Ordinal);
+                Assert.Contains("role=\"alert\"", html, StringComparison.Ordinal);
+            }
             if (state is InstantQuotationWorkflowState.Submitted)
             {
                 Assert.Contains("role=\"status\"", html, StringComparison.Ordinal);

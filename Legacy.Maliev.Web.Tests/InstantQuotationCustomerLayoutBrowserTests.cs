@@ -224,7 +224,7 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         var content = page.Locator("[data-workflow-customer-details-content]");
         await Assertions.Expect(content).ToBeVisibleAsync();
         await Assertions.Expect(page.Locator("[data-workflow-configuration]")).ToBeHiddenAsync();
-        await Assertions.Expect(page.Locator("[data-workflow-customer-details] h3:visible")).ToHaveCountAsync(1);
+        await Assertions.Expect(page.Locator("[data-workflow-customer-details] h2:visible")).ToHaveCountAsync(1);
         await Assertions.Expect(content.Locator("#instant-quote-customer-heading"))
             .ToHaveTextAsync(culture == "th" ? "ข้อมูลลูกค้า" : "Customer details");
         await Assertions.Expect(content.Locator(".instant-quote__flow-step")).ToBeVisibleAsync();
@@ -236,7 +236,7 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
             ? new[] { "ข้อมูลผู้ติดต่อหลัก", "บริษัทและข้อมูลออกใบกำกับภาษี", "รายละเอียดโครงการ" }
             : new[] { "Primary contact", "Company & billing", "Project details" })
         {
-            await Assertions.Expect(form.Locator(".instant-quote__customer-section h4").Filter(new() { HasText = heading })).ToHaveCountAsync(1);
+            await Assertions.Expect(form.Locator(".instant-quote__customer-section h3").Filter(new() { HasText = heading })).ToHaveCountAsync(1);
         }
         await Assertions.Expect(form.Locator(".instant-quote__customer-progress")).ToHaveCountAsync(0);
         await Assertions.Expect(form.Locator("input[name='FirstName']")).ToHaveAttributeAsync("placeholder", culture == "th" ? "กรอกชื่อ" : "Enter your first name");
