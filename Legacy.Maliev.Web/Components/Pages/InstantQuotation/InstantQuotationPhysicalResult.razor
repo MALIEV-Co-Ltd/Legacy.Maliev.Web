@@ -4,7 +4,18 @@
 <p role="status" data-physical-analysis-result="@(IsReady ? "ready" : "unavailable")"
    data-physical-analysis-failure="@Failure">@Localizer[Message]</p>
 
+@if (IsReady && Reconstruction is { } reconstruction && reconstruction.IsValid())
+{
+    <div class="alert alert-warning" data-geometry-reconstruction role="status">
+        <strong>@Localizer["Voxel-based estimate ({0} mm) — engineering review required",
+            reconstruction.VoxelSizeMm.ToString("0.0", System.Globalization.CultureInfo.CurrentCulture)]</strong>
+        <p>@Localizer["Pricing uses reconstructed geometry. Small features may change; the original file must be reviewed before manufacture."]</p>
+    </div>
+}
+
 @code {
+    [Parameter] public Legacy.Maliev.Web.Application.Pricing.Simulation.VoxelReconstructionInfo? Reconstruction { get; set; }
+
     [Parameter] public bool IsReady { get; set; }
     [Parameter] public string Failure { get; set; } = string.Empty;
 

@@ -25,7 +25,11 @@ internal sealed class InstantQuotationAuthenticatedPreparationService(
                     checkpoint.Status == InstantQuotationSubmissionCheckpointStatus.Completed
                         ? InstantQuotationSubmissionOutcome.Completed : InstantQuotationSubmissionOutcome.Partial,
                     checkpoint.RequestReference, InstantQuotationProblemCategory.DependencyUnavailable,
-                    checkpoint.TransactionId, checkpoint.JourneyId);
+                    checkpoint.TransactionId, checkpoint.JourneyId)
+                {
+                    FilesLinkedVerified = checkpoint.Status == InstantQuotationSubmissionCheckpointStatus.Completed
+                        && InstantQuotationSubmissionService.HasVerifiedLinkedFiles(session, checkpoint),
+                };
                 if (checkpoint.Status == InstantQuotationSubmissionCheckpointStatus.Completed || checkpoint.FrozenCustomer?.ProfileCompletion is null)
                     return new(null, null, terminal, terminal.ProblemCategory, false);
                 // A durable retry MUST retain the originally frozen request, key and graph version.

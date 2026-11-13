@@ -63,6 +63,20 @@ public sealed partial class ThreeDimensionalScanningParityTests : IClassFixture<
         var styles = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "css", "service-pages.css"));
         var script = File.ReadAllText(Path.Combine(web, "wwwroot", "src", "app", "js", "scanning-workflow.js"));
 
+        Assert.Contains("THB 2,500", component, StringComparison.Ordinal);
+        Assert.Contains("THB 4,500", component, StringComparison.Ordinal);
+        Assert.Contains("THB 1,000", component, StringComparison.Ordinal);
+        Assert.Contains("same day", component, StringComparison.Ordinal);
+        Assert.Contains("best available condition", component, StringComparison.Ordinal);
+        Assert.Contains("broken parts", component, StringComparison.Ordinal);
+        Assert.Contains("small gears", component, StringComparison.Ordinal);
+        Assert.Contains("6-metre private aircraft", component, StringComparison.Ordinal);
+        Assert.Contains("sculptures", component, StringComparison.Ordinal);
+        Assert.Contains("human", component, StringComparison.Ordinal);
+        Assert.Contains("0.02 mm + 0.06 mm/m", component, StringComparison.Ordinal);
+        Assert.Contains("direct sunlight", component, StringComparison.Ordinal);
+        Assert.Contains("LiDAR", component, StringComparison.Ordinal);
+        Assert.Contains("ความแม่นยำเชิงปริมาตร", component, StringComparison.Ordinal);
         Assert.Contains("RouteOwner", component, StringComparison.Ordinal);
         Assert.Contains("ServiceBreadcrumb", component, StringComparison.Ordinal);
         Assert.Contains("ServiceLocation", component, StringComparison.Ordinal);
@@ -72,6 +86,9 @@ public sealed partial class ThreeDimensionalScanningParityTests : IClassFixture<
         Assert.Contains("scanning-preparation-details", component, StringComparison.Ordinal);
         Assert.Contains("scanning-workflow-timeline.is-active", styles, StringComparison.Ordinal);
         Assert.Contains("scanning-workflow-step.is-visible", styles, StringComparison.Ordinal);
+        Assert.Contains(".service-card h3 { margin: 1rem 0 .45rem; color: var(--service-ink);", styles, StringComparison.Ordinal);
+        Assert.Contains("aspect-ratio: 1 / 1", styles, StringComparison.Ordinal);
+        Assert.Contains("box-sizing: border-box", styles, StringComparison.Ordinal);
         Assert.Contains("@media print", styles, StringComparison.Ordinal);
         Assert.Contains("#scanning-onsite-checklist .scanning-checklist-actions { display: none; }", styles, StringComparison.Ordinal);
         Assert.Contains("IntersectionObserver", script, StringComparison.Ordinal);

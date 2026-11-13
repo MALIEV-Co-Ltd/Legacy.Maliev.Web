@@ -45,7 +45,11 @@ public sealed class InstantQuotationAccessibilityContractTests
 
         Assert.Contains("Supported files: STL, OBJ, 3MF, GLB, GLTF, STP, STEP, IGS, and IGES. Maximum 100 files, 100 MB each.", workflow, StringComparison.Ordinal);
         Assert.Contains("<strong aria-live=\"polite\" aria-atomic=\"true\">@Money(OrderQuote?.FinalOrderPrice)</strong>", workflow, StringComparison.Ordinal);
-        Assert.DoesNotContain("role=\"status\" aria-live=\"polite\"", workflow, StringComparison.Ordinal);
+        var priceTotal = Assert.Single(workflow.Split('\n'), line =>
+            line.Contains("<strong", StringComparison.Ordinal)
+            && line.Contains("@Money(OrderQuote?.FinalOrderPrice)", StringComparison.Ordinal));
+        Assert.DoesNotContain("role=\"status\" aria-live=\"polite\"", priceTotal, StringComparison.Ordinal);
+        Assert.Contains("<span role=\"status\" aria-live=\"polite\">@Localizer[\"{0} parts selected\", SelectedBulkCount]</span>", workflow, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -96,9 +100,17 @@ public sealed class InstantQuotationAccessibilityContractTests
         Assert.Contains("aria-checked=\"@selected.ToString().ToLowerInvariant()\"", selector, StringComparison.Ordinal);
         Assert.Contains("tabindex=\"@(selected ? 0 : -1)\"", selector, StringComparison.Ordinal);
         Assert.Contains("SelectionChanged.InvokeAsync(material.Key)", selector, StringComparison.Ordinal);
-        Assert.Contains("<option value=\"@color\">@Localizer[color]</option>", workflow, StringComparison.Ordinal);
+        const string colorOption = "<option value=\"@color\">@Localizer[color == \"Any\" ? \"No preference\" : color]</option>";
+        Assert.Contains(colorOption, workflow, StringComparison.Ordinal);
+        Assert.Equal(3, workflow.Split('\n').Count(line => line.Contains(colorOption, StringComparison.Ordinal)));
         Assert.Contains("<option value=\"@material.Key\">@Localizer[material.DisplayName]</option>", review, StringComparison.Ordinal);
-        Assert.Contains("<option value=\"@color\">@Localizer[color]</option>", review, StringComparison.Ordinal);
+        Assert.Contains(colorOption, review, StringComparison.Ordinal);
+        Assert.Single(review.Split('\n'), line => line.Contains(colorOption, StringComparison.Ordinal));
+        var resource = XDocument.Load(Path.Combine(
+            FindRepositoryRoot(), "Legacy.Maliev.Web", "Resources", "Components", "Pages", "InstantQuotation",
+            "ThreeDimensionalPrintingEstimateContent.th.resx"));
+        Assert.Equal("ไม่ระบุสี", Assert.Single(resource.Descendants("data"),
+            element => (string?)element.Attribute("name") == "No preference").Element("value")?.Value);
         Assert.Contains("value=\"@country.Name\"", customer, StringComparison.Ordinal);
         Assert.Contains("@country.DisplayName", customer, StringComparison.Ordinal);
     }

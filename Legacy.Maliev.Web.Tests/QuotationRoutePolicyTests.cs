@@ -5,15 +5,18 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 public sealed class QuotationRoutePolicyTests : IClassFixture<TestingWebApplicationFactory>, IDisposable
 {
     private readonly WebApplicationFactory<Program> factory;
+    private readonly ITestOutputHelper output;
 
-    public QuotationRoutePolicyTests(TestingWebApplicationFactory factory)
+    public QuotationRoutePolicyTests(TestingWebApplicationFactory factory, ITestOutputHelper output)
     {
+        this.output = output;
         this.factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("environment", "Testing");
@@ -98,7 +101,9 @@ public sealed class QuotationRoutePolicyTests : IClassFixture<TestingWebApplicat
             BaseAddress = new Uri("https://localhost"),
         });
 
-        using var quotation = await client.GetAsync("/quotation?culture=en&item=3d-printing");
+        using var quotation = await TestResponseFailureEvidence.GetAsync(
+            this.factory.Services, client, "/quotation?culture=en&item=3d-printing",
+            TestResponseRequestLabel.BaseQuotation, this.output.WriteLine);
         string source = await quotation.Content.ReadAsStringAsync();
         using var sitemap = await client.GetAsync("/sitemap");
         string sitemapSource = await sitemap.Content.ReadAsStringAsync();
@@ -120,8 +125,12 @@ public sealed class QuotationRoutePolicyTests : IClassFixture<TestingWebApplicat
             BaseAddress = new Uri("https://localhost"),
         });
 
-        using var known = await client.GetAsync("/quotation/3d-printing?culture=th&item=obsolete");
-        using var unknown = await client.GetAsync("/quotation/3d-printing/sls");
+        using var known = await TestResponseFailureEvidence.GetAsync(
+            this.factory.Services, client, "/quotation/3d-printing?culture=th&item=obsolete",
+            TestResponseRequestLabel.LegacyQuotationRedirect, this.output.WriteLine);
+        using var unknown = await TestResponseFailureEvidence.GetAsync(
+            this.factory.Services, client, "/quotation/3d-printing/sls",
+            TestResponseRequestLabel.UnknownQuotationPath, this.output.WriteLine);
 
         Assert.Equal(HttpStatusCode.MovedPermanently, known.StatusCode);
         Assert.Equal("/quotation?culture=th&item=3d-printing", known.Headers.Location?.OriginalString);

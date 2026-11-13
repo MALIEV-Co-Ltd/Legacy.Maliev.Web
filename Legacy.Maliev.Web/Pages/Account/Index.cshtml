@@ -9,7 +9,9 @@
         <section class="auth-intro">
             <p class="maliev-eyebrow">@AccountIndexLocalizer["Member workspace"]</p>
             <h1>@AccountIndexLocalizer["Manage manufacturing projects in one place"]</h1>
-            <p>@AccountIndexLocalizer["Review quotations, orders, project files, and account details."]</p>
+            <p>@AccountIndexLocalizer[Model.DisplayModel.IsAuthenticated
+                ? "Review quotations, orders, project files, and account details."
+                : "Sign in to review quotations, orders, project files, and account details."]</p>
         </section>
         <section class="auth-card">
             <div class="auth-card__header"><h1>@AccountIndexLocalizer["Choose an account action"]</h1></div>

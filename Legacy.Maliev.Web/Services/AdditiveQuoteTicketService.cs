@@ -112,7 +112,8 @@ namespace Legacy.Maliev.Web.Application.Pricing
                     PhysicalSha256 = physical?.PhysicalSha256 ?? string.Empty,
                     Confidence = "provisional",
                     ReviewState = "engineer_review_required",
-                    GeometryDigest = CreateGeometryDigest(part.Geometry),
+                    GeometryReconstruction = physical?.GeometryReconstruction,
+                    GeometryDigest = CreateGeometryDigest(part),
                     MaterialKey = line.MaterialKey,
                     BuildPreference = line.BuildPreference,
                     Process = line.Process,
@@ -210,7 +211,7 @@ namespace Legacy.Maliev.Web.Application.Pricing
                             line.Quantity,
                             part.UploadReference.Value)
                         || !string.Equals(payload.ContentSha256, part.Geometry.Sha256, StringComparison.Ordinal)
-                        || !string.Equals(payload.GeometryDigest, CreateGeometryDigest(part.Geometry), StringComparison.Ordinal)
+                        || !string.Equals(payload.GeometryDigest, CreateGeometryDigest(part), StringComparison.Ordinal)
                         || payload.DirectCostPerUnitThb != Convert.ToDecimal(line.DirectCostPerUnit)
                         || payload.UnitPriceThb != Convert.ToDecimal(line.UnitPrice)
                         || payload.SubtotalThb != Convert.ToDecimal(line.Subtotal))
@@ -225,7 +226,8 @@ namespace Legacy.Maliev.Web.Application.Pricing
                             || !string.Equals(payload.ProfileVersion, physical.ProfileVersion, StringComparison.Ordinal)
                             || !string.Equals(payload.ProfileSha256, physical.ProfileSha256, StringComparison.Ordinal)
                             || !string.Equals(payload.PhysicalAnalysisVersion, physical.AnalysisVersion, StringComparison.Ordinal)
-                            || !string.Equals(payload.PhysicalSha256, physical.PhysicalSha256, StringComparison.Ordinal)))
+                            || !string.Equals(payload.PhysicalSha256, physical.PhysicalSha256, StringComparison.Ordinal)
+                            || payload.GeometryReconstruction != physical.GeometryReconstruction))
                     {
                         return false;
                     }
@@ -248,6 +250,8 @@ namespace Legacy.Maliev.Web.Application.Pricing
         }
 
         /// <summary>Protects a server-computed upload receipt.</summary>
+        /// <param name="payload">The server-computed upload receipt to protect for later identity validation.</param>
+        /// <returns>An opaque Data Protection token containing the upload receipt.</returns>
         public string ProtectUpload(AdditiveUploadReceiptPayload payload)
         {
             ArgumentNullException.ThrowIfNull(payload);
@@ -255,6 +259,9 @@ namespace Legacy.Maliev.Web.Application.Pricing
         }
 
         /// <summary>Unprotects and validates a server-computed upload receipt.</summary>
+        /// <param name="ticket">The opaque upload receipt token to unprotect.</param>
+        /// <param name="now">The current UTC time used to validate the receipt lifetime.</param>
+        /// <returns>The validated upload receipt; invalid or expired receipts cause a ticket exception.</returns>
         public AdditiveUploadReceiptPayload UnprotectUpload(string ticket, DateTimeOffset now)
         {
             AdditiveUploadReceiptPayload payload = this.Unprotect<AdditiveUploadReceiptPayload>(this.uploadProtector, ticket);
@@ -273,6 +280,10 @@ namespace Legacy.Maliev.Web.Application.Pricing
         }
 
         /// <summary>Checks session ownership and normalized file identity.</summary>
+        /// <param name="payload">The unprotected upload receipt whose ownership is being checked.</param>
+        /// <param name="sessionId">The current quotation session identifier.</param>
+        /// <param name="fileName">The submitted file name to compare without case sensitivity.</param>
+        /// <returns>True only when the receipt belongs to the supplied session and file name.</returns>
         public bool MatchesUploadIdentity(AdditiveUploadReceiptPayload payload, string sessionId, string fileName)
         {
             return payload != null
@@ -314,6 +325,9 @@ namespace Legacy.Maliev.Web.Application.Pricing
                     && (!string.IsNullOrEmpty(payload.PhysicalAnalysisVersion)
                         || !string.IsNullOrEmpty(payload.PhysicalSha256)
                         || !ResinIdentityMatchesCurrent(new ResinQuoteProfileIdentity(payload.ProfileVersion, payload.ProfileSha256))))
+                || (payload.GeometryReconstruction is { } reconstruction
+                    && (payload.Process != PrintProcess.Fdm || !reconstruction.IsValid()
+                        || !string.Equals(payload.ReviewState, "engineer_review_required", StringComparison.Ordinal)))
                 || !string.Equals(payload.Confidence, "provisional", StringComparison.Ordinal)
                 || !string.Equals(payload.ReviewState, "engineer_review_required", StringComparison.Ordinal)
                 || string.IsNullOrWhiteSpace(payload.MaterialKey)
@@ -347,8 +361,10 @@ namespace Legacy.Maliev.Web.Application.Pricing
             InstantQuotationPhysicalAnalysisReceipt receipt) =>
             string.Equals(receipt.SessionId, session.SessionId, StringComparison.Ordinal)
             && string.Equals(receipt.OwnerIdentity, session.OwnerIdentity, StringComparison.Ordinal)
+            && (receipt.GeometryReconstruction is null || receipt.GeometryReconstruction.IsValid())
             && receipt.PartId == part.PartId
             && part.PhysicalAnalysisUpload is { } upload
+            && receipt.GltfUnitPolicy == upload.GltfUnitPolicy
             && receipt.FileId == upload.FileId
             && string.Equals(receipt.UploadSha256, upload.Sha256, StringComparison.OrdinalIgnoreCase)
             && string.Equals(receipt.ConfiguredMaterialKey, part.Configuration.MaterialKey, StringComparison.Ordinal)
@@ -441,6 +457,14 @@ namespace Legacy.Maliev.Web.Application.Pricing
         }
 
         /// <summary>Determines whether a protected line still belongs to the immutable upload and settings.</summary>
+        /// <param name="payload">The unprotected line quote whose immutable identity is being checked.</param>
+        /// <param name="sessionId">The current quotation session identifier.</param>
+        /// <param name="fileName">The submitted file name to compare without case sensitivity.</param>
+        /// <param name="materialKey">The selected material key.</param>
+        /// <param name="buildPreference">The selected printing build preference.</param>
+        /// <param name="quantity">The requested part quantity.</param>
+        /// <param name="storagePath">The optional normalized upload path to bind; blank omits the path comparison.</param>
+        /// <returns>True only when every required identity and configuration field matches.</returns>
         public bool MatchesLineIdentity(
             AdditiveLineQuotePayload payload,
             string sessionId,
@@ -530,10 +554,16 @@ namespace Legacy.Maliev.Web.Application.Pricing
 
         private static string NormalizePath(string value) => value.Replace('\\', '/').Trim('/');
 
-        private static string CreateGeometryDigest(AuthoritativeInstantQuotationGeometry geometry)
+        private static string CreateGeometryDigest(InstantQuotationPart part)
         {
+            var geometry = part.Geometry;
+            var policy = part.PhysicalAnalysisUpload?.GltfUnitPolicy ?? InstantQuotationGltfUnitPolicy.Legacy;
+            if (!policy.IsValidForFile(part.PhysicalAnalysisUpload?.FileName ?? part.DisplayFileName, newUpload: false))
+                throw new ArgumentException("The unit interpretation is invalid.", nameof(part));
             var canonical = new StringBuilder(FormattableString.Invariant(
                 $"{geometry.Sha256}|{geometry.DimensionXmm:R}|{geometry.DimensionYmm:R}|{geometry.DimensionZmm:R}|{geometry.VolumeMm3:R}|{geometry.SurfaceAreaMm2:R}|{geometry.FacetCount}|{geometry.BodyCount}|{geometry.MinThicknessMm:R}"));
+            if (policy.Version != 0)
+                canonical.Append(FormattableString.Invariant($"|gltf-units:{policy.Version}:{(int)policy.Unit}"));
             AppendGeometryProfile(canonical, "area-mm2", geometry.AreaProfileMm2);
             AppendGeometryProfile(canonical, "perimeter-mm", geometry.PerimeterProfileMm);
             AppendGeometryProfile(canonical, "unsupported-area-mm2", geometry.UnsupportedAreaProfileMm2);

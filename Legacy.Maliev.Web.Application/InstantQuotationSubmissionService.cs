@@ -104,7 +104,10 @@ internal sealed class InstantQuotationSubmissionService(
         {
             customer = frozen;
             if (earlyRead.Checkpoint.Status == InstantQuotationSubmissionCheckpointStatus.Completed)
-                return Completed(earlyRead.Checkpoint.RequestReference, earlyRead.Checkpoint.TransactionId, earlyRead.Checkpoint.JourneyId);
+                return Completed(earlyRead.Checkpoint.RequestReference, earlyRead.Checkpoint.TransactionId, earlyRead.Checkpoint.JourneyId) with
+                {
+                    FilesLinkedVerified = HasVerifiedLinkedFiles(session, earlyRead.Checkpoint),
+                };
         }
         if (!IsValidCustomer(customer)) return Rejected(InstantQuotationProblemCategory.Validation);
         if (customer.ProfileCompletion is not null && (ownerIdentity is null || profileCompletionClient is null))
@@ -193,7 +196,10 @@ internal sealed class InstantQuotationSubmissionService(
 
         if (checkpoint?.Status == InstantQuotationSubmissionCheckpointStatus.Completed)
         {
-            return Completed(checkpoint.RequestReference, checkpoint.TransactionId, checkpoint.JourneyId);
+            return Completed(checkpoint.RequestReference, checkpoint.TransactionId, checkpoint.JourneyId) with
+            {
+                FilesLinkedVerified = HasVerifiedLinkedFiles(session, checkpoint),
+            };
         }
 
         if (checkpoint is null)
@@ -356,7 +362,7 @@ internal sealed class InstantQuotationSubmissionService(
     {
         if (checkpoint.Status >= InstantQuotationSubmissionCheckpointStatus.FilesLinked)
         {
-            return fulfillmentClient is null
+            var resumed = fulfillmentClient is null
                 ? Partial(checkpoint, InstantQuotationProblemCategory.Unexpected)
                 : await new InstantQuotationFulfillmentCoordinator(fulfillmentClient, clock).FulfillAsync(
                     session,
@@ -366,6 +372,7 @@ internal sealed class InstantQuotationSubmissionService(
                     submissionLease,
                     checkpoint,
                     cancellationToken);
+            return resumed with { FilesLinkedVerified = resumed.Outcome == InstantQuotationSubmissionOutcome.Completed && HasVerifiedLinkedFiles(session, checkpoint) };
         }
 
         InstantQuotationSubmissionCheckpointRead fencedRead;
@@ -542,7 +549,7 @@ internal sealed class InstantQuotationSubmissionService(
                 return Partial(checkpoint, InstantQuotationProblemCategory.DependencyUnavailable);
             }
 
-            return filesLinkedStored
+            var result = filesLinkedStored
                 ? await new InstantQuotationFulfillmentCoordinator(fulfillmentClient, clock).FulfillAsync(
                     session,
                     quote,
@@ -552,6 +559,7 @@ internal sealed class InstantQuotationSubmissionService(
                     filesLinkedCheckpoint,
                     cancellationToken)
                 : Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
+            return result with { FilesLinkedVerified = result.Outcome == InstantQuotationSubmissionOutcome.Completed && filesLinkedStored && HasVerifiedLinkedFiles(session, filesLinkedCheckpoint) };
         }
 
         var completedCheckpoint = checkpoint with
@@ -581,7 +589,7 @@ internal sealed class InstantQuotationSubmissionService(
         }
 
         return stored
-            ? Completed(checkpoint.RequestReference, checkpoint.TransactionId, checkpoint.JourneyId)
+            ? Completed(checkpoint.RequestReference, checkpoint.TransactionId, checkpoint.JourneyId) with { FilesLinkedVerified = true }
             : Partial(checkpoint, InstantQuotationProblemCategory.Conflict);
     }
 
@@ -611,7 +619,12 @@ internal sealed class InstantQuotationSubmissionService(
             message.AppendLine($"Height: {part.Geometry.HeightMm.ToString("0.###", CultureInfo.InvariantCulture)} mm");
             message.AppendLine(FormattableString.Invariant($"Size: {part.Geometry.DimensionXmm:0.###} x {part.Geometry.DimensionYmm:0.###} x {part.Geometry.DimensionZmm:0.###} mm"));
             message.AppendLine($"Volume: {part.Geometry.VolumeMm3.ToString("0.###", CultureInfo.InvariantCulture)} mm3");
-            var geometryWarnings = GeometryWarnings(part.Geometry);
+            var geometryWarnings = GeometryWarnings(part.Geometry).ToList();
+            if (partQuote.PhysicalReceipt?.GeometryReconstruction is { } reconstruction)
+            {
+                geometryWarnings.Add(FormattableString.Invariant(
+                    $"Voxel-based pricing estimate ({reconstruction.VoxelSizeMm:0.0} mm). Original geometry requires engineering review before manufacture."));
+            }
             if (geometryWarnings.Count > 0)
             {
                 message.AppendLine($"Geometry warning: {string.Join("; ", geometryWarnings)}");
@@ -883,6 +896,30 @@ internal sealed class InstantQuotationSubmissionService(
         var value = Encoding.UTF8.GetBytes(
             $"instant-quotation-request-file:{submissionId.ToLowerInvariant()}:{quotationRequestId}:{fileId:D}");
         return Convert.ToHexStringLower(SHA256.HashData(value));
+    }
+
+    internal static bool HasVerifiedLinkedFiles(InstantQuotationSessionState session, InstantQuotationSubmissionCheckpoint checkpoint)
+    {
+        if (!string.Equals(session.SubmissionId, checkpoint.SubmissionId, StringComparison.Ordinal)
+            || checkpoint.Status < InstantQuotationSubmissionCheckpointStatus.FilesLinked
+            || checkpoint.FinalizedFiles is not { Count: > 0 } files
+            || session.RequestState?.Parts is not { Count: > 0 } parts
+            || files.Count != parts.Count)
+            return false;
+
+        var expected = new Dictionary<Guid, string>();
+        foreach (var part in parts)
+        {
+            if (!Guid.TryParseExact(part?.UploadReference?.Value, "D", out var fileId)
+                || fileId == Guid.Empty || part?.Geometry?.Sha256 is not { Length: 64 } sha256
+                || !expected.TryAdd(fileId, sha256))
+                return false;
+        }
+
+        var seen = new HashSet<Guid>();
+        return files.All(file => file is not null && IsValidFinalizedFile(file) && seen.Add(file.FileId)
+            && expected.TryGetValue(file.FileId, out var sha256)
+            && string.Equals(file.Sha256, sha256, StringComparison.Ordinal));
     }
 
     private static bool IsValidFinalizedFile(InstantQuotationFinalizedFile file) =>

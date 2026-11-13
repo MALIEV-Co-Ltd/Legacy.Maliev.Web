@@ -1,0 +1,165 @@
+{
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "asset": {
+    "version": "2.0",
+    "generator": "https://github.com/mikedh/trimesh"
+  },
+  "accessors": [
+    {
+      "componentType": 5125,
+      "type": "SCALAR",
+      "bufferView": 0,
+      "count": 36,
+      "max": [
+        7
+      ],
+      "min": [
+        0
+      ]
+    },
+    {
+      "componentType": 5126,
+      "type": "VEC3",
+      "byteOffset": 0,
+      "bufferView": 1,
+      "count": 8,
+      "max": [
+        5,
+        5,
+        5
+      ],
+      "min": [
+        -5,
+        -5,
+        -5
+      ]
+    },
+    {
+      "componentType": 5121,
+      "type": "VEC4",
+      "bufferView": 2,
+      "count": 8
+    },
+    {
+      "componentType": 5126,
+      "type": "VEC4",
+      "bufferView": 3,
+      "count": 8
+    },
+    {
+      "componentType": 5126,
+      "type": "MAT4",
+      "bufferView": 4,
+      "count": 1
+    }
+  ],
+  "meshes": [
+    {
+      "name": "geometry_0",
+      "extras": {
+        "shape": "box",
+        "extents": [
+          10,
+          10,
+          10
+        ]
+      },
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 1,
+            "JOINTS_0": 2,
+            "WEIGHTS_0": 3
+          },
+          "indices": 0,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "world",
+      "children": [
+        1,
+        2
+      ],
+      "scale": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "translation": [
+        0.02,
+        0.03,
+        0.04
+      ]
+    },
+    {
+      "name": "geometry_0",
+      "mesh": 0,
+      "skin": 0
+    },
+    {
+      "name": "initial-joint",
+      "translation": [
+        10,
+        0,
+        0
+      ],
+      "scale": [
+        2,
+        1,
+        1
+      ]
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "data:application/octet-stream;base64,AQAAAAMAAAAAAAAABAAAAAEAAAAAAAAAAAAAAAMAAAACAAAAAgAAAAQAAAAAAAAAAQAAAAcAAAADAAAABQAAAAEAAAAEAAAABQAAAAcAAAABAAAAAwAAAAcAAAACAAAABgAAAAQAAAACAAAAAgAAAAcAAAAGAAAABgAAAAUAAAAEAAAABwAAAAUAAAAGAAAAAACgwAAAoMAAAKDAAACgwAAAoMAAAKBAAACgwAAAoEAAAKDAAACgwAAAoEAAAKBAAACgQAAAoMAAAKDAAACgQAAAoMAAAKBAAACgQAAAoEAAAKDAAACgQAAAoEAAAKBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAgD8=",
+      "byteLength": 464
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 144
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 144,
+      "byteLength": 96
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 240,
+      "byteLength": 32
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 272,
+      "byteLength": 128
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 400,
+      "byteLength": 64
+    }
+  ],
+  "skins": [
+    {
+      "joints": [
+        2
+      ],
+      "inverseBindMatrices": 4
+    }
+  ]
+}

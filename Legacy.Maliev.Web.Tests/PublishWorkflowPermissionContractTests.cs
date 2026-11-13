@@ -42,7 +42,7 @@ public sealed class PublishWorkflowPermissionContractTests
         Assert.Contains("if: vars.LEGACY_DEPLOY_ENABLED != 'true'", source, StringComparison.Ordinal);
         Assert.Contains("if: vars.LEGACY_DEPLOY_ENABLED == 'true'", source, StringComparison.Ordinal);
         Assert.Contains(
-            "uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/.github/workflows/publish-image.yml@d583f55473f47f72d33b51060fa5d14e0974daf5",
+            "uses: MALIEV-Co-Ltd/Legacy.Maliev.Workflows/.github/workflows/publish-image.yml@7a449b36fe5f4f7b9e436d2c6063321480aa4a3f",
             source,
             StringComparison.Ordinal);
         Assert.DoesNotContain("deploy.ps1", source, StringComparison.OrdinalIgnoreCase);

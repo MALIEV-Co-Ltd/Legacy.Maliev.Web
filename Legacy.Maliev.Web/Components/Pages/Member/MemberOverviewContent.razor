@@ -1,5 +1,18 @@
 @inject IStringLocalizer<MemberOverviewContent> Localizer
 
+@{
+    IReadOnlyList<MemberOverviewNotice> notices = Model.NoticeDetails.Count > 0
+        ? Model.NoticeDetails
+        : Model.Notices.Select(content => new MemberOverviewNotice(content)).ToArray();
+    MemberOverviewNoticeSeverity? panelSeverity = notices.Any(notice => notice.Severity == MemberOverviewNoticeSeverity.Error)
+        ? MemberOverviewNoticeSeverity.Error
+        : notices.Any(notice => notice.Severity == MemberOverviewNoticeSeverity.Warning)
+            ? MemberOverviewNoticeSeverity.Warning
+            : notices.Any(notice => notice.Severity == MemberOverviewNoticeSeverity.Information)
+                ? MemberOverviewNoticeSeverity.Information
+                : null;
+}
+
 <section class="workspace-content" aria-labelledby="member-overview-title" data-migration-component="member-overview-content">
     <div class="maliev-section-header">
         <p class="maliev-eyebrow">@Localizer["Member workspace"]</p>
@@ -7,18 +20,18 @@
         <p>@Localizer["Review your active manufacturing work and account status."]</p>
     </div>
 
-    @if (Model.Notices.Count == 0)
+    @if (notices.Count == 0)
     {
         <div class="maliev-alert maliev-alert--success" role="status">@Localizer["Your account is ready."]</div>
     }
     else
     {
-        <section class="maliev-panel" aria-labelledby="member-notices-title">
+        <section class="maliev-panel @NoticePanelClass(panelSeverity)" aria-labelledby="member-notices-title" role="@(panelSeverity == MemberOverviewNoticeSeverity.Error ? "alert" : "status")" data-member-notice-status="@NoticeSeverityName(panelSeverity)">
             <h2 id="member-notices-title">@Localizer["Account notices"]</h2>
             <ul>
-                @foreach (var notice in Model.Notices)
+                @foreach (var notice in notices)
                 {
-                    <li>@Localizer[notice]</li>
+                    <li data-member-notice-severity="@NoticeSeverityName(notice.Severity)"><span><i class="@NoticeIcon(notice.Severity)" aria-hidden="true"></i> @Localizer[notice.Content]</span></li>
                 }
             </ul>
         </section>
@@ -128,6 +141,29 @@
 </section>
 
 @code {
+    private static string NoticePanelClass(MemberOverviewNoticeSeverity? severity) => severity switch
+    {
+        MemberOverviewNoticeSeverity.Error => "maliev-alert--danger",
+        MemberOverviewNoticeSeverity.Warning => "maliev-alert--warning",
+        _ => string.Empty,
+    };
+
+    private static string NoticeSeverityName(MemberOverviewNoticeSeverity? severity) => severity switch
+    {
+        MemberOverviewNoticeSeverity.Information => "information",
+        MemberOverviewNoticeSeverity.Warning => "warning",
+        MemberOverviewNoticeSeverity.Error => "error",
+        _ => "unknown",
+    };
+
+    private static string NoticeIcon(MemberOverviewNoticeSeverity severity) => severity switch
+    {
+        MemberOverviewNoticeSeverity.Information => "fas fa-info-circle",
+        MemberOverviewNoticeSeverity.Warning => "fas fa-exclamation-triangle",
+        MemberOverviewNoticeSeverity.Error => "fas fa-exclamation-circle",
+        _ => "fas fa-question-circle",
+    };
+
     [Parameter]
     public MemberOverviewDisplayModel Model { get; set; } = MemberOverviewDisplayModel.Empty;
 }

@@ -1,0 +1,22 @@
+@page "/knowledges/manufacturing/process-selection"
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IStringLocalizer<ManufacturingProcessSelectionContent> ContentLocalizer
+@inject IStringLocalizer<KnowledgeIndexPage> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = ContentLocalizer["Choosing a manufacturing process | MALIEV"].Value;
+    var description = ContentLocalizer["Compare CNC machining, 3D printing, casting, injection molding, and sheet metal using geometry, material, quantity, inspection, and total project cost."].Value;
+    var documentLinks = PublicDocumentLinksDisplayModel.Create(context);
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="documentLinks" />
+</HeadContent>
+<KnowledgeShell CurrentPage="/Manufacturing/Process-Selection" RouteOwner="blazor-static-ssr">
+    <ManufacturingProcessSelectionContent RouteOwner="blazor-static-ssr" />
+</KnowledgeShell>

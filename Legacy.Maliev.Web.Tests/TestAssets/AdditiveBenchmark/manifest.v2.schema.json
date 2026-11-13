@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://maliev.com/schemas/additive-benchmark/manifest.v2.schema.json",
+  "title": "MALIEV matched-input additive benchmark manifest v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "benchmarkVersion",
+    "status",
+    "coverageRequirements",
+    "evidenceBlockers",
+    "cases"
+  ],
+  "properties": {
+    "schemaVersion": { "const": "2.0" },
+    "benchmarkVersion": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["ready", "blocked"] },
+    "coverageRequirements": { "type": "object" },
+    "evidenceBlockers": { "type": "array" },
+    "cases": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/benchmarkCase" }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[A-Fa-f0-9]{64}$"
+    },
+    "transform": {
+      "type": "array",
+      "minItems": 16,
+      "maxItems": 16,
+      "items": { "type": "number" }
+    },
+    "metricDefinitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["time", "material", "support"],
+      "properties": {
+        "time": { "type": "string", "minLength": 1 },
+        "material": { "type": "string", "minLength": 1 },
+        "support": { "type": "string", "minLength": 1 }
+      }
+    },
+    "benchmarkCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseId", "modelId", "family", "split", "availability",
+        "modelSha256", "sourceUri", "sourceUnits", "transform4x4",
+        "materialSku", "machineProfileId", "processProfileId",
+        "filamentProfileId", "profileSha256", "slicerVersion",
+        "supportMode", "orientationPolicyVersion", "preference", "quantity",
+        "expected", "workbookInputs", "slicerReference", "productionActual",
+        "provenance", "missingDataReasons", "orientationPolicy",
+        "inputArtifactSha256", "profileBundleSha256",
+        "referenceTransform4x4", "metricDefinitions"
+      ],
+      "properties": {
+        "caseId": {},
+        "modelId": {},
+        "family": {},
+        "split": {},
+        "availability": {},
+        "modelSha256": {},
+        "sourceUri": {},
+        "sourceUnits": {},
+        "transform4x4": { "$ref": "#/$defs/transform" },
+        "materialSku": {},
+        "machineProfileId": {},
+        "processProfileId": {},
+        "filamentProfileId": {},
+        "profileSha256": {},
+        "slicerVersion": {},
+        "supportMode": {},
+        "orientationPolicyVersion": {},
+        "preference": {},
+        "quantity": {},
+        "expected": {},
+        "workbookInputs": {},
+        "slicerReference": {},
+        "productionActual": {},
+        "provenance": {},
+        "missingDataReasons": {},
+        "orientationPolicy": { "enum": ["fixed", "search"] },
+        "inputArtifactSha256": { "$ref": "#/$defs/sha256" },
+        "profileBundleSha256": { "$ref": "#/$defs/sha256" },
+        "referenceTransform4x4": { "$ref": "#/$defs/transform" },
+        "metricDefinitions": { "$ref": "#/$defs/metricDefinitions" }
+      }
+    }
+  }
+}

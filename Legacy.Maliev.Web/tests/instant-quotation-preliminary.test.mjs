@@ -4,7 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import vm from 'node:vm';
 
-function loadPreviewHarness() {
+function loadPreviewHarness(documentOverride = null) {
   const source = fs.readFileSync(
     path.join(process.cwd(), 'wwwroot', 'src', 'app', 'js', 'instant-quotation-preliminary.js'),
     'utf8',
@@ -25,7 +25,7 @@ function loadPreviewHarness() {
     malievAnalytics: { emit(event) { events.push(event); } },
     setTimeout,
   };
-  const document = {
+  const document = documentOverride ?? {
     querySelector() { return null; },
   };
   const context = vm.createContext({ window, document, Intl, Date, setTimeout });
@@ -187,3 +187,25 @@ test('preliminary quotation refuses an empty or missing-part snapshot', () => {
   assert.equal(harness.written, '');
   assert.deepEqual(harness.events, []);
 });
+
+for (const encoded of ['data:image/webp;base64,cropped', 'data:image/png;base64,fallback']) {
+  test(`preliminary crop keeps WebP through ${encoded.includes('fallback') ? 'unsupported encoder fallback' : 'encoding'}`, () => {
+    const requested = [];
+    const original = 'data:image/webp;base64,original';
+    const harness = loadPreviewHarness({
+      querySelector: selector => selector.startsWith('[data-review-thumbnail]')
+        ? { src: original, complete: true, naturalWidth: 1, naturalHeight: 1 } : null,
+      createElement: tag => {
+        assert.equal(tag, 'canvas');
+        return {
+          getContext: () => ({ drawImage() {}, fillRect() {}, getImageData: () => ({ data: [0, 0, 0, 255] }) }),
+          toDataURL: type => { requested.push(type); return encoded; },
+        };
+      },
+    });
+    harness.open(snapshot());
+    assert.deepEqual(requested, ['image/webp']);
+    assert.ok(harness.written.includes(encoded.includes('fallback') ? original : encoded));
+    assert.ok(!harness.written.includes('data:image/png;base64,fallback'));
+  });
+}

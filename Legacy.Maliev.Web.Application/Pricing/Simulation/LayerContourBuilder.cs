@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Threading;
 
 /// <summary>Extracts deterministic physical layer contours from normalized triangles.</summary>
 public static class LayerContourBuilder
@@ -40,7 +41,19 @@ public static class LayerContourBuilder
             throw new SimulationGeometryException("triangle_budget_exceeded", "Mesh triangle count exceeds the analysis budget.");
         }
 
-        MeshTriangle[] triangles = mesh.Triangles.Select(triangle => Transform(triangle, pose.Transform)).ToArray();
+        int[]? groups = mesh.PositiveFillGroups?.ToArray();
+        if (groups is not null && (groups.Length != mesh.Triangles.Count
+            || groups.Any(group => group < 0) || groups.Distinct().Take(257).Count() > 256))
+        {
+            throw new SimulationGeometryException("geometry_groups_invalid", "Positive-fill grouping is invalid.");
+        }
+
+        bool reflected = groups is not null && pose.Transform.GetDeterminant() < 0;
+        MeshTriangle[] triangles = mesh.Triangles.Select(triangle =>
+        {
+            var posed = Transform(triangle, pose.Transform);
+            return reflected ? new MeshTriangle(posed.A, posed.C, posed.B) : posed;
+        }).ToArray();
         if (triangles.Length == 0)
         {
             throw new SimulationGeometryException("geometry_empty", "A mesh must contain at least one triangle.");
@@ -65,7 +78,7 @@ public static class LayerContourBuilder
         }
 
         IndexedTriangle[] ordered = triangles
-            .Select((triangle, index) => new IndexedTriangle(index, triangle, MinimumZ(triangle), MaximumZ(triangle)))
+            .Select((triangle, index) => new IndexedTriangle(index, triangle, MinimumZ(triangle), MaximumZ(triangle), groups?[index] ?? 0))
             .OrderBy(item => item.MinimumZ)
             .ThenBy(item => item.Index)
             .ToArray();
@@ -73,6 +86,7 @@ public static class LayerContourBuilder
         var output = new List<LayerContours>(layerCount);
         int nextTriangle = 0;
         int generatedSegments = 0;
+        var booleanWork = new BooleanWorkBudget(budget);
         for (int layerIndex = 0; layerIndex < layerCount; layerIndex++)
         {
             budget.CancellationToken.ThrowIfCancellationRequested();
@@ -86,14 +100,32 @@ public static class LayerContourBuilder
             }
 
             active.RemoveAll(item => item.MaximumZ < plane);
-            List<Segment64> segments = ExtractSegments(active, plane);
-            generatedSegments = checked(generatedSegments + segments.Count);
-            if (generatedSegments > budget.MaximumPathSegments)
+            IReadOnlyList<PolygonRing> rings;
+            if (groups is null)
             {
-                throw new SimulationGeometryException("path_segment_budget_exceeded", "Generated section segments exceed the analysis budget.");
+                List<Segment64> segments = ExtractSegments(active, plane, cancellationToken: budget.CancellationToken);
+                Charge(segments.Count);
+                rings = BuildRings(segments);
             }
+            else
+            {
+                var solids = new Paths64();
+                foreach (var group in active.GroupBy(item => item.Group).OrderBy(group => group.Key))
+                {
+                    budget.CancellationToken.ThrowIfCancellationRequested();
+                    var segments = ExtractSegments(group.ToArray(), plane, directed: true, budget.CancellationToken);
+                    Charge(segments.Count);
+                    foreach (var ring in BuildRings(segments, directed: true, budget, Charge, booleanWork))
+                    {
+                        var path = new Path64(ring.Points.Select(point => PointKey.Create(point).ToPoint64()));
+                        solids.Add(path);
+                    }
+                }
+                budget.CancellationToken.ThrowIfCancellationRequested();
+                rings = Union(solids, FillRule.Positive, budget, Charge, booleanWork);
+                budget.CancellationToken.ThrowIfCancellationRequested();
 
-            IReadOnlyList<PolygonRing> rings = BuildRings(segments);
+            }
             if (rings.Count == 0)
             {
                 throw new SimulationGeometryException("geometry_slice_empty", "A physical layer unexpectedly produced no solid contour.");
@@ -103,13 +135,26 @@ public static class LayerContourBuilder
         }
 
         return output;
+
+        void Charge(int count)
+        {
+            if (count > budget.MaximumPathSegments - generatedSegments)
+            {
+                throw new SimulationGeometryException("path_segment_budget_exceeded", "Generated section paths exceed the analysis budget.");
+            }
+            generatedSegments = checked(generatedSegments + count);
+        }
     }
 
-    private static List<Segment64> ExtractSegments(IReadOnlyList<IndexedTriangle> active, double plane)
+    private static List<Segment64> ExtractSegments(
+        IReadOnlyList<IndexedTriangle> active, double plane, bool directed = false,
+        CancellationToken cancellationToken = default)
     {
         var unique = new SortedSet<Segment64>(Segment64Comparer.Instance);
+        int processed = 0;
         foreach (IndexedTriangle indexed in active)
         {
+            if ((processed++ & 1023) == 0) cancellationToken.ThrowIfCancellationRequested();
             MeshTriangle triangle = indexed.Triangle;
             Vector3[] vertices = [triangle.A, triangle.B, triangle.C];
             Vector2[] intersections = new Vector2[3];
@@ -143,15 +188,27 @@ public static class LayerContourBuilder
                 continue;
             }
 
-            unique.Add(firstPoint.CompareTo(secondPoint) <= 0
-                ? new Segment64(firstPoint, secondPoint)
-                : new Segment64(secondPoint, firstPoint));
+            if (directed)
+            {
+                Vector3 normal = Vector3.Cross(triangle.B - triangle.A, triangle.C - triangle.A);
+                Vector2 tangent = new(-normal.Y, normal.X);
+                if (Vector2.Dot(intersections[1] - intersections[0], tangent) < 0)
+                    (firstPoint, secondPoint) = (secondPoint, firstPoint);
+                unique.Add(new Segment64(firstPoint, secondPoint));
+            }
+            else
+            {
+                unique.Add(firstPoint.CompareTo(secondPoint) <= 0
+                    ? new Segment64(firstPoint, secondPoint)
+                    : new Segment64(secondPoint, firstPoint));
+            }
         }
 
         return unique.ToList();
     }
 
-    private static IReadOnlyList<PolygonRing> BuildRings(IReadOnlyList<Segment64> segments)
+    private static IReadOnlyList<PolygonRing> BuildRings(IReadOnlyList<Segment64> segments, bool directed = false,
+        AnalysisBudget? budget = null, Action<int>? charge = null, BooleanWorkBudget? booleanWork = null)
     {
         var adjacency = new Dictionary<PointKey, List<int>>();
         for (int index = 0; index < segments.Count; index++)
@@ -184,6 +241,8 @@ public static class LayerContourBuilder
                 path.Add(current.ToPoint64());
                 visited[currentEdge] = true;
                 Segment64 segment = segments[currentEdge];
+                if (directed && segment.First != current)
+                    throw new SimulationGeometryException("geometry_requires_review", "Oriented section edges are inconsistent.");
                 PointKey next = segment.First == current ? segment.Second : segment.First;
                 current = next;
                 if (current == startPoint)
@@ -192,7 +251,7 @@ public static class LayerContourBuilder
                 }
 
                 currentEdge = adjacency[current]
-                    .Where(edge => !visited[edge])
+                    .Where(edge => !visited[edge] && (!directed || segments[edge].First == current))
                     .OrderBy(edge => segments[edge].Other(current))
                     .FirstOrDefault(-1);
                 if (currentEdge < 0)
@@ -210,18 +269,68 @@ public static class LayerContourBuilder
             paths.Add(path);
         }
 
+        return Union(paths, directed ? FillRule.Positive : FillRule.EvenOdd, budget, charge, booleanWork);
+    }
+
+    private static IReadOnlyList<PolygonRing> Union(Paths64 paths, FillRule fill,
+        AnalysisBudget? budget = null, Action<int>? charge = null, BooleanWorkBudget? booleanWork = null)
+    {
+        long admittedWork = long.MaxValue;
+        if (budget is not null)
+        {
+            budget.CancellationToken.ThrowIfCancellationRequested();
+            long edges = paths.Sum(path => (long)path.Count);
+            admittedWork = booleanWork!.Admit(edges, paths.Count);
+        }
         var clipper = new Clipper64();
         clipper.AddSubject(paths);
         var tree = new PolyTree64();
-        if (!clipper.Execute(ClipType.Union, FillRule.EvenOdd, tree))
+        if (!clipper.Execute(ClipType.Union, fill, tree))
         {
             throw new SimulationGeometryException("geometry_boolean_failed", "Integer polygon reconstruction failed.");
         }
 
         var rings = new List<PolygonRing>();
-        for (int index = 0; index < tree.Count; index++)
+        if (budget is null)
         {
-            Append(tree[index], rings);
+            for (int index = 0; index < tree.Count; index++) Append(tree[index], rings);
+        }
+        else
+        {
+            budget.CancellationToken.ThrowIfCancellationRequested();
+            var pending = new Stack<PolyPath64>();
+            for (int index = 0; index < tree.Count; index++) pending.Push(tree[index]);
+            long observedWork = 0;
+            while (pending.TryPop(out var node))
+            {
+                budget.CancellationToken.ThrowIfCancellationRequested();
+                if (++observedWork > admittedWork) throw BooleanBudget();
+                if (node.Polygon is { Count: >= 3 } polygon)
+                {
+                    if (observedWork + polygon.Count > admittedWork) throw BooleanBudget();
+                    observedWork += polygon.Count;
+                    charge?.Invoke(polygon.Count);
+                    var points = new Vector2[polygon.Count];
+                    int start = 0;
+                    for (int index = 0; index < polygon.Count; index++)
+                    {
+                        if ((index & 1023) == 0) budget.CancellationToken.ThrowIfCancellationRequested();
+                        points[index] = new((float)(polygon[index].X * CoordinatePrecisionMm),
+                            (float)(polygon[index].Y * CoordinatePrecisionMm));
+                        if (points[index].X < points[start].X
+                            || (points[index].X == points[start].X && points[index].Y < points[start].Y)) start = index;
+                    }
+                    var canonical = new Vector2[points.Length];
+                    for (int index = 0; index < points.Length; index++)
+                    {
+                        if ((index & 1023) == 0) budget.CancellationToken.ThrowIfCancellationRequested();
+                        canonical[index] = points[(start + index) % points.Length];
+                    }
+                    rings.Add(new PolygonRing(canonical, node.IsHole));
+                }
+                if (observedWork + pending.Count + node.Count > admittedWork) throw BooleanBudget();
+                for (int index = 0; index < node.Count; index++) pending.Push(node[index]);
+            }
         }
 
         return rings
@@ -230,6 +339,42 @@ public static class LayerContourBuilder
             .ThenBy(ring => ring.Points.Min(point => point.Y))
             .ThenByDescending(ring => Math.Abs(SignedArea(ring.Points)))
             .ToArray();
+    }
+
+    private static SimulationGeometryException BooleanBudget() => new(
+        "path_segment_budget_exceeded", "Positive-fill boolean output exceeded its admitted work bound.");
+
+    internal sealed class BooleanWorkBudget(AnalysisBudget budget)
+    {
+        private long consumed;
+
+        internal long Admit(long edges, long paths)
+        {
+            budget.CancellationToken.ThrowIfCancellationRequested();
+            if (budget.MaximumBooleanWork <= 0)
+                throw new SimulationGeometryException("analysis_budget_invalid", "Analysis budgets must be positive.");
+            if (edges < 0 || paths < 0)
+                throw new ArgumentOutOfRangeException(edges < 0 ? nameof(edges) : nameof(paths));
+
+            long outputBound;
+            long candidates;
+            try
+            {
+                // Keep the synchronous Clipper call's conservative intersection/output admission bound.
+                outputBound = checked((4 * edges * (edges - 1)) + (8 * edges) + (4 * paths));
+                candidates = checked((edges * (edges - 1) / 2) + edges + paths);
+            }
+            catch (OverflowException)
+            {
+                throw BooleanBudget();
+            }
+            if (outputBound > budget.MaximumPathSegments || outputBound > int.MaxValue)
+                throw BooleanBudget();
+            if (candidates > budget.MaximumBooleanWork - consumed)
+                throw new SimulationGeometryException("boolean_work_budget_exceeded", "Cumulative positive-fill candidate work exceeds the analysis budget.");
+            consumed = checked(consumed + candidates);
+            return outputBound;
+        }
     }
 
     private static void Append(PolyPath64 node, List<PolygonRing> rings)
@@ -303,13 +448,14 @@ public static class LayerContourBuilder
 
     private static void ValidateBudget(AnalysisBudget budget)
     {
-        if (budget.MaximumTriangles <= 0 || budget.MaximumLayers <= 0 || budget.MaximumPathSegments <= 0)
+        if (budget.MaximumTriangles <= 0 || budget.MaximumLayers <= 0 || budget.MaximumPathSegments <= 0
+            || budget.MaximumBooleanWork <= 0)
         {
             throw new SimulationGeometryException("analysis_budget_invalid", "Analysis budgets must be positive.");
         }
     }
 
-    private readonly record struct IndexedTriangle(int Index, MeshTriangle Triangle, double MinimumZ, double MaximumZ);
+    private readonly record struct IndexedTriangle(int Index, MeshTriangle Triangle, double MinimumZ, double MaximumZ, int Group);
 
     private readonly record struct Segment64(PointKey First, PointKey Second)
     {

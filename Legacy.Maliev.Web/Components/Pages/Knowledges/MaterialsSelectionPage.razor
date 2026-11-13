@@ -1,0 +1,22 @@
+@page "/knowledges/materials/selection"
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IStringLocalizer<MaterialsSelectionContent> ContentLocalizer
+@inject IStringLocalizer<KnowledgeIndexPage> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = ContentLocalizer["Choosing materials for manufactured parts | MALIEV"].Value;
+    var description = ContentLocalizer["A practical material selection worksheet covering loads, heat, chemicals, manufacturing route, finishing, tolerances, and evidence."].Value;
+    var documentLinks = PublicDocumentLinksDisplayModel.Create(context);
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="documentLinks" />
+</HeadContent>
+<KnowledgeShell CurrentPage="/Materials/Selection" RouteOwner="blazor-static-ssr">
+    <MaterialsSelectionContent RouteOwner="blazor-static-ssr" />
+</KnowledgeShell>

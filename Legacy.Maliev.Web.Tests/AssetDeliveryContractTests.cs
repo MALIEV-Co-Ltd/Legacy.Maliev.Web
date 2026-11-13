@@ -144,9 +144,33 @@ public sealed class AssetDeliveryContractTests
             "application-shell.css"));
 
         Assert.Contains(
-            ".docs-content a.maliev-button {\n    color: #fff;\n    text-decoration: none;\n}",
+            ".docs-content a:not(.maliev-button) {\n    color: var(--maliev-blue-dark);\n    text-underline-offset: .16em;\n}",
             stylesheet,
             StringComparison.Ordinal);
+        const string primarySelector = ".maliev-button,\n.maliev-form button,\n.maliev-form input[type=\"submit\"] {";
+        var primaryStart = stylesheet.IndexOf(primarySelector, StringComparison.Ordinal);
+        Assert.True(primaryStart >= 0);
+        var primaryEnd = stylesheet.IndexOf('}', primaryStart);
+        Assert.True(primaryEnd > primaryStart);
+        var primaryRule = stylesheet[primaryStart..primaryEnd];
+        Assert.Contains("background: var(--maliev-blue);\n    color: #fff;", primaryRule, StringComparison.Ordinal);
+        Assert.Contains(
+            ".maliev-button:hover,\n.maliev-form button:hover,\n.maliev-form input[type=\"submit\"]:hover {\n    border-color: var(--maliev-blue-dark);\n    background: var(--maliev-blue-dark);\n    color: #fff;",
+            stylesheet,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            ".maliev-button--secondary {\n    border-color: #b9c8d9;\n    background: #fff;\n    color: var(--maliev-ink);\n}",
+            stylesheet,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            ".maliev-button--secondary:hover {\n    border-color: #8da7c5;\n    background: var(--maliev-blue-soft);\n    color: var(--maliev-blue-dark);\n}",
+            stylesheet,
+            StringComparison.Ordinal);
+        Assert.Contains("--maliev-blue: #075de8;", stylesheet, StringComparison.Ordinal);
+        Assert.Contains("--maliev-blue-dark: #064dcc;", stylesheet, StringComparison.Ordinal);
+        Assert.Contains("--maliev-blue-soft: #eaf2ff;", stylesheet, StringComparison.Ordinal);
+        Assert.Contains("--maliev-ink: #111f33;", stylesheet, StringComparison.Ordinal);
+        Assert.DoesNotContain(".docs-content a.maliev-button {", stylesheet, StringComparison.Ordinal);
     }
 
     [Fact]

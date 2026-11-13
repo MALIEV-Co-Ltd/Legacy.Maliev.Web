@@ -13,22 +13,22 @@ public sealed class InstantQuotationWorkflowPricingTests
         { "PLA", PrintProcess.Fdm, "Red" },
         { "PLA-CF", PrintProcess.Fdm, "Black" },
         { "PETG", PrintProcess.Fdm, "#123ABC" },
-        { "PETG-CF", PrintProcess.Fdm, "Natural" },
+        { "PETG-CF", PrintProcess.Fdm, "Black" },
         { "PETG-ESD", PrintProcess.Fdm, "Black" },
         { "PET-CF", PrintProcess.Fdm, "Black" },
-        { "ABS", PrintProcess.Fdm, "Silver" },
-        { "ABS-FR", PrintProcess.Fdm, "Natural" },
-        { "ASA", PrintProcess.Fdm, "Purple" },
+        { "ABS", PrintProcess.Fdm, "Red" },
+        { "ABS-FR", PrintProcess.Fdm, "Black" },
+        { "ASA", PrintProcess.Fdm, "Natural" },
         { "ASA-CF", PrintProcess.Fdm, "Black" },
         { "HIPS", PrintProcess.Fdm, "White" },
-        { "PC", PrintProcess.Fdm, "Gray" },
-        { "PC-FR", PrintProcess.Fdm, "Natural" },
+        { "PC", PrintProcess.Fdm, "Translucent" },
+        { "PC-FR", PrintProcess.Fdm, "Black" },
         { "PA612-ESD", PrintProcess.Fdm, "Black" },
         { "ABS-ESD", PrintProcess.Fdm, "Black" },
-        { "PA6", PrintProcess.Fdm, "White" },
-        { "PA12", PrintProcess.Fdm, "Any" },
-        { "PA-CF", PrintProcess.Fdm, "Natural" },
-        { "TPU", PrintProcess.Fdm, "Clear" },
+        { "PA6", PrintProcess.Fdm, "Natural" },
+        { "PA12", PrintProcess.Fdm, "Natural" },
+        { "PA-CF", PrintProcess.Fdm, "Black" },
+        { "TPU", PrintProcess.Fdm, "White" },
         { "PVA", PrintProcess.Fdm, "Natural" },
         { "M68", PrintProcess.Resin, "Gray" },
         { "K", PrintProcess.Resin, "Black" },
@@ -40,22 +40,22 @@ public sealed class InstantQuotationWorkflowPricingTests
     public static TheoryData<string, string[]> ExactMaterialColors => new()
     {
         { "PLA", ["Any", "Black", "White", "Gray", "Silver", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink"] },
-        { "PETG", ["Any", "Black", "White", "Gray", "Silver", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink"] },
-        { "ABS", ["Any", "Black", "White", "Gray", "Silver", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink"] },
-        { "ASA", ["Any", "Black", "White", "Gray", "Silver", "Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink"] },
-        { "HIPS", ["Black", "White"] },
-        { "TPU", ["Any", "Black", "White", "Clear", "Red", "Blue"] },
-        { "PC", ["Any", "Natural", "Black", "White", "Gray"] },
-        { "PC-FR", ["Any", "Natural", "Black", "White", "Gray"] },
-        { "PA6", ["Any", "Natural", "Black", "White", "Gray"] },
-        { "PA12", ["Any", "Natural", "Black", "White", "Gray"] },
-        { "ABS-FR", ["Any", "Natural", "Black", "White", "Gray"] },
-        { "PLA-CF", ["Black", "Natural"] },
-        { "PETG-CF", ["Black", "Natural"] },
-        { "PET-CF", ["Black", "Natural"] },
-        { "PA-CF", ["Black", "Natural"] },
-        { "ASA-CF", ["Black", "Natural"] },
-        { "PETG-ESD", ["Black", "Natural"] },
+        { "PETG", ["Any", "Black", "White", "Gray", "Clear", "Red", "Orange", "Yellow", "Green", "Blue"] },
+        { "ABS", ["Any", "Black", "White", "Gray", "Red", "Yellow", "Green", "Blue"] },
+        { "ASA", ["Any", "Black", "White", "Gray", "Natural"] },
+        { "HIPS", ["White"] },
+        { "TPU", ["Black", "White"] },
+        { "PC", ["Black", "Translucent"] },
+        { "PC-FR", ["Black"] },
+        { "PA6", ["Natural", "Black"] },
+        { "PA12", ["Natural", "Black"] },
+        { "ABS-FR", ["Black"] },
+        { "PLA-CF", ["Black"] },
+        { "PETG-CF", ["Black"] },
+        { "PET-CF", ["Black"] },
+        { "PA-CF", ["Black"] },
+        { "ASA-CF", ["Black"] },
+        { "PETG-ESD", ["Black"] },
         { "PA612-ESD", ["Black"] },
         { "ABS-ESD", ["Black"] },
         { "PVA", ["Natural"] },
@@ -334,6 +334,58 @@ public sealed class InstantQuotationWorkflowPricingTests
         Assert.Equal(
             typeof(InstantQuotationOrderQuote),
             typeof(IInstantQuotationPricingService).GetMethod(nameof(IInstantQuotationPricingService.Quote))!.ReturnType);
+    }
+
+    [Theory]
+    [InlineData("PLA", "Any", 1)]
+    [InlineData("PLA", "Any", 2)]
+    [InlineData("M68", "Any", 2)]
+    [InlineData("K", "Any", 2)]
+    [InlineData("G217", "Any", 2)]
+    [InlineData("M68", "Gray", 2)]
+    [InlineData("PLA", "#123ABC", 2)]
+    public void Quote_ColorContextAllowsMultipartResinAnyWithoutNarrowingValidNamedContracts(
+        string material, string color, int bodies)
+    {
+        var claim = Claim() with { BodyCount = bodies };
+        var upload = InstantQuotationUploadResult.Succeeded(
+            "multipart-color",
+            new InstantQuotationUploadReference("opaque-color"),
+            claim.Sha256);
+        var part = Part(material, color, 2) with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(upload, claim)!,
+        };
+
+        var quote = SyntheticPhysicalPricingTestData.Quote(State(part));
+
+        var line = Assert.Single(quote.Parts);
+        Assert.Equal(color, line.Color);
+        Assert.Equal(2, line.Quantity);
+        Assert.True(quote.FinalOrderPrice > 0);
+        Assert.Equal(quote.FinalOrderPrice, quote.AllocatedLineTotals!.Sum(), 2);
+    }
+
+    [Theory]
+    [InlineData("M68", "Any", 1)]
+    [InlineData("PLA", "#12345", 2)]
+    [InlineData("PLA", "#GGGGGG", 2)]
+    [InlineData("M68", "#123ABC", 2)]
+    [InlineData("PLA", "__custom__", 2)]
+    public void Quote_ColorContextStillRejectsSingleResinAnyAndMalformedOrIneligibleHex(
+        string material, string color, int bodies)
+    {
+        var claim = Claim() with { BodyCount = bodies };
+        var upload = InstantQuotationUploadResult.Succeeded(
+            "multipart-color",
+            new InstantQuotationUploadReference("opaque-color"),
+            claim.Sha256);
+        var part = Part(material, color, 1) with
+        {
+            Geometry = AuthoritativeInstantQuotationGeometry.FromCompletedLegacyUpload(upload, claim)!,
+        };
+
+        Assert.Throws<ArgumentException>(() => SyntheticPhysicalPricingTestData.Quote(State(part)));
     }
 
     private static InstantQuotationOrderState State(params InstantQuotationPart[] parts) => new(parts);

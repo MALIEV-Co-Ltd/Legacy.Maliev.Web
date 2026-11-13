@@ -2,7 +2,7 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class LegacyServiceDefaultsIdentityContractTests
 {
-    private const string ServiceDefaultsCommit = "4ffba0639620e7e923d331317f3f28501526b573";
+    private const string ServiceDefaultsCommit = "c9f21151639f1911c780f2084dd2d757b4fb3e73";
 
     private const string DotNetPatchVersion = "10.0.12";
 

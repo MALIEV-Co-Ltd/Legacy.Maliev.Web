@@ -66,6 +66,7 @@ public sealed class PrivacyPolicyStaticSsrRouteTests : IClassFixture<TestingWebA
         Assert.Contains($"<meta name=\"keywords\" content=\"{keywords}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains(effectiveDate, source, StringComparison.Ordinal);
+        Assert.Contains("<!--email_off-->info@maliev.com<!--/email_off-->", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-navigation\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-component=\"public-footer\"", source, StringComparison.Ordinal);
@@ -109,6 +110,7 @@ public sealed class PrivacyPolicyStaticSsrRouteTests : IClassFixture<TestingWebA
         var source = WebUtility.HtmlDecode(await client.GetStringAsync("/legal/privacypolicy?culture=en"));
 
         Assert.Contains("<title>Privacy Policy | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains("<!--email_off-->info@maliev.com<!--/email_off-->", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }

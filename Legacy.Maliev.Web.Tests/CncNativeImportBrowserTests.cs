@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Sockets;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -223,7 +222,7 @@ public sealed class CncNativeBrowserFixture : IAsyncLifetime
     {
         int port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
-        factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
+        factory = new CareerSearchKestrelWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
         factory.UseKestrel(port);
         hostClient = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
@@ -254,14 +253,7 @@ public sealed class CncNativeBrowserFixture : IAsyncLifetime
         }
     }
 
-    private static int ReserveFreePort()
-    {
-        var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        int port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
-        return port;
-    }
+    private static int ReserveFreePort() => BrowserTestServerPort.Reserve();
 }
 
 [CollectionDefinition(Name)]

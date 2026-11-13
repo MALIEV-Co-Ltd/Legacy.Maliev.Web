@@ -7,12 +7,21 @@
     ViewData["Title"] = QuotationLocalizer["Request a manufacturing quotation"];
     ViewData["Description"] = QuotationLocalizer["Request a CNC machining, 3D printing, 3D scanning, or custom manufacturing quotation from MALIEV."];
     ViewData["Keywords"] = QuotationLocalizer["manufacturing quotation, CNC quote, 3D printing quote, 3D scanning quote"];
+    if (Model.HttpContext.Request.Method.Equals("GET", StringComparison.OrdinalIgnoreCase))
+    {
+        var metadata = QuotationDocumentMetadata.Create(
+            Model.RequestedItem, System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th");
+        ViewData["Title"] = metadata.Title;
+        ViewData["Description"] = metadata.Description;
+        ViewData["Keywords"] = metadata.Keywords;
+    }
     ViewData["Robots"] = "noindex,follow";
 }
 
+<div class="inquiry-page">
 <component type="typeof(QuotationHeroContent)" render-mode="Static" />
 
-<main class="inquiry-content">
+<main class="inquiry-page inquiry-content">
     <div class="inquiry-container">
         @if (!string.IsNullOrWhiteSpace(Model.Notification))
         {
@@ -21,7 +30,6 @@
         <div class="inquiry-shell">
             <component type="typeof(QuotationGuidanceContent)" render-mode="Static" />
             <section class="inquiry-form-card" aria-labelledby="quotation-form-title">
-                <h2 id="quotation-form-title">@QuotationLocalizer["Manual quotation request"]</h2>
                 <form method="post"
                       enctype="multipart/form-data"
                       asp-page-handler="SubmitRequest"
@@ -34,6 +42,7 @@
         </div>
     </div>
 </main>
+</div>
 
 @section Scripts {
     @if (!string.IsNullOrWhiteSpace(Model.RecaptchaSiteKey))

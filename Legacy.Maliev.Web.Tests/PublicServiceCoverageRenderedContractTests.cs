@@ -43,6 +43,7 @@ public sealed class PublicServiceCoverageRenderedContractTests(TestingWebApplica
             var html = await Get(route, culture, active);
             AssertCoverage(html, culture);
             AssertOwnedService(html, route, culture);
+            AssertSourceFinishingLocationActions(html, culture);
         }
     }
 
@@ -180,6 +181,46 @@ public sealed class PublicServiceCoverageRenderedContractTests(TestingWebApplica
         var html = await response.Content.ReadAsStringAsync();
         Assert.Equal(culture, Attribute(Assert.Single(Tags(html, "html")), "lang"));
         return html;
+    }
+
+    private static void AssertSourceFinishingLocationActions(string html, string culture)
+    {
+        var location = Assert.Single(Regex.Matches(RemoveScripts(html),
+            "<section\\b(?<attributes>[^>]*)>(?<body>.*?)</section>", RegexOptions.Singleline | RegexOptions.IgnoreCase)
+            .Cast<Match>(), section => Attribute(section.Groups["attributes"].Value, "class")
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("service-location-section"));
+        var links = Regex.Matches(location.Groups["body"].Value,
+            "<a\\b(?<attributes>[^>]*)>(?<body>.*?)</a>", RegexOptions.Singleline | RegexOptions.IgnoreCase)
+            .Cast<Match>().ToArray();
+        Assert.Equal(
+            new[]
+            {
+                Legacy.Maliev.Web.Application.SocialNetworks.GoogleMaps,
+                Legacy.Maliev.Web.Application.SocialNetworks.Line,
+                Legacy.Maliev.Web.Application.SocialNetworks.WhatsApp,
+                "/quotation",
+            },
+            links.Select(link => Attribute(link.Groups["attributes"].Value, "href")).ToArray());
+        Assert.Equal(
+            culture == "th"
+                ? new[] { "เปิด Google Maps", "ติดต่อผ่าน LINE OA", "ติดต่อผ่าน WhatsApp", "ส่งไฟล์เพื่อประเมิน" }
+                : new[] { "Open Google Maps", "Chat on LINE OA", "Chat on WhatsApp", "Send files for review" },
+            links.Select(link => Text(link.Groups["body"].Value)).ToArray());
+        for (var index = 0; index < links.Length; index++)
+        {
+            var attributes = links[index].Groups["attributes"].Value;
+            var classes = Attribute(attributes, "class").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            Assert.Contains("service-button", classes);
+            Assert.Contains(index == 3 ? "service-button-primary" : "service-button-secondary", classes);
+            Assert.DoesNotContain(index == 3 ? "service-button-secondary" : "service-button-primary", classes);
+            if (index < 3)
+            {
+                Assert.Equal("_blank", Attribute(attributes, "target"));
+                Assert.Equal("noopener", Attribute(attributes, "rel"));
+            }
+        }
+        Assert.Single(links, link => Attribute(link.Groups["attributes"].Value, "class")
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("service-button-primary"));
     }
 
     private static void AssertProofLink(string html, string culture)

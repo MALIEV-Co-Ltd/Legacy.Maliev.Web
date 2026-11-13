@@ -1,0 +1,76 @@
+@inject IStringLocalizer<CncGeometryAndWorkholdingContent> Localizer
+
+<article class="knowledge-document" data-migration-renderer="blazor-static-ssr" data-migration-route-owner="@RouteOwner">
+<h1>@Localizer["Geometry, rigidity and workholding"]</h1>
+<p class="docs-lead">@Localizer["Consider tool access and how the part is supported throughout the cut, not only the final shape. These design reviews connect thin features and deep pockets to fixturing, distortion and vibration."]</p>
+<figure class="docs-figure knowledge-photo">
+    <img src="/src/images/knowledge/photos/workholding.webp" srcset="/src/images/knowledge/photos/workholding-small.webp 768w, /src/images/knowledge/photos/workholding.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" alt="@Localizer["A thin aluminium frame is supported and clamped on a fixture plate."]" width="1536" height="1024" loading="eager" decoding="async" fetchpriority="high" />
+    <figcaption>@Localizer["Support the part through the machining sequence, including its least rigid stage. Illustrative image."]</figcaption>
+</figure>
+<nav class="docs-toc" aria-label="@Localizer["On this page"]">
+<strong>@Localizer["On this page"]</strong>
+<ul><li><a href="#thin-walls">@Localizer["Thin walls and floors"]</a></li>
+<li><a href="#radii-pockets">@Localizer["Internal radii and pockets"]</a></li>
+<li><a href="#size-fixturing">@Localizer["Part size and fixturing"]</a></li>
+<li><a href="#warpage">@Localizer["Warpage and residual stress"]</a></li>
+<li><a href="#chatter">@Localizer["Chatter and tool reach"]</a></li></ul></nav>
+<aside class="docs-note">@Localizer["Examples explain design principles; confirm the material, drawing revision and proposed process for the actual project."]</aside>
+<section class="docs-section" id="thin-walls">
+        <h2>@Localizer["Thin walls and floors: consider support as well as thickness"]</h2>
+        <p>@Localizer["Wall height, thickness, unsupported length and material all influence how a feature responds during cutting. A tall isolated wall behaves differently from a short wall tied into surrounding ribs. Thin floors can also bend under cutting or clamping loads. There is no single minimum wall thickness that establishes whether every material and geometry can be machined successfully."]</p>
+        <p>@Localizer["Retaining material for support during roughing and approaching the final section in stages can help control deflection. Sandvik describes alternating sides and staged strategies according to wall proportions. These are process-planning approaches, not design acceptance limits. Ask whether a rib, shorter wall, thicker base or temporary support feature is compatible with the part function and final assembly."]</p>
+        <figure class="docs-figure knowledge-diagram">
+<div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["Two 24 mm walls with different thicknesses and height-to-thickness ratios."]"><img src="/src/images/knowledge/cnc-wall-stiffness.svg" width="720" height="300" loading="lazy" alt="@Localizer["Two 24 mm walls with different thicknesses and height-to-thickness ratios."]" /></div>
+<figcaption>@Localizer["Illustrative geometry: the same wall height with different thicknesses. The ratios compare designs; they do not set a machining limit."] <a class="knowledge-diagram-link" href="/src/images/knowledge/cnc-wall-stiffness.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
+        <aside class="docs-example">@Localizer["Illustrative example: a 24 mm high wall at 1.5 mm thickness has a height-to-thickness ratio of 16. Increasing thickness to 2 mm reduces the ratio to 12. This helps compare alternatives; it does not establish feasibility. Also state whether wall straightness is required after the clamps are released."]</aside>
+        <p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/milling/shoulder-milling">@Localizer["Sandvik Coromant: thin deflecting walls and bases"]</a></p>
+    </section>
+<section class="docs-section" id="radii-pockets">
+        <h2>@Localizer["Internal radii and pockets: leave room for the cutter"]</h2>
+        <p>@Localizer["A rotating end mill leaves a radius in an internal vertical corner. Making that radius smaller usually changes the required tool diameter, reach or number of operations. When the cutter nearly fills a corner, engagement increases and the cut can become less stable. Give internal corners the largest radius that still provides clearance for the mating component and preserves required strength."]</p>
+        <p>@Localizer["Review pocket depth, width, floor thickness and corner radius together. A narrow deep pocket can combine poor access, a slender tool and difficult chip removal. Where the function allows, consider a shallower pocket, larger corner radii, an opening through one side or an assembly of simpler components. A square mating tab may instead accept corner reliefs. Any departure from the released drawing needs agreement."]</p>
+        <figure class="docs-figure knowledge-diagram">
+<div class="knowledge-diagram-viewport" role="region" tabindex="0" aria-label="@Localizer["R4 pocket corners with diameter 8 and diameter 6 cutters, showing different tool-centre clearance."]"><img src="/src/images/knowledge/cnc-corner-clearance.svg" width="720" height="280" loading="lazy" alt="@Localizer["R4 pocket corners with diameter 8 and diameter 6 cutters, showing different tool-centre clearance."]" /></div>
+<figcaption>@Localizer["Illustrative geometry: at an R4 corner, an 8 mm cutter leaves no centre-path radius; a 6 mm cutter leaves R1. This diagram does not prescribe a cutting strategy."] <a class="knowledge-diagram-link" href="/src/images/knowledge/cnc-corner-clearance.svg" target="_blank" rel="noopener">@Localizer["Open full-size diagram"]</a></figcaption>
+</figure>
+        <aside class="docs-example">@Localizer["Illustrative example: an R4 corner geometrically accommodates an 8 mm diameter cutter, but a 6 mm cutter leaves a 1 mm radius for its centre path around that corner. That extra path space can help programming; it is not a guarantee of finish, accuracy or machining time."]</aside>
+        <p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/milling/milling-inside-corners">@Localizer["Sandvik Coromant: cutter engagement inside corners"]</a></p>
+        <p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/milling/milling-holes-cavities-pockets">@Localizer["Sandvik Coromant: pocketing method selection"]</a></p>
+    </section>
+<section class="docs-section" id="size-fixturing">
+        <h2>@Localizer["Part size and fixturing: plan how the work is held"]</h2>
+        <p>@Localizer["Final length, width and height are only part of a size review. The starting stock, fixture, cutting tool, holder and approach movements also need space. A part fitting within a nominal machine travel does not establish that every surface is reachable. Small parts may need dedicated handling or support just as large parts may need several setups. Identify surfaces that can be used for holding."]</p>
+        <p>@Localizer["Mark faces that cannot carry clamp marks, sacrificial material that may be removed later, and features that must stay related across setups. Ask how the final operation will hold the part once most stock has gone. For rotating fixtures, review the combined moving envelope and tool clearance. Simulation must represent the actual stock, holder and fixture rather than only the finished model."]</p>
+        <aside class="docs-example">@Localizer["Illustrative example: a 100 × 60 × 8 mm finished plate may start as thicker stock to provide holding material. The extra thickness is a planning allowance to agree, not an automatic requirement. Confirm how the last face is supported and which features establish the second setup."]</aside>
+        <p class="docs-source"><a href="https://www.autodesk.com/solutions/5-axis-machining">@Localizer["Autodesk: access, setups and collision verification"]</a></p>
+    </section>
+<section class="docs-section" id="warpage">
+        <h2>@Localizer["Warpage and residual stress: define the free condition"]</h2>
+<figure class="docs-figure knowledge-issue-photo">
+<img src="/src/images/knowledge/photos/warpage.webp" srcset="/src/images/knowledge/photos/warpage-small.webp 768w, /src/images/knowledge/photos/warpage.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" width="1536" height="1024" loading="lazy" decoding="async" alt="@Localizer["A freely resting aluminium plate bows above a flat reference surface."]" />
+<figcaption>@Localizer["Illustrative free-state bow, exaggerated for visibility. The photograph does not establish a cause or a measured flatness value."]</figcaption>
+</figure>
+        <p>@Localizer["A part can look flat while held and change shape after release. Elastic bending under a clamp is different from distortion associated with residual stress and material removal. Wrought stock can contain residual stress from earlier processing; removing material changes the remaining balance. NIST research on aluminum bars illustrates why stock condition and the location of a part within the stock can matter."]</p>
+        <p>@Localizer["Flag broad thin plates, heavy one-sided pocketing and tight flatness requirements early. Discuss suitable stock condition, staged removal, support and any necessary thermal processing with the manufacturer. These choices have material, schedule and cost implications; no single treatment guarantees a distortion-free part. State whether inspection is in the free condition, on defined supports or under a specified assembly restraint, and agree that condition before setting an acceptance value."]</p>
+        <aside class="docs-example">@Localizer["Illustrative example: a 200 mm plate with a 0.05 mm flatness requirement needs a defined inspection condition. A result measured while the plate is pulled against a fixture does not describe its free-state shape. Provide the real mounting arrangement if the assembly intentionally restrains the plate."]</aside>
+        <p class="docs-source"><a href="https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication1006.pdf">@Localizer["NIST: aluminum residual stress and machining distortion, printed pages 34–35"]</a></p>
+    </section>
+<section class="docs-section" id="chatter">
+        <h2>@Localizer["Chatter and tool reach: avoid unnecessary slenderness"]</h2>
+<figure class="docs-figure knowledge-issue-photo">
+<img src="/src/images/knowledge/photos/chatter.webp" srcset="/src/images/knowledge/photos/chatter-small.webp 768w, /src/images/knowledge/photos/chatter.webp 1536w" sizes="(min-width: 72rem) calc(100vw - 25rem), calc(100vw - 4rem)" width="1536" height="1024" loading="lazy" decoding="async" alt="@Localizer["Repeated wavy marks appear on the side wall of a milled aluminium block."]" />
+<figcaption>@Localizer["Illustrative periodic surface marks associated with unstable cutting. Appearance alone does not establish the cause or a surface-roughness value."]</figcaption>
+</figure>
+        <p>@Localizer["Chatter can involve the cutter, holder, machine, workpiece or fixture. It may leave repeated marks and interfere with surface quality or dimensional control. A long slender tool and an unsupported wall create different sources of flexibility. Changing speed alone is not a universal cure. The design contribution is to avoid unnecessary reach, abrupt access restrictions and unsupported features where the function permits."]</p>
+        <p>@Localizer["Ask whether an opening can be enlarged, a deep feature approached from another face, or a narrow detail separated from the main roughing operation. The manufacturer must coordinate tool length, holding, engagement and cutting conditions. Do not prescribe a universal cutting recipe on a drawing. If a surface has a functional texture requirement, identify it explicitly so cosmetic tool marks are not confused with acceptance criteria."]</p>
+        <aside class="docs-example">@Localizer["Illustrative example: 40 mm reach with an 8 mm diameter tool is a reach-to-diameter ratio of 5. With a 12 mm tool it is about 3.33, if the opening permits. This compares geometric slenderness only; holder clearance, material and cutting engagement still need review."]</aside>
+        <p class="docs-source"><a href="https://www.sandvik.coromant.com/en-us/knowledge/milling/vibration">@Localizer["Sandvik Coromant: vibration sources and tool overhang"]</a></p>
+    </section>
+<p><a href="/knowledges">@Localizer["Back to the knowledge library"]</a></p>
+</article>
+
+@code {
+    [Parameter]
+    public string? RouteOwner { get; set; }
+}

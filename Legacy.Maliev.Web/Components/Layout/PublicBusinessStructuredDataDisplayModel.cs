@@ -4,12 +4,18 @@ using Legacy.Maliev.Web.Application;
 
 namespace Legacy.Maliev.Web.Components.Layout;
 
+/// <summary>
+/// Carries localized organization and local-business JSON-LD for public document metadata.
+/// </summary>
+/// <param name="OrganizationJson">Serialized organization metadata with public company identity and social links.</param>
+/// <param name="LocalBusinessJson">Serialized local-business metadata with location, opening hours, and contact details.</param>
 public sealed record PublicBusinessStructuredDataDisplayModel(
     string OrganizationJson,
     string LocalBusinessJson)
 {
     private static readonly string[] SocialLinks =
     [
+        SocialNetworks.Facebook,
         SocialNetworks.Instagram,
         SocialNetworks.Line,
         SocialNetworks.YouTube,
@@ -17,6 +23,10 @@ public sealed record PublicBusinessStructuredDataDisplayModel(
         SocialNetworks.Threads
     ];
 
+    /// <summary>
+    /// Builds public company structured data in the current request culture.
+    /// </summary>
+    /// <returns>The serialized organization and local-business metadata.</returns>
     public static PublicBusinessStructuredDataDisplayModel Create()
     {
         var isThai = string.Equals(
@@ -60,7 +70,7 @@ public sealed record PublicBusinessStructuredDataDisplayModel(
         ["contactPoint"] = new[]
         {
             CreateContactPoint("+66898950690", "customer service", "info@maliev.com", includeEmail: true),
-            CreateContactPoint("+66898950690", "sales", "manufacturing@maliev.com", includeEmail: true)
+            CreateContactPoint("+66818030404", "sales", "manufacturing@maliev.com", includeEmail: true)
         },
         ["sameAs"] = SocialLinks,
         ["taxID"] = "0125561001573"

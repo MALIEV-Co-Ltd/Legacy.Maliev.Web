@@ -1,0 +1,106 @@
+@inject IStringLocalizer<HomeContent> Localizer
+@{
+    var inCarousel = Model.StartsWith("carousel-", StringComparison.Ordinal);
+    var variant = inCarousel ? Model.Substring(9) : Model;
+    var titleId = "hero-" + variant + "-title";
+    var culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var options = new[] {
+        (Id: "assembly", En: "Assembly", Th: "งานประกอบ"),
+        (Id: "partnership", En: "Partnership", Th: "ร่วมพัฒนางาน"),
+        (Id: "journey", En: "Sketch to production", Th: "จากภาพร่างสู่การผลิต")
+    };
+}
+@if (!inCarousel) {
+<nav class="hero-review-bar" aria-label="@L("Hero design previews")">
+    <div class="landing-container hero-review-inner">
+        <span>@L("Hero previews")</span>
+        <div class="hero-review-options">
+            @foreach (var option in options) {
+                <a href="@HomeHeroSelection.PreviewLink(culture, option.Id)" aria-current="@(variant == option.Id ? "page" : null)">@L(option.En)</a>
+            }
+        </div>
+        <a class="hero-review-original" href="@HomeHeroSelection.LocalizedLink("/", culture)">@L("Current layout")</a>
+    </div>
+</nav>
+}
+@if (variant == "assembly") {
+    <section class="home-hero-option hero-assembly" aria-labelledby="@titleId">
+        <div class="landing-container hero-assembly-grid">
+            <div class="hero-option-copy">
+                <h1 id="@titleId">@L("Custom parts.")<br /><span>@L("From CAD to assembly.")</span></h1>
+                <p>@L("CNC machining, 3D printing, scanning and design in Nonthaburi, Thailand. Bring a drawing, an existing part or a project brief.")</p>
+                <div class="landing-actions">
+                    <a class="landing-button landing-button-primary" href="@HomeHeroSelection.LocalizedLink("/Contact", culture)">@L("Discuss your part") <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                    <a class="hero-option-link" href="@HomeHeroSelection.LocalizedLink("/InstantQuotation/3D-Printing", culture)"><span>@L("Price a 3D print")</span> <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                </div>
+                <p class="hero-material-summary">@L("Machined aluminium. Printed plastic, nylon and resin. One assembly.")</p>
+            </div>
+            <figure class="hero-assembly-media" aria-label="@L("Manufacturing technologies used in this illustrative assembly")">
+                <div class="hero-assembly-annotated">
+                    <img src="/src/images/landing/profile-hybrid-gripper-cutout.webp" width="1200" height="800" fetchpriority="@(inCarousel && variant != "assembly" ? "low" : "high")" loading="eager" decoding="async" alt="@L("Illustrative gripper combining machined aluminium, orange FDM housing, ivory nylon fingers and an amber resin cover")" />
+                    <svg class="hero-tech-leaders" viewBox="0 0 1200 1091" aria-hidden="true" focusable="false">
+                        <path data-tech-leader="resin" data-target-x="790" data-target-y="289" pathLength="1" d="M800 145 L790 289" />
+                        <path data-tech-leader="fdm" data-target-x="580" data-target-y="335" pathLength="1" d="M170 145 L580 335" />
+                        <path data-tech-leader="nylon" data-target-x="300" data-target-y="615" pathLength="1" d="M160 946 L300 615" />
+                        <path data-tech-leader="cnc" data-target-x="850" data-target-y="780" pathLength="1" d="M980 946 L850 780" />
+                        <circle cx="790" cy="289" r="6" data-tech-point="resin" /><circle cx="580" cy="335" r="6" data-tech-point="fdm" /><circle cx="300" cy="615" r="6" data-tech-point="nylon" /><circle cx="850" cy="780" r="6" data-tech-point="cnc" />
+                    </svg>
+                    <ul class="hero-tech-callouts">
+                        <li class="hero-tech-resin"><strong>@L("SLA printing")</strong><span>@L("Resin sensor cover")</span></li>
+                        <li class="hero-tech-fdm"><strong>@L("FDM printing")</strong><span>@L("ABS housing")</span></li>
+                        <li class="hero-tech-nylon"><strong>@L("SLS printing")</strong><span>@L("Nylon finger pads")</span></li>
+                        <li class="hero-tech-cnc"><strong>@L("Home.Hero.CncLabel")</strong><span>@L("Aluminium base & jaws")</span></li>
+                    </ul>
+                </div>
+            </figure>
+        </div>
+    </section>
+} else if (variant == "partnership") {
+    <section class="home-hero-option hero-partnership" aria-labelledby="@titleId">
+        <div class="landing-container hero-partnership-stage">
+            <figure class="hero-partnership-media"><img src="/src/images/landing/camera-bracket-deployment.webp" width="1536" height="1024" fetchpriority="@(inCarousel && variant != "assembly" ? "low" : "high")" loading="eager" decoding="async" alt="@L("Illustrative Thai customer and MALIEV engineer reviewing a camera bracket on a bottle production line")" /></figure>
+            <div class="hero-option-copy hero-partnership-copy">
+                @if (inCarousel) {
+                <h2 id="@titleId">@L("Bring the part.")<br /><span>@L("Talk to an engineer.")</span></h2>
+                } else {
+                <h1 id="@titleId">@L("Bring the part.")<br /><span>@L("Talk to an engineer.")</span></h1>
+                }
+                <p>@L("Work through the dimensions, material and manufacturing route with MALIEV. From a first prototype to parts ready for your application.")</p>
+                <div class="landing-actions">
+                    <a class="landing-button landing-button-primary" href="@HomeHeroSelection.LocalizedLink("/Contact", culture)">@L("Discuss your project") <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                    <a class="hero-option-link" href="@HomeHeroSelection.LocalizedLink("/About", culture)"><span>@L("How we work")</span> <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                </div>
+            </div>
+        </div>
+    </section>
+} else {
+    <section class="home-hero-option hero-journey" aria-labelledby="@titleId">
+        <div class="landing-container">
+            <div class="hero-journey-heading">
+                @if (inCarousel) {
+                <h2 id="@titleId">@L("A sketch becomes")<br /><span>@L("a working part.")</span></h2>
+                } else {
+                <h1 id="@titleId">@L("A sketch becomes")<br /><span>@L("a working part.")</span></h1>
+                }
+                <div class="hero-option-copy"><p>@L("Develop the CAD. Compare prototypes. Prepare production. Follow one camera bracket through the decisions that shape the finished part.")</p></div>
+            </div>
+            <div class="hero-journey-images" role="group" aria-label="@L("Illustrative bracket development from sketch to CNC production")">
+                <img src="/src/images/landing/camera-bracket-sketch-v6.webp" width="1536" height="1024" fetchpriority="@(inCarousel && variant != "assembly" ? "low" : "high")" loading="eager" decoding="async" alt="@L("Customer sketch of bracket alternatives and the bottle to inspect")" />
+                <img src="/src/images/landing/camera-bracket-cad-v5.webp" width="1536" height="1024" loading="eager" decoding="async" alt="@L("Bracket CAD developed alongside the customer sketch")" />
+                <img src="/src/images/landing/camera-bracket-prototypes-v4.webp" width="1536" height="1024" loading="eager" decoding="async" alt="@L("Printed bracket prototypes for comparing fit and geometry")" />
+                <img src="/src/images/landing/camera-bracket-production-v5.webp" width="1536" height="1024" loading="eager" decoding="async" alt="@L("Repeat batch of aluminium brackets at the CNC machine")" />
+            </div>
+            <div class="landing-actions hero-journey-actions">
+                <a class="landing-button landing-button-primary" href="@HomeHeroSelection.LocalizedLink("/Contact", culture)">@L("Start with your idea") <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+                <a class="hero-option-link" href="@HomeHeroSelection.LocalizedLink("/About", culture)"><span>@L("See the complete journey")</span> <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+            </div>
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter]
+    public string Model { get; set; } = "carousel-assembly";
+
+    private string L(string key) => Localizer[key].Value;
+}

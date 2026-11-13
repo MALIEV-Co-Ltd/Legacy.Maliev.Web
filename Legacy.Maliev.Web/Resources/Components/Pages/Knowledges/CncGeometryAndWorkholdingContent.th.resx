@@ -1,0 +1,181 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root xmlns:ns1="urn:schemas-microsoft-com:xms-msdata" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:schema id="root">
+    <xs:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xs:element name="root" ns1:IsDataSet="true">
+      <xs:complexType>
+        <xs:choice maxOccurs="unbounded">
+          <xs:element name="metadata">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" />
+              </xs:sequence>
+              <xs:attribute name="name" use="required" type="xsd:string" />
+              <xs:attribute name="type" type="xsd:string" />
+              <xs:attribute name="mimetype" type="xsd:string" />
+              <xs:attribute ref="xml:space" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="assembly">
+            <xs:complexType>
+              <xs:attribute name="alias" type="xsd:string" />
+              <xs:attribute name="name" type="xsd:string" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="data">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" ns1:Ordinal="1" />
+                <xs:element name="comment" type="xsd:string" minOccurs="0" ns1:Ordinal="2" />
+              </xs:sequence>
+              <xs:attribute name="name" type="xsd:string" use="required" ns1:Ordinal="1" />
+              <xs:attribute name="type" type="xsd:string" ns1:Ordinal="3" />
+              <xs:attribute name="mimetype" type="xsd:string" ns1:Ordinal="4" />
+              <xs:attribute ref="xml:space" />
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="resheader">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="value" type="xsd:string" minOccurs="0" ns1:Ordinal="1" />
+              </xs:sequence>
+              <xs:attribute name="name" type="xsd:string" use="required" />
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:complexType>
+    </xs:element>
+  </xs:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Geometry, rigidity and workholding | MALIEV" xml:space="preserve">
+    <value>รูปทรง ความแข็งแกร่ง และการจับยึด | MALIEV</value>
+  </data>
+  <data name="Consider tool access and how the part is supported throughout the cut, not only the final shape. These design reviews connect thin features and deep pockets to fixturing, distortion and vibration." xml:space="preserve">
+    <value>พิจารณาทางเข้าของเครื่องมือและการรองรับชิ้นงานตลอดการตัด ควบคู่กับรูปทรงสุดท้าย หัวข้อต่อไปนี้เชื่อมโยงผนังบางและโพรงลึกกับการจับยึด การบิดตัว และการสั่น</value>
+  </data>
+  <data name="Geometry, rigidity and workholding" xml:space="preserve">
+    <value>รูปทรง ความแข็งแกร่ง และการจับยึด</value>
+  </data>
+  <data name="On this page" xml:space="preserve">
+    <value>ในบทความนี้</value>
+  </data>
+  <data name="Thin walls and floors: consider support as well as thickness" xml:space="preserve">
+    <value>ผนังและพื้นบาง: พิจารณาจุดรองรับร่วมกับความหนา</value>
+  </data>
+  <data name="Internal radii and pockets: leave room for the cutter" xml:space="preserve">
+    <value>รัศมีมุมในและโพรง: เผื่อพื้นที่ให้เครื่องมือตัด</value>
+  </data>
+  <data name="Part size and fixturing: plan how the work is held" xml:space="preserve">
+    <value>ขนาดชิ้นงานและการจับยึด: วางแผนว่าจะจับงานอย่างไร</value>
+  </data>
+  <data name="Warpage and residual stress: define the free condition" xml:space="preserve">
+    <value>การแอ่นและความเค้นตกค้าง: กำหนดสภาพหลังปลดจับยึด</value>
+  </data>
+  <data name="Chatter and tool reach: avoid unnecessary slenderness" xml:space="preserve">
+    <value>การสั่นสะท้านและระยะยื่น: ลดความเรียวยาวที่ไม่จำเป็น</value>
+  </data>
+  <data name="Examples explain design principles; confirm the material, drawing revision and proposed process for the actual project." xml:space="preserve">
+    <value>ตัวอย่างใช้เพื่ออธิบายหลักการออกแบบ ควรยืนยันวัสดุ รุ่นแบบงาน และกระบวนการที่เสนอสำหรับโครงการจริง</value>
+  </data>
+  <data name="Wall height, thickness, unsupported length and material all influence how a feature responds during cutting. A tall isolated wall behaves differently from a short wall tied into surrounding ribs. Thin floors can also bend under cutting or clamping loads. There is no single minimum wall thickness that establishes whether every material and geometry can be machined successfully." xml:space="preserve">
+    <value>ความสูง ความหนา ความยาวช่วงที่ไม่มีตัวรองรับ และวัสดุ ล้วนมีผลต่อการตอบสนองของฟีเจอร์ขณะตัด ผนังสูงที่อยู่เดี่ยวมีพฤติกรรมต่างจากผนังเตี้ยที่เชื่อมกับครีบรอบข้าง พื้นบางอาจแอ่นจากแรงตัดหรือแรงจับยึดได้เช่นกัน จึงไม่มีค่าความหนาผนังต่ำสุดค่าเดียวที่ใช้ตัดสินการผลิตได้กับทุกวัสดุและทุกรูปทรง</value>
+  </data>
+  <data name="Retaining material for support during roughing and approaching the final section in stages can help control deflection. Sandvik describes alternating sides and staged strategies according to wall proportions. These are process-planning approaches, not design acceptance limits. Ask whether a rib, shorter wall, thicker base or temporary support feature is compatible with the part function and final assembly." xml:space="preserve">
+    <value>การเหลือเนื้อวัสดุไว้รองรับระหว่างกัดหยาบ แล้วค่อย ๆ กัดเข้าใกล้ความหนาสุดท้าย ช่วยควบคุมการโก่งตัวได้ Sandvik อธิบายวิธีสลับกัดแต่ละด้านและแบ่งขั้นตามสัดส่วนผนัง วิธีเหล่านี้ใช้วางแผนการผลิต ไม่ใช่เกณฑ์ตัดสินรับแบบ ควรหารือว่าการเพิ่มครีบ ลดความสูง เพิ่มความหนาพื้น หรือทำส่วนรองรับชั่วคราว สอดคล้องกับหน้าที่และการประกอบหรือไม่</value>
+  </data>
+  <data name="Two 24 mm walls with different thicknesses and height-to-thickness ratios." xml:space="preserve">
+    <value>ผนังสูง 24 มม. สองชิ้นที่มีความหนาและอัตราส่วนความสูงต่อความหนาต่างกัน</value>
+  </data>
+  <data name="Illustrative geometry: the same wall height with different thicknesses. The ratios compare designs; they do not set a machining limit." xml:space="preserve">
+    <value>ตัวอย่างรูปทรง: ผนังสูงเท่ากันแต่หนาต่างกัน อัตราส่วนนี้ใช้เปรียบเทียบแบบ ไม่ใช่ขีดจำกัดการผลิต</value>
+  </data>
+  <data name="Illustrative example: a 24 mm high wall at 1.5 mm thickness has a height-to-thickness ratio of 16. Increasing thickness to 2 mm reduces the ratio to 12. This helps compare alternatives; it does not establish feasibility. Also state whether wall straightness is required after the clamps are released." xml:space="preserve">
+    <value>ตัวอย่างประกอบ: ผนังสูง 24 มม. หนา 1.5 มม. มีอัตราส่วนความสูงต่อความหนาเท่ากับ 16 หากเพิ่มความหนาเป็น 2 มม. อัตราส่วนลดเป็น 12 ใช้เปรียบเทียบทางเลือกได้ แต่ยังตัดสินความเป็นไปได้ไม่ได้ ควรระบุด้วยว่าต้องการความตรงของผนังหลังปลดจับยึดหรือไม่</value>
+  </data>
+  <data name="Sandvik Coromant: thin deflecting walls and bases" xml:space="preserve">
+    <value>Sandvik Coromant: การกัดผนังและพื้นบางที่โก่งตัวได้</value>
+  </data>
+  <data name="A rotating end mill leaves a radius in an internal vertical corner. Making that radius smaller usually changes the required tool diameter, reach or number of operations. When the cutter nearly fills a corner, engagement increases and the cut can become less stable. Give internal corners the largest radius that still provides clearance for the mating component and preserves required strength." xml:space="preserve">
+    <value>ดอกเอ็นมิลหมุนตัดจะทิ้งรัศมีไว้ที่มุมในแนวตั้ง การลดรัศมีมักทำให้ต้องเปลี่ยนขนาดดอก ระยะยื่น หรือจำนวนขั้นตอน เมื่อดอกเกือบเต็มมุม พื้นที่สัมผัสตัดจะเพิ่มขึ้นและอาจทำให้การตัดไม่เสถียร ควรกำหนดรัศมีมุมในให้ใหญ่ที่สุดเท่าที่ชิ้นส่วนคู่ประกอบยังสวมได้และยังคงความแข็งแรงตามต้องการ</value>
+  </data>
+  <data name="Review pocket depth, width, floor thickness and corner radius together. A narrow deep pocket can combine poor access, a slender tool and difficult chip removal. Where the function allows, consider a shallower pocket, larger corner radii, an opening through one side or an assembly of simpler components. A square mating tab may instead accept corner reliefs. Any departure from the released drawing needs agreement." xml:space="preserve">
+    <value>ทบทวนความลึก ความกว้าง ความหนาพื้น และรัศมีมุมโพรงร่วมกัน โพรงลึกและแคบอาจมีทั้งปัญหาเข้าถึงยาก เครื่องมือเรียวยาว และคายเศษลำบาก หากหน้าที่ชิ้นงานเอื้ออำนวย อาจลดความลึก เพิ่มรัศมี เปิดด้านหนึ่งของโพรง หรือแยกประกอบจากชิ้นส่วนที่ง่ายกว่า หากต้องสวมเดือยเหลี่ยม อาจใช้มุมหลบแทน การเปลี่ยนจากแบบที่อนุมัติแล้วต้องตกลงกันก่อนเสมอ</value>
+  </data>
+  <data name="R4 pocket corners with diameter 8 and diameter 6 cutters, showing different tool-centre clearance." xml:space="preserve">
+    <value>มุมโพรง R4 กับเครื่องมือตัดขนาดเส้นผ่านศูนย์กลาง 8 และ 6 มม. แสดงระยะเผื่อแนวศูนย์กลางที่ต่างกัน</value>
+  </data>
+  <data name="Illustrative geometry: at an R4 corner, an 8 mm cutter leaves no centre-path radius; a 6 mm cutter leaves R1. This diagram does not prescribe a cutting strategy." xml:space="preserve">
+    <value>ตัวอย่างรูปทรง: มุม R4 กับเครื่องมือขนาด 8 มม. ไม่มีรัศมีเหลือให้แนวศูนย์กลาง ส่วนเครื่องมือขนาด 6 มม. เหลือ R1 ภาพนี้ไม่ได้กำหนดวิธีตัดเฉือน</value>
+  </data>
+  <data name="Illustrative example: an R4 corner geometrically accommodates an 8 mm diameter cutter, but a 6 mm cutter leaves a 1 mm radius for its centre path around that corner. That extra path space can help programming; it is not a guarantee of finish, accuracy or machining time." xml:space="preserve">
+    <value>ตัวอย่างประกอบ: มุม R4 สามารถรับดอกเส้นผ่านศูนย์กลาง 8 มม. ได้ในเชิงรูปทรง แต่ดอก 6 มม. จะเหลือรัศมีทางเดินจุดศูนย์กลาง 1 มม. บริเวณมุมนั้น พื้นที่เพิ่มเติมช่วยในการวางทางเดินเครื่องมือได้ แต่ไม่ได้รับประกันผิว ความแม่นยำ หรือเวลาผลิต</value>
+  </data>
+  <data name="Sandvik Coromant: cutter engagement inside corners" xml:space="preserve">
+    <value>Sandvik Coromant: การสัมผัสตัดบริเวณมุมใน</value>
+  </data>
+  <data name="Sandvik Coromant: pocketing method selection" xml:space="preserve">
+    <value>Sandvik Coromant: การเลือกวิธีกัดโพรง</value>
+  </data>
+  <data name="Final length, width and height are only part of a size review. The starting stock, fixture, cutting tool, holder and approach movements also need space. A part fitting within a nominal machine travel does not establish that every surface is reachable. Small parts may need dedicated handling or support just as large parts may need several setups. Identify surfaces that can be used for holding." xml:space="preserve">
+    <value>ความยาว ความกว้าง และความสูงสุดท้ายเป็นเพียงส่วนหนึ่งของการทบทวนขนาด วัตถุดิบ ฟิกซ์เจอร์ ดอกตัด หัวจับ และการเคลื่อนที่เข้าออกล้วนต้องใช้พื้นที่ การที่ชิ้นงานมีขนาดอยู่ในระยะเดินเครื่องไม่ได้แปลว่าจะเข้าถึงทุกผิวได้ ชิ้นงานเล็กอาจต้องมีวิธีหยิบจับหรือรองรับเฉพาะ เช่นเดียวกับงานใหญ่ที่อาจต้องจับยึดหลายครั้ง ควรระบุผิวที่อนุญาตให้ใช้จับงาน</value>
+  </data>
+  <data name="Mark faces that cannot carry clamp marks, sacrificial material that may be removed later, and features that must stay related across setups. Ask how the final operation will hold the part once most stock has gone. For rotating fixtures, review the combined moving envelope and tool clearance. Simulation must represent the actual stock, holder and fixture rather than only the finished model." xml:space="preserve">
+    <value>ทำเครื่องหมายผิวที่ห้ามมีรอยจับ เนื้อเผื่อที่ตัดทิ้งภายหลังได้ และฟีเจอร์ที่ต้องรักษาความสัมพันธ์เมื่อเปลี่ยนการจับยึด ควรถามด้วยว่าในขั้นตอนสุดท้ายจะจับชิ้นงานอย่างไรเมื่อกัดเนื้อส่วนใหญ่ออกแล้ว หากใช้ฟิกซ์เจอร์หมุน ต้องตรวจพื้นที่กวาดรวมและระยะหลบเครื่องมือ การจำลองต้องรวมวัตถุดิบ หัวจับ และฟิกซ์เจอร์จริง ไม่ใช่เฉพาะโมเดลสำเร็จ</value>
+  </data>
+  <data name="Illustrative example: a 100 × 60 × 8 mm finished plate may start as thicker stock to provide holding material. The extra thickness is a planning allowance to agree, not an automatic requirement. Confirm how the last face is supported and which features establish the second setup." xml:space="preserve">
+    <value>ตัวอย่างประกอบ: แผ่นสำเร็จขนาด 100 × 60 × 8 มม. อาจเริ่มจากวัตถุดิบที่หนากว่าเพื่อเหลือส่วนจับยึด ความหนาเผื่อเป็นสิ่งที่ต้องตกลงตามแผนผลิต ไม่ใช่ข้อกำหนดตายตัว ต้องยืนยันว่าจะรองรับผิวสุดท้ายอย่างไรและใช้ฟีเจอร์ใดอ้างอิงในการจับครั้งที่สอง</value>
+  </data>
+  <data name="Autodesk: access, setups and collision verification" xml:space="preserve">
+    <value>Autodesk: การเข้าถึง การจับยึด และการตรวจการชน</value>
+  </data>
+  <data name="A part can look flat while held and change shape after release. Elastic bending under a clamp is different from distortion associated with residual stress and material removal. Wrought stock can contain residual stress from earlier processing; removing material changes the remaining balance. NIST research on aluminum bars illustrates why stock condition and the location of a part within the stock can matter." xml:space="preserve">
+    <value>ชิ้นงานอาจดูเรียบขณะจับยึด แต่เปลี่ยนรูปหลังปลดออก การแอ่นแบบยืดหยุ่นจากแรงจับต่างจากการเปลี่ยนรูปที่เกี่ยวกับความเค้นตกค้างและการตัดเนื้อวัสดุ วัตถุดิบที่ผ่านการแปรรูปอาจมีความเค้นตกค้างจากขั้นตอนก่อนหน้า เมื่อตัดเนื้อออก สมดุลของเนื้อที่เหลือจะเปลี่ยนไป งานวิจัยแท่งอะลูมิเนียมของ NIST แสดงให้เห็นความสำคัญของสภาพวัตถุดิบและตำแหน่งชิ้นงานภายในเนื้อวัตถุดิบ</value>
+  </data>
+  <data name="Flag broad thin plates, heavy one-sided pocketing and tight flatness requirements early. Discuss suitable stock condition, staged removal, support and any necessary thermal processing with the manufacturer. These choices have material, schedule and cost implications; no single treatment guarantees a distortion-free part. State whether inspection is in the free condition, on defined supports or under a specified assembly restraint, and agree that condition before setting an acceptance value." xml:space="preserve">
+    <value>ควรแจ้งตั้งแต่ต้นหากเป็นแผ่นบางกว้าง กัดโพรงออกมากเพียงด้านเดียว หรือต้องควบคุมความเรียบอย่างเข้มงวด หารือเรื่องสภาพวัตถุดิบ การแบ่งขั้นตัดเนื้อ การรองรับ และกระบวนการทางความร้อนที่จำเป็นกับผู้ผลิต ทางเลือกเหล่านี้มีผลต่อวัสดุ เวลา และราคา ไม่มีวิธีเดียวที่รับประกันว่าจะไม่เปลี่ยนรูป ต้องระบุว่าจะตรวจในสภาพอิสระ บนจุดรองรับที่กำหนด หรือภายใต้แรงยึดแบบการประกอบ และตกลงก่อนกำหนดเกณฑ์รับงาน</value>
+  </data>
+  <data name="Illustrative example: a 200 mm plate with a 0.05 mm flatness requirement needs a defined inspection condition. A result measured while the plate is pulled against a fixture does not describe its free-state shape. Provide the real mounting arrangement if the assembly intentionally restrains the plate." xml:space="preserve">
+    <value>ตัวอย่างประกอบ: แผ่นยาว 200 มม. ที่กำหนดความเรียบ 0.05 มม. ต้องระบุสภาวะตรวจ ผลที่วัดขณะดึงแผ่นให้แนบฟิกซ์เจอร์ไม่สามารถบอกการเปลี่ยนรูปในสภาพอิสระได้ หากการประกอบจริงตั้งใจยึดบังคับแผ่น ควรส่งรายละเอียดการติดตั้งนั้นมาด้วย</value>
+  </data>
+  <data name="NIST: aluminum residual stress and machining distortion, printed pages 34–35" xml:space="preserve">
+    <value>NIST: ความเค้นตกค้างและการเปลี่ยนรูปในการกัดอะลูมิเนียม หน้าเอกสาร 34–35</value>
+  </data>
+  <data name="Chatter can involve the cutter, holder, machine, workpiece or fixture. It may leave repeated marks and interfere with surface quality or dimensional control. A long slender tool and an unsupported wall create different sources of flexibility. Changing speed alone is not a universal cure. The design contribution is to avoid unnecessary reach, abrupt access restrictions and unsupported features where the function permits." xml:space="preserve">
+    <value>การสั่นสะท้านอาจเกี่ยวข้องกับดอกตัด หัวจับ เครื่องจักร ชิ้นงาน หรือฟิกซ์เจอร์ โดยอาจทิ้งรอยซ้ำและกระทบคุณภาพผิวหรือการควบคุมขนาด ดอกเรียวยาวกับผนังที่ไม่มีตัวรองรับเป็นแหล่งความยืดหยุ่นคนละส่วน การเปลี่ยนรอบเพียงอย่างเดียวจึงไม่ใช่คำตอบสำหรับทุกกรณี ในด้านการออกแบบ ควรลดระยะเอื้อมที่ไม่จำเป็น ช่องเข้าถึงที่บีบรัด และฟีเจอร์ไร้ตัวรองรับเท่าที่หน้าที่งานอนุญาต</value>
+  </data>
+  <data name="Ask whether an opening can be enlarged, a deep feature approached from another face, or a narrow detail separated from the main roughing operation. The manufacturer must coordinate tool length, holding, engagement and cutting conditions. Do not prescribe a universal cutting recipe on a drawing. If a surface has a functional texture requirement, identify it explicitly so cosmetic tool marks are not confused with acceptance criteria." xml:space="preserve">
+    <value>อาจหารือเรื่องขยายช่องเปิด เข้ากัดฟีเจอร์ลึกจากอีกด้าน หรือแยกการเก็บรายละเอียดแคบออกจากขั้นตอนกัดหยาบหลัก ผู้ผลิตต้องเลือกความยาวดอก การจับยึด การสัมผัสตัด และสภาวะตัดให้สัมพันธ์กัน ไม่ควรกำหนดสูตรตัดเดียวสำหรับทุกงานไว้ในแบบ หากผิวมีข้อกำหนดความหยาบเพื่อการใช้งาน ต้องระบุให้ชัด เพื่อไม่ให้รอยเครื่องมือด้านความสวยงามปะปนกับเกณฑ์ตรวจรับ</value>
+  </data>
+  <data name="Illustrative example: 40 mm reach with an 8 mm diameter tool is a reach-to-diameter ratio of 5. With a 12 mm tool it is about 3.33, if the opening permits. This compares geometric slenderness only; holder clearance, material and cutting engagement still need review." xml:space="preserve">
+    <value>ตัวอย่างประกอบ: ระยะเอื้อม 40 มม. กับดอกเส้นผ่านศูนย์กลาง 8 มม. มีอัตราส่วนระยะเอื้อมต่อเส้นผ่านศูนย์กลาง 5 หากช่องเปิดรับดอก 12 มม. ได้ อัตราส่วนจะเป็นประมาณ 3.33 ตัวเลขนี้เปรียบเทียบความเรียวยาวทางรูปทรงเท่านั้น ยังต้องตรวจระยะหลบหัวจับ วัสดุ และการสัมผัสตัดร่วมด้วย</value>
+  </data>
+  <data name="Sandvik Coromant: vibration sources and tool overhang" xml:space="preserve">
+    <value>Sandvik Coromant: แหล่งการสั่นและระยะยื่นเครื่องมือ</value>
+  </data>
+  <data name="Back to the knowledge library" xml:space="preserve">
+    <value>กลับสู่คลังความรู้</value>
+  </data>
+  <data name="A thin aluminium frame is supported and clamped on a fixture plate." xml:space="preserve"><value>กรอบอะลูมิเนียมบางมีจุดรองรับและจับยึดบนแผ่นฟิกซ์เจอร์</value></data>
+  <data name="Support the part through the machining sequence, including its least rigid stage. Illustrative image." xml:space="preserve"><value>รองรับชิ้นงานตลอดลำดับการผลิต รวมถึงช่วงที่ชิ้นงานมีความแข็งเกร็งน้อยที่สุด ภาพประกอบ</value></data>
+  <data name="Open full-size diagram" xml:space="preserve"><value>เปิดแผนภาพขนาดเต็ม</value></data>
+  <data name="Thin walls and floors" xml:space="preserve"><value>ผนังและพื้นบาง</value></data>
+  <data name="Internal radii and pockets" xml:space="preserve"><value>รัศมีมุมในและโพรง</value></data>
+  <data name="Part size and fixturing" xml:space="preserve"><value>ขนาดชิ้นงานและการจับยึด</value></data>
+  <data name="Warpage and residual stress" xml:space="preserve"><value>การแอ่นและความเค้นตกค้าง</value></data>
+  <data name="Chatter and tool reach" xml:space="preserve"><value>การสั่นสะท้านและระยะยื่น</value></data>
+  <data name="A freely resting aluminium plate bows above a flat reference surface." xml:space="preserve"><value>แผ่นอะลูมิเนียมที่วางอย่างอิสระแอ่นเหนือพื้นผิวอ้างอิงเรียบ</value></data>
+  <data name="Illustrative free-state bow, exaggerated for visibility. The photograph does not establish a cause or a measured flatness value." xml:space="preserve"><value>ตัวอย่างการแอ่นเมื่อไม่มีแรงจับยึด ขยายการแอ่นเพื่อให้เห็นชัด ภาพนี้ไม่ได้ระบุสาเหตุหรือค่าความเรียบที่วัดได้</value></data>
+  <data name="Repeated wavy marks appear on the side wall of a milled aluminium block." xml:space="preserve"><value>รอยคลื่นซ้ำปรากฏบนผนังด้านข้างของแท่งอะลูมิเนียมที่ผ่านการกัด</value></data>
+  <data name="Illustrative periodic surface marks associated with unstable cutting. Appearance alone does not establish the cause or a surface-roughness value." xml:space="preserve"><value>ตัวอย่างรอยบนผิวที่เกิดซ้ำเป็นคาบซึ่งสัมพันธ์กับการตัดที่ไม่เสถียร ลักษณะผิวเพียงอย่างเดียวไม่สามารถยืนยันสาเหตุหรือค่าความหยาบผิวได้</value></data>
+</root>

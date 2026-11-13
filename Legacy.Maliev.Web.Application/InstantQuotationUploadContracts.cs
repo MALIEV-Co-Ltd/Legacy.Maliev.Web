@@ -49,7 +49,11 @@ public sealed record InstantQuotationPhysicalAnalysisUpload(
     string ContentType,
     long SizeBytes,
     string Sha256,
-    string Status);
+    string Status)
+{
+    /// <summary>Gets the protected per-upload unit interpretation; absent saved values retain legacy millimetres.</summary>
+    public InstantQuotationGltfUnitPolicy GltfUnitPolicy { get; init; } = InstantQuotationGltfUnitPolicy.Legacy;
+}
 
 public sealed record InstantQuotationFinalizedFile(
     Guid FileId,
