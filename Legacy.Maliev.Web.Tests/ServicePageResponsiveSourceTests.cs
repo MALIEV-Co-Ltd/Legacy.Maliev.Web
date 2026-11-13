@@ -35,6 +35,7 @@ public sealed class ServicePageResponsiveSourceTests
         Assert.Contains("scrollTo({", js, StringComparison.Ordinal);
         Assert.Contains("addEventListener('scroll'", js, StringComparison.Ordinal);
         Assert.Contains("TRAILING_EDGE_PADDING = 44", js, StringComparison.Ordinal);
+        Assert.Contains("!section.classList.contains('service-hero')", js, StringComparison.Ordinal);
         Assert.Contains("service-toc.js", entry, StringComparison.Ordinal);
     }
 
@@ -49,9 +50,9 @@ public sealed class ServicePageResponsiveSourceTests
         Assert.Contains("<ServiceBreadcrumb", source, StringComparison.Ordinal);
         var hero = System.Text.RegularExpressions.Regex.Match(source, "<section\\b(?=[^>]*\\bclass=\"[^\"]*\\bservice-hero\\b[^\"]*\")[^>]*>");
         Assert.True(hero.Success);
-        Assert.True(
-            source.IndexOf("<ServiceBreadcrumb", StringComparison.Ordinal) < hero.Index,
-            "The service breadcrumb must precede its hero.");
+        var breadcrumb = source.IndexOf("<ServiceBreadcrumb", StringComparison.Ordinal);
+        var end = source.IndexOf("</section>", hero.Index, StringComparison.Ordinal);
+        Assert.True(breadcrumb > hero.Index && breadcrumb < end, "The service breadcrumb must be inside its hero.");
         Assert.Contains("<ServicePageToc />", source, StringComparison.Ordinal);
         Assert.Contains($"ServiceKey=\"{service}\"", source, StringComparison.Ordinal);
     }
