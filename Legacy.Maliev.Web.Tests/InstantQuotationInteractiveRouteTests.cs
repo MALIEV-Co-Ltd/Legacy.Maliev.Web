@@ -440,8 +440,8 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<Testin
             Assert.True(dropzone.Success);
             var limitMb = InstantQuotationWorkflowCoordinator.MaximumFileSize / (1024 * 1024);
             var expected = culture == "th"
-                ? $"สูงสุด {limitMb} MB ต่อไฟล์"
-                : $"Up to {limitMb} MB per file";
+                ? $"สูงสุด {limitMb} MB ต่อไฟล์ · เพิ่มได้หลายชิ้น"
+                : $"Up to {limitMb} MB per file · add multiple parts";
 
             Assert.Contains(expected, dropzone.Groups["content"].Value, StringComparison.Ordinal);
             Assert.DoesNotContain("instant-quote__sr-only", dropzone.Value, StringComparison.Ordinal);
@@ -468,7 +468,24 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<Testin
             System.Text.RegularExpressions.RegexOptions.Singleline)
             .Cast<System.Text.RegularExpressions.Match>().ToList();
         var lookupButtons = allEnabledButtons.Where(match => match.Value.Contains("data-lookup-", StringComparison.Ordinal)).ToList();
-        var enabledButtons = allEnabledButtons.Except(lookupButtons).ToList();
+        var consultationButtons = allEnabledButtons.Where(match => System.Text.RegularExpressions.Regex.IsMatch(
+            match.Value, "<button\\b[^>]*\\bid=\"instant-quote-consultation\"(?=\\s|>)")).ToList();
+        if (state is InstantQuotationWorkflowState.Uploaded)
+        {
+            var consultation = Assert.Single(consultationButtons).Value;
+            Assert.Contains("type=\"button\"", consultation, StringComparison.Ordinal);
+            Assert.Contains("data-summary-consultation", consultation, StringComparison.Ordinal);
+            Assert.Contains("data-bs-toggle=\"dropdown\"", consultation, StringComparison.Ordinal);
+            Assert.Contains("aria-controls=\"instant-quote-consultation-menu\"", consultation, StringComparison.Ordinal);
+            Assert.Contains("aria-expanded=\"false\"", consultation, StringComparison.Ordinal);
+            Assert.Matches("<ul\\b[^>]*\\bid=\"instant-quote-consultation-menu\"[^>]*aria-labelledby=\"instant-quote-consultation\"", html);
+        }
+        else
+        {
+            Assert.Empty(consultationButtons);
+            Assert.DoesNotContain("id=\"instant-quote-consultation\"", html, StringComparison.Ordinal);
+        }
+        var enabledButtons = allEnabledButtons.Except(lookupButtons).Except(consultationButtons).ToList();
         if (state is InstantQuotationWorkflowState.CustomerDetails)
         {
             // Keep the original viewer/save action gate while accounting for the separately wired lookup controls.
@@ -500,6 +517,52 @@ public sealed class InstantQuotationInteractiveRouteTests : IClassFixture<Testin
         Assert.Contains(enabledButtons, match => match.Value.Contains("Reset view", StringComparison.Ordinal));
         Assert.Contains(enabledButtons, match => match.Value.Contains("Fit to view", StringComparison.Ordinal));
         Assert.Contains(enabledButtons, match => match.Value.Contains("Fullscreen", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("en", InstantQuotationWorkflowState.Review, "instant-quote-review-heading")]
+    [InlineData("th", InstantQuotationWorkflowState.Review, "instant-quote-review-heading")]
+    [InlineData("en", InstantQuotationWorkflowState.CustomerDetails, "instant-quote-customer-heading")]
+    [InlineData("th", InstantQuotationWorkflowState.CustomerDetails, "instant-quote-customer-heading")]
+    [InlineData("en", InstantQuotationWorkflowState.Submitted, "instant-quote-submitted-heading")]
+    [InlineData("th", InstantQuotationWorkflowState.Submitted, "instant-quote-submitted-heading")]
+    public async Task ReviewAndSubmittedStates_ExposeTopLevelSectionHeadings(string culture, InstantQuotationWorkflowState state, string headingId)
+    {
+        var previousCulture = CultureInfo.CurrentCulture;
+        var previousUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(culture);
+            var customer = state is InstantQuotationWorkflowState.CustomerDetails
+                ? InstantQuotationCustomerDisplayModel.Empty with { InvalidFields = ["TaxNumber"] }
+                : null;
+            var html = WebUtility.HtmlDecode(await RenderWorkflowAsync(state, customer));
+            Assert.Contains("<h1 id=\"instant-quote-workflow-heading\"", html, StringComparison.Ordinal);
+            Assert.Contains($"<h2 id=\"{headingId}\"", html, StringComparison.Ordinal);
+            Assert.Contains($"aria-labelledby=\"{headingId}\"", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("role=\"dialog\"", html, StringComparison.Ordinal);
+            if (state is InstantQuotationWorkflowState.CustomerDetails)
+            {
+                foreach (var childId in new[] { "instant-quote-contact-title", "instant-quote-company-title", "instant-quote-project-title" })
+                {
+                    Assert.Contains($"<h3 id=\"{childId}\"", html, StringComparison.Ordinal);
+                    Assert.Contains($"aria-labelledby=\"{childId}\"", html, StringComparison.Ordinal);
+                }
+                Assert.Contains("<h3 class=\"h4\" data-instant-quote-submit-heading", html, StringComparison.Ordinal);
+                Assert.Contains("<h3 class=\"h4\">", html, StringComparison.Ordinal);
+                Assert.Contains("role=\"alert\"", html, StringComparison.Ordinal);
+            }
+            if (state is InstantQuotationWorkflowState.Submitted)
+            {
+                Assert.Contains("role=\"status\"", html, StringComparison.Ordinal);
+            }
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previousCulture;
+            CultureInfo.CurrentUICulture = previousUiCulture;
+        }
     }
 
     [Theory]

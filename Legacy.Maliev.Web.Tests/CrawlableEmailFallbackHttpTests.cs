@@ -74,8 +74,10 @@ public sealed class CrawlableEmailFallbackHttpTests(TestingWebApplicationFactory
         using var response = await client.GetAsync($"/contact?culture={culture}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var html = await response.Content.ReadAsStringAsync();
-        AssertContact(html, "info@maliev.com");
-        Assert.DoesNotContain("href=\"mailto:info@maliev.com\"", html, StringComparison.Ordinal);
+        var main = Regex.Match(html, "<main\\b[^>]*class=\"[^\"]*\\binquiry-page\\b[^\"]*\"[^>]*>[\\s\\S]*?</main>", RegexOptions.CultureInvariant);
+        Assert.True(main.Success);
+        AssertContact(main.Value, "info@maliev.com");
+        Assert.DoesNotContain("href=\"mailto:info@maliev.com\"", main.Value, StringComparison.Ordinal);
     }
 
     private static void AssertContact(string html, string recipient)

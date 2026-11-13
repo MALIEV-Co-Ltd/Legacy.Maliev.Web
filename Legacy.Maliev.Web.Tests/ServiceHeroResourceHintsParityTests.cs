@@ -7,14 +7,14 @@ public sealed class ServiceHeroResourceHintsParityTests
 {
     public static TheoryData<string, string> ServicePages => new()
     {
-        { "ThreeDimensionalDesignPage.razor", "/src/images/services/design/design-workflow.webp" },
-        { "ThreeDimensionalPrintingPage.razor", "/src/images/services/printing/printing-hero.webp" },
-        { "ThreeDimensionalScanningPage.razor", "/src/images/services/scanning/scanning-hero.webp" },
-        { "CncMachiningPage.razor", "/src/images/services/cnc/cnc-hero.webp" },
-        { "CustomManufacturingPage.razor", "/src/images/services/custom-manufacturing/custom-manufacturing-story.webp" },
-        { "FinishingAndColorPage.razor", "/src/images/services/printing/printing-finish-color-approval.webp" },
-        { "LowVolumeInjectionMoldingPage.razor", "/src/images/services/injection-molding/injection-service-hero-wide.webp" },
-        { "SiliconeCastingPage.razor", "/src/images/services/silicone-casting/silicone-casting-workflow.webp" },
+        { "ThreeDimensionalDesignPage.razor", "/src/images/services/hero-illustrations/design-hero-light.webp" },
+        { "ThreeDimensionalPrintingPage.razor", "/src/images/services/printing/printing-hero-prototypes-transparent.webp" },
+        { "ThreeDimensionalScanningPage.razor", "/src/images/services/hero-illustrations/scanning-hero-raptor-x-unbranded.webp" },
+        { "CncMachiningPage.razor", "/src/images/services/hero-illustrations/cnc-hero-light.webp" },
+        { "CustomManufacturingPage.razor", "/src/images/services/hero-illustrations/custom-hero-light.webp" },
+        { "FinishingAndColorPage.razor", "/src/images/services/hero-illustrations/finishing-hero-light.webp" },
+        { "LowVolumeInjectionMoldingPage.razor", "/src/images/services/hero-illustrations/injection-hero-light.webp" },
+        { "SiliconeCastingPage.razor", "/src/images/services/hero-illustrations/silicone-hero-light.webp" },
     };
 
     [Theory]

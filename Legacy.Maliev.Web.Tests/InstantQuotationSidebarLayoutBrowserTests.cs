@@ -13,6 +13,7 @@ namespace Legacy.Maliev.Web.Tests;
 // This proves real Razor/circuit layout, not FileService admission or commercial pricing.
 public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper output)
 {
+    internal const string UnexpectedConsoleErrorSentinel = "synthetic-unexpected-sidebar-console-error";
     private static int ReserveFreePort() => BrowserTestServerPort.Reserve();
 
     [Theory]
@@ -43,11 +44,16 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         await RunPartsRailAsync(culture, 1280, 720, expectCompact: true);
     }
 
-    private async Task RunPartsRailAsync(string culture, int width, int height, bool expectCompact = false)
+    internal Task RunUnexpectedConsoleErrorControlAsync() =>
+        RunPartsRailAsync("en", 1280, 800, injectUnexpectedConsoleError: true);
+
+    private async Task RunPartsRailAsync(string culture, int width, int height, bool expectCompact = false,
+        bool injectUnexpectedConsoleError = false)
     {
         await using var factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
         var port = ReserveFreePort();
         var evidencePrefix = height == 800 ? $"sidebar-{culture}-{width}" : $"sidebar-{culture}-{width}-h{height}";
+        if (injectUnexpectedConsoleError) evidencePrefix += "-unexpected-console-control";
         var origin = new Uri($"http://127.0.0.1:{port}");
         factory.UseKestrel(port);
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
@@ -56,6 +62,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         await using var context = await browser.NewContextAsync(new()
         { ViewportSize = new() { Width = width, Height = height }, HasTouch = width <= 375 });
         await using var page = await context.NewPageAsync();
+        await OptionalPrintingDriverFixture.UseUnavailableDriverAsync(page);
         await using var failureEvidence = new BrowserFailureEvidence(page,
             metadata => output.WriteLine("[sidebar-evidence-cleanup] " + metadata));
         failureEvidence.Stage("Navigation");
@@ -255,7 +262,7 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         await Assertions.Expect(page.Locator("[data-workflow-parts-panel] [data-workflow-part-count]")).ToHaveAttributeAsync("aria-live", "polite");
         await Assertions.Expect(page.Locator("[data-workflow-parts-panel] [data-workflow-part-count]")).ToHaveTextAsync(culture == "th" ? $"{names.Length} ชิ้น" : $"{names.Length} parts");
         await Assertions.Expect(rail.Locator(".iq-compact-dropzone strong")).ToHaveTextAsync(culture == "th" ? "เพิ่มชิ้นงาน" : "Add parts");
-        var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+        var review = page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
         await Assertions.Expect(review).ToBeEnabledAsync();
         var directory = Environment.GetEnvironmentVariable("MALIEV_BROWSER_EVIDENCE_DIR");
         async Task Capture(string state)
@@ -406,6 +413,38 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
                 "Every rendered line of the full part name must fit its card and rail. "
                 + "Rectangles=[left,top,right,bottom]; failures=[index,edgeMask,left,top,right,bottom], "
                 + "edges=left1/right2/top4/bottom8. " + nameGeometry.GetRawText());
+            var thumbnail = card.Locator("img[data-workflow-thumbnail]");
+            await Assertions.Expect(thumbnail).ToHaveCountAsync(1);
+            await using var thumbnailElement = await thumbnail.ElementHandleAsync()
+                ?? throw new InvalidOperationException("The owning part thumbnail is missing.");
+            await using var thumbnailReady = await page.WaitForFunctionAsync(
+                "image => image.isConnected && image.complete && image.naturalWidth > 0 && image.naturalHeight > 0",
+                thumbnailElement);
+            var thumbnailGeometry = await thumbnail.EvaluateAsync<JsonElement>("""
+                image => {
+                  const r=image.getBoundingClientRect();
+                  const card=image.closest('[data-workflow-part]').getBoundingClientRect();
+                  const rail=image.closest('[data-workflow-parts]').getBoundingClientRect();
+                  return {
+                    loaded:image.complete && image.naturalWidth>0 && image.naturalHeight>0,
+                    positive:r.width>0 && r.height>0,
+                    square:Math.abs(r.width-r.height)<=1,
+                    insideCard:r.left>=card.left-1 && r.right<=card.right+1
+                      && r.top>=card.top-1 && r.bottom<=card.bottom+1,
+                    insideRailHorizontally:r.left>=rail.left-1 && r.right<=rail.right+1,
+                    objectFit:getComputedStyle(image).objectFit,
+                    width:r.width,height:r.height,
+                    naturalWidth:image.naturalWidth,naturalHeight:image.naturalHeight };
+                }
+                """);
+            Assert.True(thumbnailGeometry.GetProperty("loaded").GetBoolean()
+                && thumbnailGeometry.GetProperty("positive").GetBoolean()
+                && thumbnailGeometry.GetProperty("square").GetBoolean()
+                && thumbnailGeometry.GetProperty("insideCard").GetBoolean()
+                && thumbnailGeometry.GetProperty("insideRailHorizontally").GetBoolean()
+                && thumbnailGeometry.GetProperty("objectFit").GetString() == "contain",
+                "The loaded square part thumbnail must fit its card and the rail width. "
+                + thumbnailGeometry.GetRawText());
             var view = card.Locator("button").First;
             var remove = card.Locator("button").Last;
             var keyboardOperation = name == names[0] ? "first-keyboard" : "second-keyboard";
@@ -464,6 +503,25 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
         if (!string.IsNullOrWhiteSpace(directory))
             await page.ScreenshotAsync(new() { Path = Path.Combine(directory, $"{evidencePrefix}-customer.png"), FullPage = true });
         failureEvidence.AwaitBoundary("customer-input", true);
+        if (injectUnexpectedConsoleError)
+        {
+            var observed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            EventHandler<IConsoleMessage> onUnexpectedConsole = (_, message) =>
+            {
+                if (message.Type == "error" && message.Text == UnexpectedConsoleErrorSentinel)
+                    observed.TrySetResult(true);
+            };
+            page.Console += onUnexpectedConsole;
+            try
+            {
+                await page.EvaluateAsync("message => console.error(message)", UnexpectedConsoleErrorSentinel);
+                await observed.Task.WaitAsync(TimeSpan.FromSeconds(30));
+            }
+            finally
+            {
+                page.Console -= onUnexpectedConsole;
+            }
+        }
         try
         {
             Assert.Empty(errors);
@@ -482,5 +540,21 @@ public sealed class InstantQuotationSidebarLayoutBrowserTests(ITestOutputHelper 
                 """), metadata => output.WriteLine("[sidebar-failure] " + metadata));
             throw;
         }
+    }
+}
+
+/// <summary>Proves optional driver isolation preserves the real sidebar console-error gate.</summary>
+public sealed class InstantQuotationSidebarConsoleIsolationTests(ITestOutputHelper output)
+{
+    /// <summary>Requires an unexpected application console error to fail the unchanged full sidebar assertion.</summary>
+    /// <returns>A task that completes after the real sidebar failure is observed and all case resources are released.</returns>
+    [Fact]
+    public async Task UnexpectedApplicationConsoleError_StillFailsTheOriginalSidebarAssertion()
+    {
+        var failure = await Record.ExceptionAsync(() =>
+            new InstantQuotationSidebarLayoutBrowserTests(output).RunUnexpectedConsoleErrorControlAsync());
+        var expected = Assert.IsType<Xunit.Sdk.EmptyException>(failure);
+        Assert.Contains(InstantQuotationSidebarLayoutBrowserTests.UnexpectedConsoleErrorSentinel,
+            expected.Message, StringComparison.Ordinal);
     }
 }

@@ -10,6 +10,9 @@ using System.Globalization;
 
 namespace Legacy.Maliev.Web.Areas.Member.Pages.Quotations;
 
+/// <summary>Loads the signed-in customer's paged quotation history with validated sorting and page sizes.</summary>
+/// <param name="sessionManager">The server-side account session manager used to resolve identity and manage sign-in state.</param>
+/// <param name="quotationClient">The typed client reading or submitting quotation operations for this page.</param>
 [Authorize]
 public sealed class Index(
     IAccountSessionManager sessionManager,
@@ -17,22 +20,31 @@ public sealed class Index(
 {
     private const string InvalidQueryValuesMessage = "One or more query values are invalid.";
 
+    /// <summary>The current page of quotations owned by the signed-in customer.</summary>
     public CustomerQuotationPage Quotations { get; private set; } = new([], 1, 0, 0);
 
+    /// <summary>The quotation-history rows, validated query state, and safe service feedback.</summary>
     public MemberQuotationsIndexDisplayModel DisplayModel { get; private set; } = MemberQuotationsIndexDisplayModel.Empty;
 
+    /// <summary>The optional text filter submitted for the member history listing.</summary>
     [BindProperty(SupportsGet = true)]
     public string? Search { get; set; }
 
+    /// <summary>The requested ordering for the member history listing.</summary>
     [BindProperty(SupportsGet = true)]
     public string? Sort { get; set; }
 
+    /// <summary>The one-based page requested for the member history listing.</summary>
     [BindProperty(SupportsGet = true, Name = "index")]
     public int PageIndex { get; set; } = 1;
 
+    /// <summary>The number of results requested per page, subject to the supported page-size policy.</summary>
     [BindProperty(SupportsGet = true, Name = "size")]
     public int PageSize { get; set; } = 25;
 
+    /// <summary>Validates sorting and paging before loading the customer's quotation history.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The quotation history page, a bad-request result for invalid query values, or an authentication challenge.</returns>
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid || !PageSizeQuery.TryResolve(PageSize, out var pageSize)

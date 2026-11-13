@@ -62,7 +62,7 @@
                 iconChar: '⚠',
                 title: thai ? 'ตรวจวัดความหนาได้ไม่ครบทุกบริเวณ' : 'Thickness analysis is incomplete',
                 subtitle: thai
-                    ? 'บางบริเวณไม่สามารถตรวจวัดได้อย่างน่าเชื่อถือ เนื่องจากคุณภาพเมชหรือข้อจำกัดของการวิเคราะห์'
+                    ? 'บางบริเวณไม่สามารถตรวจวัดได้อย่างน่าเชื่อถือ เนื่องจากคุณภาพ mesh หรือข้อจำกัดของการวิเคราะห์'
                     : 'Some regions could not be measured reliably because of mesh quality or analysis limits.'
             });
         }

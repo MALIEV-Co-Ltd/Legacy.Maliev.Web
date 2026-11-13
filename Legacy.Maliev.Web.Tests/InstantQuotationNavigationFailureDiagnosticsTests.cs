@@ -85,4 +85,26 @@ public sealed class InstantQuotationNavigationFailureDiagnosticsTests
         Assert.Equal(200, actual);
         Assert.Equal(0, calls);
     }
+    [Fact]
+    public void OutstandingSnapshotTracksLateRequestsWithinBoundsWithoutPrivateData()
+    {
+        var ledger = new NavigationRequestLedger(new("http://127.0.0.1:46767"));
+        for (var index = 0; index < 80; index++)
+        {
+            var finished = new object();
+            ledger.Start(finished, "http://127.0.0.1:46767/customer/secret?token=secret", "GET", "fetch");
+            ledger.End(finished, "finished");
+        }
+        var late = new object();
+        ledger.Start(late, "http://127.0.0.1:46767/_blazor?id=secret", "GET", "fetch");
+        for (var index = 0; index < 40; index++)
+            ledger.Start(new object(), "http://127.0.0.1:46767/customer/secret", "secret", "secret");
+        var snapshot = ledger.Snapshot();
+        Assert.Equal(32, snapshot.OutstandingRequests.Length);
+        Assert.Contains(snapshot.OutstandingRequests, item => item.Path == "/_blazor" && item.Outcome == "pending");
+        Assert.Equal(9, snapshot.OutstandingOmittedCumulative);
+        Assert.DoesNotContain("secret", JsonSerializer.Serialize(snapshot), StringComparison.Ordinal);
+        ledger.End(late, "finished");
+        Assert.DoesNotContain(ledger.Snapshot().OutstandingRequests, item => item.Path == "/_blazor");
+    }
 }

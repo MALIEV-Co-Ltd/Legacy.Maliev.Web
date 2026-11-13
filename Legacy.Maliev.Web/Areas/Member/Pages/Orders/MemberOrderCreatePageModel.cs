@@ -11,6 +11,11 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Legacy.Maliev.Web.Areas.Member.Pages.Orders;
 
+/// <summary>Validates catalogue selections and uploaded files before submitting an owned member order with an operation identifier.</summary>
+/// <param name="kind">The manufacturing service whose catalogue and submission rules apply.</param>
+/// <param name="sessionManager">The server-side account session manager used to resolve identity and manage sign-in state.</param>
+/// <param name="catalogClient">The typed client supplying permitted order processes, materials, and file formats.</param>
+/// <param name="submissionService">The service coordinating persistence and follow-up for the owned submission.</param>
 [Authorize]
 [RequestFormLimits(MultipartBodyLengthLimit = 115_343_360)]
 [RequestSizeLimit(115_343_360)]
@@ -22,26 +27,48 @@ public abstract class MemberOrderCreatePageModel(
 {
     private const long MaximumUploadBytes = 100L * 1024 * 1024;
 
+    /// <summary>The order form fields, catalogue options, and validation feedback.</summary>
     public MemberOrderCreationDisplayModel DisplayModel { get; private set; } = default!;
 
+    /// <summary>The customer-supplied order title used to identify the manufacturing request.</summary>
     [BindProperty, Required(ErrorMessage = "Please give your order a name"), StringLength(200)] public string Name { get; set; } = string.Empty;
+    /// <summary>The optional customer instructions accompanying the manufacturing request.</summary>
     [BindProperty, StringLength(500)] public string? Description { get; set; }
+    /// <summary>The requested number of manufactured items; scanning submissions use one.</summary>
     [BindProperty, Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1")] public int Quantity { get; set; } = 1;
+    /// <summary>The selected manufacturing process identifier validated against the current order catalogue.</summary>
     [BindProperty] public int ProcessId { get; set; }
+    /// <summary>The selected material identifier validated against the current order catalogue.</summary>
     [BindProperty] public int MaterialId { get; set; }
+    /// <summary>The selected additive material colour identifier validated against available material options.</summary>
     [BindProperty] public int ColorId { get; set; }
+    /// <summary>The selected surface-finish identifier validated against available material options.</summary>
     [BindProperty] public int SurfaceFinishId { get; set; }
+    /// <summary>Whether the customer permits social-media use associated with the submitted order.</summary>
     [BindProperty] public bool AllowSocialMedia { get; set; }
+    /// <summary>Whether the customer accepted the required terms before order submission.</summary>
     [BindProperty] public bool AcceptTermsAndConditions { get; set; }
+    /// <summary>Whether scanning dimensions are expressed in millimetres rather than inches.</summary>
     [BindProperty] public bool IsMetric { get; set; } = true;
+    /// <summary>The optional approximate scanning width in the selected dimension unit.</summary>
     [BindProperty] public decimal? Width { get; set; }
+    /// <summary>The optional approximate scanning length in the selected dimension unit.</summary>
     [BindProperty] public decimal? Length { get; set; }
+    /// <summary>The optional approximate scanning height in the selected dimension unit.</summary>
     [BindProperty] public decimal? Height { get; set; }
+    /// <summary>The operation identifier used to correlate and validate this owned submission.</summary>
     [BindProperty] public string OperationId { get; set; } = Guid.NewGuid().ToString("D");
+    /// <summary>The uploaded request files validated before submission or attachment follow-up.</summary>
     [BindProperty] public List<IFormFile> Files { get; set; } = [];
 
+    /// <summary>The one-time outcome message carried across this workflow's post/redirect/get boundary.</summary>
     [TempData] public string? Notification { get; set; }
 
+    /// <summary>Loads the service catalogue and resolves optional process and material preselections.</summary>
+    /// <param name="process">The requested process name used to preselect the current catalogue option.</param>
+    /// <param name="material">The requested material name used to select a catalogue or estimate option.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The order form with its current catalogue and display projection.</returns>
     public async Task<IActionResult> OnGetAsync(
         string? process,
         string? material,
@@ -56,6 +83,9 @@ public abstract class MemberOrderCreatePageModel(
         return Page();
     }
 
+    /// <summary>Validates consent, catalogue options, dimensions, and uploads before submitting an owned order.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The created-order redirect, the form with errors or partial-outcome guidance, or an authentication challenge.</returns>
     public async Task<IActionResult> OnPostSubmitAsync(CancellationToken cancellationToken)
     {
         if (!Guid.TryParse(OperationId, out var operationId) || operationId == Guid.Empty)
