@@ -61,7 +61,7 @@
     text-transform: uppercase;
 }
 
-.service-finder-intro h2 {
+.service-finder-intro :is(h1, h2) {
     max-width: 30rem;
     margin: 0;
     color: #102642;
@@ -975,7 +975,7 @@
         gap: 1.3rem;
     }
 
-    .service-finder-intro h2 {
+    .service-finder-intro :is(h1, h2) {
         max-width: 24rem;
         font-size: clamp(2rem, 11vw, 2.8rem);
     }
@@ -1043,6 +1043,8 @@
         grid-template-columns: minmax(0, 1fr);
     }
 }
+
+.services-index-page .service-finder-intro .service-breadcrumb { width: 100%; padding-top: 0; text-align: left; }
 
 @media (prefers-reduced-motion: reduce) {
     .service-finder-option,

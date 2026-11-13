@@ -2,9 +2,9 @@
 @using Legacy.Maliev.Web.Components.Shared
 
 <main class="service-page" data-migration-component="three-dimensional-scanning-content" data-migration-route-owner="@RouteOwner">
-    <ServiceBreadcrumb ServiceKey="3D Scanning" />
-    <ServicePageToc />
+
     <section class="service-hero printing-hero-light" aria-labelledby="scanning-title">
+        <ServiceBreadcrumb ServiceKey="3D Scanning" />
         <img class="service-hero-media" src="/src/images/services/hero-illustrations/scanning-hero-raptor-x-unbranded.webp" srcset="/src/images/services/hero-illustrations/scanning-hero-raptor-x-unbranded-640.webp 640w, /src/images/services/hero-illustrations/scanning-hero-raptor-x-unbranded-768.webp 768w, /src/images/services/hero-illustrations/scanning-hero-raptor-x-unbranded-960.webp 960w, /src/images/services/hero-illustrations/scanning-hero-raptor-x-unbranded.webp 1536w" sizes="(max-width: 767px) 100vw, 50vw" width="1536" height="1024" loading="eager" fetchpriority="high" decoding="async" alt="@T("Illustration of a 3D scanner, a metal housing and its digital mesh", "ภาพประกอบเครื่องสแกน 3 มิติ ชิ้นงานโลหะและ mesh ดิจิทัล")" />
         <div class="service-container service-hero-copy">
             <p class="service-eyebrow">@T("In-House & Onsite 3D Scanning", "บริการสแกน 3D ในสถานที่และนอกสถานที่")</p>
@@ -17,14 +17,17 @@
             <ul class="service-hero-points"><li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("In-house and onsite", "ในสถานที่และนอกสถานที่")</li><li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("Raw mesh to editable CAD", "จาก Raw Mesh สู่ CAD")</li><li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("CAD comparison and color maps", "เปรียบเทียบ CAD และแผนที่สี")</li></ul>
             <p class="service-hero-followup"><a href="/Services/Custom-Manufacturing">@T("Need a finished part but are unsure whether scanning is the first step? Start with a custom manufacturing review.", "ต้องการผลิตชิ้นงานแต่ยังไม่แน่ใจว่าควรเริ่มจากการสแกนหรือไม่? เริ่มที่บริการรับผลิตชิ้นงานตามแบบเพื่อช่วยเลือกกระบวนการ")</a></p>
         </div>
+        <div class="service-quick"><div class="service-container service-quick-grid">
+        <article><i class="fas fa-camera" aria-hidden="true"></i><div><h2 class="service-quick-title">@T("Raw capture", "ข้อมูลสแกน")</h2><p>@T("Point/mesh data for visualization, archiving, and downstream work.", "ข้อมูลจุดหรือ mesh สำหรับแสดงผล เก็บถาวร และงานต่อยอด")</p></div></article>
+        <article><i class="fas fa-drafting-compass" aria-hidden="true"></i><div><h2 class="service-quick-title">@T("Reverse engineering", "Reverse Engineering")</h2><p>@T("Reconstructed surfaces and features when editable CAD is required.", "สร้างพื้นผิวและฟีเจอร์ใหม่เมื่อต้องการ CAD ที่แก้ไขได้")</p></div></article>
+        <article><i class="fas fa-chart-area" aria-hidden="true"></i><div><h2 class="service-quick-title">@T("Deviation analysis", "Deviation Analysis")</h2><p>@T("Compare scan data with nominal CAD to visualize differences.", "เปรียบเทียบข้อมูลสแกนกับ CAD เพื่อแสดงความแตกต่าง")</p></div></article>
+        <article><i class="fas fa-truck" aria-hidden="true"></i><div><h2 class="service-quick-title">@T("Onsite service", "บริการนอกสถานที่")</h2><p>@T("For large, fixed, fragile, or impractical-to-transport objects.", "สำหรับวัตถุขนาดใหญ่ ติดตั้งอยู่ เปราะบาง หรือขนย้ายไม่สะดวก")</p></div></article>
+    </div></div>
     </section>
 
-    <section class="service-quick"><div class="service-container service-quick-grid">
-        <article><i class="fas fa-camera" aria-hidden="true"></i><div><h2>@T("Raw capture", "ข้อมูลสแกน")</h2><p>@T("Point/mesh data for visualization, archiving, and downstream work.", "ข้อมูลจุดหรือ mesh สำหรับแสดงผล เก็บถาวร และงานต่อยอด")</p></div></article>
-        <article><i class="fas fa-drafting-compass" aria-hidden="true"></i><div><h2>@T("Reverse engineering", "Reverse Engineering")</h2><p>@T("Reconstructed surfaces and features when editable CAD is required.", "สร้างพื้นผิวและฟีเจอร์ใหม่เมื่อต้องการ CAD ที่แก้ไขได้")</p></div></article>
-        <article><i class="fas fa-chart-area" aria-hidden="true"></i><div><h2>@T("Deviation analysis", "Deviation Analysis")</h2><p>@T("Compare scan data with nominal CAD to visualize differences.", "เปรียบเทียบข้อมูลสแกนกับ CAD เพื่อแสดงความแตกต่าง")</p></div></article>
-        <article><i class="fas fa-truck" aria-hidden="true"></i><div><h2>@T("Onsite service", "บริการนอกสถานที่")</h2><p>@T("For large, fixed, fragile, or impractical-to-transport objects.", "สำหรับวัตถุขนาดใหญ่ ติดตั้งอยู่ เปราะบาง หรือขนย้ายไม่สะดวก")</p></div></article>
-    </div></section>
+    <ServicePageToc />
+
+
 
     <nav class="service-page-toc" aria-label="@T("On this page", "ในหน้านี้")" data-service-page-toc>
         <strong>@T("On this page", "ในหน้านี้")</strong>
