@@ -70,7 +70,7 @@ public sealed class ServiceHeroOrderBrowserTests(PublicContactBrowserFixture fix
         {
             Assert.True(await details.EvaluateAsync<bool>("""
                 element => {
-                    const facts = document.querySelector('section.service-quick');
+                    const facts = document.querySelector('section.service-hero .service-quick');
                     return facts && (element.compareDocumentPosition(facts) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
                 }
                 """));

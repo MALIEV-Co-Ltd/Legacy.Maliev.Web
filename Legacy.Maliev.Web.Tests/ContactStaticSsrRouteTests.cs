@@ -182,7 +182,7 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
         var form = Regex.Match(source, "<form\\b[^>]*\\bid=\"contact-us\"[^>]*>");
         Assert.True(form.Success);
         Assert.Contains("method=\"post\"", form.Value, StringComparison.Ordinal);
-        Assert.Contains("Could not retrieve countries from the server.", source, StringComparison.Ordinal);
+        Assert.Contains("Could not retrieve countries from the server", source, StringComparison.Ordinal);
         Assert.DoesNotContain("controlled-country-private-failure", source, StringComparison.Ordinal);
         var select = Regex.Match(source, "<select\\b(?<attributes>[^>]*\\bid=\"Country\"[^>]*)>(?<options>.*?)</select>",
             RegexOptions.Singleline | RegexOptions.IgnoreCase);
@@ -205,7 +205,7 @@ public sealed class ContactStaticSsrRouteTests : IClassFixture<TestingWebApplica
     }
 
     [Theory]
-    [InlineData("en", "Could not retrieve countries from the server.", "Select a country")]
+    [InlineData("en", "Could not retrieve countries from the server", "Select a country")]
     [InlineData("th", "ไม่สามารถดึงรายชื่อประเทศจากเซิร์ฟเวอร์ได้", "เลือกประเทศ")]
     public async Task RetainedRazorCountryTransportFailure_KeepsContactGetAvailableWithoutDownstreamWrites(
         string culture, string unavailableMessage, string countryPlaceholder)

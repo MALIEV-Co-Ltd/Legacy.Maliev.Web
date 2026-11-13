@@ -2,9 +2,9 @@
 @using Legacy.Maliev.Web.Components.Shared
 
 <main class="service-page" data-migration-component="cnc-machining-content" data-migration-route-owner="@RouteOwner">
-    <ServiceBreadcrumb ServiceKey="CNC Machining" />
-    <ServicePageToc />
+
     <section class="service-hero printing-hero-light" aria-labelledby="cnc-title">
+        <ServiceBreadcrumb ServiceKey="CNC Machining" />
         <img class="service-hero-media" src="/src/images/services/hero-illustrations/cnc-hero-light.webp" srcset="/src/images/services/hero-illustrations/cnc-hero-light-640.webp 640w, /src/images/services/hero-illustrations/cnc-hero-light-768.webp 768w, /src/images/services/hero-illustrations/cnc-hero-light-960.webp 960w, /src/images/services/hero-illustrations/cnc-hero-light.webp 1536w" sizes="(max-width: 767px) 100vw, 50vw" width="1536" height="1024" loading="eager" fetchpriority="high" decoding="async" alt="@T("Illustration of machined aluminium components", "ภาพประกอบชิ้นส่วนอะลูมิเนียมที่ผ่านการกัด CNC")" />
         <div class="service-container service-hero-copy">
             <p class="service-eyebrow">@T("CNC Milling & Turning", "โรงกลึง CNC · Milling และ Turning")</p>
@@ -17,14 +17,17 @@
             <ul class="service-hero-points"><li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("One piece welcome", "รับงานชิ้นเดียว")</li><li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("Metals and engineering plastics", "โลหะและพลาสติกวิศวกรรม")</li><li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("Engineering review before production", "วิศวกรตรวจสอบก่อนผลิต")</li></ul>
             <p class="service-hero-followup"><a href="/Services/Custom-Manufacturing">@T("Not sure CNC is the right process? Start with a custom manufacturing review.", "ยังไม่แน่ใจว่าควรใช้ CNC หรือไม่? เริ่มที่บริการรับผลิตชิ้นงานตามแบบเพื่อช่วยเลือกกระบวนการ")</a></p>
         </div>
+        <div class="service-quick"><div class="service-container service-quick-grid">
+        <article><i class="fas fa-cube" aria-hidden="true"></i><div><h2 class="service-quick-title">@T("Order size", "จำนวนสั่งผลิต")</h2><p>@T("One-off parts through repeat production.", "ตั้งแต่งานชิ้นเดียวถึงงานผลิตซ้ำ")</p></div></article>
+        <article><i class="fas fa-file-alt" aria-hidden="true"></i><div><h2 class="service-quick-title">@T("Best quote input", "ข้อมูลที่ควรส่ง")</h2><p>@T("3D CAD, drawing, material, quantity, and finish.", "ไฟล์ 3D แบบงาน วัสดุ จำนวน และผิวสำเร็จ")</p></div></article>
+        <article><i class="fas fa-cogs" aria-hidden="true"></i><div><h2 class="service-quick-title">@T("Processes", "กระบวนการ")</h2><p>@T("CNC milling and turning, reviewed per geometry.", "CNC Milling และ Turning ตามรูปทรงชิ้นงาน")</p></div></article>
+        <article><i class="fas fa-map-marker-alt" aria-hidden="true"></i><div><h2 class="service-quick-title">@T("Service area", "พื้นที่ให้บริการ")</h2><p>@T("Bangkok, Nonthaburi, and delivery across Thailand.", "กรุงเทพ นนทบุรี และจัดส่งทั่วไทย")</p></div></article>
+    </div></div>
     </section>
 
-    <section class="service-quick"><div class="service-container service-quick-grid">
-        <article><i class="fas fa-cube" aria-hidden="true"></i><div><h2>@T("Order size", "จำนวนสั่งผลิต")</h2><p>@T("One-off parts through repeat production.", "ตั้งแต่งานชิ้นเดียวถึงงานผลิตซ้ำ")</p></div></article>
-        <article><i class="fas fa-file-alt" aria-hidden="true"></i><div><h2>@T("Best quote input", "ข้อมูลที่ควรส่ง")</h2><p>@T("3D CAD, drawing, material, quantity, and finish.", "ไฟล์ 3D แบบงาน วัสดุ จำนวน และผิวสำเร็จ")</p></div></article>
-        <article><i class="fas fa-cogs" aria-hidden="true"></i><div><h2>@T("Processes", "กระบวนการ")</h2><p>@T("CNC milling and turning, reviewed per geometry.", "CNC Milling และ Turning ตามรูปทรงชิ้นงาน")</p></div></article>
-        <article><i class="fas fa-map-marker-alt" aria-hidden="true"></i><div><h2>@T("Service area", "พื้นที่ให้บริการ")</h2><p>@T("Bangkok, Nonthaburi, and delivery across Thailand.", "กรุงเทพ นนทบุรี และจัดส่งทั่วไทย")</p></div></article>
-    </div></section>
+    <ServicePageToc />
+
+
 
     <section id="cnc-capabilities" class="service-section"><div class="service-container">
         <header class="service-heading center"><p class="service-eyebrow">@T("Capabilities", "ความสามารถการผลิต")</p><h2>@T("What can CNC machining make?", "CNC เหมาะกับการผลิตอะไร?")</h2><p>@T("CNC machining removes material from solid stock to produce repeatable features, accurate interfaces, and durable functional parts.", "CNC เป็นกระบวนการตัดเนื้อวัสดุออกจากวัตถุดิบตัน เพื่อสร้างชิ้นงานใช้งานจริงที่มีรูปทรงและตำแหน่งประกอบสม่ำเสมอ")</p></header>
