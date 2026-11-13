@@ -280,6 +280,8 @@ public sealed class ThreeDimensionalPrintingGalleryBrowserTests(PublicContactBro
             ViewportSize = new ViewportSize { Width = 390, Height = 900 },
             ReducedMotion = ReducedMotion.Reduce,
         });
+        await context.RouteAsync("**/*", request => new Uri(request.Request.Url).GetLeftPart(UriPartial.Authority)
+            == origin.GetLeftPart(UriPartial.Authority) ? request.ContinueAsync() : request.AbortAsync());
         await using var page = await context.NewPageAsync();
         var route = new Uri(origin, $"/services/{service}?culture={culture}").ToString();
         var response = await page.GotoAsync(route,
@@ -301,8 +303,8 @@ public sealed class ThreeDimensionalPrintingGalleryBrowserTests(PublicContactBro
         await Assertions.Expect(toggle).ToBeVisibleAsync();
         await Assertions.Expect(main.Locator("nav.service-page-toc:visible")).ToHaveCountAsync(1);
         var expected = new List<(ILocator Destination, string Id, string Heading)>();
-        // Source 1498292f enumerates direct main sections, excluding quick/CTA wrappers and blank h2s.
-        foreach (var section in await main.Locator(":scope > section:not(.service-quick):not(.service-cta-wrap)").AllAsync())
+        // The hero's summary headings remain accessible without becoming contents entries.
+        foreach (var section in await main.Locator(":scope > section:not(.service-hero):not(.service-quick):not(.service-cta-wrap)").AllAsync())
         {
             var heading = section.Locator("h2").First;
             if (await heading.CountAsync() == 0)
