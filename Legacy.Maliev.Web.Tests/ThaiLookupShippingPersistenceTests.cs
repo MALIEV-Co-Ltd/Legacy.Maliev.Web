@@ -139,7 +139,7 @@ public sealed class ThaiLookupShippingPersistenceTests(MemberAuthorityFixture au
                 await page.Locator("#Email").FillAsync("member-crawl@example.test");
                 try { await page.Locator("#Password").FillAsync(authority.Password); }
                 catch (PlaywrightException) { throw new InvalidOperationException("Synthetic login credential entry failed; credential-bearing browser diagnostics suppressed."); }
-                await page.Locator("button[type=submit]").First.ClickAsync();
+                await page.Locator("#customer-login button[type=submit]").ClickAsync();
                 await page.Locator("#ShippingAddress1").WaitForAsync();
                 Assert.Equal("Distinct shipping", await page.Locator("#ShippingAddress1").InputValueAsync());
                 var cookie = Assert.Single(await context.CookiesAsync(), value => value.Name == "__Host-Maliev.Legacy.Session");

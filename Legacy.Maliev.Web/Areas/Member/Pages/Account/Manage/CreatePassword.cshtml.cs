@@ -9,6 +9,10 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace Legacy.Maliev.Web.Areas.Member.Pages.Account.Manage;
 
+/// <summary>Creates an initial password for a signed-in account that does not already have one.</summary>
+/// <param name="sessionManager">The server-side account session manager used to resolve identity and manage sign-in state.</param>
+/// <param name="authenticationClient">The typed identity client handling customer credential and challenge operations.</param>
+/// <param name="logger">The logger instance for diagnostic output.</param>
 [Authorize]
 [EnableRateLimiting("account")]
 public sealed class CreatePassword(
@@ -16,14 +20,20 @@ public sealed class CreatePassword(
     ICustomerAuthenticationClient authenticationClient,
     ILogger<CreatePassword> logger) : PageModel
 {
+    /// <summary>The password submitted to the identity workflow; it is excluded from the form display projection.</summary>
     [BindProperty, Required, DataType(DataType.Password), StringLength(1024, MinimumLength = 8)]
     public string Password { get; set; } = string.Empty;
 
+    /// <summary>The repeated password used to detect a mismatched password entry before submission.</summary>
     [BindProperty, Required, DataType(DataType.Password), StringLength(1024), Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
     public string ConfirmPassword { get; set; } = string.Empty;
 
+    /// <summary>The safe initial-password validation feedback without password values.</summary>
     public MemberCreatePasswordDisplayModel DisplayModel { get; private set; } = MemberCreatePasswordDisplayModel.Empty;
 
+    /// <summary>Requires a usable session before displaying the initial-password form.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The password-creation page or an authentication challenge.</returns>
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         var accessToken = await sessionManager.GetAccessTokenAsync(HttpContext, cancellationToken);
@@ -32,6 +42,9 @@ public sealed class CreatePassword(
         return Page();
     }
 
+    /// <summary>Creates the identity password when permitted and ends the current session after success.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A sign-in redirect, the form with safe errors, or an authentication challenge.</returns>
     public async Task<IActionResult> OnPostCreatePasswordAsync(CancellationToken cancellationToken)
     {
         var accessToken = await sessionManager.GetAccessTokenAsync(HttpContext, cancellationToken);

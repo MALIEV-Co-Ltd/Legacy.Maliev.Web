@@ -334,9 +334,9 @@
   <data name="Hero design previews" xml:space="preserve"><value>ตัวเลือกแบบส่วนแรกของหน้าเว็บ</value></data>
   <data name="Hero previews" xml:space="preserve"><value>เปรียบเทียบส่วนแรกของหน้า</value></data>
   <data name="Current layout" xml:space="preserve"><value>แบบปัจจุบัน</value></data>
-  <data name="Custom parts." xml:space="preserve"><value>ชิ้นส่วนสั่งผลิต</value></data>
-  <data name="From CAD to assembly." xml:space="preserve"><value>จาก CAD ถึงงานประกอบ</value></data>
-  <data name="CNC machining, 3D printing, scanning and design in Nonthaburi, Thailand. Bring a drawing, an existing part or a project brief." xml:space="preserve"><value>ออกแบบ สแกน พิมพ์ 3 มิติ และ CNC ที่นนทบุรี เริ่มจากแบบงาน ชิ้นงานเดิม หรือโจทย์ที่คุณต้องการพัฒนา</value></data>
+  <data name="Custom parts." xml:space="preserve"><value>บริการผลิตชิ้นงานตามแบบ</value></data>
+  <data name="From CAD to assembly." xml:space="preserve"><value>จากไอเดียสู่ชิ้นงานที่ใช้งานได้จริง</value></data>
+  <data name="CNC machining, 3D printing, scanning and design in Nonthaburi, Thailand. Bring a drawing, an existing part or a project brief." xml:space="preserve"><value>บริการ CNC พิมพ์ 3 มิติ สแกน และออกแบบชิ้นงาน เริ่มต้นด้วยแบบ CAD ภาพร่าง หรือชิ้นงานตัวอย่าง แล้วคุยกับเราเพื่อเลือกวิธีผลิตที่เหมาะกับงานของคุณ</value></data>
   <data name="Discuss your part" xml:space="preserve"><value>ปรึกษางานชิ้นส่วน</value></data>
   <data name="Price a 3D print" xml:space="preserve"><value>ประเมินราคาพิมพ์ 3 มิติ</value></data>
   <data name="Machined aluminium. Printed plastic, nylon and resin. One assembly." xml:space="preserve"><value>อะลูมิเนียม CNC พลาสติก ไนลอน และเรซินพิมพ์ 3 มิติ ในงานประกอบเดียวกัน</value></data>

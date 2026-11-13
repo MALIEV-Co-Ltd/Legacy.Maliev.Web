@@ -5,8 +5,16 @@ using Microsoft.AspNetCore.Http.Features;
 
 namespace Legacy.Maliev.Web;
 
+/// <summary>
+/// Maps customer-scoped document operations with authenticated sessions and explicit upload validation.
+/// </summary>
 public static class CustomerDocumentEndpointRouteBuilderExtensions
 {
+    /// <summary>
+    /// Registers member document listing, receipt, download, upload, and replacement endpoints.
+    /// </summary>
+    /// <param name="endpoints">The endpoint builder to which the authenticated document group is added.</param>
+    /// <returns>The original endpoint builder with the member document routes registered.</returns>
     public static IEndpointRouteBuilder MapCustomerDocumentEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/member/documents").RequireAuthorization();

@@ -4,8 +4,17 @@ using Microsoft.AspNetCore.Routing;
 
 namespace Legacy.Maliev.Web.Middleware;
 
+/// <summary>
+/// Enforces bounded error-page entry and preserves the trusted failure status without caching error responses.
+/// </summary>
+/// <param name="next">The next request delegate invoked after the error-response contract is applied.</param>
 public sealed class ErrorResponseContractMiddleware(RequestDelegate next)
 {
+    /// <summary>
+    /// Allows trusted failures or explicit valid previews into the error page and redirects unrelated error-page requests.
+    /// </summary>
+    /// <param name="context">The current request and response carrying trusted failure features or a preview status.</param>
+    /// <returns>The asynchronous downstream request, or a completed task after redirecting an unsupported error-page entry.</returns>
     public Task InvokeAsync(HttpContext context)
     {
         if (!context.Request.Path.StartsWithSegments("/Error", StringComparison.OrdinalIgnoreCase))

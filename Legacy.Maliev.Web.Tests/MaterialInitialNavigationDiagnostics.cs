@@ -29,7 +29,7 @@ internal sealed class MaterialInitialNavigationDiagnostics : IDisposable
         TestResponseFailureEvidence? serverProbe = null, string phase = "initial", string waitState = "networkidle")
     {
         if (phase is not ("initial" or "reload")) throw new ArgumentOutOfRangeException(nameof(phase));
-        if (waitState is not ("networkidle" or "domcontentloaded")) throw new ArgumentOutOfRangeException(nameof(waitState));
+        if (waitState is not ("networkidle" or "domcontentloaded" or "profile-ready")) throw new ArgumentOutOfRangeException(nameof(waitState));
         this.origin = origin;
         this.serverProbe = serverProbe;
         this.phase = phase;

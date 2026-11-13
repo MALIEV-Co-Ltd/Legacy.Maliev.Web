@@ -11,6 +11,16 @@ using Microsoft.Extensions.Options;
 
 namespace Legacy.Maliev.Web.Pages.Contact;
 
+/// <summary>Loads localized contact form data and persists verified contact requests before sending notifications.</summary>
+/// <param name="countryClient">The typed country client supplying form country options.</param>
+/// <param name="contactClient">The typed client persisting customer contact requests.</param>
+/// <param name="notificationClient">The typed notification client used for customer and staff messages.</param>
+/// <param name="antiBotVerifier">The verifier for the browser's anti-bot challenge.</param>
+/// <param name="recaptchaOptions">The configured public browser challenge settings.</param>
+/// <param name="googleMapsOptions">The configured contact-map presentation settings.</param>
+/// <param name="trustedCustomerLoader">The loader resolving trusted customer contact details from the server-managed session.</param>
+/// <param name="localizer">The localizer supplying this page's validation and outcome messages.</param>
+/// <param name="logger">The logger instance for diagnostic output.</param>
 public sealed class Index(
     ICountryClient countryClient,
     IContactClient contactClient,
@@ -24,55 +34,70 @@ public sealed class Index(
 {
     private const string RecaptchaAction = "submit";
 
+    /// <summary>The optional company name associated with the submitted customer request.</summary>
     [BindProperty]
     [StringLength(50)]
     public string? Company { get; set; }
 
+    /// <summary>The country options returned by the country service for this form.</summary>
     public IReadOnlyList<Country> Countries { get; private set; } = [];
 
+    /// <summary>The customer's country name used for the submitted contact or billing details.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Please select your country")]
     [StringLength(50)]
     public string Country { get; set; } = string.Empty;
 
+    /// <summary>The customer's email address used by this account or request workflow.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Email address is required")]
     [EmailAddress(ErrorMessage = "Please enter a valid email address")]
     [StringLength(50)]
     public string Email { get; set; } = string.Empty;
 
+    /// <summary>The customer's given name used in the account or request contact details.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Please enter your first name")]
     [StringLength(50)]
     public string FirstName { get; set; } = string.Empty;
 
+    /// <summary>The customer's family name used in the account or request contact details.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Please enter your last name")]
     [StringLength(50)]
     public string LastName { get; set; } = string.Empty;
 
+    /// <summary>The customer's request text submitted for staff review.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Please enter your message")]
     [StringLength(5000)]
     public string Message { get; set; } = string.Empty;
 
+    /// <summary>The optional contact telephone number submitted with the request.</summary>
     [BindProperty]
     [StringLength(50)]
     public string? Phone { get; set; }
 
+    /// <summary>The browser's anti-bot challenge response, verified before the request is persisted.</summary>
     [BindProperty(Name = "g-recaptcha-response")]
     public string? RecaptchaToken { get; set; }
 
+    /// <summary>The configured public site key used to obtain a browser anti-bot challenge.</summary>
     public string RecaptchaSiteKey => recaptchaOptions.Value.SiteKey;
 
+    /// <summary>The supported English or Thai UI culture used for contact-page rendering and redirects.</summary>
     public string Culture => System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName is "th" ? "th" : "en";
 
+    /// <summary>The contact-map display configuration projected from the configured Google Maps options.</summary>
     public ContactMapDisplayModel Map => ContactMapDisplayModel.Create(googleMapsOptions);
 
+    /// <summary>Whether the form is using a customer identity resolved from the server-managed session.</summary>
     public bool IsAuthenticatedCustomer { get; private set; }
 
+    /// <summary>Whether the country lookup succeeded for the current form request.</summary>
     public bool CountryServiceAvailable { get; private set; } = true;
 
+    /// <summary>The contact form values, country options, authentication state, and localized validation feedback.</summary>
     public ContactFormDisplayModel DisplayModel => new(
         FirstName,
         LastName,
@@ -95,6 +120,7 @@ public sealed class Index(
                     .ToArray(),
                 StringComparer.Ordinal));
 
+    /// <summary>The one-time outcome message carried across this workflow's post/redirect/get boundary.</summary>
     [TempData]
     public string? Notification { get; set; }
 
@@ -107,6 +133,9 @@ public sealed class Index(
             : localized.Value;
     }
 
+    /// <summary>Loads country options and any trusted customer contact details for the contact form.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The contact page with current service and validation feedback.</returns>
     public async Task<IActionResult> OnGetAsync(CancellationToken cancellationToken)
     {
         await LoadCountriesAsync(cancellationToken);
@@ -114,6 +143,9 @@ public sealed class Index(
         return Page();
     }
 
+    /// <summary>Verifies the form and anti-bot response, persists the contact request, then requests notifications.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The form with controlled errors or a localized redirect referencing the persisted contact request.</returns>
     public async Task<IActionResult> OnPostSubmitRequestAsync(CancellationToken cancellationToken)
     {
         await LoadCountriesAsync(cancellationToken);

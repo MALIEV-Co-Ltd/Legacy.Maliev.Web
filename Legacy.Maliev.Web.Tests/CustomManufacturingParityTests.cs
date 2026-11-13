@@ -52,7 +52,7 @@ public sealed partial class CustomManufacturingParityTests : IClassFixture<Testi
         var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("custom-manufacturing-story.webp", source, StringComparison.Ordinal);
+        Assert.Contains("custom-hero-light.webp", source, StringComparison.Ordinal);
         Assert.Contains("service-hero-media", source, StringComparison.Ordinal);
         Assert.Contains("Not sure which manufacturing process fits your part?", source, StringComparison.Ordinal);
         Assert.Contains("service-page-toc", source, StringComparison.Ordinal);

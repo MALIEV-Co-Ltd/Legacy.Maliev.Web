@@ -1,4 +1,6 @@
 using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json.Nodes;
 using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Application.Pricing;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
@@ -11,10 +13,12 @@ namespace Legacy.Maliev.Web.Tests;
 /// <summary>Actual GLB bytes and production physics/tickets, without a browser or external FileService.</summary>
 public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
 {
-    [Fact]
-    public async Task FreshDefaultUploads_EnterReviewOnlyAfterCurrentProtectedPhysicalPricesExist()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task FreshDefaultUploads_EnterReviewOnlyAfterCurrentProtectedPhysicalPricesExist(int bodies)
     {
-        var fixture = await Fixture.CreateAsync();
+        var fixture = await Fixture.CreateAsync(bodies: bodies);
         await MaterialPricingTestCleanup.RunAsync(async () =>
         {
             await fixture.UploadAsync("first.glb");
@@ -30,14 +34,29 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
         }, static () => ValueTask.CompletedTask, fixture.DisposeAsync, _ => { });
     }
 
-    [Theory]
-    [InlineData("release")]
-    [InlineData("cancel")]
-    [InlineData("dispose")]
-    [InlineData("stale-store")]
-    public async Task PendingDefaultQuote_CannotAcceptBeforeItsCurrentProtectedCommit(string transition)
+    [Fact]
+    public async Task SavedBlackConfiguration_RestoresWithCurrentProtectedPhysicalAuthorityWithoutBecomingAny()
     {
         var fixture = await Fixture.CreateAsync();
+        await MaterialPricingTestCleanup.RunAsync(async () =>
+        {
+            await fixture.UploadAsync("saved-black.glb");
+            await fixture.AssertProtectedBlackRestoreAsync();
+        }, static () => ValueTask.CompletedTask, fixture.DisposeAsync, _ => { });
+    }
+
+    [Theory]
+    [InlineData("release", 1)]
+    [InlineData("release", 2)]
+    [InlineData("cancel", 1)]
+    [InlineData("cancel", 2)]
+    [InlineData("dispose", 1)]
+    [InlineData("dispose", 2)]
+    [InlineData("stale-store", 1)]
+    [InlineData("stale-store", 2)]
+    public async Task PendingDefaultQuote_CannotAcceptBeforeItsCurrentProtectedCommit(string transition, int bodies)
+    {
+        var fixture = await Fixture.CreateAsync(bodies: bodies);
         await MaterialPricingTestCleanup.RunAsync(async () =>
         {
             fixture.Control.HoldQuote = true;
@@ -47,6 +66,7 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
             try
             {
                 await fixture.Control.Entered.Task.WaitAsync(TimeSpan.FromSeconds(33));
+                fixture.AssertEligibleSourceConfiguration();
                 Assert.False(fixture.Workflow.HasCompleteAuthoritativeQuote);
                 Assert.Throws<InvalidOperationException>(() => fixture.Workflow.EnterReview());
                 Assert.Null((await fixture.Store.GetAsync(fixture.SessionId, Owner, default))!.QuoteAuthorization);
@@ -114,50 +134,77 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
     }
 
     [Theory]
-    [InlineData("no-authority")]
-    [InlineData("no-ticket-service")]
-    [InlineData("null-quote")]
-    [InlineData("missing-receipt")]
-    [InlineData("invalid-ticket")]
-    [InlineData("expired-ticket")]
-    [InlineData("missing-authorization")]
-    [InlineData("session")]
-    [InlineData("owner")]
-    [InlineData("file")]
-    [InlineData("sha")]
-    [InlineData("quantity")]
-    [InlineData("build")]
-    [InlineData("profile")]
-    [InlineData("missing-protected-receipt")]
-    [InlineData("refused-store")]
-    [InlineData("failed-upload")]
-    [InlineData("unsupported-extension")]
-    public async Task FreshDefaultAcceptance_RejectsAbsentRefusedOrMismatchedAuthority(string mode)
+    [InlineData("no-authority", 1)]
+    [InlineData("no-authority", 2)]
+    [InlineData("no-ticket-service", 1)]
+    [InlineData("no-ticket-service", 2)]
+    [InlineData("null-quote", 1)]
+    [InlineData("null-quote", 2)]
+    [InlineData("missing-receipt", 1)]
+    [InlineData("missing-receipt", 2)]
+    [InlineData("wrong-quote-color", 1)]
+    [InlineData("wrong-quote-color", 2)]
+    [InlineData("invalid-ticket", 1)]
+    [InlineData("invalid-ticket", 2)]
+    [InlineData("expired-ticket", 1)]
+    [InlineData("expired-ticket", 2)]
+    [InlineData("missing-authorization", 1)]
+    [InlineData("missing-authorization", 2)]
+    [InlineData("session", 1)]
+    [InlineData("session", 2)]
+    [InlineData("owner", 1)]
+    [InlineData("owner", 2)]
+    [InlineData("file", 1)]
+    [InlineData("file", 2)]
+    [InlineData("sha", 1)]
+    [InlineData("sha", 2)]
+    [InlineData("quantity", 1)]
+    [InlineData("quantity", 2)]
+    [InlineData("build", 1)]
+    [InlineData("build", 2)]
+    [InlineData("profile", 1)]
+    [InlineData("profile", 2)]
+    [InlineData("missing-protected-receipt", 1)]
+    [InlineData("missing-protected-receipt", 2)]
+    [InlineData("refused-store", 1)]
+    [InlineData("refused-store", 2)]
+    [InlineData("failed-upload", 1)]
+    [InlineData("failed-upload", 2)]
+    [InlineData("unsupported-extension", 1)]
+    [InlineData("unsupported-extension", 2)]
+    public async Task FreshDefaultAcceptance_RejectsAbsentRefusedOrMismatchedAuthority(string mode, int bodies)
     {
-        var fixture = await Fixture.CreateAsync(mode);
+        var fixture = await Fixture.CreateAsync(mode, bodies);
         await MaterialPricingTestCleanup.RunAsync(async () =>
         {
             var actual = await Record.ExceptionAsync(() => fixture.UploadAsync(
                 mode == "unsupported-extension" ? "rejected.exe" : "rejected.glb"));
             Assert.Null(actual);
+            if (mode == "wrong-quote-color") await fixture.AssertOnlyQuoteColorDiffersAsync();
             Assert.NotEqual(InstantQuotationWorkflowState.Configured, fixture.Workflow.State);
             Assert.False(fixture.Workflow.HasCompleteAuthoritativeQuote);
             Assert.Throws<InvalidOperationException>(() => fixture.Workflow.EnterReview());
             if (mode is "failed-upload" or "unsupported-extension")
                 Assert.Empty(fixture.Workflow.Parts);
             else
+            {
                 Assert.Single(fixture.Workflow.Parts);
+                fixture.AssertEligibleSourceConfiguration();
+            }
         }, static () => ValueTask.CompletedTask, fixture.DisposeAsync, _ => { });
     }
 
-    [Fact]
-    public async Task AuthorizationWriteFault_PreservesTerminalFailurePolicyAndCannotAcceptDefaults()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task AuthorizationWriteFault_PreservesTerminalFailurePolicyAndCannotAcceptDefaults(int bodies)
     {
-        var fixture = await Fixture.CreateAsync("faulted-store");
+        var fixture = await Fixture.CreateAsync("faulted-store", bodies);
         await MaterialPricingTestCleanup.RunAsync(async () =>
         {
             var actual = await Record.ExceptionAsync(() => fixture.UploadAsync("fault.glb"));
             Assert.Null(actual);
+            fixture.AssertEligibleSourceConfiguration();
             Assert.Equal(InstantQuotationWorkflowUploadStatus.Error, Assert.Single(fixture.Workflow.Uploads).Status);
             Assert.Equal(InstantQuotationProblemCategory.Unexpected, Assert.Single(fixture.Workflow.Uploads).ProblemCategory);
             Assert.False(fixture.Workflow.HasCompleteAuthoritativeQuote);
@@ -165,14 +212,17 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
         }, static () => ValueTask.CompletedTask, fixture.DisposeAsync, _ => { });
     }
 
-    [Fact]
-    public async Task AcknowledgedRemoval_CannotAcceptFreshDefaultsWhileAnotherUploadPublishes()
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task AcknowledgedRemoval_CannotAcceptFreshDefaultsWhileAnotherUploadPublishes(int bodies)
     {
-        var fixture = await Fixture.CreateAsync();
+        var fixture = await Fixture.CreateAsync(bodies: bodies);
         await MaterialPricingTestCleanup.RunAsync(async () =>
         {
             fixture.Control.ReturnNullQuote = true;
             await fixture.UploadAsync("unconfigured-first.glb");
+            fixture.AssertEligibleSourceConfiguration();
             Assert.Equal(InstantQuotationWorkflowState.Uploaded, fixture.Workflow.State);
             var first = Assert.Single(fixture.Workflow.Parts);
             var entries = (System.Collections.IEnumerable)typeof(InstantQuotationWorkflowCoordinator)
@@ -230,6 +280,7 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
         internal bool HoldQuote { get; set; }
         internal bool ReturnNullQuote { get; set; }
         internal bool HoldRemovalStore { get; set; }
+        internal InstantQuotationOrderQuote? OriginalQuoteBeforeColorMismatch { get; private set; }
         internal CancellationToken LifetimeToken => lifetime.Token;
         internal TaskCompletionSource RemovalStoreEntered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal TaskCompletionSource RemovalStoreRelease { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -265,6 +316,11 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
                     await Release.Task.WaitAsync(lifetime.Token);
                 }
                 if (Mode == "null-quote" || ReturnNullQuote) return null;
+                if (Mode == "wrong-quote-color" && quote is not null)
+                {
+                    OriginalQuoteBeforeColorMismatch = quote;
+                    return quote with { Parts = quote.Parts.Select(part => part with { Color = "White" }).ToArray() };
+                }
                 return Mode == "missing-receipt" && quote is not null
                     ? quote with { Parts = quote.Parts.Select(part => part with { PhysicalReceipt = null }).ToArray() }
                     : quote;
@@ -472,16 +528,20 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
         internal InstantQuotationWorkflowCoordinator Workflow => workflow ?? throw new InvalidOperationException("Fixture is not initialized.");
         internal EvidenceStore Store => store ?? throw new InvalidOperationException("Fixture is not initialized.");
         internal string SessionId => Workflow.ProtectedSessionIdentity;
-        private static readonly byte[] Bytes = Convert.FromBase64String(AdmittedGltfMeshReaderTests.OriginalGlb);
-        private static readonly string Sha = Convert.ToHexStringLower(SHA256.HashData(Bytes));
-        private Fixture(string mode)
+        private readonly byte[] bytes;
+        private readonly string sha;
+        private readonly int bodies;
+        private Fixture(string mode, int bodies)
         {
+            this.bodies = bodies;
+            bytes = FixtureBytes(bodies);
+            sha = Convert.ToHexStringLower(SHA256.HashData(bytes));
             control = new(mode);
             factory = new(control, new Uploads(control));
         }
-        internal static async Task<Fixture> CreateAsync(string mode = "current")
+        internal static async Task<Fixture> CreateAsync(string mode = "current", int bodies = 1)
         {
-            var fixture = new Fixture(mode);
+            var fixture = new Fixture(mode, bodies);
             try
             {
                 fixture.scope = fixture.factory.Services.CreateAsyncScope();
@@ -508,13 +568,13 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
         internal Task UploadAsync(params string[] names) => UploadAsync(default, names);
         internal Task UploadAsync(CancellationToken token, params string[] names)
         {
-            var claim = new InstantQuotationGeometryClaim(1, Sha, 10, 10, 10, 1000, 600,
-                Enumerable.Repeat(100d, 64).ToArray(), Enumerable.Repeat(40d, 64).ToArray(),
-                12, 1, true, false, false, 10)
+            var claim = new InstantQuotationGeometryClaim(1, sha, bodies == 1 ? 10 : 30, 10, 10, 1000 * bodies, 600 * bodies,
+                Enumerable.Repeat(100d * bodies, 64).ToArray(), Enumerable.Repeat(40d * bodies, 64).ToArray(),
+                12 * bodies, bodies, true, false, false, 10)
             { GltfUnitPolicy = UnitPolicy };
             var task = Workflow.UploadAsync(names.Select(name => new InstantQuotationWorkflowUploadFile(
-                name, "model/gltf-binary", Bytes.Length, claim,
-                current => { current.ThrowIfCancellationRequested(); return Task.FromResult<Stream>(new MemoryStream(Bytes, false)); })).ToArray(), token);
+                name, "model/gltf-binary", bytes.Length, claim,
+                current => { current.ThrowIfCancellationRequested(); return Task.FromResult<Stream>(new MemoryStream(bytes, false)); })).ToArray(), token);
             uploads.Add(task);
             return task;
         }
@@ -524,10 +584,22 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
             uploads.Add(task);
             return task;
         }
+        internal void AssertEligibleSourceConfiguration()
+        {
+            Assert.NotEmpty(Workflow.Parts);
+            Assert.All(Workflow.Parts, part =>
+            {
+                Assert.Equal(new InstantQuotationPartConfiguration("PLA", "Any", 1), part.Configuration);
+                Assert.Equal(bodies, part.Geometry.BodyCount);
+            });
+        }
         internal async Task AssertCurrentDefaultAuthorityAsync(int count)
         {
-            Assert.Equal(960, Bytes.Length);
-            Assert.Equal("2d31d5a61f110106cf30c0c17d713602b8ab5c9d90c6c802e980e4c1c0bee8dc", Sha);
+            if (bodies == 1)
+            {
+                Assert.Equal(960, bytes.Length);
+                Assert.Equal("2d31d5a61f110106cf30c0c17d713602b8ab5c9d90c6c802e980e4c1c0bee8dc", sha);
+            }
             var quote = Assert.IsType<InstantQuotationOrderQuote>(Workflow.OrderQuote);
             var state = (await Store.GetAsync(SessionId, Owner, default))!;
             Assert.Equal(count, state.Parts.Count);
@@ -538,18 +610,185 @@ public sealed class InstantQuotationAutomaticDefaultAcceptanceTests
                 .Validate(state, quote, state.QuoteAuthorization, DateTimeOffset.UtcNow));
             Assert.All(state.Parts, part =>
             {
-                Assert.Equal(new InstantQuotationPartConfiguration("PLA", "Black", 1), part.Configuration);
+                Assert.Equal(new InstantQuotationPartConfiguration("PLA", "Any", 1), part.Configuration);
+                Assert.Equal(bodies, part.Geometry.BodyCount);
                 var line = Assert.Single(quote.Parts, item => item.PartId == part.PartId);
                 var receipt = Assert.IsType<InstantQuotationPhysicalAnalysisReceipt>(line.PhysicalReceipt);
+                Assert.Equal("Any", line.Color);
+                Assert.Equal("PLA", line.MaterialKey);
+                Assert.Equal(1, line.Quantity);
+                var binding = Assert.IsType<InstantQuotationPhysicalAnalysisBinding>(
+                    Workflow.CurrentPhysicalAnalysisBinding(part.PartId, receipt.ProfileVersion));
+                Assert.True(receipt.Matches(binding, "PLA"));
+                Assert.True(FdmRuntimeProfileCatalog.LoadEmbedded().TryResolveTrustedProfile(
+                    "PLA", BuildPreference.Standard, out var profile));
+                Assert.Equal(profile!.ResolvedProfileSha256, receipt.ProfileSha256);
+                Assert.Equal(FdmRuntimeProfileCatalog.LoadEmbedded().ProfileVersion, receipt.ProfileVersion);
+                Assert.Equal(Legacy.Maliev.Web.Application.Pricing.Simulation.FdmSimulationEngine.AnalysisVersion, receipt.AnalysisVersion);
                 Assert.Equal(part.PhysicalAnalysisUpload!.FileId, receipt.FileId);
                 Assert.Equal(UnitPolicy, part.PhysicalAnalysisUpload.GltfUnitPolicy);
                 Assert.Equal(UnitPolicy, receipt.GltfUnitPolicy);
-                Assert.Equal(Sha, receipt.UploadSha256);
-                Assert.Equal(1, receipt.BoundingCm3PerUnit, 3);
+                Assert.Equal(sha, receipt.UploadSha256);
+                Assert.Equal(bodies == 1 ? 10 : 30, part.Geometry.DimensionXmm);
+                Assert.Equal(10, part.Geometry.DimensionYmm);
+                Assert.Equal(10, part.Geometry.DimensionZmm);
+                Assert.Equal(bodies == 1 ? 1 : 3, receipt.BoundingCm3PerUnit, 3);
                 Assert.True(receipt.DepositedMm3 > 0);
                 Assert.True(receipt.MotionSeconds > 0);
                 Assert.Contains(receipt, state.PhysicalReceipts!);
             });
+        }
+        internal async Task AssertOnlyQuoteColorDiffersAsync()
+        {
+            AssertEligibleSourceConfiguration();
+            var state = Assert.IsType<InstantQuotationSessionState>(await Store.GetAsync(SessionId, Owner, default));
+            var part = Assert.Single(state.Parts);
+            Assert.Equal(new InstantQuotationPartConfiguration("PLA", "Any", 1), part.Configuration);
+            var original = Assert.IsType<InstantQuotationOrderQuote>(Control.OriginalQuoteBeforeColorMismatch);
+            var quote = Assert.IsType<InstantQuotationOrderQuote>(Workflow.OrderQuote);
+            var originalLine = Assert.Single(original.Parts);
+            var line = Assert.Single(quote.Parts);
+            Assert.Equal("Any", originalLine.Color);
+            Assert.Equal("White", line.Color);
+            Assert.NotEqual(part.Configuration.Color, line.Color);
+            Assert.Equal(originalLine, line with { Color = originalLine.Color });
+            Assert.Equal(original, quote with { Parts = original.Parts });
+            var authorization = Assert.IsType<InstantQuotationQuoteAuthorization>(state.QuoteAuthorization);
+            var service = Assert.IsAssignableFrom<IInstantQuotationQuoteTicketService>(tickets);
+            Assert.True(service.Validate(state, original, authorization, DateTimeOffset.UtcNow));
+            Assert.True(service.Validate(state, quote, authorization, DateTimeOffset.UtcNow));
+            var receipt = Assert.IsType<InstantQuotationPhysicalAnalysisReceipt>(line.PhysicalReceipt);
+            Assert.Equal(originalLine.PhysicalReceipt, receipt);
+            var binding = Assert.IsType<InstantQuotationPhysicalAnalysisBinding>(
+                Workflow.CurrentPhysicalAnalysisBinding(part.PartId, receipt.ProfileVersion));
+            Assert.True(receipt.Matches(binding, "PLA"));
+            Assert.True(FdmRuntimeProfileCatalog.LoadEmbedded().TryResolveTrustedProfile(
+                "PLA", BuildPreference.Standard, out var profile));
+            Assert.Equal(profile!.ResolvedProfileSha256, receipt.ProfileSha256);
+            Assert.Equal(FdmRuntimeProfileCatalog.LoadEmbedded().ProfileVersion, receipt.ProfileVersion);
+            Assert.Equal(Legacy.Maliev.Web.Application.Pricing.Simulation.FdmSimulationEngine.AnalysisVersion, receipt.AnalysisVersion);
+            Assert.Equal(part.PhysicalAnalysisUpload!.FileId, receipt.FileId);
+            Assert.Equal(sha, receipt.UploadSha256);
+            Assert.Equal(UnitPolicy, receipt.GltfUnitPolicy);
+            Assert.Equal(bodies == 1 ? 1 : 3, receipt.BoundingCm3PerUnit, 3);
+            Assert.True(double.IsFinite(line.UnitPrice) && line.UnitPrice > 0);
+            Assert.True(double.IsFinite(receipt.DepositedMm3) && receipt.DepositedMm3 > 0);
+            Assert.True(double.IsFinite(receipt.SupportMm3) && receipt.SupportMm3 >= 0);
+            Assert.True(double.IsFinite(receipt.MotionSeconds) && receipt.MotionSeconds > 0);
+            Assert.Contains(receipt, state.PhysicalReceipts!);
+        }
+
+        internal async Task AssertProtectedBlackRestoreAsync()
+        {
+            Assert.Equal(1, bodies);
+            var uploaded = Assert.Single(Workflow.Parts);
+            await Workflow.UpdateConfigurationAsync(uploaded.PartId, "PLA", "Black", 1, default);
+            var before = Assert.IsType<InstantQuotationSessionState>(await Store.GetAsync(SessionId, Owner, default));
+            var beforeQuote = Assert.IsType<InstantQuotationOrderQuote>(Workflow.OrderQuote);
+            AssertBlackAuthority(Workflow, before, beforeQuote);
+            var beforePart = Assert.Single(before.Parts);
+            var beforePayload = System.Text.Json.JsonSerializer.Serialize(before.RequestState);
+            var beforeReceipt = Assert.IsType<InstantQuotationPhysicalAnalysisReceipt>(Assert.Single(beforeQuote.Parts).PhysicalReceipt);
+
+            var provider = scope.ServiceProvider;
+            await using var restored = new InstantQuotationWorkflowCoordinator(Store,
+                provider.GetRequiredService<IInstantQuotationUploadClient>(),
+                provider.GetRequiredService<IInstantQuotationPricingService>(), Owner,
+                quoteTicketService: tickets,
+                authoritativePricingService: provider.GetRequiredService<IInstantQuotationAuthoritativePricingService>());
+            await restored.InitializeAsync(SessionId, default);
+
+            var after = Assert.IsType<InstantQuotationSessionState>(await Store.GetAsync(SessionId, Owner, default));
+            var afterQuote = Assert.IsType<InstantQuotationOrderQuote>(restored.OrderQuote);
+            AssertBlackAuthority(restored, after, afterQuote);
+            Assert.Equal(before.SessionId, after.SessionId);
+            Assert.Equal(before.OwnerIdentity, after.OwnerIdentity);
+            Assert.Equal(SessionId, restored.ProtectedSessionIdentity);
+            Assert.Equal(beforePayload, System.Text.Json.JsonSerializer.Serialize(after.RequestState));
+            var afterPart = Assert.Single(after.Parts);
+            Assert.Equal(beforePart.PartId, afterPart.PartId);
+            Assert.Equal(beforePart.UploadReference, afterPart.UploadReference);
+            Assert.Equal(beforePart.PhysicalAnalysisUpload, afterPart.PhysicalAnalysisUpload);
+            Assert.Equal(beforeReceipt, Assert.Single(afterQuote.Parts).PhysicalReceipt);
+            restored.EnterReview();
+            Assert.Equal(InstantQuotationWorkflowState.Review, restored.State);
+            restored.EnterCustomerDetails();
+            Assert.Equal(InstantQuotationWorkflowState.CustomerDetails, restored.State);
+
+            void AssertBlackAuthority(InstantQuotationWorkflowCoordinator coordinator,
+                InstantQuotationSessionState state, InstantQuotationOrderQuote quote)
+            {
+                Assert.Equal(InstantQuotationWorkflowState.Configured, coordinator.State);
+                Assert.True(coordinator.HasCompleteAuthoritativeQuote);
+                var part = Assert.Single(state.Parts);
+                Assert.Equal(new InstantQuotationPartConfiguration("PLA", "Black", 1), part.Configuration);
+                Assert.Equal(part.Configuration, Assert.Single(coordinator.Parts).Configuration);
+                Assert.Equal(1, part.Geometry.BodyCount);
+                var authorization = Assert.IsType<InstantQuotationQuoteAuthorization>(state.QuoteAuthorization);
+                Assert.True(Assert.IsAssignableFrom<IInstantQuotationQuoteTicketService>(tickets)
+                    .Validate(state, quote, authorization, DateTimeOffset.UtcNow));
+                var line = Assert.Single(quote.Parts);
+                Assert.Equal(part.PartId, line.PartId);
+                Assert.Equal("Black", line.Color);
+                Assert.Equal("PLA", line.MaterialKey);
+                Assert.Equal(1, line.Quantity);
+                Assert.True(double.IsFinite(line.UnitPrice) && line.UnitPrice > 0);
+                var receipt = Assert.IsType<InstantQuotationPhysicalAnalysisReceipt>(line.PhysicalReceipt);
+                var binding = Assert.IsType<InstantQuotationPhysicalAnalysisBinding>(
+                    coordinator.CurrentPhysicalAnalysisBinding(part.PartId, receipt.ProfileVersion));
+                Assert.True(receipt.Matches(binding, "PLA"));
+                Assert.True(FdmRuntimeProfileCatalog.LoadEmbedded().TryResolveTrustedProfile(
+                    "PLA", BuildPreference.Standard, out var profile));
+                Assert.Equal(profile!.ResolvedProfileSha256, receipt.ProfileSha256);
+                Assert.Equal(FdmRuntimeProfileCatalog.LoadEmbedded().ProfileVersion, receipt.ProfileVersion);
+                Assert.Equal(Legacy.Maliev.Web.Application.Pricing.Simulation.FdmSimulationEngine.AnalysisVersion, receipt.AnalysisVersion);
+                Assert.Equal(part.PhysicalAnalysisUpload!.FileId, receipt.FileId);
+                Assert.Equal(sha, receipt.UploadSha256);
+                Assert.Equal(UnitPolicy, receipt.GltfUnitPolicy);
+                Assert.Equal(1, receipt.BoundingCm3PerUnit, 3);
+                Assert.True(receipt.DepositedMm3 > 0);
+                Assert.True(receipt.MotionSeconds > 0);
+                Assert.Contains(receipt, state.PhysicalReceipts!);
+            }
+        }
+
+        private static byte[] FixtureBytes(int bodies)
+        {
+            var original = Convert.FromBase64String(AdmittedGltfMeshReaderTests.OriginalGlb);
+            if (bodies == 1) return original;
+            Assert.Equal(2, bodies);
+            var jsonLength = BitConverter.ToInt32(original, 12);
+            var document = JsonNode.Parse(Encoding.UTF8.GetString(original, 20, jsonLength))!;
+            // A translated second mesh instance gives two disconnected closed cubes in the actual upload bytes.
+            document["nodes"]!.AsArray().Add(new JsonObject
+            {
+                ["mesh"] = 0,
+                ["translation"] = new JsonArray(20, 0, 0),
+            });
+            document["nodes"]![0]!["children"]!.AsArray().Add(2);
+            var json = Encoding.UTF8.GetBytes(document.ToJsonString());
+            var paddedLength = (json.Length + 3) & ~3;
+            using var stream = new MemoryStream();
+            using (var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))
+            {
+                writer.Write(0x46546c67);
+                writer.Write(2);
+                writer.Write(20 + paddedLength + original.Length - 20 - jsonLength);
+                writer.Write(paddedLength);
+                writer.Write(0x4e4f534a);
+                writer.Write(json);
+                for (var index = json.Length; index < paddedLength; index++) writer.Write((byte)' ');
+                writer.Write(original.AsSpan(20 + jsonLength));
+            }
+            var result = stream.ToArray();
+            var mesh = Legacy.Maliev.Web.Application.Pricing.Simulation.AdmittedGltfMeshReader.Read(result);
+            Assert.Equal(24, mesh.Triangles.Count);
+            Assert.Equal(1, mesh.UnitsToMillimetres);
+            var vertices = mesh.Triangles.SelectMany(triangle => new[] { triangle.A, triangle.B, triangle.C }).ToArray();
+            Assert.Equal(30f, vertices.Max(vertex => vertex.X) - vertices.Min(vertex => vertex.X));
+            Assert.Equal(12, mesh.Triangles.Count(triangle => triangle.A.X <= 5 && triangle.B.X <= 5 && triangle.C.X <= 5));
+            Assert.Equal(12, mesh.Triangles.Count(triangle => triangle.A.X >= 15 && triangle.B.X >= 15 && triangle.C.X >= 15));
+            return result;
         }
         internal async Task DrainAsync(Exception? primary)
         {

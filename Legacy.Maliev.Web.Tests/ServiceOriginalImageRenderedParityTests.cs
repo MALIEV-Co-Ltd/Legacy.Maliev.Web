@@ -12,7 +12,7 @@ public sealed class ServiceOriginalImageRenderedParityTests(TestingWebApplicatio
     public static TheoryData<string, string[]> OriginalImages => new()
     {
         { "/services/cnc-machining", [
-            "/src/images/services/cnc/cnc-hero.webp",
+            "/src/images/services/hero-illustrations/cnc-hero-light.webp",
             "/src/images/services/cnc/cards/cnc-card-milled-parts.webp",
             "/src/images/services/cnc/cards/cnc-card-turned-parts.webp",
             "/src/images/services/cnc/cards/cnc-card-jigs-fixtures.webp",
@@ -22,7 +22,7 @@ public sealed class ServiceOriginalImageRenderedParityTests(TestingWebApplicatio
             "/src/images/services/cnc/cnc-materials.webp"
         ] },
         { "/services/3d-printing", [
-            "/src/images/services/printing/printing-hero.webp",
+            "/src/images/services/printing/printing-hero-prototypes-transparent.webp",
             "/src/images/services/printing/printing-fdm-application.webp",
             "/src/images/services/printing/printing-resin-application.webp",
             "/src/images/services/printing/printing-industrial-application.webp",
@@ -32,7 +32,7 @@ public sealed class ServiceOriginalImageRenderedParityTests(TestingWebApplicatio
             "/src/images/services/printing/printing-file-orientation-support.webp"
         ] },
         { "/services/3d-scanning", [
-            "/src/images/services/scanning/scanning-hero.webp",
+            "/src/images/services/hero-illustrations/scanning-hero-raptor-x-unbranded.webp",
             "/src/images/services/scanning/cards/scanning-card-raw-mesh.webp",
             "/src/images/services/scanning/cards/scanning-card-reverse-engineering.webp",
             "/src/images/services/scanning/cards/scanning-card-deviation-analysis.webp",

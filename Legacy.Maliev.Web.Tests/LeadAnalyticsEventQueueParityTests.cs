@@ -329,6 +329,35 @@ public sealed class LeadAnalyticsEventQueueParityTests
         Assert.Equal(transactionId, document.RootElement.GetProperty("transaction_id").GetString());
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void FileCompletion_TempDataReadOrRemovalFailureDoesNotEscape(int failureMode)
+    {
+        var data = new FailingFileCompletionTempData(failureMode);
+        Assert.False(LeadAnalyticsEventQueue.TryConsumeFileCompletion(data, out var transactionId));
+        Assert.Null(transactionId);
+    }
+
+    private sealed class FailingFileCompletionTempData(int failureMode) : Dictionary<string, object?>, ITempDataDictionary
+    {
+        bool IDictionary<string, object?>.TryGetValue(string key, out object? value)
+        {
+            if (failureMode == 0) throw new InvalidOperationException("Synthetic read failure");
+            value = "request-42";
+            return true;
+        }
+
+        bool IDictionary<string, object?>.Remove(string key) => failureMode == 1
+            ? throw new InvalidOperationException("Synthetic removal failure") : false;
+        public void Keep() { }
+        public void Keep(string key) { }
+        public void Load() { }
+        public object? Peek(string key) => null;
+        public void Save() { }
+    }
+
     private static TempDataDictionary CreateTempData() =>
         new(new DefaultHttpContext(), new DictionaryTempDataProvider());
 

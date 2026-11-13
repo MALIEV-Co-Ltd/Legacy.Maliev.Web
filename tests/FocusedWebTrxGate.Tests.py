@@ -17,6 +17,74 @@ spec.loader.exec_module(gate)
 NS = "{http://microsoft.com/schemas/VisualStudio/TeamTest/2010}"
 FIELDS = "total executed passed failed error timeout aborted inconclusive passedButRunAborted notRunnable notExecuted disconnected warning completed inProgress pending".split()
 
+# Retained147 family/count inventory frozen from b3, independent of the live gate.
+MIGRATION_CONSUMERS_RETAINED_147 = {
+    "Legacy.Maliev.Web.Tests.PublicCrawlerInventoryAcceptanceTests": {
+        "SourceInventory_ActualEnglishAndThaiDocumentsKeepTheirDiscoveryContract": 54,
+        "RetainedThreePublicLayouts_KeepTheSameHttpDiscoveryContract": 6,
+        "SourceCommercialPages_RenderIndependentIntentAndDirectQuotationAnchors": 20,
+        "AdditiveNoWeaponsRoute_DoesNotReplaceAnyHistoricalInventoryDocument": 2,
+        "PublicInventoryAcceptance_DoesNotRelaxPrivateAndCredentialUtilities": 4,
+    },
+    "Legacy.Maliev.Web.Tests.SitemapResponseCachingHttpTests": {
+        "Public_sitemap_declares_source_one_hour_public_cache_lifetime": 2,
+        "Public_sitemap_keeps_exact_canonical_inventory_localized_alternates_and_private_exclusions": 2,
+        "Public_sitemap_xml_is_identical_across_cultures_and_caller_cookie_input": 1,
+    },
+    "Legacy.Maliev.Web.Tests.KnowledgeGuidelinesStaticSsrRouteTests": {
+        "Host_DeclaresTheGuidelinesStaticSsrPageAndKeepsTheRazorRollbackSource": 1,
+        "GuidelinesRoute_RendersCompleteLocalizedAccessibleStaticDocument": 2,
+        "GuidelinesRoute_PreservesCanonicalAndLocalizedAlternates": 2,
+        "GuidelinesRoute_EmitsLocalizedValidHowToStructuredData": 2,
+        "AcceptedConsent_PreservesTheGtmBodyContainerOnTheGuidelinesRoute": 1,
+        "DisabledGuidelinesRoute_UsesTheRetainedRazorFallbackAtTheCanonicalUrl": 1,
+    },
+    "Legacy.Maliev.Web.Tests.KnowledgeCncMachiningStaticSsrRouteTests": {
+        "Host_DeclaresTheCncMachiningSpecificationPageAndKeepsTheRazorRollbackSource": 1,
+        "CncMachiningSpecificationRoute_RendersCompleteLocalizedAccessibleDocument": 2,
+        "SourceFinalSurfaceFinishesRoute_PreservesTheRelocatedAnodizingDetail": 2,
+        "CncMachiningSpecificationRoute_PreservesCanonicalAndLocalizedAlternates": 2,
+        "CncMachiningSpecificationRoute_EmitsLocalizedWebPageAndFourLevelBreadcrumbSchema": 2,
+        "AcceptedConsent_PreservesTheGtmBodyContainerOnTheCncMachiningSpecificationRoute": 1,
+        "DisabledCncMachiningSpecificationRoute_UsesTheRetainedRazorFallback": 1,
+    },
+    "Legacy.Maliev.Web.Tests.PublicCopyParityTests": {
+        "CareerDirectoryKeepsThePostA40ResponsiveAndCloudflareSafeMarkup": 1,
+        "LegalDocumentsExposeTheLocalizedEffectiveDateAndCompleteTocAnchors": 1,
+        "KnowledgeAndInquirySurfacesKeepLocalizedProjectCopyAndProgressiveEnhancementMarkers": 1,
+    },
+    "Legacy.Maliev.Web.Tests.AssetDeliveryContractTests": {
+        "RazorPartials_ReferenceNegotiatedAssetsInsteadOfGzipFiles": 1,
+        "GeneratedProductionAsset_IsPresentAndNonEmpty": 4,
+        "CncQuotationRuntimeAsset_IsPresentAndNonEmpty": 11,
+        "ObsoleteAnimationDependencies_AreAbsentFromSourceAndBundles": 1,
+        "ObsoleteJqueryValidationStack_IsAbsentFromSourceAndBundles": 1,
+        "KnowledgeActionLinks_KeepAccessibleButtonTextContrast": 1,
+        "InstantQuotationAssets_AreBundledAndKeepPricingOnServerEndpoints": 1,
+    },
+    "Legacy.Maliev.Web.Tests.PublicWebpImageContractTests": {
+        "SourceDerivedWebpAssets_MatchCommit6509356": 1,
+        "PublicRuntimeSources_ReferenceOnlyWebpRasterImages": 1,
+        "PublicWebpReferences_ResolveToCommittedAssets": 1,
+    },
+    "Legacy.Maliev.Web.Tests.AboutPageContractTests": {
+        "About_RendersLocalizedSourceStoryAndAccessibleControls": 2,
+        "About_PreservesOrderedIllustrativeProjectAndEngineeringLimits": 1,
+        "About_PreservesExactCustomerRosterAndCorrectedArtwork": 2,
+    },
+    "Legacy.Maliev.Web.Tests.WebSurfaceTests": {
+        "HomePage_RendersLocalizedStaticBlazorBodyWithNavigationParity": 2,
+        "AboutRoute_PreservesLocalizedStaticSsrTimelineWithoutFacebookProfileIntegration": 2,
+        "Sitemap_PublishesEveryIndexedRouteWithLocalizedAlternates": 1,
+    },
+}
+ABOUT_CTA_CLASS = "Legacy.Maliev.Web.Tests.AboutPageContractTests"
+ABOUT_CTA_METHOD = "AboutContent_HidesCustomersAndPreservesFollowingCallToAction"
+APPROVED_ABOUT_CTA_NAMES = (
+    f'{ABOUT_CTA_CLASS}.{ABOUT_CTA_METHOD}(culture: "en", callToAction: "Have an idea, drawing or sample part?")',
+    f'{ABOUT_CTA_CLASS}.{ABOUT_CTA_METHOD}(culture: "th", callToAction: "มีไอเดีย แบบงาน หรือชิ้นงานตัวอย่าง?")',
+)
+
 # Frozen CNC source8a6bd8313d14457ebc4ba7d4b3e93872baac3bab display cases.
 # Native147TRX reports EN828/TH811 result names and447-unit definitions.
 PINNED_CNC_DISPLAY_CASES = [
@@ -26,17 +94,18 @@ PINNED_CNC_DISPLAY_CASES = [
 
 
 class FocusedGateControls(unittest.TestCase):
-    def fixture(self, directory, suite):
+    def fixture(self, directory, suite, independent_roster=None):
         dll = directory / "Legacy.Maliev.Web.Tests.dll"
         dll.write_bytes(b"Synthetic parser control marker, not a native assembly")
         root = ET.Element(NS + "TestRun")
         summary = ET.SubElement(root, NS + "ResultSummary", outcome="Completed")
-        total = sum(sum(methods.values()) for methods in gate.ROSTERS[suite].values())
+        roster = gate.ROSTERS[suite] if independent_roster is None else independent_roster
+        total = sum(sum(methods.values()) for methods in roster.values())
         ET.SubElement(summary, NS + "Counters", {k: str(total) if k in ("total", "executed", "passed") else "0" for k in FIELDS})
         results = ET.SubElement(root, NS + "Results")
         definitions = ET.SubElement(root, NS + "TestDefinitions")
         entries = ET.SubElement(root, NS + "TestEntries")
-        for cls, methods in gate.ROSTERS[suite].items():
+        for cls, methods in roster.items():
             for method, rows in methods.items():
                 for index in range(rows):
                     if suite == "sidebar" and method == "RealPartsRailExposesLongNamesAndKeyboardActions":
@@ -64,6 +133,93 @@ class FocusedGateControls(unittest.TestCase):
         ET.ElementTree(root).write(path, encoding="utf-8", xml_declaration=True)
         return gate.verify(path, suite, dll)
 
+    def independent_about_fixture(self, directory):
+        roster = copy.deepcopy(MIGRATION_CONSUMERS_RETAINED_147)
+        roster[ABOUT_CTA_CLASS][ABOUT_CTA_METHOD] = 2
+        root, dll = self.fixture(directory, "migration-consumers", roster)
+        definitions = {row.get("id"): row for row in root.find(NS + "TestDefinitions")}
+        about_rows = []
+        for result in root.find(NS + "Results"):
+            definition = definitions[result.get("testId")]
+            method = definition.find(NS + "TestMethod")
+            if method.get("className") == ABOUT_CTA_CLASS and method.get("name") == ABOUT_CTA_METHOD:
+                about_rows.append((result, definition))
+        self.assertEqual(2, len(about_rows))
+        for (result, definition), name in zip(about_rows, APPROVED_ABOUT_CTA_NAMES, strict=True):
+            result.set("testName", name)
+            definition.set("name", name)
+        return root, dll, about_rows
+
+    def test_retained147_roster_and_only_approved_about_pair_are_present(self):
+        self.assertEqual(147, sum(sum(methods.values()) for methods in MIGRATION_CONSUMERS_RETAINED_147.values()))
+        current = copy.deepcopy(gate.ROSTERS["migration-consumers"])
+        self.assertEqual(2, current[ABOUT_CTA_CLASS].pop(ABOUT_CTA_METHOD, None))
+        self.assertEqual(MIGRATION_CONSUMERS_RETAINED_147, current)
+
+    def test_independent149_source_fixture_is_accepted(self):
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            root, dll, _ = self.independent_about_fixture(directory)
+            self.assertEqual(147 + 2, self.verify(root, directory, dll, "migration-consumers")["passed"])
+
+    def test_old147_without_approved_about_pair_is_not_complete(self):
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            root, dll = self.fixture(directory, "migration-consumers", MIGRATION_CONSUMERS_RETAINED_147)
+            with self.assertRaises(ValueError):
+                self.verify(root, directory, dll, "migration-consumers")
+
+    def test_each_approved_about_case_rejects_missing_extra_unknown_duplicate_or_nonpassed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            directory = Path(temp)
+            for case in range(2):
+                for mutation in ("missing", "extra", "unknown", "duplicate-sourcecase", "failed", "skipped"):
+                    with self.subTest(case=case, mutation=mutation):
+                        root, dll, about_rows = self.independent_about_fixture(directory)
+                        result, definition = about_rows[case]
+                        results = root.find(NS + "Results")
+                        definitions = root.find(NS + "TestDefinitions")
+                        entries = root.find(NS + "TestEntries")
+                        entry = next(row for row in entries if row.get("testId") == result.get("testId"))
+                        counters = root.find(NS + "ResultSummary/" + NS + "Counters")
+                        if mutation == "missing":
+                            results.remove(result)
+                            definitions.remove(definition)
+                            entries.remove(entry)
+                            for field in ("total", "executed", "passed"):
+                                counters.set(field, str(147 + 2 - 1))
+                        elif mutation == "extra":
+                            extra_result, extra_definition, extra_entry = map(copy.deepcopy, (result, definition, entry))
+                            test, execution = str(uuid.uuid4()), str(uuid.uuid4())
+                            extra_result.set("testId", test)
+                            extra_result.set("executionId", execution)
+                            extra_result.set("testName", result.get("testName") + " extra")
+                            extra_definition.set("id", test)
+                            extra_definition.set("name", extra_result.get("testName"))
+                            extra_definition.find(NS + "Execution").set("id", execution)
+                            extra_entry.set("testId", test)
+                            extra_entry.set("executionId", execution)
+                            results.append(extra_result)
+                            definitions.append(extra_definition)
+                            entries.append(extra_entry)
+                            for field in ("total", "executed", "passed"):
+                                counters.set(field, str(147 + 2 + 1))
+                        elif mutation == "unknown":
+                            definition.find(NS + "TestMethod").set("name", "UnapprovedAboutCase")
+                            name = f'{ABOUT_CTA_CLASS}.UnapprovedAboutCase(culture: "foreign")'
+                            result.set("testName", name)
+                            definition.set("name", name)
+                        elif mutation == "duplicate-sourcecase":
+                            name = about_rows[1 - case][0].get("testName")
+                            result.set("testName", name)
+                            definition.set("name", name)
+                        else:
+                            result.set("outcome", "Failed" if mutation == "failed" else "NotExecuted")
+                            counters.set("passed", str(147 + 2 - 1))
+                            counters.set("failed" if mutation == "failed" else "notExecuted", "1")
+                        with self.assertRaises(ValueError):
+                            self.verify(root, directory, dll, "migration-consumers")
+
     def test_exact_frozen_roster_counts(self):
         self.assertEqual([10, 10, 9, 26, 4], [
             sum(gate.ROSTERS["fdm"]["Legacy.Maliev.Web.Tests." + cls].values())
@@ -76,7 +232,7 @@ class FocusedGateControls(unittest.TestCase):
                          gate.ROSTERS["sidebar"]["Legacy.Maliev.Web.Tests.InstantQuotationSidebarLayoutBrowserTests"])
 
     def test_both_complete_suites_accept_lowercase_native_storage(self):
-        for suite, total in (("fdm", 59), ("sidebar", 16), ("migration-consumers", 147), ("billing-lifetime", 50)):
+        for suite, total in (("fdm", 59), ("sidebar", 16), ("migration-consumers", 147 + 2), ("billing-lifetime", 50)):
             with self.subTest(suite=suite), tempfile.TemporaryDirectory() as temp:
                 directory = Path(temp)
                 root, dll = self.fixture(directory, suite)
@@ -128,7 +284,7 @@ class FocusedGateControls(unittest.TestCase):
 
 
     def test_migration_consumer_families_cannot_be_dropped_skipped_or_replaced(self):
-        self.assertEqual(147, sum(sum(methods.values()) for methods in gate.ROSTERS["migration-consumers"].values()))
+        self.assertEqual(147 + 2, sum(sum(methods.values()) for methods in gate.ROSTERS["migration-consumers"].values()))
         with tempfile.TemporaryDirectory() as temp:
             directory = Path(temp)
             baseline, dll = self.fixture(directory, "migration-consumers")
@@ -141,10 +297,10 @@ class FocusedGateControls(unittest.TestCase):
                             parent = root.find(NS + container)
                             parent.remove(parent[0])
                         for field in ("total", "executed", "passed"):
-                            counters.set(field, "146")
+                            counters.set(field, str(147 + 2 - 1))
                     elif mutation == "skip":
                         root.find(NS + "Results")[0].set("outcome", "NotExecuted")
-                        counters.set("passed", "146")
+                        counters.set("passed", str(147 + 2 - 1))
                         counters.set("notExecuted", "1")
                     else:
                         root.find(NS + "TestDefinitions")[0].find(NS + "TestMethod").set(
@@ -185,7 +341,7 @@ class FocusedGateControls(unittest.TestCase):
             ET.SubElement(summary, NS + "RunInfos")
             output = ET.SubElement(summary, NS + "Output")
             ET.SubElement(output, NS + "StdOut").text = "Ordinary native test output"
-            self.assertEqual(147, self.verify(root, directory, dll, "migration-consumers")["passed"])
+            self.assertEqual(147 + 2, self.verify(root, directory, dll, "migration-consumers")["passed"])
 
 
     def test_lifecycle_frozen_cases_and_wrong_argument_rejection(self):
@@ -414,7 +570,7 @@ class FocusedGateControls(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             directory = Path(temp)
             root, dll, _ = self.long_native_fixture(directory)
-            self.assertEqual(147, self.verify(root, directory, dll, "migration-consumers")["passed"])
+            self.assertEqual(147 + 2, self.verify(root, directory, dll, "migration-consumers")["passed"])
 
     def test_native_display_uses_exact447_utf16_boundary_and_control_escaping(self):
         cases = [

@@ -27,6 +27,11 @@ namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation
         /// object-creation reservation is an unresolved ownership tombstone: it must not expire
         /// until exact-path cleanup is confirmed and <see cref="Rollback" /> is called.
         /// </summary>
+        /// <param name="receipt">The receipt state whose form, item and role need reserved capacity.</param>
+        /// <param name="now">The UTC observation time used to evaluate receipt expiry.</param>
+        /// <param name="maximumOutstandingPerForm">The maximum outstanding receipt slots for the protected form.</param>
+        /// <param name="reservation">The opaque reservation when capacity is acquired; otherwise, null.</param>
+        /// <returns>True when the tuple's capacity was reserved atomically.</returns>
         bool TryReserve(CncUploadReceiptState receipt, DateTimeOffset now, int maximumOutstandingPerForm, out CncUploadReceiptReservation? reservation);
 
         /// <summary>
@@ -34,23 +39,33 @@ namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation
         /// returned by <see cref="TryReserve" />, this is an in-store transition which cannot
         /// reject because of the form cap.
         /// </summary>
+        /// <param name="reservation">The live reservation returned before confirmed object creation.</param>
+        /// <param name="now">The UTC observation time used to evaluate receipt expiry.</param>
         void Finalize(CncUploadReceiptReservation reservation, DateTimeOffset now);
 
         /// <summary>
         /// Rolls back a live reservation after a confirmed pre-upload or upload failure.
         /// Any previously finalized receipt for the same tuple remains available.
         /// </summary>
+        /// <param name="reservation">The live reservation whose failed object creation has been confirmed.</param>
+        /// <param name="now">The UTC observation time used to evaluate receipt expiry.</param>
         void Rollback(CncUploadReceiptReservation reservation, DateTimeOffset now);
 
         /// <summary>
         /// Atomically verifies and removes the complete claimed receipt set.
         /// </summary>
+        /// <param name="claims">The complete set of exact protected receipt values to claim together.</param>
+        /// <param name="now">The UTC observation time used to evaluate receipt expiry.</param>
+        /// <param name="claimSet">The atomically removed receipt states when every claim matches; otherwise, null.</param>
+        /// <returns>True only when the complete receipt set was verified and claimed atomically.</returns>
         bool TryClaimAll(IReadOnlyCollection<CncUploadReceiptClaim> claims, DateTimeOffset now, out CncUploadReceiptClaimSet? claimSet);
 
         /// <summary>
         /// Restores an atomically claimed set only when request persistence was never attempted.
         /// A newer upload for the same tuple always wins.
         /// </summary>
+        /// <param name="claimSet">The previously claimed set eligible for restoration before persistence.</param>
+        /// <param name="now">The UTC observation time used to evaluate receipt expiry.</param>
         void Restore(CncUploadReceiptClaimSet claimSet, DateTimeOffset now);
     }
 
@@ -62,6 +77,12 @@ namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation
         /// <summary>
         /// Initializes a new instance of the <see cref="CncUploadReceiptState" /> class.
         /// </summary>
+        /// <param name="formId">The protected form identifier owning the upload slot.</param>
+        /// <param name="sessionId">The protected browser journey or session identifier.</param>
+        /// <param name="itemId">The indexed quotation item identifier.</param>
+        /// <param name="role">The model or drawing upload role.</param>
+        /// <param name="protectedReceipt">The exact protected receipt value issued for the upload.</param>
+        /// <param name="expiresAtUtc">The absolute UTC expiry of the issued receipt.</param>
         public CncUploadReceiptState(string formId, string sessionId, string itemId, string role, string protectedReceipt, DateTimeOffset expiresAtUtc)
         {
             this.FormId = formId;
@@ -99,6 +120,11 @@ namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation
         /// <summary>
         /// Initializes a new instance of the <see cref="CncUploadReceiptClaim" /> class.
         /// </summary>
+        /// <param name="formId">The protected form identifier owning the upload slot.</param>
+        /// <param name="sessionId">The protected browser journey or session identifier.</param>
+        /// <param name="itemId">The indexed quotation item identifier.</param>
+        /// <param name="role">The model or drawing upload role.</param>
+        /// <param name="protectedReceipt">The exact protected receipt value issued for the upload.</param>
         public CncUploadReceiptClaim(string formId, string sessionId, string itemId, string role, string protectedReceipt)
         {
             this.FormId = formId;
@@ -130,6 +156,8 @@ namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation
     public sealed class CncUploadReceiptReservation
     {
         /// <summary>Initializes a new reservation token.</summary>
+        /// <param name="receipt">The receipt state whose capacity is reserved.</param>
+        /// <param name="token">The opaque token proving ownership of that reservation.</param>
         public CncUploadReceiptReservation(CncUploadReceiptState receipt, string token)
         {
             this.Receipt = receipt ?? throw new ArgumentNullException(nameof(receipt));
@@ -151,6 +179,7 @@ namespace Legacy.Maliev.Web.Components.Pages.InstantQuotation
         /// <summary>
         /// Initializes a new instance of the <see cref="CncUploadReceiptClaimSet" /> class.
         /// </summary>
+        /// <param name="receipts">The complete receipt states removed by one successful atomic claim.</param>
         public CncUploadReceiptClaimSet(IReadOnlyList<CncUploadReceiptState> receipts) =>
             this.Receipts = receipts ?? throw new ArgumentNullException(nameof(receipts));
 
