@@ -40,7 +40,7 @@ public sealed class ScanningIntentGuideHttpTests(TestingWebApplicationFactory fa
             ? new[] { "เก็บรูปทรง", "สร้างแบบที่ใช้งานต่อได้", "ตรวจเทียบกับแบบอ้างอิง" }
             : new[] { "Keep the shape", "Rebuild a usable design", "Check against a reference" }, headings);
         Assert.Contains(culture == "th"
-            ? "เก็บเมชเพื่อแสดงผล เก็บถาวร หรือประมวลผลต่อเอง"
+            ? "เก็บ mesh เพื่อแสดงผล เก็บถาวร หรือประมวลผลต่อเอง"
             : "Capture a mesh for visualization, archiving, or your own processing.", section.Value, StringComparison.Ordinal);
         Assert.Contains(culture == "th"
             ? "สร้าง CAD ที่แก้ไขได้จากพื้นผิวที่วัด"

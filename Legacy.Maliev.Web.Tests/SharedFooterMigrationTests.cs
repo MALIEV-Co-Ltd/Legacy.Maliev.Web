@@ -153,8 +153,8 @@ public sealed class SharedFooterMigrationTests : IClassFixture<TestingWebApplica
         Assert.DoesNotContain("href=\"https://www.facebook.com", source, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("target=\"_blank\" rel=\"noopener\"", source, StringComparison.Ordinal);
         Assert.True(
-            source.IndexOf($"href=\"{SocialNetworks.Line}\"", StringComparison.Ordinal) <
-            source.IndexOf($"href=\"{SocialNetworks.Messenger}\"", StringComparison.Ordinal),
+            links.IndexOf($"href=\"{SocialNetworks.Line}\"", StringComparison.Ordinal) <
+            links.IndexOf($"href=\"{SocialNetworks.Messenger}\"", StringComparison.Ordinal),
             "LINE must remain ahead of the secondary Messenger link.");
         Assert.Contains("<footer class=\"landing-footer\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("blazor.web.js", source, StringComparison.OrdinalIgnoreCase);

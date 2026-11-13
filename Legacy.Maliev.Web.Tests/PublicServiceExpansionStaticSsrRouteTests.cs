@@ -21,9 +21,9 @@ public sealed partial class PublicServiceExpansionStaticSsrRouteTests : IClassFi
         Assert.Contains("aria-label=", toc, StringComparison.Ordinal);
         var expected = new Dictionary<string, string[]>(StringComparer.Ordinal)
         {
-            ["ThreeDimensionalDesign"] = ["/services/3d-design", "design-title", "/src/images/services/design/design-workflow.webp", "design-workflow", "design-faq"],
-            ["SiliconeCasting"] = ["/services/silicone-casting", "silicone-title", "/src/images/services/silicone-casting/silicone-casting-workflow.webp", "silicone-workflow", "silicone-faq"],
-            ["LowVolumeInjectionMolding"] = ["/services/low-volume-injection-molding", "injection-title", "/src/images/services/injection-molding/injection-service-hero-wide.webp", "injection-part-proof", "injection-workflow", "injection-faq"]
+            ["ThreeDimensionalDesign"] = ["/services/3d-design", "design-title", "/src/images/services/hero-illustrations/design-hero-light.webp", "design-workflow", "design-faq"],
+            ["SiliconeCasting"] = ["/services/silicone-casting", "silicone-title", "/src/images/services/hero-illustrations/silicone-hero-light.webp", "silicone-workflow", "silicone-faq"],
+            ["LowVolumeInjectionMolding"] = ["/services/low-volume-injection-molding", "injection-title", "/src/images/services/hero-illustrations/injection-hero-light.webp", "injection-part-proof", "injection-workflow", "injection-faq"]
         };
 
         foreach (var pair in expected)

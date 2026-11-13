@@ -2448,7 +2448,7 @@ public sealed class WebSurfaceTests : IDisposable
 
     [Theory]
     [InlineData("en", "Custom parts.", "From CAD to assembly.", "What MALIEV helps you develop")]
-    [InlineData("th", "ชิ้นส่วนสั่งผลิต", "จาก CAD ถึงงานประกอบ", "สิ่งที่ MALIEV ช่วยพัฒนาให้คุณ")]
+    [InlineData("th", "บริการผลิตชิ้นงานตามแบบ", "จากไอเดียสู่ชิ้นงานที่ใช้งานได้จริง", "สิ่งที่ MALIEV ช่วยพัฒนาให้คุณ")]
     public async Task HomePage_RendersLocalizedStaticBlazorBodyWithNavigationParity(
         string culture,
         string eyebrow,

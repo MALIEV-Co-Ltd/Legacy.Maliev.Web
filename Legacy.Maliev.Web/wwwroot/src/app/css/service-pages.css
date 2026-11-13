@@ -868,3 +868,22 @@
     .service-part-bento-tile .service-part-bento-media,
     .service-part-bento-overlay { transition: none; }
 }
+
+/* Source service illustrations use a light, split hero rather than a photographic overlay. */
+.service-hero.printing-hero-light { min-height: 36rem; align-items: center; background: #f4f7fb; color: #102039; overflow: hidden; }
+.printing-hero-light::after { display: none; }
+.printing-hero-light .service-hero-media { position: absolute; inset: 50% 3% auto auto; width: 48%; height: auto; transform: translateY(-50%); object-fit: contain; background: transparent; }
+.printing-hero-light .service-hero-lead { color: #40526a; }
+.printing-hero-light .service-hero-points { color: #243851; }
+.printing-hero-light .service-eyebrow { color: #075de8; }
+.printing-hero-light .service-hero-proof-link, .printing-hero-light .service-hero-followup a { color: #075de8; }
+.printing-hero-light .service-button-secondary { color: #102039; border-color: #8290a2; }
+@media (min-width: 861px) {
+    .printing-hero-light .service-hero-copy > * { max-width: min(42rem, 48%); }
+    .printing-hero-light .service-hero-media { right: max(4vw, calc((100% - 84rem) / 2)); width: min(44.16vw, 40.32rem); }
+}
+@media (max-width: 860px) {
+    .service-hero.printing-hero-light { min-height: 0; display: flex; flex-direction: column; padding-bottom: 2.5rem; }
+    .printing-hero-light .service-hero-copy { order: 0; padding-bottom: 1.25rem; }
+    .printing-hero-light .service-hero-media { position: relative; inset: auto; order: 1; width: min(100%, 36rem); height: auto; transform: none; opacity: 1; }
+}

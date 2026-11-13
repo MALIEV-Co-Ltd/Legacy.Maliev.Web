@@ -125,11 +125,14 @@ export function createWorkflowPreviewInterop({
   let partsWheelHandler = null;
   let inputDropZone = null;
   let inputDropHandler = null;
+  let emptyOwner = null;
+  let unbindEmptySize = () => {};
   const selectionSnapshots = [];
 
   function bindInput(input) {
     assertActive();
     configureFilePickerForPlatform(input);
+    bindEmptySize(input?.closest?.('.instant-quote__workflow') ?? null);
     bindPartsWheel(input?.closest?.('.instant-quote__workflow')?.querySelector?.('[data-workflow-parts]') ?? null);
     if (inputElement === input) return;
     unbindInput();
@@ -166,6 +169,51 @@ export function createWorkflowPreviewInterop({
     inputChangeHandler = null;
     inputDropZone = null;
     inputDropHandler = null;
+  }
+
+  function bindEmptySize(owner) {
+    if (emptyOwner === owner) {
+      owner && measureEmptySize(owner);
+      return;
+    }
+    unbindEmptySize();
+    emptyOwner = null;
+    unbindEmptySize = () => {};
+    const view = owner?.ownerDocument?.defaultView;
+    if (!view || !owner?.style || !owner.getBoundingClientRect) return;
+    emptyOwner = owner;
+    let frame = null;
+    const resize = () => {
+      if (frame !== null) return;
+      frame = view.requestAnimationFrame(() => {
+        frame = null;
+        if (!disposed && emptyOwner === owner) measureEmptySize(owner);
+      });
+    };
+    unbindEmptySize = () => {
+      emptyOwner = null;
+      unbindEmptySize = () => {};
+      view.removeEventListener('resize', resize);
+      view.removeEventListener('orientationchange', resize);
+      view.visualViewport?.removeEventListener('resize', resize);
+      if (frame !== null) view.cancelAnimationFrame(frame);
+      frame = null;
+      owner.style.removeProperty('--iq-empty-viewport-height');
+    };
+    view.addEventListener('resize', resize);
+    view.addEventListener('orientationchange', resize);
+    view.visualViewport?.addEventListener('resize', resize);
+    measureEmptySize(owner);
+  }
+
+  function measureEmptySize(owner) {
+    const view = owner.ownerDocument.defaultView;
+    const fixed = view.getComputedStyle(owner.ownerDocument.body).overflowY === 'hidden';
+    const stacked = view.getComputedStyle(owner).flexDirection === 'column';
+    const minimum = fixed && !stacked ? 420 : 240;
+    const remaining = Math.floor((view.visualViewport?.height || view.innerHeight)
+      - Math.max(0, owner.getBoundingClientRect().top));
+    owner.style.setProperty('--iq-empty-viewport-height', `${Math.max(minimum, remaining)}px`);
   }
 
   function bindPartsWheel(rail) {
@@ -902,6 +950,7 @@ export function createWorkflowPreviewInterop({
     attempt(unbindThumbnailRoot);
     thumbnails.clear();
     attempt(unbindInput);
+    attempt(unbindEmptySize);
     for (const key of [...previews.keys()]) attempt(() => release(key));
     for (const selection of selectionSnapshots) selection.files.length = 0;
     selectionSnapshots.length = 0;

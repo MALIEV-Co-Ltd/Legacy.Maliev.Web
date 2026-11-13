@@ -6,8 +6,16 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace Legacy.Maliev.Web;
 
+/// <summary>
+/// Maps bounded Thai address and company lookups behind antiforgery and request-rate controls.
+/// </summary>
 public static class ThaiLookupEndpoints
 {
+    /// <summary>
+    /// Registers the fixed-window request-rate boundary used by Thai lookup endpoints.
+    /// </summary>
+    /// <param name="services">The service collection receiving lookup rate-limiter configuration.</param>
+    /// <returns>The original service collection with the lookup boundary registered.</returns>
     public static IServiceCollection AddThaiLookupBoundary(this IServiceCollection services)
     {
         services.AddRateLimiter(options =>
@@ -20,6 +28,11 @@ public static class ThaiLookupEndpoints
         return services;
     }
 
+    /// <summary>
+    /// Registers protected POST lookups that keep address and company search text out of URLs.
+    /// </summary>
+    /// <param name="endpoints">The endpoint builder receiving Thai address and company lookup routes.</param>
+    /// <returns>The original endpoint builder with rate-limited lookup routes registered.</returns>
     public static IEndpointRouteBuilder MapThaiLookupEndpoints(this IEndpointRouteBuilder endpoints)
     {
         // POST keeps pasted addresses/search queries out of URLs. Existing antiforgery form token is required.

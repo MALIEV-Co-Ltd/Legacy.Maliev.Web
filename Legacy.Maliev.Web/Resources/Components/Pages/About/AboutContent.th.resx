@@ -136,7 +136,7 @@
   <data name="Review the cover and tooling" xml:space="preserve"><value>ทบทวนฝาครอบและแม่พิมพ์</value></data>
   <data name="Review the part and tooling before production. Our pneumatic injection route supports the following limits." xml:space="preserve"><value>ประเมินชิ้นงานและแม่พิมพ์ก่อนผลิต โดยงานฉีดพลาสติกระบบลมรองรับขอบเขตดังนี้</value></data>
   <data name="S&amp;P Syndicate" xml:space="preserve"><value>เอส แอนด์ พี ซินดิเคท</value></data>
-  <data name="Scan-only work produces a triangular mesh such as STL. Editable CAD and 2D drawings are separately defined work." xml:space="preserve"><value>งานสแกนอย่างเดียวส่งมอบเมชสามเหลี่ยม เช่น STL ส่วน CAD ที่แก้ไขได้และแบบ 2 มิติเป็นขอบเขตงานที่ต้องกำหนดเพิ่มเติม</value></data>
+  <data name="Scan-only work produces a triangular mesh such as STL. Editable CAD and 2D drawings are separately defined work." xml:space="preserve"><value>งานสแกนอย่างเดียวส่งมอบ mesh สามเหลี่ยม เช่น STL ส่วน CAD ที่แก้ไขได้และแบบ 2 มิติเป็นขอบเขตงานที่ต้องกำหนดเพิ่มเติม</value></data>
   <data name="Scope and deliverables" xml:space="preserve"><value>ขอบเขตงานและสิ่งส่งมอบ</value></data>
   <data name="Sculpture master" xml:space="preserve"><value>ต้นแบบประติมากรรม</value></data>
   <data name="Selected corporate customers" xml:space="preserve"><value>ลูกค้าองค์กรบางส่วนของเรา</value></data>
@@ -148,7 +148,7 @@
   <data name="Silicone casting" xml:space="preserve"><value>หล่อซิลิโคน</value></data>
   <data name="Singha Kameda (Thailand) Co., Ltd." xml:space="preserve"><value>สิงห์ คาเมดะ (ประเทศไทย)</value></data>
   <data name="Sketch bracket alternatives around the bottle, camera position and conveyor clearance. Record the basic requirements before developing CAD." xml:space="preserve"><value>ร่างขายึดหลายแนวทาง โดยพิจารณาขวด ตำแหน่งกล้อง และระยะหลบสายพาน พร้อมจดข้อกำหนดเบื้องต้นก่อนพัฒนาแบบ CAD</value></data>
-  <data name="Sketches, reference photos, drawings, sample parts or scanned meshes, with intended use and critical interfaces." xml:space="preserve"><value>ภาพร่าง ภาพอ้างอิง แบบงาน ชิ้นงานตัวอย่าง หรือเมชจากการสแกน พร้อมการใช้งานและจุดประกอบสำคัญ</value></data>
+  <data name="Sketches, reference photos, drawings, sample parts or scanned meshes, with intended use and critical interfaces." xml:space="preserve"><value>ภาพร่าง ภาพอ้างอิง แบบงาน ชิ้นงานตัวอย่าง หรือ mesh จากการสแกน พร้อมการใช้งานและจุดประกอบสำคัญ</value></data>
   <data name="slide" xml:space="preserve"><value>รายการบริการ</value></data>
   <data name="Source-based image of a PA-CF printed wheel-like sample" xml:space="preserve"><value>ภาพจากชิ้นงานพิมพ์ PA-CF ลักษณะคล้ายล้อ</value></data>
   <data name="Specify the part" xml:space="preserve"><value>ข้อมูลชิ้นงาน</value></data>

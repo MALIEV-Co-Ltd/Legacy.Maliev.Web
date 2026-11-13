@@ -6,10 +6,25 @@ using Microsoft.AspNetCore.Http;
 
 namespace Legacy.Maliev.Web.Components.Pages.Member;
 
+/// <summary>
+/// Loads customer-scoped history pages while retaining validated query and pagination state.
+/// </summary>
 public static class MemberListLoaders
 {
     private const string InvalidQueryValuesMessage = "One or more query values are invalid.";
 
+    /// <summary>
+    /// Loads the current member's order history and reports invalid query or unavailable-service feedback.
+    /// </summary>
+    /// <param name="context">The request receiving a bad-request status for unsupported page sizes.</param>
+    /// <param name="sessionManager">The server-side session accessor used to resolve the customer identifier.</param>
+    /// <param name="orderClient">The customer-scoped client used to retrieve the order page.</param>
+    /// <param name="search">The optional order search filter.</param>
+    /// <param name="sort">The requested order sort, or blank for creation-date descending.</param>
+    /// <param name="index">The raw page index to validate and normalize.</param>
+    /// <param name="size">The raw page size to validate against supported choices.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The formatted history page, or an empty view with appropriate query or session feedback.</returns>
     public static async Task<MemberOrderHistoryDisplayModel> LoadOrdersAsync(
         HttpContext context,
         IAccountSessionManager sessionManager,
@@ -88,6 +103,18 @@ public static class MemberListLoaders
             page.PageIndex < page.TotalPages ? BuildPageHref(path, page.TotalPages, pageSize, sort, search) : null);
     }
 
+    /// <summary>
+    /// Loads the current member's quotation history using validated sort and page-size selections.
+    /// </summary>
+    /// <param name="context">The request receiving a bad-request status for unsupported query choices.</param>
+    /// <param name="sessionManager">The server-side session accessor used to resolve the customer identifier.</param>
+    /// <param name="quotationClient">The customer-scoped client used to retrieve the quotation page.</param>
+    /// <param name="search">The optional quotation search filter.</param>
+    /// <param name="sort">The raw quotation sort expression to validate.</param>
+    /// <param name="index">The raw page index to validate and normalize.</param>
+    /// <param name="size">The raw page size to validate against supported choices.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The formatted quotation page, or an empty view with appropriate query or session feedback.</returns>
     public static async Task<MemberQuotationsIndexDisplayModel> LoadQuotationsAsync(
         HttpContext context,
         IAccountSessionManager sessionManager,

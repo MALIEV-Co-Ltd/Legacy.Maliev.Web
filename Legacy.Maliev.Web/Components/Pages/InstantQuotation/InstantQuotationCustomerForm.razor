@@ -3,7 +3,7 @@
 
 <section data-workflow-customer-details-content aria-labelledby="instant-quote-customer-heading">
     <header class="instant-quote__panel-header">
-        <h3 id="instant-quote-customer-heading">@Localizer["Customer details"]</h3>
+        <h2 id="instant-quote-customer-heading" class="h3">@Localizer["Customer details"]</h2>
     </header>
     <span class="instant-quote__flow-step">@Localizer["Step 3 of 3"]</span>
     <p>@Localizer["Required fields are marked with an asterisk."]</p>
@@ -16,13 +16,13 @@
         <p role="alert">@Localizer["We could not securely load your customer profile. Please try again."]</p>
     }
     <div class="instant-quote__validation-summary" data-instant-quote-submit-feedback tabindex="-1" hidden>
-        <h4 data-instant-quote-submit-heading></h4>
+        <h3 class="h4" data-instant-quote-submit-heading></h3>
         <ul data-instant-quote-submit-errors></ul>
     </div>
     @if (Model.InvalidFields.Count > 0)
     {
         <div class="instant-quote__validation-summary" role="alert" tabindex="-1" autofocus>
-            <h4>@Localizer["There are problems with the customer details."]</h4>
+            <h3 class="h4">@Localizer["There are problems with the customer details."]</h3>
             <ul>
                 @foreach (var field in Model.InvalidFields)
                 {
@@ -56,7 +56,7 @@
             <section class="instant-quote__customer-section" aria-labelledby="instant-quote-contact-title">
                 <header class="instant-quote__customer-section-heading">
                     <span class="instant-quote__customer-section-index" aria-hidden="true">1</span>
-                    <div><h4 id="instant-quote-contact-title">@Localizer["Primary contact"]</h4><p>@Localizer["Let us know who we should contact about this request."]</p></div>
+                    <div><h3 id="instant-quote-contact-title">@Localizer["Primary contact"]</h3><p>@Localizer["Let us know who we should contact about this request."]</p></div>
                 </header>
                 <div class="instant-quote__customer-fields">
                     <div>
@@ -89,7 +89,7 @@
             <section class="instant-quote__customer-section" aria-labelledby="instant-quote-company-title">
                 <header class="instant-quote__customer-section-heading">
                     <span class="instant-quote__customer-section-index" aria-hidden="true">2</span>
-                    <div><h4 id="instant-quote-company-title">@Localizer["Company & billing"]</h4><p>@Localizer["Your company and billing information."]</p></div>
+                    <div><h3 id="instant-quote-company-title">@Localizer["Company & billing"]</h3><p>@Localizer["Your company and billing information."]</p></div>
                 </header>
                 <div class="instant-quote__customer-fields">
                     <div>
@@ -113,14 +113,14 @@
                         @FieldError("TaxNumber")
                     </div>
                     <Legacy.Maliev.Web.Components.Lookups.ThaiLookupSurface Id="instant-company-lookup" Surface="instant-company" AntiforgeryFieldName="@Model.AntiforgeryFieldName" />
-                    <div>
+                    <div data-instant-tax-branch-field>
                         <label for="instant-quote-tax-branch">@Localizer["Tax invoice issued to"]</label>
                         <select id="instant-quote-tax-branch" name="TaxBranch" disabled="@Model.IsLocked("TaxBranch")">
                             <option value="head-office" selected="@(Model.TaxBranch == "head-office")">@Localizer["Head office"]</option>
                             <option value="branch" selected="@(Model.TaxBranch == "branch")">@Localizer["Branch"]</option>
                         </select>
                     </div>
-                    <div>
+                    <div data-instant-tax-branch-code-field>
                         <label for="instant-quote-tax-branch-code">@Localizer["Branch code"]</label>
                         <input id="instant-quote-tax-branch-code" name="TaxBranchCode" value="@Model.TaxBranchCode" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" aria-invalid="@AriaInvalid("TaxBranchCode")" aria-describedby="@ErrorId("TaxBranchCode")" readonly="@Model.IsLocked("TaxBranchCode")" aria-readonly="@(Model.IsLocked("TaxBranchCode") ? "true" : null)" />
                         @FieldError("TaxBranchCode")
@@ -168,7 +168,7 @@
             <section class="instant-quote__customer-section" aria-labelledby="instant-quote-project-title">
                 <header class="instant-quote__customer-section-heading">
                     <span class="instant-quote__customer-section-index" aria-hidden="true">3</span>
-                    <div><h4 id="instant-quote-project-title">@Localizer["Project details"]</h4><p>@Localizer["Any details that will help us prepare an accurate quotation."]</p></div>
+                    <div><h3 id="instant-quote-project-title">@Localizer["Project details"]</h3><p>@Localizer["Any details that will help us prepare an accurate quotation."]</p></div>
                 </header>
                 <div class="instant-quote__customer-fields">
                     <div>

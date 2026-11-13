@@ -128,7 +128,7 @@
 <data name="Information" xml:space="preserve"><value>ข้อมูล</value></data>
 <data name="What to include" xml:space="preserve"><value>สิ่งที่ควรส่ง</value></data>
 <data name="3D geometry" xml:space="preserve"><value>รูปทรง 3 มิติ</value></data>
-<data name="For solid models, include a STEP/STP export where available. For printing meshes, STL, OBJ, or 3MF may be useful; state the intended units and overall size. Confirm support in the chosen upload route." xml:space="preserve"><value>หากมีโมเดลทรงตัน ให้แนบ STEP/STP สำหรับเมชงานพิมพ์ อาจใช้ STL, OBJ หรือ 3MF โดยระบุหน่วยและขนาดโดยรวม ตรวจสอบรูปแบบที่รองรับในช่องทางอัปโหลดที่เลือก</value></data>
+<data name="For solid models, include a STEP/STP export where available. For printing meshes, STL, OBJ, or 3MF may be useful; state the intended units and overall size. Confirm support in the chosen upload route." xml:space="preserve"><value>หากมีโมเดลทรงตัน ให้แนบ STEP/STP สำหรับ mesh งานพิมพ์ อาจใช้ STL, OBJ หรือ 3MF โดยระบุหน่วยและขนาดโดยรวม ตรวจสอบรูปแบบที่รองรับในช่องทางอัปโหลดที่เลือก</value></data>
 <data name="Drawing" xml:space="preserve"><value>แบบชิ้นงาน</value></data>
 <data name="Add a dimensioned PDF for tolerances, threads, finishes, inspection points, or requirements not captured by geometry. State which document controls each requirement." xml:space="preserve"><value>แนบแบบ PDF ที่มีขนาด ค่าความคลาดเคลื่อน เกลียว การตกแต่ง จุดตรวจ และข้อกำหนดที่รูปทรงสื่อไม่ได้ พร้อมระบุเอกสารที่ใช้กำหนดแต่ละรายการ</value></data>
 <data name="Physical sample or idea" xml:space="preserve"><value>ชิ้นงานตัวอย่างหรือแนวคิด</value></data>

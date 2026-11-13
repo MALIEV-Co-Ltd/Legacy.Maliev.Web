@@ -16,7 +16,7 @@ public sealed partial class InstantQuotationSubmissionEndpointTests
         await using var application = CreateFactory(submission, authenticated: true, preparation: preparation);
         using var client = CreateClient(application);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(TestAuthenticationHandler.SchemeName);
-        var token = await GetAntiforgeryTokenAsync(client);
+        var token = await GetAntiforgeryTokenAsync(application.Services, client);
 
         using var response = await client.PostAsync(SubmitRoute, CustomerForm(new()
         {
