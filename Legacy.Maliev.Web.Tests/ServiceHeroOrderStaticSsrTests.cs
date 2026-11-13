@@ -51,9 +51,9 @@ public sealed class ServiceHeroOrderStaticSsrTests(TestingWebApplicationFactory 
         Assert.Contains(expectedDetail, WebUtility.HtmlDecode(ordered.Groups["details"].Value), StringComparison.Ordinal);
         if (hasQuickFacts)
         {
-            var quickFacts = Regex.Match(html, "<section\\b[^>]*class=\"service-quick(?:\\s[^\"]*)?\"",
+            var quickFacts = Regex.Match(hero.Value, "<div\\b[^>]*class=\"service-quick(?:\\s[^\"]*)?\"",
                 RegexOptions.CultureInvariant);
-            Assert.True(quickFacts.Success && hero.Index + hero.Length <= quickFacts.Index,
+            Assert.True(quickFacts.Success && quickFacts.Index > ordered.Index + ordered.Length,
                 $"{route} ({culture}) must render hero details before its quick facts.");
         }
     }

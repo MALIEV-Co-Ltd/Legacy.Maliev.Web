@@ -62,12 +62,12 @@ public sealed partial class ServicesStaticSsrRouteTests : IClassFixture<TestingW
         "en",
         "Manufacturing services | MALIEV",
         "Custom part manufacturing, CNC machining, 3D printing, 3D design, silicone casting, low-volume injection molding, and 3D scanning services in Thailand.",
-        "Manufacturing services")]
+        "Find the right manufacturing service for your project")]
     [InlineData(
         "th",
         "บริการผลิตชิ้นส่วน | MALIEV",
         "รับผลิตชิ้นส่วนตามแบบ งาน CNC งานพิมพ์และออกแบบ 3 มิติ งานหล่อซิลิโคน งานฉีดพลาสติกจำนวนน้อย และงานสแกน 3 มิติในประเทศไทย",
-        "บริการผลิตชิ้นส่วน")]
+        "ค้นหาบริการผลิตที่เหมาะกับโปรเจ็คของคุณ")]
     public async Task ServicesRoute_RendersCompleteLocalizedStaticDocument(
         string culture,
         string title,
