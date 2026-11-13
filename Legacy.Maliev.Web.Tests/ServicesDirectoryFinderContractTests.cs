@@ -43,8 +43,10 @@ public sealed class ServicesDirectoryFinderContractTests
         Assert.Contains("data-service-finder", body, StringComparison.Ordinal);
         Assert.Contains("<ServiceBreadcrumb ServiceKey=\"Services\" />", body, StringComparison.Ordinal);
         Assert.True(
-            body.IndexOf("<ServiceBreadcrumb ServiceKey=\"Services\" />", StringComparison.Ordinal) < body.IndexOf("<header class=\"maliev-page-header\"", StringComparison.Ordinal),
-            "The services index must render its breadcrumb before the page header.");
+            body.IndexOf("class=\"service-finder-intro\"", StringComparison.Ordinal) < body.IndexOf("<ServiceBreadcrumb ServiceKey=\"Services\" />", StringComparison.Ordinal)
+            && body.IndexOf("<ServiceBreadcrumb ServiceKey=\"Services\" />", StringComparison.Ordinal) < body.IndexOf("<h1 id=\"service-finder-title\"", StringComparison.Ordinal),
+            "The finder intro must render its breadcrumb before its primary heading.");
+        Assert.DoesNotContain("<header class=\"maliev-page-header\"", body, StringComparison.Ordinal);
         Assert.Equal(7, body.Split("service-index-card-action", StringSplitOptions.None).Length - 1);
         Assert.Contains("service-finder-results", body, StringComparison.Ordinal);
         Assert.Contains("data-finder-quotation-link", body, StringComparison.Ordinal);

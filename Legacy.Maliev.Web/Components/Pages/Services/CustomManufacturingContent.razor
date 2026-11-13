@@ -2,9 +2,9 @@
 @using Legacy.Maliev.Web.Components.Shared
 
 <main class="service-page" data-migration-component="custom-manufacturing-content" data-migration-route-owner="@RouteOwner">
-    <ServiceBreadcrumb ServiceKey="Custom Manufacturing" />
-    <ServicePageToc />
+
     <section class="service-hero printing-hero-light" aria-labelledby="custom-manufacturing-title">
+        <ServiceBreadcrumb ServiceKey="Custom Manufacturing" />
         <img class="service-hero-media" src="/src/images/services/hero-illustrations/custom-hero-light.webp" srcset="/src/images/services/hero-illustrations/custom-hero-light-640.webp 640w, /src/images/services/hero-illustrations/custom-hero-light-768.webp 768w, /src/images/services/hero-illustrations/custom-hero-light-960.webp 960w, /src/images/services/hero-illustrations/custom-hero-light.webp 1536w" sizes="(max-width: 767px) 100vw, 50vw" width="1536" height="1024" loading="eager" fetchpriority="high" decoding="async" alt="@T("Illustration of custom metal and polymer components", "ภาพประกอบชิ้นส่วนโลหะและพลาสติกที่ผลิตตามแบบ")" />
         <div class="service-container service-hero-copy">
             <p class="service-eyebrow">@T("Made-to-order project intake", "เริ่มต้นงานผลิตตามแบบ")</p>
@@ -15,16 +15,19 @@
                 <a class="service-button service-button-secondary" href="@Legacy.Maliev.Web.Application.SocialNetworks.Line">@T("Discuss on LINE", "ปรึกษาทาง LINE")</a>
             </div>
         </div>
+        <div class="service-quick" role="region" aria-label="@T("Information needed for review", "ข้อมูลที่ใช้ในการประเมิน")">
+        <div class="service-container service-quick-grid">
+            <article><div><h2 class="service-quick-title">@T("Drawing or sample", "แบบหรือตัวอย่าง")</h2><p>@T("CAD, a dimensioned drawing, clear photos, or an existing part.", "ไฟล์ CAD แบบระบุขนาด รูปถ่ายที่ชัดเจน หรือชิ้นงานเดิม")</p></div></article>
+            <article><div><h2 class="service-quick-title">@T("Material or behavior", "วัสดุหรือคุณสมบัติ")</h2><p>@T("State the known material or how the part must perform.", "ระบุวัสดุที่ทราบหรือคุณสมบัติที่ชิ้นงานต้องมี")</p></div></article>
+            <article><div><h2 class="service-quick-title">@T("Quantity", "จำนวน")</h2><p>@T("Share the first quantity and any expected repeat demand.", "แจ้งจำนวนครั้งแรกและความต้องการสั่งซ้ำที่คาดไว้")</p></div></article>
+            <article><div><h2 class="service-quick-title">@T("Use and critical points", "การใช้งานและจุดสำคัญ")</h2><p>@T("Explain interfaces, fits, loads, environment, and important surfaces.", "อธิบายจุดประกอบ ฟิต แรง สภาพแวดล้อม และผิวสำคัญ")</p></div></article>
+        </div>
+    </div>
     </section>
 
-    <section class="service-quick" aria-label="@T("Information needed for review", "ข้อมูลที่ใช้ในการประเมิน")">
-        <div class="service-container service-quick-grid">
-            <article><div><h2>@T("Drawing or sample", "แบบหรือตัวอย่าง")</h2><p>@T("CAD, a dimensioned drawing, clear photos, or an existing part.", "ไฟล์ CAD แบบระบุขนาด รูปถ่ายที่ชัดเจน หรือชิ้นงานเดิม")</p></div></article>
-            <article><div><h2>@T("Material or behavior", "วัสดุหรือคุณสมบัติ")</h2><p>@T("State the known material or how the part must perform.", "ระบุวัสดุที่ทราบหรือคุณสมบัติที่ชิ้นงานต้องมี")</p></div></article>
-            <article><div><h2>@T("Quantity", "จำนวน")</h2><p>@T("Share the first quantity and any expected repeat demand.", "แจ้งจำนวนครั้งแรกและความต้องการสั่งซ้ำที่คาดไว้")</p></div></article>
-            <article><div><h2>@T("Use and critical points", "การใช้งานและจุดสำคัญ")</h2><p>@T("Explain interfaces, fits, loads, environment, and important surfaces.", "อธิบายจุดประกอบ ฟิต แรง สภาพแวดล้อม และผิวสำคัญ")</p></div></article>
-        </div>
-    </section>
+    <ServicePageToc />
+
+
 
     <nav class="service-page-toc" aria-label="@T("On this page", "ในหน้านี้")" data-service-page-toc>
         <strong>@T("On this page", "ในหน้านี้")</strong>

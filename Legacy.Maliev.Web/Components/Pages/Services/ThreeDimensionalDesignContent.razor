@@ -2,15 +2,15 @@
 @using Legacy.Maliev.Web.Components.Shared
 
 <main class="service-page" data-migration-component="three-dimensional-design-content" data-migration-route-owner="@RouteOwner">
-    <nav class="service-breadcrumb" aria-label="@T("Breadcrumb", "เส้นทางนำทาง")">
+
+    <section class="service-hero printing-hero-light" aria-labelledby="design-title">
+        <nav class="service-breadcrumb" aria-label="@T("Breadcrumb", "เส้นทางนำทาง")">
         <ol>
             <li><a href="/">@T("Home", "หน้าแรก")</a></li>
             <li><a href="/services">@T("Services", "บริการ")</a></li>
             <li aria-current="page">@T("3D Design", "ออกแบบ 3 มิติ")</li>
         </ol>
     </nav>
-
-    <section class="service-hero printing-hero-light" aria-labelledby="design-title">
         <img class="service-hero-media" src="/src/images/services/hero-illustrations/design-hero-light.webp" srcset="/src/images/services/hero-illustrations/design-hero-light-640.webp 640w, /src/images/services/hero-illustrations/design-hero-light-768.webp 768w, /src/images/services/hero-illustrations/design-hero-light-960.webp 960w, /src/images/services/hero-illustrations/design-hero-light.webp 1774w" sizes="(max-width: 767px) 100vw, 50vw" width="1774" height="887" loading="eager" fetchpriority="high" decoding="async" alt="@T("Illustration of a sketch, CAD model and manufactured bracket", "ภาพประกอบภาพร่าง แบบ CAD และชิ้นส่วนที่ผลิต")" />
         <div class="service-container service-hero-copy">
             <p class="service-eyebrow">@T("3D Design & DFM", "ออกแบบ 3 มิติและ DFM")</p>
@@ -26,16 +26,17 @@
                 <li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("DFM decisions before production", "ตัดสินใจ DFM ก่อนผลิต")</li>
             </ul>
         </div>
+        <div class="service-quick" role="region" aria-label="@T("3D design service scope", "ขอบเขตบริการออกแบบ 3 มิติ")">
+        <div class="service-container service-quick-grid">
+            <article><div><h2 class="service-quick-title">@T("Inputs", "ข้อมูลตั้งต้น")</h2><p>@T("Sketches, drawings, photos, samples, and scanned meshes.", "ภาพร่าง แบบ รูปถ่าย ชิ้นงาน และ mesh จากการสแกน")</p></div></article>
+            <article><div><h2 class="service-quick-title">@T("Outputs", "สิ่งส่งมอบ")</h2><p>@T("Agreed CAD formats, drawings, and design notes.", "ไฟล์ CAD แบบ และบันทึกการออกแบบตามที่ตกลง")</p></div></article>
+            <article><div><h2 class="service-quick-title">@T("Decisions", "ประเด็นที่ต้องตัดสินใจ")</h2><p>@T("Interfaces, tolerances, materials, and manufacturing route.", "จุดประกอบ ค่าคลาดเคลื่อน วัสดุ และกระบวนการผลิต")</p></div></article>
+            <article><div><h2 class="service-quick-title">@T("Next step", "ขั้นตอนถัดไป")</h2><p>@T("Move directly into a specialist manufacturing review when ready.", "ส่งต่อให้บริการผลิตเฉพาะทางเมื่อแบบพร้อม")</p></div></article>
+        </div>
+    </div>
     </section>
 
-    <section class="service-quick" aria-label="@T("3D design service scope", "ขอบเขตบริการออกแบบ 3 มิติ")">
-        <div class="service-container service-quick-grid">
-            <article><div><h2>@T("Inputs", "ข้อมูลตั้งต้น")</h2><p>@T("Sketches, drawings, photos, samples, and scanned meshes.", "ภาพร่าง แบบ รูปถ่าย ชิ้นงาน และ mesh จากการสแกน")</p></div></article>
-            <article><div><h2>@T("Outputs", "สิ่งส่งมอบ")</h2><p>@T("Agreed CAD formats, drawings, and design notes.", "ไฟล์ CAD แบบ และบันทึกการออกแบบตามที่ตกลง")</p></div></article>
-            <article><div><h2>@T("Decisions", "ประเด็นที่ต้องตัดสินใจ")</h2><p>@T("Interfaces, tolerances, materials, and manufacturing route.", "จุดประกอบ ค่าคลาดเคลื่อน วัสดุ และกระบวนการผลิต")</p></div></article>
-            <article><div><h2>@T("Next step", "ขั้นตอนถัดไป")</h2><p>@T("Move directly into a specialist manufacturing review when ready.", "ส่งต่อให้บริการผลิตเฉพาะทางเมื่อแบบพร้อม")</p></div></article>
-        </div>
-    </section>
+
 
     <ServicePageToc />
 
