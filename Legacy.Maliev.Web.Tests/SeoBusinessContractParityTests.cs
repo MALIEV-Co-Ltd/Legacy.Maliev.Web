@@ -96,7 +96,7 @@ public sealed class SeoBusinessContractParityTests
         var contracts = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
             ["/"] = ["พัฒนาต้นแบบ", "Functional Prototypes", "วิศวกรรมย้อนกลับ", "Reverse Engineering"],
-            ["/services"] = ["บริการผลิตชิ้นส่วน", "Manufacturing services"],
+            ["/services"] = ["ค้นหาบริการผลิตที่เหมาะกับโปรเจ็คของคุณ", "Find the right manufacturing service for your project"],
             ["/services/custom-manufacturing"] = ["รับผลิตชิ้นงานตามแบบ", "Custom Part Manufacturing"],
             ["/services/3d-design"] = ["รับออกแบบ 3 มิติ", "3D Design"],
             ["/services/silicone-casting"] = ["รับหล่อซิลิโคน", "Silicone Casting"],

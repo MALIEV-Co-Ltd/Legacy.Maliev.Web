@@ -2,27 +2,30 @@
 @using Legacy.Maliev.Web.Components.Shared
 
 <main class="service-page" data-migration-component="three-dimensional-printing-content" data-migration-route-owner="@RouteOwner" data-quote-service-id="3d_printing" data-quote-locale="@(IsThai ? "th" : "en")">
-    <ServiceBreadcrumb ServiceKey="3D Printing" />
-    <ServicePageToc />
+
     <section class="service-hero printing-hero-light" aria-labelledby="printing-title">
+        <ServiceBreadcrumb ServiceKey="3D Printing" />
         <img class="service-hero-media" src="/src/images/services/printing/printing-hero-prototypes-transparent.webp" srcset="/src/images/services/printing/printing-hero-prototypes-transparent-640.webp 640w, /src/images/services/printing/printing-hero-prototypes-transparent-768.webp 768w, /src/images/services/printing/printing-hero-prototypes-transparent-960.webp 960w, /src/images/services/printing/printing-hero-prototypes-transparent.webp 1536w" sizes="(max-width: 767px) 100vw, 50vw" width="1536" height="1024" loading="eager" fetchpriority="high" decoding="async" alt="@T("Illustration of 3D-printed engineering prototypes in nylon, plastic and resin", "ภาพประกอบต้นแบบชิ้นงานพิมพ์ 3 มิติจากไนลอน พลาสติก และเรซิ่น")" />
         <div class="service-container service-hero-copy">
             <p class="service-eyebrow">@T("FDM, Resin & Industrial Additive", "FDM เรซิ่น และงานพิมพ์อุตสาหกรรม")</p>
-            <h1 id="printing-title">@T("3D Printing Service in Thailand for Prototypes and Production Parts", "รับปริ้น 3D และรับพิมพ์ 3 มิติ อัปโหลดไฟล์ประเมินราคา")</h1>
+            <h1 id="printing-title">@if (IsThai) { <text>รับปริ้น 3D และรับพิมพ์ <span class="printing-title-nowrap">3 มิติ</span> อัปโหลดไฟล์<span class="printing-title-nowrap">ประเมินราคา</span></text> } else { <text>3D Printing Service in Thailand for Prototypes and Production Parts</text> }</h1>
             <p class="service-hero-lead">@T("MALIEV provides 3D printing services across Thailand. Upload FDM or resin parts for an instant estimate, or request an engineering review for MJF, SLS, SLM, DMLS, and safety-critical parts so process, material, finishing, and inspection can be confirmed per project.", "MALIEV รับพิมพ์ 3D ด้วยระบบ FDM และเรซิ่น พร้อมประเมินราคาออนไลน์ สำหรับงาน MJF, SLS, SLM, DMLS หรือชิ้นงานที่มีข้อกำหนดสำคัญ ให้ส่งไฟล์เพื่อให้วิศวกรยืนยันกระบวนการ วัสดุ การเก็บผิว และการตรวจสอบเป็นรายโปรเจ็ค")</p>
             <p class="service-hero-proof"><a class="service-hero-proof-link" href="#printing-part-proof"><i class="fas fa-images" aria-hidden="true"></i>@T("See actual MALIEV-produced parts", "ดูตัวอย่างชิ้นงานผลิตจริงจาก MALIEV")</a></p>
             <div class="service-actions"><a data-quote-route="instant" data-quote-placement="hero" class="service-button service-button-primary" href="/InstantQuotation/3D-Printing">@T("Get Instant 3D Pricing", "ประเมินราคาพิมพ์ 3D ทันที") <i class="fas fa-arrow-right" aria-hidden="true"></i></a><a data-quote-route="engineering" data-quote-placement="hero" class="service-button service-button-secondary" href="/Quotation?item=3D-Printing">@T("Request Engineering Review", "ขอให้วิศวกรประเมิน")</a></div>
             <ul class="service-hero-points"><li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("Instant online estimate", "ประเมินราคาออนไลน์ทันที")</li><li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("No minimum quantity", "ไม่มีจำนวนขั้นต่ำ")</li><li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("Thailand shipping from THB 100 or pickup in Pak Kret", "จัดส่งในไทยเริ่มต้น 100 บาท หรือรับชิ้นงานเองที่ปากเกร็ด")</li><li><i class="fas fa-check-circle" aria-hidden="true"></i>@T("Engineering and specialty materials", "วัสดุวิศวกรรมและวัสดุเฉพาะทาง")</li></ul>
             <p class="service-hero-followup"><a href="/Services/Custom-Manufacturing">@T("Not sure 3D printing is the right process? Start with a custom manufacturing review.", "ยังไม่แน่ใจว่าควรใช้ 3D Printing หรือไม่? เริ่มที่บริการรับผลิตชิ้นงานตามแบบเพื่อช่วยเลือกกระบวนการ")</a></p>
         </div>
+        <div class="service-quick"><div class="service-container service-quick-grid">
+        <article><i class="fas fa-upload" aria-hidden="true"></i><div><h2 class="service-quick-title">@T("Upload", "อัปโหลด")</h2><p>@T("STL, STEP, OBJ, 3MF, and supported CAD files.", "รองรับ STL, STEP, OBJ, 3MF และไฟล์ CAD")</p></div></article>
+        <article><i class="fas fa-layer-group" aria-hidden="true"></i><div><h2 class="service-quick-title">@T("Processes", "กระบวนการ")</h2><p>@T("FDM for durable parts; resin for fine detail and smooth surfaces.", "FDM สำหรับชิ้นงานทนทาน เรซิ่นสำหรับรายละเอียดและผิวเรียบ")</p></div></article>
+        <article><i class="fas fa-palette" aria-hidden="true"></i><div><h2 class="service-quick-title">@T("Materials", "วัสดุ")</h2><p>@T("General, engineering, carbon-fiber, ESD, FR, flexible, and resin options.", "วัสดุทั่วไป วิศวกรรม คาร์บอนไฟเบอร์ ESD หน่วงไฟ ยืดหยุ่น และเรซิ่น")</p></div></article>
+        <article><i class="fas fa-calculator" aria-hidden="true"></i><div><h2 class="service-quick-title">@T("Price factors", "ปัจจัยราคา")</h2><p>@T("Geometry, material, size, support, orientation, finish, and quantity.", "รูปทรง วัสดุ ขนาด ซัพพอร์ต ทิศทาง ผิว และจำนวน")</p></div></article>
+    </div></div>
     </section>
 
-    <section class="service-quick"><div class="service-container service-quick-grid">
-        <article><i class="fas fa-upload" aria-hidden="true"></i><div><h2>@T("Upload", "อัปโหลด")</h2><p>@T("STL, STEP, OBJ, 3MF, and supported CAD files.", "รองรับ STL, STEP, OBJ, 3MF และไฟล์ CAD")</p></div></article>
-        <article><i class="fas fa-layer-group" aria-hidden="true"></i><div><h2>@T("Processes", "กระบวนการ")</h2><p>@T("FDM for durable parts; resin for fine detail and smooth surfaces.", "FDM สำหรับชิ้นงานทนทาน เรซิ่นสำหรับรายละเอียดและผิวเรียบ")</p></div></article>
-        <article><i class="fas fa-palette" aria-hidden="true"></i><div><h2>@T("Materials", "วัสดุ")</h2><p>@T("General, engineering, carbon-fiber, ESD, FR, flexible, and resin options.", "วัสดุทั่วไป วิศวกรรม คาร์บอนไฟเบอร์ ESD หน่วงไฟ ยืดหยุ่น และเรซิ่น")</p></div></article>
-        <article><i class="fas fa-calculator" aria-hidden="true"></i><div><h2>@T("Price factors", "ปัจจัยราคา")</h2><p>@T("Geometry, material, size, support, orientation, finish, and quantity.", "รูปทรง วัสดุ ขนาด ซัพพอร์ต ทิศทาง ผิว และจำนวน")</p></div></article>
-    </div></section>
+    <ServicePageToc />
+
+
 
     <nav class="service-page-toc" aria-label="@T("On this page", "ในหน้านี้")" data-service-page-toc>
         <strong>@T("On this page", "ในหน้านี้")</strong>
@@ -50,7 +53,7 @@
             </article>
         </div>
         <div class="service-card-grid printing-file-grid">
-            <article class="service-card"><i class="fas fa-file-alt" aria-hidden="true"></i><h3>@T("Accepted 3D printing files", "ไฟล์สามมิติที่รับรองสำหรับงาน 3D Printing")</h3><div class="service-copy"><ul><li>STL</li><li>OBJ</li><li>3MF</li><li>GLB</li><li>GLTF</li><li>STEP / STP</li><li>IGES / IGS</li></ul></div></article>
+            <article class="service-card"><i class="fas fa-file-alt" aria-hidden="true"></i><h3>@T("Accepted 3D printing files", "ไฟล์สามมิติที่รับรองสำหรับงาน 3D Printing")</h3><div class="service-copy"><ul class="printing-file-badges"><li>STL</li><li>OBJ</li><li>3MF</li><li>GLB</li><li>GLTF</li><li>STEP / STP</li><li>IGES / IGS</li></ul><p>@T("Instant estimates require a format supported for automated analysis. STEP/STP and IGES/IGS may require engineering review.", "การประเมินราคาออนไลน์ต้องใช้ไฟล์ที่รองรับการวิเคราะห์อัตโนมัติ ส่วน STEP/STP และ IGES/IGS อาจต้องให้วิศวกรตรวจสอบ")</p></div></article>
             <article class="service-card"><i class="fas fa-clipboard-list" aria-hidden="true"></i><h3>@T("What to include with the file", "ข้อมูลที่ควรส่งพร้อมไฟล์")</h3><div class="service-copy"><ul><li>@T("Units, scale, quantity, and the required date.", "หน่วย สเกล จำนวน และวันที่ต้องการใช้ชิ้นงาน")</li><li>@T("Preferred process or material, if known.", "กระบวนการหรือวัสดุที่ต้องการ หากทราบแล้ว")</li><li>@T("Critical dimensions, fits, load, heat, chemicals, or finish.", "ขนาดสำคัญ ฟิต แรง ความร้อน สารเคมี หรือผิวงาน")</li><li>@T("Photos or a drawing when the model needs context.", "รูปถ่ายหรือแบบงานเมื่อโมเดลต้องมีข้อมูลประกอบ")</li></ul></div></article>
         </div>
         <p class="printing-route-followup">@T("Not sure which route fits?", "ยังไม่แน่ใจว่าควรเลือกเส้นทางใด?") <a href="/Services/CNC-Machining">@T("Compare CNC machining", "เปรียบเทียบงาน CNC")</a> · <a href="/Services/3D-Scanning">@T("Review scanning and reverse engineering", "ดูบริการสแกน 3D และ Reverse Engineering")</a> · <a href="/Services/Custom-Manufacturing">@T("Start a custom manufacturing review", "เริ่มประเมินงานผลิตตามแบบ")</a></p>
