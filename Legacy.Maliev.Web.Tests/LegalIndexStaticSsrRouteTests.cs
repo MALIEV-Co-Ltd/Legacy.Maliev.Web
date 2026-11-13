@@ -45,7 +45,7 @@ public sealed class LegalIndexStaticSsrRouteTests : IClassFixture<TestingWebAppl
     [InlineData(
         "en",
         "Legal information | MALIEV",
-        "Review MALIEV policies for website use, privacy, and confidential manufacturing project information.",
+        "Review MALIEV website terms, privacy information, and non-disclosure guidance before sharing or managing a manufacturing project.",
         "Legal information")]
     [InlineData(
         "th",
@@ -110,14 +110,18 @@ public sealed class LegalIndexStaticSsrRouteTests : IClassFixture<TestingWebAppl
         Assert.Contains($"<meta property=\"og:url\" content=\"{canonical}\"", source, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public async Task DisabledLegalRoute_UsesTheRetainedRazorFallback()
+    [Theory]
+    [InlineData("en", "Legal information | MALIEV", "Review MALIEV website terms, privacy information, and non-disclosure guidance before sharing or managing a manufacturing project.")]
+    [InlineData("th", "ข้อมูลทางกฎหมาย | MALIEV", "รวมข้อมูลด้านกฎหมาย นโยบายความเป็นส่วนตัว ข้อกำหนดการใช้งาน และข้อตกลงรักษาความลับสำหรับการติดต่อและโปรเจ็คงานผลิตกับ MALIEV")]
+    public async Task DisabledLegalRoute_UsesTheRetainedRazorFallback(string culture, string title, string description)
     {
-        var fallbackFactory = factory.WithWebHostBuilder(builder => builder.UseSetting("BlazorRouting:Legal", "false"));
+        using var fallbackFactory = factory.WithWebHostBuilder(builder => builder.UseSetting("BlazorRouting:Legal", "false"));
         using var client = CreateClient(fallbackFactory);
-        var source = WebUtility.HtmlDecode(await client.GetStringAsync("/legal?culture=en"));
+        var source = WebUtility.HtmlDecode(await client.GetStringAsync($"/legal?culture={culture}"));
 
-        Assert.Contains("<title>Legal information | MALIEV</title>", source, StringComparison.Ordinal);
+        Assert.Contains($"<title>{title}</title>", source, StringComparison.Ordinal);
+        Assert.Contains($"<meta name=\"description\" content=\"{description}\"", source, StringComparison.Ordinal);
+        Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
     }

@@ -4,8 +4,20 @@ using Legacy.Maliev.Web.Infrastructure;
 
 namespace Legacy.Maliev.Web.Components.Pages.Member;
 
+/// <summary>
+/// Loads account profile and address view models using the current member's server-side session.
+/// </summary>
 public static class MemberAccountLoaders
 {
+    /// <summary>
+    /// Loads the current member's profile and projects editable contact and company fields.
+    /// </summary>
+    /// <param name="context">The current authenticated request.</param>
+    /// <param name="sessionManager">The server-side session accessor used to resolve the customer identifier.</param>
+    /// <param name="customerClient">The customer account client used to retrieve the profile.</param>
+    /// <param name="notification">The optional profile-operation outcome message retained for display.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The profile view, including errors or an empty model when profile data cannot be loaded.</returns>
     public static async Task<MemberProfileDisplayModel> LoadProfileAsync(
         HttpContext context,
         IAccountSessionManager sessionManager,
@@ -41,6 +53,16 @@ public static class MemberAccountLoaders
             []);
     }
 
+    /// <summary>
+    /// Loads saved billing and shipping addresses alongside available country choices.
+    /// </summary>
+    /// <param name="context">The current authenticated request.</param>
+    /// <param name="sessionManager">The server-side session accessor used to resolve the customer identifier.</param>
+    /// <param name="customerClient">The account client used to retrieve saved addresses.</param>
+    /// <param name="countryClient">The country lookup client used to populate address choices.</param>
+    /// <param name="notification">The optional address-operation outcome message retained for display.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The address view with available fields, countries, and service-failure messages.</returns>
     public static async Task<MemberAddressDisplayModel> LoadAddressAsync(
         HttpContext context,
         IAccountSessionManager sessionManager,
@@ -76,6 +98,14 @@ public static class MemberAccountLoaders
             errors);
     }
 
+    /// <summary>
+    /// Checks the member session and account email before presenting the email-change form.
+    /// </summary>
+    /// <param name="context">The current authenticated request.</param>
+    /// <param name="sessionManager">The server-side session accessor used to resolve the token and customer identifier.</param>
+    /// <param name="customerClient">The account client used to verify that the existing email can be loaded.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A blank email-change view, with account-service errors when the current email is unavailable.</returns>
     public static async Task<MemberChangeEmailDisplayModel> LoadChangeEmailAsync(
         HttpContext context,
         IAccountSessionManager sessionManager,

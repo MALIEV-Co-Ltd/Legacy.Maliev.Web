@@ -23,7 +23,7 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
         var response = await page.GotoAsync(new Uri(fixture.Origin, $"/About?culture={culture}").ToString());
         Assert.NotNull(response);
         Assert.True(response.Ok);
-        await AssertFinalCustomerRosterAsync(page, culture);
+        await AssertCustomersHiddenAsync(page, culture);
         await Expect(page.Locator("[data-capability-carousel]")).ToHaveAttributeAsync("data-carousel-state", "ready");
         await Expect(page.Locator("[data-workpiece-gallery]")).ToHaveAttributeAsync("data-workpiece-ready", "true");
         await Expect(page.Locator("main.profile-about")).ToHaveAttributeAsync("data-presentation-state", "reduced");
@@ -66,6 +66,14 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
         Assert.Equal("true", await lastWorkpiece.GetAttributeAsync("aria-pressed"));
         Assert.Equal("workpiece-photo-3", await lastWorkpiece.GetAttributeAsync("aria-controls"));
         Assert.True(await page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
+        if (Environment.GetEnvironmentVariable("MALIEV_WEB_VALIDATION_SCREENSHOTS") == "1")
+        {
+            await page.Locator(".landing-cta-section").ScrollIntoViewIfNeededAsync();
+            await page.ScreenshotAsync(new()
+            {
+                Path = Path.Combine(Path.GetTempPath(), $"legacy-web-about-customers-hidden-{culture}-{width}.png"),
+            });
+        }
     }
 
     [Theory]
@@ -78,7 +86,7 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
         var response = await page.GotoAsync(new Uri(fixture.Origin, $"/About?culture={culture}").ToString());
         Assert.NotNull(response);
         Assert.True(response.Ok);
-        await AssertFinalCustomerRosterAsync(page, culture);
+        await AssertCustomersHiddenAsync(page, culture);
         Assert.True(await page.Locator("main.profile-about").IsVisibleAsync());
         Assert.Equal(6, await page.Locator(".profile-capability-slide").CountAsync());
         Assert.False(await page.Locator("[data-capability-controls]").IsVisibleAsync());
@@ -122,7 +130,7 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
         var response = await page.GotoAsync(new Uri(fixture.Origin, $"/About?culture={culture}").ToString());
         Assert.NotNull(response);
         Assert.True(response.Ok);
-        await AssertFinalCustomerRosterAsync(page, culture);
+        await AssertCustomersHiddenAsync(page, culture);
         await Expect(page.Locator("[data-workpiece-gallery]")).ToHaveAttributeAsync("data-workpiece-ready", "true");
         await Expect(page.Locator("main.profile-about")).ToHaveAttributeAsync("data-presentation-state", "ready");
         await DismissConsentAsync(page);
@@ -163,34 +171,27 @@ public sealed class AboutStoryBrowserTests(PublicContactBrowserFixture fixture)
         Assert.Equal("stopped", await page.Locator("[data-workpiece-gallery]").GetAttributeAsync("data-workpiece-ready"));
     }
 
-    private static async Task AssertFinalCustomerRosterAsync(IPage page, string culture)
+    private static async Task AssertCustomersHiddenAsync(IPage page, string culture)
     {
-        string[] expected = [
-            "ptt", "pttep", "bangchak", "siemens-mobility", "mitsubishi-materials", "fabrinet",
-            "minor-food", "kohler", "grohe", "murata", "olympus", "air-liquide", "lixil", "kobelco",
-            "siam-motors", "mektec", "thai-asahi-denso", "yg-1", "sp-syndicate", "singha-kameda",
-            "aeon-fantasy", "lenso", "mfec", "thai-coconut", "khon-kaen-sugar", "bem", "crown-seal",
-            "thai-optical", "kumwell", "tpi-polene-power",
-            "alten-korea", "forth", "do-day-dream", "thai-agri-foods",
-            "sahamitr-pressure-container", "crown-ceramics"
-        ];
-        Assert.Equal(expected, await page.Locator("[data-customer]").EvaluateAllAsync<string[]>(
-            "cards => cards.map(card => card.dataset.customer)"));
-        Assert.Equal(0, await page.Locator("[data-customer='index-creative-village']").CountAsync());
-        var crown = page.Locator("[data-customer='crown-ceramics']");
-        await Expect(crown).ToContainTextAsync(culture == "th" ? "คราวน์ เซรามิคส์" : "Crown Ceramics");
-        var image = crown.Locator("img");
-        foreach (var (name, value) in new[]
+        var facts = page.Locator(".profile-company-facts");
+        await Expect(facts.Locator("article")).ToHaveCountAsync(3);
+        await Expect(facts.Locator("h2")).ToHaveTextAsync(culture == "th"
+            ? new[] { "บริษัท มาลีฟ จำกัด", "ก่อตั้งในปี 2018", "นนทบุรี ประเทศไทย" }
+            : new[] { "Maliev Co., Ltd.", "Established in 2018", "Nonthaburi, Thailand" });
+        await Expect(facts.Locator("p")).ToHaveCountAsync(0);
+        await Expect(page.Locator(".profile-customers")).ToHaveCountAsync(0);
+        await Expect(page.Locator("[data-customer]")).ToHaveCountAsync(0);
+        await Expect(page.Locator("img[src^='/src/images/customers/']")).ToHaveCountAsync(0);
+        await Expect(page.GetByRole(AriaRole.Heading, new()
         {
-            ("src", "/src/images/customers/crown-ceramics.webp"),
-            ("width", "234"),
-            ("height", "119"),
-            ("loading", "lazy"), ("decoding", "async"), ("alt", "")
-        })
-            await Expect(image).ToHaveAttributeAsync(name, value);
-        foreach (var slug in new[] { "sahamitr-pressure-container", "crown-ceramics" })
-            await Expect(page.Locator($"[data-customer='{slug}'] > .profile-customer-logo"))
-                .ToHaveAttributeAsync("class", "profile-customer-logo");
+            Name = culture == "th" ? "ลูกค้าองค์กรบางส่วนของเรา" : "Selected corporate customers",
+            Exact = true,
+        })).ToHaveCountAsync(0);
+        var callToAction = page.Locator(".landing-cta-section");
+        await Expect(callToAction).ToContainTextAsync(culture == "th"
+            ? "มีไอเดีย แบบงาน หรือชิ้นงานตัวอย่าง?"
+            : "Have an idea, drawing or sample part?");
+        await Expect(callToAction.Locator("a")).ToHaveAttributeAsync("href", $"/Contact?culture={culture}");
     }
 
     private static async Task DismissConsentAsync(IPage page)

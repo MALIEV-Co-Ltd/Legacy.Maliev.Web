@@ -44,6 +44,7 @@ internal static class ErrorIncidentHandler
             : StatusCodes.Status500InternalServerError;
 
         logger.LogCritical(
+            exception,
             "{EventName} Service={Service} Method={Method} Path={Path} StatusCode={StatusCode} ExceptionType={ExceptionType} IncidentId={IncidentId} OccurredAtUtc={OccurredAtUtc}",
             "UnhandledRequestFailure",
             typeof(Program).Assembly.GetName().Name ?? "Legacy.Maliev.Web",

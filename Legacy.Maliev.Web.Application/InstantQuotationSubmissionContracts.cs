@@ -103,7 +103,10 @@ public sealed record InstantQuotationSubmissionResult(
     int? RequestReference,
     InstantQuotationProblemCategory ProblemCategory,
     string? TransactionId = null,
-    Guid? JourneyId = null);
+    Guid? JourneyId = null)
+{
+    internal bool FilesLinkedVerified { get; init; }
+}
 
 public interface IInstantQuotationSubmissionService
 {

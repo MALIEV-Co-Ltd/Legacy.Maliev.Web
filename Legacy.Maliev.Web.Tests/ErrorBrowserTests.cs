@@ -53,6 +53,46 @@ public sealed class ErrorBrowserTests(ErrorBrowserFixture fixture)
     }
 
     [Theory]
+    [InlineData("en", 390, 844)]
+    [InlineData("th", 390, 844)]
+    [InlineData("en", 1440, 900)]
+    [InlineData("th", 1440, 900)]
+    public async Task NotFound_RecoveryLinksRetainTransparentBackgroundAndAccessibleStates(string culture, int width, int height)
+    {
+        await using var context = await CreateContextAsync(width, height, reducedMotion: ReducedMotion.Reduce);
+        await using var page = await context.NewPageAsync();
+        var response = await page.GotoAsync(ErrorUrl(404, culture));
+        Assert.Equal(404, response?.Status);
+        await page.Mouse.MoveAsync(0, 0);
+        var home = page.Locator("a.space-error__home");
+        var support = page.Locator("a.space-error__support");
+        Assert.Equal("rgba(0, 0, 0, 0)", await home.EvaluateAsync<string>("element => getComputedStyle(element).backgroundColor"));
+        Assert.Equal("rgba(0, 0, 0, 0)", await support.EvaluateAsync<string>("element => getComputedStyle(element).backgroundColor"));
+
+        var screenshotDirectory = Environment.GetEnvironmentVariable("MALIEV_404_SCREENSHOT_DIR");
+        if (!string.IsNullOrEmpty(screenshotDirectory))
+        {
+            Directory.CreateDirectory(screenshotDirectory);
+            await page.ScreenshotAsync(new PageScreenshotOptions { Path = Path.Combine(screenshotDirectory, $"404-recovery-{culture}-{width}.png") });
+        }
+
+        await home.HoverAsync();
+        Assert.Equal("rgb(255, 255, 255)", await home.EvaluateAsync<string>("element => getComputedStyle(element).backgroundColor"));
+        await support.HoverAsync();
+        Assert.Equal("rgba(0, 0, 0, 0)", await support.EvaluateAsync<string>("element => getComputedStyle(element).backgroundColor"));
+        Assert.Equal("rgb(255, 255, 255)", await support.EvaluateAsync<string>("element => getComputedStyle(element).color"));
+
+        await page.Mouse.MoveAsync(0, 0);
+        for (var index = 0; index < 4 && !await home.EvaluateAsync<bool>("element => element === document.activeElement"); index++)
+        {
+            await page.Keyboard.PressAsync("Tab");
+        }
+        Assert.True(await home.EvaluateAsync<bool>("element => element === document.activeElement && element.matches(':focus-visible') && getComputedStyle(element).outlineStyle !== 'none' && parseFloat(getComputedStyle(element).outlineWidth) >= 3"));
+        await page.Keyboard.PressAsync("Tab");
+        Assert.True(await support.EvaluateAsync<bool>("element => element === document.activeElement && element.matches(':focus-visible') && getComputedStyle(element).outlineStyle !== 'none' && parseFloat(getComputedStyle(element).outlineWidth) >= 3"));
+    }
+
+    [Theory]
     [InlineData("en", "Error page preview", "Please include this incident ID when contacting support.")]
     [InlineData("th", "ตัวอย่างหน้าข้อผิดพลาด", "โปรดแจ้งรหัสเหตุขัดข้องนี้เมื่อติดต่อฝ่ายช่วยเหลือ")]
     public async Task ErrorPreview_KeepsLocalizedShellWithoutIncidentDetailsOrSupportInstructions(

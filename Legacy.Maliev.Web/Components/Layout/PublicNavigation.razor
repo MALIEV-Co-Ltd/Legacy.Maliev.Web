@@ -5,6 +5,19 @@
         <a href="/" class="landing-brand" aria-label="MALIEV home">
             <img src="/src/images/navbar_logo_black.webp" width="120" height="34" alt="MALIEV" />
         </a>
+        <div class="landing-contact">
+            <details class="landing-contact-details">
+                <summary class="landing-contact-toggle"><i class="far fa-comment-dots" aria-hidden="true"></i><span>@(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th" ? "ติดต่อเรา" : "Contact")</span><i class="fas fa-chevron-down" aria-hidden="true"></i></summary>
+                <div class="landing-contact-menu" aria-label="@(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th" ? "ช่องทางติดต่อ" : "Contact options")">
+                    <a href="https://m.me/maliev.manufacturing/" target="_blank" rel="noopener noreferrer"><i class="fab fa-facebook-messenger contact-icon-messenger" aria-hidden="true"></i><span>Facebook Messenger</span></a>
+                    <a href="https://line.me/ti/p/@@maliev" target="_blank" rel="noopener noreferrer"><i class="fab fa-line contact-icon-line" aria-hidden="true"></i><span>LINE</span></a>
+                    <a href="https://wa.me/66898950690" target="_blank" rel="noopener noreferrer" data-maliev-contact-destination="whatsapp_business"><i class="fab fa-whatsapp contact-icon-whatsapp" aria-hidden="true"></i><span>WhatsApp</span></a>
+                    <a href="mailto:info@maliev.com"><i class="far fa-envelope" aria-hidden="true"></i><span>info@maliev.com</span></a>
+                    <a href="tel:+66898950690"><i class="fas fa-phone-alt" aria-hidden="true"></i><span>+66 (0)89-895-0690</span></a>
+                    <a href="https://goo.gl/maps/AXqLnqUu5dM2" target="_blank" rel="noopener noreferrer"><svg class="contact-icon-maps" viewBox="0 0 24 32" aria-hidden="true" focusable="false"><defs><clipPath id="contact-maps-pin"><path d="M12 1C5.9 1 1 5.9 1 12c0 7.1 7.1 12.2 11 19 3.9-6.8 11-11.9 11-19C23 5.9 18.1 1 12 1Z" /></clipPath></defs><g clip-path="url(#contact-maps-pin)"><path fill="#4285f4" d="M0 0h12v15H0z"/><path fill="#ea4335" d="M12 0h12v15H12z"/><path fill="#34a853" d="M0 15h12v17H0z"/><path fill="#fbbc04" d="M12 15h12v17H12z"/></g><circle cx="12" cy="12" r="4.3" fill="#fff"/></svg><span>@(System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th" ? "ที่ตั้งบริษัท" : "Our location")</span></a>
+                </div>
+            </details>
+        </div>
         <button class="landing-nav-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#NavigationBarTop" aria-controls="NavigationBarTop" aria-expanded="false" aria-label="Toggle navigation">
             <span class="fas fa-bars" aria-hidden="true"></span>
         </button>
@@ -60,14 +73,26 @@
                 }
                 <li class="landing-language">
                     <form class="maliev-language-form" method="post" role="form" action="@Model.LanguageAction">
-                        <i class="fas fa-globe" aria-hidden="true"></i>
-                        <label class="visually-hidden" for="maliev-navbar-language">Select language</label>
-                        <select id="maliev-navbar-language" class="form-select form-select-sm maliev-language-select" name="culture" onchange="this.form.submit()">
+                        <button class="maliev-language-toggle" type="button" id="maliev-language-menu" data-bs-toggle="dropdown" aria-expanded="false" aria-label="@Localizer["Select language"]">
+                            <i class="fas fa-globe" aria-hidden="true"></i><span>@(Model.Cultures.FirstOrDefault(culture => culture.IsSelected)?.Label)</span><i class="fas fa-chevron-down maliev-language-chevron" aria-hidden="true"></i>
+                        </button>
+                        <ul class="dropdown-menu maliev-language-menu" aria-labelledby="maliev-language-menu">
                             @foreach (var culture in Model.Cultures)
                             {
-                                <option value="@culture.Name" selected="@culture.IsSelected">@culture.Label</option>
+                                <li><button type="submit" name="culture" value="@culture.Name" class="dropdown-item maliev-language-option" aria-current="@(culture.IsSelected ? "true" : "false")">@culture.Label</button></li>
                             }
-                        </select>
+                        </ul>
+                        <noscript>
+                            <style>.maliev-language-toggle { display: none !important; } .maliev-language-form noscript { display: flex; align-items: center; gap: .4rem; } .maliev-language-form noscript select { min-height: 2.75rem; } .maliev-language-form noscript button { width: auto; min-width: 2.75rem; min-height: 2.75rem; padding: .5rem; } @@media (max-width: 89.99rem) { .landing-nav { flex-wrap: wrap; } .landing-nav-toggle { display: none; } .landing-nav-content { display: block !important; position: static; flex: 0 0 100%; } }</style>
+                            <label class="visually-hidden" for="maliev-navbar-language">Select language</label>
+                            <select id="maliev-navbar-language" class="form-select form-select-sm maliev-language-select" name="culture" aria-label="@Localizer["Select language"]">
+                                @foreach (var culture in Model.Cultures)
+                                {
+                                    <option value="@culture.Name" selected="@culture.IsSelected">@culture.Label</option>
+                                }
+                            </select>
+                            <button type="submit">@Localizer["Go"]</button>
+                        </noscript>
                         <input type="hidden" name="@Model.AntiforgeryFieldName" value="@Model.AntiforgeryToken" />
                     </form>
                 </li>

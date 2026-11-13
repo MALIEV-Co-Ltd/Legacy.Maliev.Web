@@ -120,7 +120,14 @@ public sealed class ScanningComparisonBrowserTests(PublicContactBrowserFixture f
         Assert.Contains(culture == "en" ? "true surface color" : "สีพื้นผิวจริง", comparisonNote, StringComparison.OrdinalIgnoreCase);
         Assert.Contains(culture == "en" ? "deviation color map" : "แผนที่สีความคลาดเคลื่อน", comparisonNote, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, await sample.Locator("canvas, model-viewer, iframe, object, a[download]").CountAsync());
-        Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"));
+        var overflow = await page.EvaluateAsync<string>("""
+            () => JSON.stringify({ width: innerWidth, scrollWidth: document.documentElement.scrollWidth,
+                offenders: [...document.querySelectorAll('body *')].map(element => ({
+                    tag: element.tagName, id: element.id, className: String(element.className),
+                    right: Math.round(element.getBoundingClientRect().right)
+                })).filter(element => element.right > innerWidth + 1).slice(0, 12) })
+            """);
+        Assert.True(await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth + 1"), overflow);
         Assert.Equal(0, await sample.Locator("a.service-button").CountAsync());
         await sample.ScreenshotAsync(new LocatorScreenshotOptions { Path = ScreenshotPath($"scanning-comparison-{culture}-{width}.png") });
     }
@@ -144,7 +151,9 @@ public sealed class ScanningComparisonBrowserTests(PublicContactBrowserFixture f
         Assert.Contains(culture == "en" ? "scan mesh and reconstructed CAD" : "Mesh กับ CAD", await sample.Locator("#scanning-cad-title").InnerTextAsync(), StringComparison.OrdinalIgnoreCase);
         Assert.Equal(2, await cad.Locator("img").CountAsync());
         Assert.Equal("compare", await cad.GetAttributeAsync("data-mode"));
-        Assert.Equal(culture == "en" ? "Scan mesh" : "เมชสแกน", await cad.Locator(".scanning-comparison-scan figcaption").InnerTextAsync());
+        Assert.Equal(culture == "en" ? "Scan mesh" : "mesh สแกน", await cad.Locator(".scanning-comparison-scan figcaption").InnerTextAsync());
+        Assert.Equal(culture == "en" ? "Scan mesh and CAD comparison" : "เปรียบเทียบ mesh สแกนและ CAD",
+            await cad.Locator("[data-comparison-handle]").GetAttributeAsync("aria-label"));
 
         foreach (string mode in new[] { "scan", "cad", "side", "compare" })
         {
@@ -289,13 +298,76 @@ public sealed class ScanningComparisonBrowserTests(PublicContactBrowserFixture f
         Assert.InRange(int.Parse((await comparison.Locator("[data-comparison-handle]").GetAttributeAsync("aria-valuenow"))!), 74, 76);
         Assert.InRange(Math.Abs(await page.EvaluateAsync<double>("scrollY") - scrollBefore), 0, 1);
     }
-    private Task<IBrowserContext> CreateContextAsync(int width, bool javaScript = true) =>
-        fixture.Browser.NewContextAsync(new BrowserNewContextOptions
+    /// <summary>Checks the onsite cards retain their accessible dark-section presentation.</summary>
+    [Theory]
+    [InlineData("en", 390)]
+    [InlineData("th", 390)]
+    [InlineData("en", 1440)]
+    [InlineData("th", 1440)]
+    public async Task OnsiteCards_RetainDarkSectionStyles(string culture, int width)
+    {
+        await using IBrowserContext context = await CreateContextAsync(width);
+        await context.RouteAsync("**/*", async route =>
+        {
+            if (Uri.TryCreate(route.Request.Url, UriKind.Absolute, out var uri) && uri.Host == "127.0.0.1")
+            {
+                await route.ContinueAsync();
+            }
+            else
+            {
+                await route.AbortAsync();
+            }
+        });
+        IPage page = await OpenPageAsync(context, culture);
+        ILocator section = page.Locator("#scanning-service-modes");
+        ILocator cards = section.Locator("article.service-card.service-card-visual");
+        Assert.Equal(3, await cards.CountAsync());
+        string[] headings = culture == "en"
+            ? ["Site access", "Environment", "Pre-visit planning"]
+            : ["การเข้าถึงพื้นที่", "สภาพแวดล้อม", "วางแผนก่อนเข้าพื้นที่"];
+
+        for (int index = 0; index < headings.Length; index++)
+        {
+            ILocator card = cards.Nth(index);
+            ILocator image = card.Locator("img.service-card-media");
+            ILocator heading = card.Locator(".service-card-body h3");
+            ILocator description = card.Locator(".service-card-body p");
+            await image.ScrollIntoViewIfNeededAsync();
+            string imagePath = (await image.GetAttributeAsync("src"))!;
+            var imageResponse = await context.APIRequest.GetAsync(new Uri(fixture.Origin, imagePath).ToString());
+            Assert.True(imageResponse.Ok, $"Onsite image {imagePath} returned {imageResponse.Status}.");
+            Assert.Equal("image/webp", imageResponse.Headers["content-type"]);
+            Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString((await imageResponse.BodyAsync())[..4]));
+            await image.EvaluateAsync("image => new Promise((resolve, reject) => { if (image.complete) { image.naturalWidth > 0 ? resolve() : reject(new Error('Image failed to load')); } else { image.addEventListener('load', resolve, { once: true }); image.addEventListener('error', reject, { once: true }); } })");
+            await image.EvaluateAsync("image => image.decode()");
+            Assert.True(await image.EvaluateAsync<bool>("image => image.complete && image.naturalWidth > 0"));
+            Assert.Equal(headings[index], await heading.InnerTextAsync());
+            Assert.False(string.IsNullOrWhiteSpace(await image.GetAttributeAsync("alt")));
+            Assert.False(string.IsNullOrWhiteSpace(await description.InnerTextAsync()));
+            Assert.Equal("rgba(255, 255, 255, 0.18)", await card.EvaluateAsync<string>("element => getComputedStyle(element).borderColor"));
+            Assert.Equal("rgb(11, 36, 66)", await card.EvaluateAsync<string>("element => getComputedStyle(element).backgroundColor"));
+            Assert.Equal("none", await card.EvaluateAsync<string>("element => getComputedStyle(element).boxShadow"));
+            Assert.Equal("rgba(255, 255, 255, 0.18)", await image.EvaluateAsync<string>("element => getComputedStyle(element).borderBottomColor"));
+            Assert.Equal("rgb(11, 36, 66)", await image.EvaluateAsync<string>("element => getComputedStyle(element).backgroundColor"));
+            Assert.Equal("rgb(255, 255, 255)", await heading.EvaluateAsync<string>("element => getComputedStyle(element).color"));
+            Assert.Equal("rgb(217, 230, 244)", await description.EvaluateAsync<string>("element => getComputedStyle(element).color"));
+        }
+
+        await cards.First.ScreenshotAsync(new LocatorScreenshotOptions { Path = ScreenshotPath($"scanning-onsite-{culture}-{width}.png") });
+    }
+
+    private async Task<IBrowserContext> CreateContextAsync(int width, bool javaScript = true)
+    {
+        var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
             Locale = "th-TH",
             ViewportSize = new ViewportSize { Width = width, Height = 1000 },
             JavaScriptEnabled = javaScript,
         });
+        await context.RouteAsync("**/*", route => new Uri(route.Request.Url).GetLeftPart(UriPartial.Authority)
+            == fixture.Origin.GetLeftPart(UriPartial.Authority) ? route.ContinueAsync() : route.AbortAsync());
+        return context;
+    }
 
     private async Task<IPage> OpenPageAsync(IBrowserContext context, string culture, bool javaScript = true)
     {

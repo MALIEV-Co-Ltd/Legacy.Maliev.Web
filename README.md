@@ -73,6 +73,46 @@ Production deployment is intentionally deferred for owner review in Aspire and e
 
 ## Current shared dependency and private observation
 
-Web adopts Legacy.Maliev.ServiceDefaults at `3c790ba6414b2a539f24aabb6948549ffd81a86b` in the normal build, Dockerfile and joined Web graph. CompatibilityContracts remains `78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7`; dedicated historical producer proof graphs retain their own pins.
+Web adopts Legacy.Maliev.ServiceDefaults at `c9f21151639f1911c780f2084dd2d757b4fb3e73` in the normal build, Dockerfile, current Web qualification consumers and joined Web graph. CompatibilityContracts remains `78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7`; dedicated historical producer proof graphs retain their own pins.
 
 Actual Program registers `AddPrivateRequestObservation("web")`. GET `/web/liveness` and `/web/readiness` identify the serving host with an uncached process marker. The private `/internal/diagnostics/observability` probe requires the original connection peer to be loopback and exactly one valid nonce; forwarded headers cannot grant access. This source draft requires hosted consumer and joined validation before acceptance.
+
+## Private Web console boundary
+
+Web selects the existing `PrivateFailureConsoleFormatter` from the selected
+shared producer `c9f21151639f1911c780f2084dd2d757b4fb3e73` after `AddServiceDefaults`. Only the built-in
+console logging provider is retained; raw OpenTelemetry log export is excluded.
+The shared metrics and tracing registrations and configured exporters remain
+unchanged. No other service's default logging provider is changed.
+
+This is the native-console adaptation of original
+`f14d3ef9c294783a34d1196050f51f682aab8316`, not a claim that every logging
+provider filters customer data. The formatter suppresses Information, Debug and
+Trace records even when console category configuration enables them. Failure
+records use a fixed message, runtime UTC/assembly/exception provenance, actual W3C
+trace/span correlation and bounded scalar fields. Messages, request values,
+objects and raw scopes are not serialized.
+
+The five source business codes remain exact. Modern response incidents retain
+their nonempty GUID-N identifier and exact round-trip incident time normalized to
+UTC; historical arbitrary request trace identifiers are not copied. The
+formatter's lowercase timestamp and runtime provenance remain authoritative.
+The Web incident logger passes the original exception only to this selected
+private sink so its runtime type can be preserved without its message or stack.
+
+Ordinary non-Testing entry-point failures use `PrivateStartupBoundary` and set
+exit code 1. Testing startup validation and cancellation failures are rethrown
+unchanged without changing the process exit code, so WebApplicationFactory
+observes the original failed startup rather than successful completion.
+`HostAbortedException` is rethrown unchanged for host discovery/tooling. Startup
+tests use an isolated entry writer. Actual incident regressions retain their
+serialized console capture and drain the host before checking the selected
+private formatter's wire output and request correlation. Existing request observation continues
+to own handled-failure and bounded/resettable health records.
+
+The selected shared producer comes from PR #93. Its exact protected-main checks
+must be green before this Web follower is published. The Web consumer and
+dependency-pin proposal still requires its own reviewed exact-head
+Release, focused/full, formatting, security and coverage checks, followed by
+protected-main verification. Neither source #469 nor the
+separate diagnostic issue #466 is closed by source inspection or by this README.

@@ -47,8 +47,10 @@ public sealed class ServicePageResponsiveSourceTests
     {
         var source = Read("Legacy.Maliev.Web", "Components", "Pages", "Services", fileName);
         Assert.Contains("<ServiceBreadcrumb", source, StringComparison.Ordinal);
+        var hero = System.Text.RegularExpressions.Regex.Match(source, "<section\\b(?=[^>]*\\bclass=\"[^\"]*\\bservice-hero\\b[^\"]*\")[^>]*>");
+        Assert.True(hero.Success);
         Assert.True(
-            source.IndexOf("<ServiceBreadcrumb", StringComparison.Ordinal) < source.IndexOf("<section class=\"service-hero\"", StringComparison.Ordinal),
+            source.IndexOf("<ServiceBreadcrumb", StringComparison.Ordinal) < hero.Index,
             "The service breadcrumb must precede its hero.");
         Assert.Contains("<ServicePageToc />", source, StringComparison.Ordinal);
         Assert.Contains($"ServiceKey=\"{service}\"", source, StringComparison.Ordinal);
@@ -85,17 +87,17 @@ public sealed class ServicePageResponsiveSourceTests
         Assert.Equal(9, System.Text.RegularExpressions.Regex.Matches(scanningDecisions, "services/scanning/cards/[^\"']+\\.webp").Count);
         foreach (var (page, image) in new[]
         {
-            (printing, "printing/printing-hero.webp"),
-            (cnc, "cnc/cnc-hero.webp"),
-            (scanning, "scanning/scanning-hero.webp"),
+            (printing, "printing/printing-hero-prototypes-transparent.webp"),
+            (cnc, "hero-illustrations/cnc-hero-light.webp"),
+            (scanning, "hero-illustrations/scanning-hero-raptor-x-unbranded.webp"),
         })
         {
             var hero = System.Text.RegularExpressions.Regex.Match(
                 page,
                 $"<img class=\"service-hero-media\" src=\"/src/images/services/{System.Text.RegularExpressions.Regex.Escape(image)}\"[^>]+>");
             Assert.True(hero.Success);
-            Assert.Contains("width=\"1672\"", hero.Value, StringComparison.Ordinal);
-            Assert.Contains("height=\"941\"", hero.Value, StringComparison.Ordinal);
+            Assert.Contains("width=\"1536\"", hero.Value, StringComparison.Ordinal);
+            Assert.Contains("height=\"1024\"", hero.Value, StringComparison.Ordinal);
             Assert.Contains("loading=\"eager\"", hero.Value, StringComparison.Ordinal);
             Assert.Contains("fetchpriority=\"high\"", hero.Value, StringComparison.Ordinal);
         }

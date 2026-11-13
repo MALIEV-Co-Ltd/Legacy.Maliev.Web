@@ -11,6 +11,11 @@ using Microsoft.Extensions.Localization;
 
 namespace Legacy.Maliev.Web.Pages.Account;
 
+/// <summary>Requests a password-reset challenge and sends a localized single-use link without disclosing account eligibility.</summary>
+/// <param name="authenticationClient">The typed identity client handling customer credential and challenge operations.</param>
+/// <param name="notificationClient">The typed notification client used for customer and staff messages.</param>
+/// <param name="localizer">The localizer supplying this page's validation and outcome messages.</param>
+/// <param name="logger">The logger instance for diagnostic output.</param>
 [EnableRateLimiting("account")]
 public sealed class ForgotPassword(
     ICustomerAuthenticationClient authenticationClient,
@@ -18,15 +23,18 @@ public sealed class ForgotPassword(
     IStringLocalizer<ForgotPasswordContent> localizer,
     ILogger<ForgotPassword> logger) : PageModel
 {
+    /// <summary>The customer's email address used by this account or request workflow.</summary>
     [BindProperty]
     [Required(ErrorMessage = "Email address is required")]
     [EmailAddress(ErrorMessage = "Please enter a valid email address")]
     [StringLength(320, ErrorMessage = "Email address is too long.")]
     public string Email { get; set; } = string.Empty;
 
+    /// <summary>The one-time outcome message carried across this workflow's post/redirect/get boundary.</summary>
     [TempData]
     public string? Notification { get; set; }
 
+    /// <summary>The reset-request email, outcome, and localized validation feedback.</summary>
     public ForgotPasswordFormDisplayModel DisplayModel => new(
         Email,
         Notification,
@@ -50,6 +58,9 @@ public sealed class ForgotPassword(
                 : localizer["The submitted value is invalid."].Value;
     }
 
+    /// <summary>Requests a reset challenge and sends a localized reset link when identity permits it.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The invalid form or a localized redirect carrying a non-enumerating outcome message.</returns>
     public async Task<IActionResult> OnPostPasswordResetAsync(CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)

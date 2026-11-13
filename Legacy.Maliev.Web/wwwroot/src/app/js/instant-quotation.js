@@ -123,8 +123,8 @@ function wireCustomerForms(root) {
 
         wiredCustomerForms.add(customerForm);
         wireCustomerValidationLinks(customerForm.closest('[data-workflow-customer-details-content]'));
-        wireOptionalQuotationFields(customerForm);
         const customerSubmit = document.querySelector('[data-instant-quote-submit]');
+        wireOptionalQuotationFields(customerForm, customerSubmit);
         wireInstantQuotationAddressValidation(customerForm, customerSubmit);
         if (customerForm.id === 'instant-quotation-form') {
             wireInstantQuotationSubmission(
