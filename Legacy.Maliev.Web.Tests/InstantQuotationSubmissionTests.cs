@@ -11,6 +11,135 @@ public sealed class InstantQuotationSubmissionTests
     private const string SubmissionId = "ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789";
     private const string UploadFileIdText = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public async Task CompletedReplay_WithMalformedFileProof_RemainsCompletedWithoutAnalyticsProof(int malformed)
+    {
+        var part = Part();
+        var candidate = malformed switch
+        {
+            0 => null!,
+            1 => part with { UploadReference = null! },
+            2 => part with { Geometry = null! },
+            _ => part,
+        };
+        var file = SuccessfulFinalization().Files.Single();
+        var checkpoint = new InstantQuotationSubmissionCheckpoint(SubmissionId, 417,
+            InstantQuotationSubmissionCheckpointStatus.Completed, "synthetic-snapshot",
+            malformed == 3 ? [null!] : [file], TransactionId: "request-417", FrozenCustomer: Customer());
+        var quotation = new RecordingQuotationClient(_ => throw new InvalidOperationException("Unexpected quotation call"));
+        var events = new List<string>();
+        var service = new InstantQuotationSubmissionService(new RecordingSessionStore(Session(candidate), Owner),
+            new NoPricingService(), quotation, new RecordingSubmissionStore { ReadOverride = checkpoint },
+            new RecordingUploadClient(events, SuccessfulFinalization()), SuccessfulRequestFileClient.Instance);
+
+        var result = await service.SubmitAsync(SessionId, Owner, Customer(), default);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Completed, result.Outcome);
+        Assert.Equal(417, result.RequestReference);
+        Assert.False(result.FilesLinkedVerified);
+        Assert.Empty(quotation.Calls);
+        Assert.Empty(events);
+    }
+
+    private sealed class NoPricingService : IInstantQuotationPricingService
+    {
+        public InstantQuotationOrderQuote Quote(InstantQuotationOrderState state) => throw new InvalidOperationException("Unexpected pricing call");
+    }
+
+    [Theory]
+    [InlineData("completed", InstantQuotationSubmissionOutcome.Completed, true)]
+    [InlineData("linked-partial", InstantQuotationSubmissionOutcome.Partial, false)]
+    [InlineData("failed-second-link", InstantQuotationSubmissionOutcome.Partial, false)]
+    public async Task Submit_FileProofRequiresCompletedFulfillmentAfterEveryLink(
+        string scenario, InstantQuotationSubmissionOutcome expectedOutcome, bool expectedProof)
+    {
+        var first = Part();
+        var secondId = Guid.Parse("bbbbbbbb-cccc-dddd-eeee-ffffffffffff");
+        var second = first with { PartId = Guid.NewGuid(), UploadReference = new(secondId.ToString("D")) };
+        var file = SuccessfulFinalization().Files.Single();
+        var finalization = SuccessfulFinalization() with { Files = [file, file with { FileId = secondId }] };
+        var failure = new InstantQuotationRequestFileLinkResult(InstantQuotationServiceStatus.Unavailable,
+            InstantQuotationAuthorizationStatus.NotEvaluated, InstantQuotationOperationStatus.Failed,
+            InstantQuotationProblemCategory.DependencyUnavailable);
+        var links = scenario == "failed-second-link"
+            ? new RecordingRequestFileClient(SuccessfulRequestFileClient.Success, failure)
+            : new RecordingRequestFileClient();
+        var store = new RecordingSubmissionStore();
+        var fulfillment = new RecordingFulfillmentClient { FailCustomer = scenario == "linked-partial" };
+        var service = new InstantQuotationSubmissionService(new RecordingSessionStore(Session(first, second), Owner),
+            new NoPricingService(), new RecordingQuotationClient(_ => new QuotationRequestResult(417, true, true)),
+            store, new RecordingUploadClient(null, finalization), links, fulfillment,
+            quoteTicketService: AcceptingQuoteTicketService.Instance, authoritativePricingService: new InertQuoteService());
+
+        var result = await service.SubmitAsync(SessionId, Owner, Customer(), default);
+
+        Assert.Equal(expectedOutcome, result.Outcome);
+        Assert.Equal(expectedProof, result.FilesLinkedVerified);
+        Assert.Equal(2, links.Calls.Count);
+        Assert.Equal(new[] { file.FileId, secondId }.Order(), links.Calls.Select(call => call.File.FileId).Order());
+        Assert.Equal(scenario == "failed-second-link" ? InstantQuotationSubmissionCheckpointStatus.Persisted
+            : scenario == "linked-partial" ? InstantQuotationSubmissionCheckpointStatus.FilesLinked
+            : InstantQuotationSubmissionCheckpointStatus.Completed, store.Checkpoint?.Status);
+        Assert.Equal(scenario == "failed-second-link" ? 0 : 1, fulfillment.CustomerCalls);
+    }
+
+    private sealed class InertQuoteService : IInstantQuotationAuthoritativePricingService
+    {
+        public Task<InstantQuotationOrderQuote?> QuoteAsync(InstantQuotationSessionState session, string? ownerIdentity,
+            bool includeComparisons, CancellationToken cancellationToken)
+        {
+            var parts = session.Parts.Select(part => new InstantQuotationPartQuote(
+                part.PartId, "ABS", "Black", 1, PrintProcess.Fdm, 0, 0, 0, 0, 0, 0, 0,
+                false, 0, 0, [], BuildPreference.Standard, [])).ToArray();
+            return Task.FromResult<InstantQuotationOrderQuote?>(new InstantQuotationOrderQuote(
+                parts, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1));
+        }
+    }
+
+    [Theory]
+    [InlineData("completed", InstantQuotationSubmissionOutcome.Completed, true)]
+    [InlineData("link-failed", InstantQuotationSubmissionOutcome.Partial, false)]
+    [InlineData("storage-failed", InstantQuotationSubmissionOutcome.Partial, false)]
+    public async Task FreshWithoutFulfillment_RequiresAllLinksAndCompletedStorageForProof(
+        string scenario, InstantQuotationSubmissionOutcome expectedOutcome, bool expectedProof)
+    {
+        var first = Part();
+        var secondId = Guid.Parse("bbbbbbbb-cccc-dddd-eeee-ffffffffffff");
+        var second = first with { PartId = Guid.NewGuid(), UploadReference = new(secondId.ToString("D")) };
+        var file = SuccessfulFinalization().Files.Single();
+        var finalization = SuccessfulFinalization() with { Files = [file, file with { FileId = secondId }] };
+        var failedLink = new InstantQuotationRequestFileLinkResult(InstantQuotationServiceStatus.Unavailable,
+            InstantQuotationAuthorizationStatus.NotEvaluated, InstantQuotationOperationStatus.Failed,
+            InstantQuotationProblemCategory.DependencyUnavailable);
+        var links = scenario == "link-failed"
+            ? new RecordingRequestFileClient(SuccessfulRequestFileClient.Success, failedLink) : new RecordingRequestFileClient();
+        var store = new RecordingSubmissionStore { RejectCompletedWrite = scenario == "storage-failed" };
+        var service = new InstantQuotationSubmissionService(new RecordingSessionStore(Session(first, second), Owner),
+            new NoPricingService(), new RecordingQuotationClient(_ => new QuotationRequestResult(417, true, true)),
+            store, new RecordingUploadClient(null, finalization), links,
+            quoteTicketService: AcceptingQuoteTicketService.Instance, authoritativePricingService: new InertQuoteService());
+
+        var result = await service.SubmitAsync(SessionId, Owner, Customer(), default);
+
+        Assert.Equal(expectedOutcome, result.Outcome);
+        Assert.Equal(expectedProof, result.FilesLinkedVerified);
+        Assert.Equal(2, links.Calls.Count);
+        Assert.Equal(expectedProof ? InstantQuotationSubmissionCheckpointStatus.Completed : InstantQuotationSubmissionCheckpointStatus.Persisted,
+            store.Checkpoint?.Status);
+        Assert.Null(store.Checkpoint?.FinalizedFiles);
+        if (expectedProof)
+        {
+            var replay = await service.SubmitAsync(SessionId, Owner, Customer(), default);
+            Assert.Equal(InstantQuotationSubmissionOutcome.Completed, replay.Outcome);
+            Assert.False(replay.FilesLinkedVerified);
+            Assert.Equal(2, links.Calls.Count);
+        }
+    }
+
     [Fact]
     public async Task AuthenticatedDurableQuote_CheckpointConflictKeepsKnownTerminalReferenceWithoutProfileEffects()
     {
@@ -915,6 +1044,51 @@ public sealed class InstantQuotationSubmissionTests
         Assert.Equal(System.Reflection.NullabilityState.Nullable, nullability.ReadState);
     }
 
+    [Fact]
+    public async Task Submit_ReconstructedQuoteRetainsServerReviewWarningInPersistedRequest()
+    {
+        // This isolates message composition; real byte-to-physical acceptance is tested separately.
+        var events = new List<string>();
+        var quotation = new RecordingQuotationClient(_ =>
+            new QuotationRequestResult(417, ServiceAvailable: true, Authorized: true));
+        var service = new InstantQuotationSubmissionService(
+            new RecordingSessionStore(Session(Part()), Owner),
+            new InstantQuotationPricingService(), quotation, new RecordingSubmissionStore(events),
+            new RecordingUploadClient(events, SuccessfulFinalization()), SuccessfulRequestFileClient.Instance,
+            quoteTicketService: AcceptingQuoteTicketService.Instance,
+            authoritativePricingService: new ReconstructionMessagePricing());
+
+        var result = await service.SubmitAsync(SessionId, Owner, Customer(), default);
+
+        Assert.Equal(InstantQuotationSubmissionOutcome.Completed, result.Outcome);
+        string message = Assert.Single(quotation.Calls).Submission.Message;
+        Assert.Contains("Voxel-based pricing estimate (0.3 mm). Original geometry requires engineering review before manufacture.",
+            message, StringComparison.Ordinal);
+        Assert.Contains("Review state: engineer_review_required", message, StringComparison.Ordinal);
+        Assert.DoesNotContain(UploadFileIdText, message, StringComparison.Ordinal);
+    }
+
+    private sealed class ReconstructionMessagePricing : IInstantQuotationAuthoritativePricingService
+    {
+        public async Task<InstantQuotationOrderQuote?> QuoteAsync(
+            InstantQuotationSessionState session, string? ownerIdentity, bool includeComparisons,
+            CancellationToken cancellationToken)
+        {
+            var quote = await SyntheticAuthoritativePricingTestService.Instance.QuoteAsync(
+                session, ownerIdentity, includeComparisons, cancellationToken);
+            return quote! with
+            {
+                Parts = quote!.Parts.Select(line => line with
+                {
+                    PhysicalReceipt = line.PhysicalReceipt! with
+                    {
+                        GeometryReconstruction = new("voxel-majority-v1", 0.3),
+                    },
+                }).ToArray(),
+            };
+        }
+    }
+
     private static InstantQuotationSubmissionService Service(
         RecordingQuotationClient quotation,
         RecordingSubmissionStore persisted,
@@ -1130,7 +1304,7 @@ public sealed class InstantQuotationSubmissionTests
         QuotationRequestSubmission Submission,
         string IdempotencyKey);
 
-    private sealed class RecordingSubmissionStore(List<string>? events = null) : IInstantQuotationSubmissionStore
+    internal sealed class RecordingSubmissionStore(List<string>? events = null) : IInstantQuotationSubmissionStore
     {
         private readonly object sync = new();
         private InstantQuotationSubmissionCheckpoint? checkpoint;
@@ -1138,6 +1312,8 @@ public sealed class InstantQuotationSubmissionTests
         private bool leased;
 
         public bool AcceptWrites { get; init; } = true;
+
+        public bool RejectCompletedWrite { get; init; }
 
         public bool AcceptRenewals { get; init; } = true;
 
@@ -1233,7 +1409,7 @@ public sealed class InstantQuotationSubmissionTests
                 var matchesPrior = expectedPriorStatus is null
                     ? checkpoint is null
                     : checkpoint?.Status == expectedPriorStatus;
-                if (!validLease || !AcceptWrites || !matchesPrior)
+                if (!validLease || !AcceptWrites || !matchesPrior || (RejectCompletedWrite && value.Status == InstantQuotationSubmissionCheckpointStatus.Completed))
                 {
                     return Task.FromResult(false);
                 }
@@ -1294,6 +1470,7 @@ public sealed class InstantQuotationSubmissionTests
 
     private sealed class RecordingFulfillmentClient : IInstantQuotationFulfillmentClient
     {
+        public bool FailCustomer { get; init; }
         public Task<InstantQuotationNotificationPreparationResult> PrepareQuotationNotificationsAsync(
             InstantQuotationSessionState session, InstantQuotationOrderQuote quote, InstantQuotationCustomerSubmission customer,
             int requestReference, IReadOnlyList<InstantQuotationFinalizedFile> files, CancellationToken cancellationToken) => Task.FromResult(
@@ -1321,6 +1498,7 @@ public sealed class InstantQuotationSubmissionTests
             CancellationToken cancellationToken)
         {
             CustomerCalls++;
+            if (FailCustomer) return Task.FromResult(new InstantQuotationCustomerProvisionResult(null, false, false, false));
             return Task.FromResult(new InstantQuotationCustomerProvisionResult(71, true, true, true));
         }
 

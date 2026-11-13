@@ -139,7 +139,7 @@ public sealed class ThaiLookupShippingPersistenceTests(MemberAuthorityFixture au
                 await page.Locator("#Email").FillAsync("member-crawl@example.test");
                 try { await page.Locator("#Password").FillAsync(authority.Password); }
                 catch (PlaywrightException) { throw new InvalidOperationException("Synthetic login credential entry failed; credential-bearing browser diagnostics suppressed."); }
-                await page.Locator("button[type=submit]").First.ClickAsync();
+                await page.Locator("#customer-login button[type=submit]").ClickAsync();
                 await page.Locator("#ShippingAddress1").WaitForAsync();
                 Assert.Equal("Distinct shipping", await page.Locator("#ShippingAddress1").InputValueAsync());
                 var cookie = Assert.Single(await context.CookiesAsync(), value => value.Name == "__Host-Maliev.Legacy.Session");
@@ -294,7 +294,7 @@ public sealed class ThaiLookupShippingPersistenceTests(MemberAuthorityFixture au
         using var ticks = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
         do
         {
-            Assert.False(child.HasExited, "Disposable service startup failed; credential-bearing output suppressed.");
+            Assert.False(child.HasExited, await child.StartupFailureAsync(deadline.Token));
             try { using var response = await http.GetAsync(path, deadline.Token); if (response.StatusCode == HttpStatusCode.Unauthorized) return; }
             catch (HttpRequestException) { }
         } while (await ticks.WaitForNextTickAsync(deadline.Token));

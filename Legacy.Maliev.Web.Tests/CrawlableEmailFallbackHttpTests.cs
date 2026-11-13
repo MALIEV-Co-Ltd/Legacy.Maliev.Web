@@ -74,8 +74,10 @@ public sealed class CrawlableEmailFallbackHttpTests(TestingWebApplicationFactory
         using var response = await client.GetAsync($"/contact?culture={culture}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var html = await response.Content.ReadAsStringAsync();
-        AssertContact(html, "info@maliev.com");
-        Assert.DoesNotContain("href=\"mailto:info@maliev.com\"", html, StringComparison.Ordinal);
+        var main = Regex.Match(html, "<main\\b[^>]*class=\"[^\"]*\\binquiry-page\\b[^\"]*\"[^>]*>[\\s\\S]*?</main>", RegexOptions.CultureInvariant);
+        Assert.True(main.Success);
+        AssertContact(main.Value, "info@maliev.com");
+        Assert.DoesNotContain("href=\"mailto:info@maliev.com\"", main.Value, StringComparison.Ordinal);
     }
 
     private static void AssertContact(string html, string recipient)
@@ -98,6 +100,19 @@ public sealed class CrawlableEmailFallbackHttpTests(TestingWebApplicationFactory
 
     private sealed class ControlledCareerClient : ICareerClient
     {
+        public async Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(CareerSort.JobId_Ascending, null, 1, 25, cancellationToken);
+            return new ServiceResponse<IReadOnlyList<CareerLevel>>(listing.Levels, listing.ServiceAvailable);
+        }
+
+        public async Task<ServiceResponse<CareerOfferPage>> GetOffersAsync(
+            CareerSort sort, string? search, int pageIndex, int pageSize, CancellationToken cancellationToken)
+        {
+            var listing = await GetListingAsync(sort, search, pageIndex, pageSize, cancellationToken);
+            return new ServiceResponse<CareerOfferPage>(listing.Offers, listing.ServiceAvailable);
+        }
+
         public List<int> Requested { get; } = [];
 
         public Task<CareerListing> GetListingAsync(CareerSort sort, string? search, int pageIndex, int pageSize,

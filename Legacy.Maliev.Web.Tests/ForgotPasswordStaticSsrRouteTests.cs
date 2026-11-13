@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Legacy.Maliev.Web.Tests;
@@ -38,6 +39,30 @@ public sealed class ForgotPasswordStaticSsrRouteTests : IClassFixture<TestingWeb
 
         Assert.Contains("data-migration-renderer=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ThaiDescription_PreservesSourceCopyOnActiveAndFallbackRoutes(bool rendererEnabled)
+    {
+        await using var routeFactory = factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:ForgotPassword", rendererEnabled ? "true" : "false"));
+        using var client = routeFactory.CreateClient(
+            new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        using var response = await client.GetAsync("/account/forgotpassword?culture=th");
+        var source = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("<meta name=\"description\" content=\"กู้คืนรหัสผ่านบัญชี MALIEV ด้วยลิงก์ที่ปลอดภัยเพื่อกลับไปจัดการใบเสนอราคาและโปรเจ็คผลิตของคุณ\"", source, StringComparison.Ordinal);
+        if (rendererEnabled)
+        {
+            Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.DoesNotContain("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
+        }
     }
 
     private static string FindRepositoryRoot()

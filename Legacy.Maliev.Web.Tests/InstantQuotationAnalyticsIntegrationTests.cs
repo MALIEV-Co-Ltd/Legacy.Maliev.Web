@@ -4,17 +4,25 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Legacy.Maliev.Web.Tests;
 
-public sealed class InstantQuotationAnalyticsIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class InstantQuotationAnalyticsIntegrationTests : IClassFixture<TestingWebApplicationFactory>, IAsyncLifetime
 {
     private readonly WebApplicationFactory<Program> factory;
 
-    public InstantQuotationAnalyticsIntegrationTests(WebApplicationFactory<Program> factory)
+    public InstantQuotationAnalyticsIntegrationTests(TestingWebApplicationFactory factory)
     {
         this.factory = factory.WithWebHostBuilder(builder => builder
             .UseSetting("environment", "Testing")
             .UseSetting("Recaptcha:ProjectId", "test-project")
             .UseSetting("Recaptcha:SiteKey", "test-site-key"));
     }
+
+    /// <summary>Completes setup after the per-test child factory has been created.</summary>
+    /// <returns>A completed setup task.</returns>
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    /// <summary>Releases this test's child host and its tracked clients without disposing the borrowed parent.</summary>
+    /// <returns>A task that completes after the owned child factory has been disposed.</returns>
+    public async Task DisposeAsync() => await factory.DisposeAsync();
 
     [Fact]
     public void DefaultRuntimeRegistration_ActivatesReviewedTrackerAndJsSinkPerCircuitScope()
@@ -60,22 +68,24 @@ public sealed class InstantQuotationAnalyticsIntegrationTests : IClassFixture<We
     }
 
     [Fact]
-    public void UploadStart_IsEmittedOnlyAfterAUsableAnalyzedBatchAndBeforeReservation()
+    public void UploadStart_UsableSingletonEmitsBeforeItsActualProducerWithoutAggregateRefire()
     {
-        var source = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(),
-            "Legacy.Maliev.Web",
-            "Components",
-            "Pages",
-            "InstantQuotation",
-            "InstantQuotationWorkflow.razor.cs"));
-        var nonEmptyGate = source.IndexOf("if (analyzed.Count == 0)", StringComparison.Ordinal);
-        var emission = source.IndexOf("analytics.RecordUploadStartAsync", StringComparison.Ordinal);
-        var reservation = source.IndexOf("workflow.ReserveUploads(files)", StringComparison.Ordinal);
+        var root = FindRepositoryRoot();
+        var source = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages",
+            "InstantQuotation", "InstantQuotationWorkflowCoordinator.cs"));
+        var component = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Pages",
+            "InstantQuotation", "InstantQuotationWorkflow.razor.cs"));
+        var upload = source[source.IndexOf("private async Task StartUploadAsync", StringComparison.Ordinal)..];
+        var validation = upload.IndexOf("entry.File.GeometryClaim is null", StringComparison.Ordinal);
+        var stream = upload.IndexOf("await entry.File.OpenReadStreamAsync", StringComparison.Ordinal);
+        var emission = upload.IndexOf("analytics.RecordUploadStartAsync", StringComparison.Ordinal);
+        var producer = upload.IndexOf("await uploadClient.UploadAsync", StringComparison.Ordinal);
 
-        Assert.True(nonEmptyGate >= 0 && nonEmptyGate < emission);
-        Assert.True(emission < reservation);
-        Assert.Contains("analyzed.Count", source[emission..reservation], StringComparison.Ordinal);
+        Assert.True(validation >= 0 && validation < stream);
+        Assert.True(stream < emission && emission < producer);
+        Assert.Contains("entry.LocalId:N", upload[emission..producer], StringComparison.Ordinal);
+        Assert.Contains(", 1)", upload[emission..producer], StringComparison.Ordinal);
+        Assert.DoesNotContain("analytics.RecordUploadStartAsync", component, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

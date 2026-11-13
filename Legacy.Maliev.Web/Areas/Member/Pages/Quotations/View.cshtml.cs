@@ -10,19 +10,30 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Legacy.Maliev.Web.Areas.Member.Pages.Quotations;
 
+/// <summary>Loads an owned quotation and records an accept or decline decision using its expected operation identifier.</summary>
+/// <param name="sessionManager">The server-side account session manager used to resolve identity and manage sign-in state.</param>
+/// <param name="quotationClient">The typed client reading or submitting quotation operations for this page.</param>
+/// <param name="memberDetailClient">The typed client supplying associated member detail data.</param>
 [Authorize]
 public sealed class View(
     IAccountSessionManager sessionManager,
     ICustomerQuotationClient quotationClient,
     ICustomerMemberDetailClient memberDetailClient) : PageModel
 {
+    /// <summary>The owned quotation details and safe decision feedback.</summary>
     public MemberQuotationDetailDisplayModel DisplayModel { get; private set; } = MemberQuotationDetailDisplayModel.Empty;
 
+    /// <summary>The operation identifier used to correlate and validate this owned submission.</summary>
     public string OperationId { get; private set; } = string.Empty;
 
+    /// <summary>The one-time outcome message carried across this workflow's post/redirect/get boundary.</summary>
     [TempData]
     public string? Notification { get; set; }
 
+    /// <summary>Loads the requested quotation through the member ownership boundary.</summary>
+    /// <param name="id">The identifier of the owned quotation to display.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>The quotation detail page, a not-found result, or an authentication challenge.</returns>
     public async Task<IActionResult> OnGetAsync(int id, CancellationToken cancellationToken)
     {
         if (id <= 0)
@@ -33,6 +44,12 @@ public sealed class View(
         return await LoadAsync(id, cancellationToken);
     }
 
+    /// <summary>Validates the expected operation identifier and records the customer's quotation decision.</summary>
+    /// <param name="quotationId">The identifier of the owned quotation receiving the decision.</param>
+    /// <param name="accepted">Whether the customer accepted rather than declined the quotation.</param>
+    /// <param name="operationId">The submitted operation identifier that must match the expected quotation-decision operation.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A detail redirect after success, the detail page with errors, a bad-request result, or an authentication challenge.</returns>
     public async Task<IActionResult> OnPostDecisionAsync(
         int quotationId,
         bool accepted,

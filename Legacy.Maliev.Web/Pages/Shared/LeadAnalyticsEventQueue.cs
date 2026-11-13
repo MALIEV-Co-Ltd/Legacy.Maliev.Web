@@ -19,6 +19,30 @@ namespace Legacy.Maliev.Web.Pages.Shared
         private const string TempDataKey = "Maliev.LeadAnalyticsEvent";
         // Pre-605 consumers treat every event under the legacy key as a conversion.
         private const string ContactTempDataKey = "Maliev.ContactAnalyticsEvent.v1";
+        private const string FileCompletionTempDataKey = "Maliev.FileUploadCompletionEvent.v1";
+
+        internal static void TryQueueFileCompletion(ITempDataDictionary tempData, int requestReference, string? transactionId)
+        {
+            if (requestReference <= 0 || !string.Equals(transactionId, $"request-{requestReference.ToString(CultureInfo.InvariantCulture)}", StringComparison.Ordinal))
+                return;
+
+            try { tempData[FileCompletionTempDataKey] = transactionId; }
+            catch (Exception) { /* Analytics must not prevent the submission response. */ }
+        }
+
+        internal static bool TryConsumeFileCompletion(ITempDataDictionary tempData, out string? transactionId)
+        {
+            transactionId = null;
+            try
+            {
+                if (!tempData.TryGetValue(FileCompletionTempDataKey, out var value)) return false;
+                if (!tempData.Remove(FileCompletionTempDataKey)) return false;
+                if (value is not string candidate || !IsValidRequestTransactionId(candidate)) return false;
+                transactionId = candidate;
+                return true;
+            }
+            catch (Exception) { return false; }
+        }
 
         /// <summary>
         /// Attempts to queue a persisted contact-message event without allowing analytics failures to escape.
@@ -53,9 +77,9 @@ namespace Legacy.Maliev.Web.Pages.Shared
         /// </summary>
         /// <param name="tempData">The request TempData dictionary.</param>
         /// <param name="transactionId">The API-issued quotation-request transaction identifier.</param>
-        /// <param name="service">The controlled MALIEV service context.</param>
         /// <param name="hasFiles">Whether the submitted request included files.</param>
-        /// <param name="fileUploadCompleted">Whether every submitted file was stored and linked.</param>
+        /// <param name="requestedItem">The submitted manufacturing item used to resolve a controlled service context.</param>
+        /// <param name="journeyId">The non-PII GUID identifying this manual-quotation funnel journey.</param>
         /// <param name="failure">The validation, serialization, or TempData failure, when unsuccessful.</param>
         /// <returns><see langword="true" /> when the event was queued.</returns>
         internal static bool TryQueueManualQuotation(
@@ -400,6 +424,10 @@ namespace Legacy.Maliev.Web.Pages.Shared
         public string? JourneyId { get; }
 
         /// <summary>Builds the GA4 conversion projection from the persisted lead identity.</summary>
+        /// <param name="eventName">The event name assigned to the persisted lead-conversion projection.</param>
+        /// <param name="currency">The optional currency code included when nonblank.</param>
+        /// <param name="value">The optional conversion value included when supplied.</param>
+        /// <returns>The controlled dictionary projection for a validated persisted quotation.</returns>
         public object BuildGenerateLeadConversionEvent(string eventName = "generate_lead", string currency = "THB", decimal? value = null)
         {
             if (!this.IsPersistedQuotation)

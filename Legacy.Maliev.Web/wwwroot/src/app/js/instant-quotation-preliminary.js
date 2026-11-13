@@ -132,7 +132,8 @@
             outputContext.fillStyle = '#fff';
             outputContext.fillRect(0, 0, outputWidth, outputHeight);
             outputContext.drawImage(canvas, cropX, cropY, cropWidth, cropHeight, 0, 0, outputWidth, outputHeight);
-            return output.toDataURL('image/png');
+            var cropped = output.toDataURL('image/webp');
+            return cropped.indexOf('data:image/webp;base64,') === 0 ? cropped : image.src;
         } catch (error) {
             return image.src;
         }

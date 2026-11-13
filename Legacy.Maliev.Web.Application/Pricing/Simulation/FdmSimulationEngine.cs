@@ -29,6 +29,27 @@ public static class FdmSimulationEngine
             request.Pose,
             request.Profile,
             request.Budget);
+        return EstimateLayers(request, layers, null);
+    }
+
+    // Only the admitted-byte server path may use this source recovery policy.
+    internal static SimulationResult EstimateRecoverable(SimulationRequest request)
+    {
+        try { return Estimate(request); }
+        catch (SimulationGeometryException exception) when (
+            exception.ReasonCode is "geometry_requires_review" or "geometry_slice_empty")
+        {
+            request.Budget.CancellationToken.ThrowIfCancellationRequested();
+            var recovery = VoxelReconstruction.Build(
+                request.Mesh, request.Pose, request.Profile.LayerHeightMm, request.Budget);
+            return EstimateLayers(request, recovery.Layers, recovery.Provenance);
+        }
+    }
+
+    private static SimulationResult EstimateLayers(
+        SimulationRequest request, IReadOnlyList<LayerContours> layers,
+        VoxelReconstructionInfo? geometryReconstruction)
+    {
         ModelPathPlan model = ModelPathPlanner.Build(layers, request.Profile);
         SupportPlan support = request.Profile.Support.Mode == "tree"
             ? TreeSupportPlanner.Build(request.Mesh, layers, model, request.Profile)
@@ -56,7 +77,8 @@ public static class FdmSimulationEngine
             roles,
             motion,
             support.Regions,
-            diagnostics);
+            diagnostics,
+            geometryReconstruction);
     }
 
     private static RoleDeposition[] BuildRoleLedger(

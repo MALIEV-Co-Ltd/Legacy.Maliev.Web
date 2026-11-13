@@ -72,22 +72,34 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
                 "CareerDetailPage.razor",
                 "CareerIndexPage.razor",
                 "ChangeEmailConfirmationPage.razor",
+                "CncCuttingToolsPage.razor",
+                "CncFeedsAndSpeedsPage.razor",
+                "CncGeometryAndWorkholdingPage.razor",
+                "CncHolesAndTolerancesPage.razor",
                 "CncMachiningPage.razor",
+                "CncMachiningProcessesPage.razor",
                 "CncMachiningSpecificationPage.razor",
                 "ContactPage.razor",
                 "CustomManufacturingPage.razor",
                 "EmailConfirmationPage.razor",
                 "ErrorPage.razor",
                 "FinishingAndColorPage.razor",
+                "FinishingHeatTreatmentPage.razor",
+                "FinishingSurfaceFinishesPage.razor",
                 "ForgotPasswordPage.razor",
                 "GuidelinesPage.razor",
                 "HomePage.razor",
+                "InspectionMeasuringPartsPage.razor",
                 "InstantQuotationPage.razor",
                 "KnowledgeIndexPage.razor",
                 "LegalPage.razor",
                 "LineContactPage.razor",
                 "LoginPage.razor",
                 "LogoutPage.razor",
+                "ManufacturingProcessSelectionPage.razor",
+                "MaterialsEngineeringPlasticsPage.razor",
+                "MaterialsMetalsPage.razor",
+                "MaterialsSelectionPage.razor",
                 "MemberAccountIndexPage.razor",
                 "MemberAddressPage.razor",
                 "MemberChangeEmailPage.razor",
@@ -155,7 +167,7 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         Assert.Contains($"<meta name=\"keywords\" content=\"{keywords}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:title\" content=\"{title}\"", source, StringComparison.Ordinal);
         Assert.Contains($"<meta property=\"og:description\" content=\"{description}\"", source, StringComparison.Ordinal);
-        Assert.Contains("<link rel=\"preload\" as=\"image\" href=\"/src/images/services/scanning/scanning-hero.webp\"", source, StringComparison.Ordinal);
+        Assert.Contains("<link rel=\"preload\" as=\"image\" href=\"/src/images/services/hero-illustrations/scanning-hero-raptor-x-unbranded.webp\"", source, StringComparison.Ordinal);
         Assert.Contains($">{heading}<", source, StringComparison.Ordinal);
         Assert.Contains($">{lead}<", source, StringComparison.Ordinal);
         Assert.Contains("data-migration-route-owner=\"blazor-static-ssr\"", source, StringComparison.Ordinal);
@@ -222,7 +234,7 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         Assert.Equal(faqQuestion, faq.RootElement.GetProperty("mainEntity")[0].GetProperty("name").GetString());
         Assert.Equal(
             culture == "th"
-                ? "งานสแกนอย่างเดียวโดยทั่วไปส่งมอบเป็นเมชสามเหลี่ยม เช่น STL ส่วน DWG เป็นแบบเขียน 2D จึงต้องมีขอบเขตงาน Reverse Engineering และเขียนแบบเพิ่ม ไม่มีตัวเลขลดราคาแบบตายตัว เพราะงาน CAD/DWG ขึ้นกับรูปทรงและรายละเอียดของแบบ เราสามารถแยกราคาเป็นงานสแกนอย่างเดียวกับงาน CAD/DWG ได้"
+                ? "งานสแกนอย่างเดียวโดยทั่วไปส่งมอบเป็น mesh สามเหลี่ยม เช่น STL ส่วน DWG เป็นแบบเขียน 2D จึงต้องมีขอบเขตงาน Reverse Engineering และเขียนแบบเพิ่ม ไม่มีตัวเลขลดราคาแบบตายตัว เพราะงาน CAD/DWG ขึ้นกับรูปทรงและรายละเอียดของแบบ เราสามารถแยกราคาเป็นงานสแกนอย่างเดียวกับงาน CAD/DWG ได้"
                 : "A scan-only scope normally delivers a triangular mesh such as STL. DWG is a 2D engineering drawing, so it requires an additional reverse-engineering and drafting scope. There is no fixed reduction because CAD/DWG effort depends on the geometry and drawing requirements; we can quote scan-only and CAD/DWG as separate line items.",
             faq.RootElement.GetProperty("mainEntity")[5].GetProperty("acceptedAnswer").GetProperty("text").GetString());
         Assert.Equal(
@@ -240,7 +252,7 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         var pricing = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Components", "Shared", "ServicePricing.razor"));
 
         Assert.Contains("Scan-only normally delivers STL mesh data.", content, StringComparison.Ordinal);
-        Assert.Contains("งานสแกนอย่างเดียวโดยทั่วไปส่งมอบเป็นเมช STL", content, StringComparison.Ordinal);
+        Assert.Contains("งานสแกนอย่างเดียวโดยทั่วไปส่งมอบเป็น mesh STL", content, StringComparison.Ordinal);
         Assert.Contains("Raw 3D scanning with STL output starts at THB 2,500.", content, StringComparison.Ordinal);
         Assert.Contains("งานสแกน 3D พร้อมไฟล์ STL ดิบเริ่มต้น 2,500 บาท", content, StringComparison.Ordinal);
         Assert.Contains("Scan-only normally delivers a triangular mesh such as STL.", content, StringComparison.Ordinal);
@@ -249,7 +261,7 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         Assert.Contains("Can you scan at our factory or site?", content, StringComparison.Ordinal);
         Assert.Contains("We provide onsite scanning when a part is very large", content, StringComparison.Ordinal);
         Assert.Contains("Direct scan mesh", pricing, StringComparison.Ordinal);
-        Assert.Contains("เมชจากการสแกนโดยตรง", pricing, StringComparison.Ordinal);
+        Assert.Contains("mesh จากการสแกนโดยตรง", pricing, StringComparison.Ordinal);
         Assert.Contains("Quoted after site review", pricing, StringComparison.Ordinal);
     }
 
@@ -290,6 +302,51 @@ public sealed partial class ThreeDimensionalScanningStaticSsrRouteTests : IClass
         Assert.Contains("\"@type\":\"FAQPage\"", WebUtility.HtmlDecode(source), StringComparison.Ordinal);
         Assert.Contains("GTM-KHDDLVRR", source, StringComparison.Ordinal);
         Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
+    }
+
+    /// <summary>Preserves the original per-project accuracy limitation in both public renderers.</summary>
+    /// <param name="useBlazorRoute">Whether the routed component owns the request.</param>
+    /// <param name="culture">The requested public content language.</param>
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(false, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "th")]
+    public async Task Route_PreservesOriginalPerProjectAccuracyDisclaimer(bool useBlazorRoute, string culture)
+    {
+        await using var application = factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:Services", useBlazorRoute.ToString()));
+        using var client = CreateClient(application);
+        using var response = await client.GetAsync($"/services/3d-scanning?culture={culture}");
+        var html = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+        var content = Assert.Single(Regex.Matches(html,
+            "<main\\b(?=[^>]*data-migration-component=\"three-dimensional-scanning-content\")[^>]*>(?<content>[\\s\\S]*?)</main>",
+            RegexOptions.CultureInvariant));
+        Assert.Equal(useBlazorRoute, content.Value.Contains(
+            "data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        var limitations = Assert.Single(Regex.Matches(content.Groups["content"].Value,
+            "<section\\b(?=[^>]*id=\"scanning-limitations\")[^>]*>(?<content>[\\s\\S]*?)</section>",
+            RegexOptions.CultureInvariant));
+        var note = Assert.Single(Regex.Matches(limitations.Groups["content"].Value,
+            "<div class=\"service-note\">(?<copy>[^<]*)</div>", RegexOptions.CultureInvariant));
+
+        if (culture == "th")
+        {
+            // Original bb477 and frozen edf4 differ only in the project noun; retain the complete limitation.
+            Assert.Contains(note.Groups["copy"].Value, new[]
+            {
+                "รายละเอียดและความไม่แน่นอนขึ้นกับขนาด ผิว การเข้าถึง สภาพแวดล้อม การตั้งเครื่อง วิธีจัดแนว และผลลัพธ์ที่ต้องการ จึงไม่ควรใช้ตัวเลขความแม่นยำเดียวกับทุกโครงการ",
+                "รายละเอียดและความไม่แน่นอนขึ้นกับขนาด ผิว การเข้าถึง สภาพแวดล้อม การตั้งเครื่อง วิธีจัดแนว และผลลัพธ์ที่ต้องการ จึงไม่ควรใช้ตัวเลขความแม่นยำเดียวกับทุกโปรเจ็ค"
+            });
+        }
+        else
+        {
+            Assert.Equal("Achievable detail and measurement uncertainty depend on object size, surface, access, environment, scanner setup, alignment strategy, and requested output. A single accuracy number cannot describe every project.",
+                note.Groups["copy"].Value);
+        }
     }
 
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) =>

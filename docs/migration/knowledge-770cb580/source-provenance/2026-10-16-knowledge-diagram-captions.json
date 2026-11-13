@@ -1,0 +1,146 @@
+[
+  {
+    "slug": "visual-quotation-package",
+    "page": "Guidelines",
+    "anchor": "files",
+    "alt": "A CAD model, dimensioned drawing and four parts all carry revision R2.",
+    "altTh": "โมเดล CAD แบบระบุขนาด และชิ้นงานสี่ชิ้นใช้ฉบับแก้ไข R2 ตรงกัน",
+    "caption": "1: the model defines nominal geometry. 2: the matching drawing adds tolerances and requirements. 3: identify quantity and revision for each part; the four-part R2 batch is an example, not a minimum order.",
+    "captionTh": "1: โมเดลกำหนดรูปทรงตามแบบ 2: แบบที่ตรงกันระบุค่าความคลาดเคลื่อนและข้อกำหนด 3: ระบุจำนวนและฉบับแก้ไขของแต่ละชิ้นงาน ชุด R2 สี่ชิ้นนี้เป็นเพียงตัวอย่าง ไม่ใช่จำนวนสั่งขั้นต่ำ"
+  },
+  {
+    "slug": "visual-review-loop",
+    "page": "Workflow",
+    "anchor": "approval",
+    "alt": "A four-stage review chain with a return loop from prototype to review.",
+    "altTh": "ลำดับการทบทวนสี่ขั้น พร้อมลูกศรย้อนจากต้นแบบกลับไปทบทวน",
+    "caption": "1: define the design. 2: review requirements and open questions. 3: evaluate a prototype when included in the agreed scope. 4: approve the identified revision. A change returns to review; production approval does not follow automatically from making a prototype.",
+    "captionTh": "1: กำหนดแบบ 2: ทบทวนข้อกำหนดและประเด็นที่ยังไม่ชัดเจน 3: ประเมินต้นแบบเมื่ออยู่ในขอบเขตที่ตกลง 4: อนุมัติฉบับแก้ไขที่ระบุ เมื่อมีการเปลี่ยนแบบต้องกลับไปทบทวน การสร้างต้นแบบไม่ได้หมายถึงการอนุมัติผลิตโดยอัตโนมัติ"
+  },
+  {
+    "slug": "visual-cnc-preparation",
+    "page": "Specifications/CNC-Machining",
+    "anchor": "files",
+    "alt": "Model, critical requirements and a supported machining setup are considered together.",
+    "altTh": "พิจารณาโมเดล ข้อกำหนดสำคัญ และการจับยึดขณะกัดร่วมกัน",
+    "caption": "1: communicate nominal shape. 2: identify functional dimensions, datums, threads and finish requirements. 3: review how the stock is supported and how the cutter reaches the feature. This schematic is a planning concept, not a production fixture design.",
+    "captionTh": "1: สื่อสารรูปทรงตามแบบ 2: ระบุขนาดที่สำคัญต่อการใช้งาน ดาตัม เกลียว และผิวงาน 3: ทบทวนการรองรับชิ้นงานและทางเข้าของเครื่องมือตัด ภาพนี้อธิบายแนวคิดการวางแผน ไม่ใช่แบบฟิกซ์เจอร์สำหรับผลิตจริง"
+  },
+  {
+    "slug": "visual-feeds-speeds",
+    "page": "CNC/Feeds-and-Speeds",
+    "anchor": "milling",
+    "alt": "Cutter rotation n and travel vf, with a milling example recalculated at a lower RPM.",
+    "altTh": "การหมุน n และการเคลื่อนที่ vf ของดอกกัด พร้อมตัวอย่างคำนวณอัตราป้อนใหม่เมื่อจำกัดรอบ",
+    "caption": "1: rotation and linear travel are different quantities. 2: assumed inputs D = 10 mm, Vc = 120 m/min, fz = 0.04 mm/tooth and zc = 4 give 3819.7 rpm and 611.2 mm/min. At 3000 rpm, maintaining the same feed per tooth requires 480 mm/min. These are arithmetic examples, not recommended cutting settings.",
+    "captionTh": "1: การหมุนและการเคลื่อนที่เชิงเส้นเป็นคนละปริมาณ 2: สมมติ D = 10 มม., Vc = 120 เมตร/นาที, fz = 0.04 มม./ฟัน และ zc = 4 จะได้ 3819.7 รอบ/นาที และ 611.2 มม./นาที เมื่อจำกัดที่ 3000 รอบ/นาที ต้องลดอัตราป้อนเป็น 480 มม./นาทีเพื่อคงอัตราป้อนต่อฟันเดิม ตัวเลขนี้ใช้แสดงวิธีคำนวณ ไม่ใช่คำแนะนำค่าตัด"
+  },
+  {
+    "slug": "visual-cutting-tool-reach",
+    "page": "CNC/Cutting-Tools",
+    "anchor": "holding",
+    "alt": "A tool section distinguishes exposed overhang, cutting length, smooth shank and flutes.",
+    "altTh": "ภาพตัดเครื่องมือแยกระยะยื่นนอกหัวจับ ความยาวคมตัด ก้านเรียบ และร่องคมตัด",
+    "caption": "1: Lₒ is exposed tool overhang from the holder face to the tip. 2: Lc is the cutting length. 3: the smooth shank is not a cutting edge. 4: flutes remove material and evacuate chips. Keep overhang only as long as access requires; check the holder and non-cutting surfaces throughout the path. Proportions are schematic.",
+    "captionTh": "1: Lₒ คือระยะยื่นจากหน้าหัวจับถึงปลายเครื่องมือ 2: Lc คือความยาวคมตัด 3: ก้านเรียบไม่ใช่คมตัด 4: ร่องคมตัดใช้ตัดวัสดุและระบายเศษ ใช้ระยะยื่นเท่าที่จำเป็นต่อการเข้าถึง และตรวจสอบการหลบของหัวจับกับส่วนที่ไม่ใช่คมตัดตลอดแนวเดิน ภาพไม่ได้แสดงสัดส่วนจริง"
+  },
+  {
+    "slug": "visual-hole-depths",
+    "page": "CNC/Holes-and-Tolerances",
+    "anchor": "holes-threads",
+    "alt": "Sections of a blind threaded hole, through hole and counterbore.",
+    "altTh": "ภาพตัดรูเกลียวตัน รูทะลุ และรูคว้านบ่า",
+    "caption": "1: blind-hole total drill depth h₁ includes the drill point; full-thread engagement h₂ stops earlier and needs bottom clearance. 2: a through hole needs diameter and location requirements. 3: a counterbore needs both diameters and the recess depth h₃. Thread marks and clearances are exaggerated for explanation; no standard thread profile or fixed allowance is specified.",
+    "captionTh": "1: ความลึกเจาะรวม h₁ ของรูตันรวมปลายดอกสว่าน ส่วนระยะเกลียวเต็ม h₂ สิ้นสุดก่อนถึงก้นรูและต้องเผื่อระยะหลบ 2: รูทะลุต้องระบุเส้นผ่านศูนย์กลางและตำแหน่ง 3: รูคว้านบ่าต้องระบุเส้นผ่านศูนย์กลางทั้งสองและความลึกบ่า h₃ ภาพขยายรอยเกลียวและระยะหลบเพื่ออธิบาย ไม่ได้กำหนดรูปเกลียวมาตรฐานหรือระยะเผื่อคงที่"
+  },
+  {
+    "slug": "visual-machining-access",
+    "page": "CNC/Machining-Processes",
+    "anchor": "axes",
+    "alt": "A fixed vertical tool approach beside an angled tool orientation to the same part.",
+    "altTh": "ทางเข้าเครื่องมือแนวดิ่งคงที่เทียบกับแนวเอียงสำหรับชิ้นงานเดียวกัน",
+    "caption": "1: three-axis cutting uses linear X, Y and Z motion with a fixed approach orientation for that setup. 2: rotary positioning can expose angled features; indexed 3+2 holds the selected orientation during cutting, while simultaneous five-axis changes it during the cut. The sketch illustrates access only, not greater accuracy or confirmed machine availability.",
+    "captionTh": "1: การกัดสามแกนเคลื่อนที่เชิงเส้น X, Y และ Z โดยคงทิศทางเข้ากัดในแต่ละการจับงาน 2: การจัดตำแหน่งด้วยแกนหมุนช่วยเข้าถึงส่วนที่เอียง โดย 3+2 คงมุมที่เลือกขณะกัด ส่วนห้าแกนพร้อมกันเปลี่ยนมุมระหว่างกัด ภาพอธิบายการเข้าถึงเท่านั้น ไม่ได้หมายถึงความแม่นยำที่สูงกว่าหรือยืนยันเครื่องจักรที่มีให้บริการ"
+  },
+  {
+    "slug": "visual-service-inputs",
+    "page": "Specifications/Index",
+    "anchor": null,
+    "alt": "Three panels distinguish digital geometry, a dimensioned drawing and a physical sample.",
+    "altTh": "ภาพสามส่วนแยกข้อมูลจากโมเดลดิจิทัล แบบระบุขนาด และชิ้นงานจริง",
+    "caption": "1: a model communicates nominal geometry and units. 2: a drawing specifies tolerances and requirements that shape alone cannot express. 3: an existing sample reveals actual condition, including wear or damage; it does not automatically establish the original nominal dimensions. Submit the inputs relevant to the required service and identify unresolved differences.",
+    "captionTh": "1: โมเดลสื่อสารรูปทรงตามแบบและหน่วย 2: แบบระบุค่าความคลาดเคลื่อนและข้อกำหนดที่รูปทรงอย่างเดียวบอกไม่ได้ 3: ชิ้นงานเดิมแสดงสภาพจริง รวมถึงการสึกหรือความเสียหาย แต่ไม่ได้ยืนยันขนาดเดิมตามแบบโดยอัตโนมัติ ส่งข้อมูลให้เหมาะกับบริการและแจ้งจุดที่ยังไม่ตรงกัน"
+  },
+  {
+    "slug": "visual-material-criteria",
+    "page": "Materials/Selection",
+    "anchor": "requirements",
+    "alt": "Three engineering sketches show a loaded cantilever, fluid and temperature exposure, and clearance between mating parts.",
+    "altTh": "ภาพทางวิศวกรรมแสดงคานรับแรง การสัมผัสของเหลวและอุณหภูมิ และระยะห่างระหว่างชิ้นส่วนประกอบ",
+    "caption": "1: define load and allowable deflection. 2: identify actual fluids and temperature. 3: define the mating clearance. Assess these requirements together before choosing a grade; drawings are schematic.",
+    "captionTh": "1: ระบุแรงและการโก่งตัวที่ยอมรับได้ 2: ระบุของเหลวและอุณหภูมิจริง 3: กำหนดระยะห่างของคู่ประกอบ พิจารณาร่วมกันก่อนเลือกเกรดวัสดุ ภาพเป็นแผนผังอธิบาย"
+  },
+  {
+    "slug": "visual-metal-designation",
+    "page": "Materials/Metals",
+    "anchor": "aluminium",
+    "alt": "Brackets separate the alloy or grade from the condition in 6061-T6 and 42CrMo4+QT.",
+    "altTh": "วงเล็บแยกชื่อเกรดออกจากสภาพวัสดุในรหัส 6061-T6 และ 42CrMo4+QT",
+    "caption": "1 identifies the alloy or steel grade. 2 identifies the temper or treatment condition: T6 for the aluminium example and quenched-and-tempered (+QT) for the steel example. These labels are not a complete product specification.",
+    "captionTh": "1 ระบุโลหะผสมหรือเกรดเหล็ก 2 ระบุสภาพวัสดุหรือการอบชุบ: T6 ในตัวอย่างอะลูมิเนียม และชุบแข็งแล้วอบคืนไฟ (+QT) ในตัวอย่างเหล็ก รหัสเหล่านี้ยังไม่ใช่ข้อกำหนดผลิตภัณฑ์ที่ครบถ้วน"
+  },
+  {
+    "slug": "visual-polymer-creep",
+    "page": "Materials/Engineering-Plastics",
+    "anchor": "peek-ptfe",
+    "alt": "A cantilever bends under a constant force; a qualitative deflection versus time curve rises without numerical property values.",
+    "altTh": "คานโก่งตัวเมื่อรับแรงคงที่ และกราฟเชิงคุณภาพแสดงการโก่งตัวเพิ่มตามเวลาโดยไม่มีค่าคุณสมบัติวัสดุเชิงตัวเลข",
+    "caption": "1: sustained load on a plastic beam. 2: qualitative increase in deflection over time at constant force. The curve is illustrative, not measured data or a comparison of polymer grades; temperature, grade, and geometry matter.",
+    "captionTh": "1: คานพลาสติกภายใต้แรงต่อเนื่อง 2: การโก่งตัวเพิ่มตามเวลาขณะรับแรงคงที่ เป็นแนวโน้มเพื่ออธิบาย ไม่ใช่ข้อมูลวัดหรือกราฟเปรียบเทียบเกรดพลาสติก อุณหภูมิ เกรด และรูปทรงมีผลต่อพฤติกรรม"
+  },
+  {
+    "slug": "visual-process-routes",
+    "page": "Manufacturing/Process-Selection",
+    "anchor": "routes",
+    "alt": "Cross-sections show removing material from a pocket, depositing successive layers, and bending a sheet into an angle.",
+    "altTh": "ภาพตัดแสดงการกัดเนื้อวัสดุออกเพื่อทำโพ็กเก็ต การเติมชั้นวัสดุ และการพับแผ่นให้เป็นมุม",
+    "caption": "1: subtractive machining removes material from stock. 2: additive manufacturing builds successive layers. 3: sheet forming changes the shape of a sheet. These are process principles, not interchangeable routes for every geometry or material.",
+    "captionTh": "1: งานตัดเฉือนเอาเนื้อวัสดุออกจากชิ้นตั้งต้น 2: การผลิตแบบเติมเนื้อสร้างวัสดุทีละชั้น 3: การขึ้นรูปแผ่นเปลี่ยนรูปทรงของแผ่น เป็นหลักการของกระบวนการ ไม่ได้หมายความว่าทุกรูปทรงหรือวัสดุใช้แทนกันได้"
+  },
+  {
+    "slug": "visual-treatment-allowance",
+    "page": "Finishing/Heat-Treatment",
+    "anchor": "sequence",
+    "alt": "Three schematic stages show rough stock with allowance, exaggerated bow after treatment, and a final ground straight feature.",
+    "altTh": "สามขั้นตอนแสดงเนื้อเผื่อหลังกลึงหยาบ การโก่งหลังอบชุบที่วาดเกินจริง และผิวสำคัญหลังเจียระไนขั้นสุดท้าย",
+    "caption": "1: leave an agreed machining allowance a around the final profile (dashed). 2: treatment may cause distortion; the bow is exaggerated. 3: finish critical surfaces and inspect. This planning sketch is not a universal treatment sequence or an allowance value.",
+    "captionTh": "1: ตกลงเนื้อเผื่อตัดเฉือน a รอบรูปทรงสุดท้ายที่แสดงด้วยเส้นประ 2: อบชุบอาจทำให้เสียรูป โดยภาพขยายการโก่งเกินจริง 3: เก็บผิวสำคัญและตรวจสอบ ภาพนี้ไม่ใช่ลำดับอบชุบหรือค่าเนื้อเผื่อที่ใช้ได้กับทุกงาน"
+  },
+  {
+    "slug": "visual-thermal-measurement",
+    "page": "Inspection/Measuring-Parts",
+    "anchor": "temperature",
+    "alt": "An assumed 100 mm length at 20 degrees Celsius increases by 0.012 mm for a uniform ten degree rise using an assumed expansion coefficient of twelve times ten to the minus six per kelvin.",
+    "altTh": "ตัวอย่างความยาว 100 มม. ที่ 20 องศาเซลเซียส ยาวขึ้น 0.012 มม. เมื่ออุณหภูมิเพิ่มสม่ำเสมอ 10 องศา โดยสมมติสัมประสิทธิ์การขยายตัว 12 คูณ 10 ยกกำลังลบ 6 ต่อเคลวิน",
+    "caption": "1: assumed length at 20 °C. 2: predicted length at 30 °C is 100.012 mm. Expansion is greatly exaggerated in the drawing. The coefficient is an illustrative assumption, not a material specification; real corrections also consider gradients and instrument expansion.",
+    "captionTh": "1: ความยาวสมมติที่ 20 °C 2: ความยาวคำนวณที่ 30 °C เท่ากับ 100.012 มม. ภาพขยายการยืดตัวเกินจริงอย่างมาก ค่าสัมประสิทธิ์เป็นเพียงสมมติเพื่ออธิบาย ไม่ใช่ข้อกำหนดวัสดุ การแก้ค่าจริงต้องพิจารณาความต่างอุณหภูมิภายในและการขยายตัวของเครื่องมือด้วย"
+  },
+  {
+    "slug": "visual-print-orientation",
+    "page": "Specifications/3D-Printing",
+    "anchor": "process",
+    "alt": "The same L-shaped section is printed in two orientations. Layer planes are perpendicular to the vertical Z build direction; one orientation shows support below an overhang.",
+    "altTh": "ภาพหน้าตัดรูปตัวแอลเดียวกันในสองทิศทางพิมพ์ ระนาบชั้นตั้งฉากกับทิศทางสร้างแนวตั้ง Z และมีวัสดุรองรับใต้ส่วนยื่นในหนึ่งทิศทาง",
+    "caption": "1 and 2: the same cross-section in two build orientations. Z indicates build direction; blue lines represent layers. 3: schematic support below an overhang. Support needs depend on process, material, geometry, and settings; no angle threshold or strength guarantee is implied.",
+    "captionTh": "1 และ 2: หน้าตัดเดียวกันในสองทิศทางพิมพ์ Z คือทิศทางสร้างชิ้นงาน เส้นสีน้ำเงินแสดงชั้นพิมพ์ 3: วัสดุรองรับใต้ส่วนยื่น ความจำเป็นของซัพพอร์ตขึ้นกับกระบวนการ วัสดุ รูปทรง และการตั้งค่า ภาพไม่ได้กำหนดเกณฑ์มุมหรือรับประกันความแข็งแรง"
+  },
+  {
+    "slug": "visual-scan-to-cad",
+    "page": "Specifications/3D-Scanning",
+    "anchor": "deliverables",
+    "alt": "A point and triangle representation is compared with a clean CAD profile and reconstructed internal feature, separated by a workflow arrow.",
+    "altTh": "เปรียบเทียบผิวที่แทนด้วยจุดและสามเหลี่ยมกับรูปทรง CAD ที่สร้างใหม่และฟีเจอร์ภายใน โดยมีลูกศรแสดงขั้นตอน",
+    "caption": "1: sampled surface points and triangles. 2: a reconstructed CAD interpretation. Clean edges or reconstructed features are not proof of measured coverage or accuracy. Confirm missing areas, nominal dimensions, assumptions, and the required deliverable with the engineer.",
+    "captionTh": "1: จุดผิวที่เก็บได้และตาข่ายสามเหลี่ยม 2: แบบ CAD ที่สร้างขึ้นจากการตีความ ขอบเรียบหรือฟีเจอร์ที่สร้างใหม่ไม่ใช่หลักฐานว่าพื้นที่นั้นถูกวัดหรือมีความแม่นยำ ต้องตกลงบริเวณที่ขาด มิติที่ต้องการ สมมติฐาน และไฟล์ส่งมอบกับวิศวกร"
+  }
+]

@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Hosting;
+using Legacy.Maliev.Web.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -61,7 +63,7 @@ internal sealed class OwnedWebSurfaceParent : TestingWebApplicationFactory
     protected override IHost CreateHost(IHostBuilder builder)
     {
         // WebSurface uses default TestServer only; no Kestrel port/address configuration is changed.
-        var host = builder.Build();
+        var host = new OwnedWebSurfaceBuiltHost(builder.Build());
         try
         {
             host.Start();
@@ -123,4 +125,33 @@ internal sealed class OwnedWebSurfaceResources : IDisposable
         var failures = Release();
         if (failures.Count > 0) throw new AggregateException("Owned WebSurface cleanup failed.", failures);
     }
+}
+
+/// <summary>Releases only the explicitly created Testing web-root lease after the host's consumers.</summary>
+internal sealed class OwnedWebSurfaceBuiltHost : IHost
+{
+    private readonly IHost host;
+    private readonly OwnedWebSurfaceResources resources = new();
+
+    internal OwnedWebSurfaceBuiltHost(IHost host)
+    {
+        this.host = host;
+        try
+        {
+            if (host.Services.GetService<TestingWebRootLease>() is { } lease) resources.Own(lease);
+        }
+        catch (Exception original)
+        {
+            resources.Own(host);
+            resources.ReleasePreserving(original);
+            throw;
+        }
+        // Reverse disposal releases consumers before the creation-owned lease, even if DI disposal throws.
+        resources.Own(host);
+    }
+
+    public IServiceProvider Services => host.Services;
+    public Task StartAsync(CancellationToken cancellationToken = default) => host.StartAsync(cancellationToken);
+    public Task StopAsync(CancellationToken cancellationToken = default) => host.StopAsync(cancellationToken);
+    public void Dispose() => resources.Dispose();
 }

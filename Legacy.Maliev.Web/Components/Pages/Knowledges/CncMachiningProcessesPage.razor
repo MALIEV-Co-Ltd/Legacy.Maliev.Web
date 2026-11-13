@@ -1,0 +1,22 @@
+@page "/knowledges/cnc/machining-processes"
+@using Legacy.Maliev.Web.Components.Layout
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IStringLocalizer<CncMachiningProcessesContent> ContentLocalizer
+@inject IStringLocalizer<KnowledgeIndexPage> Localizer
+
+@{
+    var context = HttpContextAccessor.HttpContext
+        ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
+    var title = ContentLocalizer["3-axis, 5-axis, EDM and grinding | MALIEV"].Value;
+    var description = ContentLocalizer["Choose a process because it solves a specific access, material or surface requirement. Review combinations of operations and confirm the route for the actual part."].Value;
+    var documentLinks = PublicDocumentLinksDisplayModel.Create(context);
+}
+<PageTitle>@title</PageTitle>
+<HeadContent>
+    <meta name="description" content="@description" />
+    <PublicOpenGraphMetadata Model="@(PublicOpenGraphMetadataDisplayModel.Create(context, title, description, image: null))" />
+    <PublicDocumentLinks Model="documentLinks" />
+</HeadContent>
+<KnowledgeShell CurrentPage="/CNC/Machining-Processes" RouteOwner="blazor-static-ssr">
+    <CncMachiningProcessesContent RouteOwner="blazor-static-ssr" />
+</KnowledgeShell>

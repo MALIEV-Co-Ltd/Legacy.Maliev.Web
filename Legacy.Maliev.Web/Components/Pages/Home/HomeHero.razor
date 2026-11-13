@@ -1,0 +1,33 @@
+@inject IStringLocalizer<HomeContent> Localizer
+
+@if (Variant == "carousel")
+{
+    <div class="home-hero-carousel" data-home-hero-carousel data-pause-label="@L("Pause automatic slides")" data-play-label="@L("Resume automatic slides")" data-motion-paused-label="@L("Automatic slides paused")" role="region" aria-roledescription="@L("carousel")" aria-label="@L("Explore how MALIEV develops parts")">
+        <div class="hero-carousel-stage" id="home-hero-panels" aria-live="off">
+            @for (var i = 0; i < Scenes.Length; i++)
+            {
+                var scene = Scenes[i];
+                <div class="hero-carousel-panel" id="home-hero-@scene.Id" data-hero-scene="@scene.Id" role="group" aria-roledescription="@L("slide")" aria-label="@(i + 1) / 3 · @L(scene.Label)" hidden="@(i != 0)">
+                    <HomeHeroScene Model="@("carousel-" + scene.Id)" />
+                </div>
+            }
+        </div>
+        <div class="landing-container hero-carousel-controls" data-hero-controls hidden>
+            <button type="button" data-hero-toggle aria-controls="home-hero-panels">@L("Pause automatic slides")</button>
+        </div>
+    </div>
+}
+else
+{
+    <HomeHeroScene Model="@Variant" />
+}
+
+@code {
+    [Parameter]
+    public string Variant { get; set; } = "carousel";
+
+    private static readonly (string Id, string Label)[] Scenes =
+        [("assembly", "Assembly"), ("partnership", "Partnership"), ("journey", "Sketch to production")];
+
+    private string L(string key) => Localizer[key].Value;
+}

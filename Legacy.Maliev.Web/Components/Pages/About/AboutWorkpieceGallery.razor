@@ -1,0 +1,36 @@
+@using System.Globalization
+@inject IStringLocalizer<AboutContent> Localizer
+
+@{
+    var photos = new[] {
+        (Image: "reverse-engineering-worn-part.webp", En: "Automotive mounting part", Th: "ขายึดรถยนต์"),
+        (Image: "reverse-workpiece-adapter.webp", En: "Flanged adapter", Th: "อะแดปเตอร์หน้าแปลน"),
+        (Image: "reverse-workpiece-sculpture.webp", En: "Sculpture master", Th: "ต้นแบบประติมากรรม"),
+        (Image: "reverse-workpiece-machinery.webp", En: "Pump impeller", Th: "ใบพัดปั๊ม")
+    };
+}
+<figure class="profile-story-media profile-workpiece-gallery" data-workpiece-gallery aria-label="@T("Illustrative examples of existing workpieces", "ภาพประกอบตัวอย่างชิ้นงานเดิม")" data-pause-label="@T("Pause photos", "หยุดเปลี่ยนภาพ")" data-play-label="@T("Play photos", "เปลี่ยนภาพอัตโนมัติ")">
+    <div class="profile-workpiece-stage" aria-live="off">
+        @for (var i = 0; i < photos.Length; i++) {
+            <img data-workpiece-photo id="workpiece-photo-@i" src="/src/images/landing/@photos[i].Image" width="1200" height="800" loading="lazy" decoding="async" hidden="@(i != 0)" alt="@T("Illustrative sample for reverse engineering: " + photos[i].En, "ภาพประกอบตัวอย่างสำหรับวิศวกรรมย้อนกลับ: " + photos[i].Th)" />
+        }
+    </div>
+    <div class="profile-workpiece-controls" data-workpiece-controls hidden>
+        <div role="group" aria-label="@T("Choose a workpiece photo", "เลือกภาพชิ้นงาน")">
+            @for (var i = 0; i < photos.Length; i++) {
+                <button type="button" data-workpiece-index="@i" aria-controls="workpiece-photo-@i" aria-pressed="@(i == 0 ? "true" : "false")" aria-label="@T(photos[i].En, photos[i].Th)"></button>
+            }
+        </div>
+        <button type="button" data-workpiece-toggle aria-label="@T("Pause photos", "หยุดเปลี่ยนภาพ")"><i class="fas fa-pause workpiece-pause" aria-hidden="true"></i><i class="fas fa-play workpiece-play" aria-hidden="true"></i></button>
+    </div>
+</figure>
+
+@code {
+    private string T(string english, string thai)
+    {
+        var value = Localizer[english];
+        return value.ResourceNotFound
+            ? CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "th" ? thai : english
+            : value.Value;
+    }
+}

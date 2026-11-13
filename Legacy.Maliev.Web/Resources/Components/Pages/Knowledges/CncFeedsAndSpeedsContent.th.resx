@@ -1,0 +1,158 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+  <data name="CNC feeds and speeds: calculate, then verify" xml:space="preserve">
+    <value>อัตราป้อนและความเร็วตัด CNC: คำนวณแล้วตรวจสอบ</value>
+  </data>
+  <data name="Connect cutting speed, spindle speed and feed with the actual tool, material, engagement and machine limits. Worked metric examples show how to keep units and assumptions consistent." xml:space="preserve">
+    <value>เชื่อมโยงความเร็วตัด ความเร็วรอบ และอัตราป้อนกับเครื่องมือตัด วัสดุ ระยะกินงาน และขีดจำกัดของเครื่องจริง ตัวอย่างระบบเมตริกช่วยให้ใช้หน่วยและสมมติฐานได้สอดคล้องกัน</value>
+  </data>
+  <data name="Start with the exact tool and operation" xml:space="preserve">
+    <value>เริ่มจากเครื่องมือตัดและลักษณะงานที่ใช้จริง</value>
+  </data>
+  <data name="A useful cutting plan starts with the material grade and condition, tool part number, substrate, coating and operation. Obtain the tool manufacturer’s starting data for that combination. A value for side milling cannot automatically become a slotting or drilling value. Check whether the recommendation assumes flood coolant, internal coolant, air or dry cutting, and whether it specifies a particular engagement." xml:space="preserve">
+    <value>แผนการตัดที่ใช้งานได้ต้องเริ่มจากเกรดและสภาพวัสดุ รหัสเครื่องมือตัด วัสดุพื้นฐาน สารเคลือบ และลักษณะงาน ขอค่าตั้งต้นจากผู้ผลิตเครื่องมือสำหรับชุดเงื่อนไขนั้นโดยตรง ค่าสำหรับกัดด้านข้างไม่ควรนำไปใช้กับกัดร่องเต็มหน้าหรือเจาะทันที ตรวจสอบว่าคำแนะนำตั้งอยู่บนการใช้น้ำหล่อเย็นภายนอก ผ่านตัวเครื่องมือ ลม หรือการตัดแห้ง และระบุระยะกินงานไว้หรือไม่</value>
+  </data>
+  <data name="The numbers in this guide are arithmetic examples, not recommended settings for any material, machine or MALIEV service. Confirm tool suitability, workholding and the machine manual before a controlled trial. There is no universal cutting-data table that safely replaces the actual tool data." xml:space="preserve">
+    <value>ตัวเลขในคู่มือนี้เป็นตัวอย่างคำนวณ ไม่ใช่ค่าที่แนะนำสำหรับวัสดุ เครื่องจักร หรือบริการของ MALIEV ต้องตรวจสอบความเหมาะสมของเครื่องมือตัด การจับยึด และคู่มือเครื่องก่อนทดลองอย่างควบคุม ไม่มีตารางค่าตัดสากลที่ใช้แทนข้อมูลของเครื่องมือจริงได้อย่างปลอดภัย</value>
+  </data>
+  <data name="Sandvik Coromant: product-specific cutting data and tool selection" xml:space="preserve">
+    <value>Sandvik Coromant: ข้อมูลการตัดและการเลือกเครื่องมือเฉพาะรุ่น</value>
+  </data>
+  <data name="Define the quantities before calculating" xml:space="preserve">
+    <value>กำหนดความหมายและหน่วยก่อนคำนวณ</value>
+  </data>
+  <data name="Metric cutting quantities" xml:space="preserve">
+    <value>ปริมาณและหน่วยการตัดระบบเมตริก</value>
+  </data>
+  <data name="Quantity" xml:space="preserve">
+    <value>ปริมาณ</value>
+  </data>
+  <data name="Meaning and unit" xml:space="preserve">
+    <value>ความหมายและหน่วย</value>
+  </data>
+  <data name="Vc" xml:space="preserve">
+    <value>Vc</value>
+  </data>
+  <data name="Cutting speed at the cutting diameter, m/min" xml:space="preserve">
+    <value>ความเร็วตัด ณ เส้นผ่านศูนย์กลางที่ตัด หน่วย m/min</value>
+  </data>
+  <data name="D" xml:space="preserve">
+    <value>D</value>
+  </data>
+  <data name="Effective cutting diameter, mm; for turning use workpiece diameter at the cut" xml:space="preserve">
+    <value>เส้นผ่านศูนย์กลางตัดจริง หน่วย mm; งานกลึงใช้เส้นผ่านศูนย์กลางชิ้นงาน ณ จุดตัด</value>
+  </data>
+  <data name="n" xml:space="preserve">
+    <value>n</value>
+  </data>
+  <data name="Spindle speed, rpm (revolutions per minute)" xml:space="preserve">
+    <value>ความเร็วรอบสปินเดิล หน่วย rpm หรือรอบต่อนาที</value>
+  </data>
+  <data name="fz / fn" xml:space="preserve">
+    <value>fz / fn</value>
+  </data>
+  <data name="Feed per tooth, mm/tooth / feed per revolution, mm/rev" xml:space="preserve">
+    <value>ระยะป้อนต่อฟัน หน่วย mm/tooth / ระยะป้อนต่อรอบ หน่วย mm/rev</value>
+  </data>
+  <data name="vf / zc" xml:space="preserve">
+    <value>vf / zc</value>
+  </data>
+  <data name="Linear feed, mm/min / effective cutting teeth per revolution" xml:space="preserve">
+    <value>อัตราป้อนเชิงเส้น หน่วย mm/min / จำนวนฟันตัดที่มีผลต่อรอบ</value>
+  </data>
+  <data name="ap / ae" xml:space="preserve">
+    <value>ap / ae</value>
+  </data>
+  <data name="Axial depth / radial width of cut in milling, mm" xml:space="preserve">
+    <value>ความลึกกินงานตามแนวแกน / ความกว้างกินงานตามแนวรัศมีในงานกัด หน่วย mm</value>
+  </data>
+  <data name="Keep millimetres and metres separate: the factor 1000 converts the cutting-speed units. The spindle relationship is n = 1000 × Vc / (π × D); reversing it gives Vc = π × D × n / 1000. Use the effective diameter at the cutting depth, rather than blindly using the tool’s largest catalog diameter." xml:space="preserve">
+    <value>แยกมิลลิเมตรกับเมตรให้ชัด ตัวคูณ 1000 ใช้แปลงหน่วยความเร็วตัด ความสัมพันธ์คือ n = 1000 × Vc / (π × D) และเมื่อจัดรูปกลับจะได้ Vc = π × D × n / 1000 ใช้เส้นผ่านศูนย์กลางตัดจริงที่ความลึกนั้น ไม่ใช่เลือกเส้นผ่านศูนย์กลางใหญ่ที่สุดในแค็ตตาล็อกเสมอไป</value>
+  </data>
+  <data name="Sandvik Coromant: milling quantities and effective cutting diameter" xml:space="preserve">
+    <value>Sandvik Coromant: ปริมาณงานกัดและเส้นผ่านศูนย์กลางตัดจริง</value>
+  </data>
+  <data name="Milling: feed per tooth and an RPM cap" xml:space="preserve">
+    <value>งานกัด: ระยะป้อนต่อฟันและการจำกัดรอบ</value>
+  </data>
+  <data name="For milling, vf = fz × n × zc. Use the manufacturer’s effective tooth count for the cutter configuration; do not substitute the number of teeth simultaneously touching the part. For an ordinary four-flute end mill with four effective edges, zc is four. Special staggered or multi-row cutters need the supplier’s definition. Feed per tooth and maximum chip thickness are related, but are not always equal." xml:space="preserve">
+    <value>งานกัดใช้ vf = fz × n × zc โดยใช้จำนวนฟันที่มีผลตามที่ผู้ผลิตกำหนดสำหรับชุดเครื่องมือนั้น อย่าใช้จำนวนฟันที่สัมผัสชิ้นงานพร้อมกันมาแทน สำหรับเอ็นมิลล์สี่ฟันทั่วไปที่มีคมตัดทำงานครบสี่คม zc เท่ากับสี่ ส่วนหัวกัดแบบฟันสลับหรือหลายแถวต้องตรวจนิยามของผู้ผลิต ระยะป้อนต่อฟันกับความหนาเศษสูงสุดสัมพันธ์กัน แต่ไม่ได้เท่ากันทุกกรณี</value>
+  </data>
+  <data name="Example assumptions: D = 10 mm, Vc = 120 m/min, fz = 0.04 mm/tooth and zc = 4. Calculate n = 120000 / (π × 10) = 3819.7 rpm and vf = 0.04 × 3819.7 × 4 = 611.2 mm/min. If the permitted spindle speed is only 3000 rpm, recalculate vf = 480 mm/min. Actual Vc then becomes 94.2 m/min." xml:space="preserve">
+    <value>สมมติ D = 10 mm, Vc = 120 m/min, fz = 0.04 mm/tooth และ zc = 4 จะได้ n = 120000 / (π × 10) = 3819.7 rpm และ vf = 0.04 × 3819.7 × 4 = 611.2 mm/min หากอนุญาตให้ใช้รอบได้เพียง 3000 rpm ต้องคำนวณ vf ใหม่เป็น 480 mm/min และความเร็วตัดจริง Vc จะเหลือ 94.2 m/min</value>
+  </data>
+  <data name="Keeping 611.2 mm/min after that speed reduction would raise fz to about 0.0509 mm/tooth. A feed override can therefore change chip loading as well as cycle time. Round the programmed values sensibly, then calculate back from the values actually entered. An RPM cap is a limit, not proof that the resulting lower cutting speed suits the tool." xml:space="preserve">
+    <value>หากคงอัตราป้อน 611.2 mm/min หลังลดรอบ fz จะเพิ่มเป็นประมาณ 0.0509 mm/tooth การปรับ feed override จึงเปลี่ยนภาระต่อฟันด้วย ไม่ใช่เปลี่ยนแค่เวลา ปัดค่าที่จะป้อนเข้าโปรแกรมอย่างเหมาะสม แล้วคำนวณย้อนจากค่าที่ใช้จริง การไม่เกินรอบจำกัดยังไม่ได้ยืนยันว่าความเร็วตัดที่ลดลงเหมาะกับเครื่องมือนั้น</value>
+  </data>
+  <data name="Sandvik Coromant: metric milling formula sheet" xml:space="preserve">
+    <value>Sandvik Coromant: แผ่นสูตรงานกัดระบบเมตริก</value>
+  </data>
+  <data name="Engagement changes the cutting load" xml:space="preserve">
+    <value>ระยะกินงานเปลี่ยนภาระการตัด</value>
+  </data>
+  <data name="Record ap and ae alongside speed and feed. A full-width slot and a light side cut can share RPM and programmed fz while imposing very different loads and chip-clearance demands. At low radial engagement, radial chip thinning can make the maximum chip thinner than the programmed feed per tooth. Entering angle and rounded cutting edges can also change the relationship." xml:space="preserve">
+    <value>บันทึก ap และ ae ควบคู่กับความเร็วและอัตราป้อน การกัดร่องเต็มหน้ากับกัดข้างเบาอาจใช้รอบและ fz เท่ากัน แต่มีภาระตัดและความต้องการระบายเศษต่างกันมาก เมื่อกินงานแนวรัศมีน้อย ปรากฏการณ์ radial chip thinning ทำให้ความหนาเศษสูงสุดต่ำกว่าระยะป้อนต่อฟันที่ตั้งไว้ มุมเข้าตัดและคมตัดโค้งก็เปลี่ยนความสัมพันธ์นี้ได้</value>
+  </data>
+  <data name="Use the tool maker’s engagement correction or a verified CAM model. Do not apply a generic chip-thinning multiplier twice if the supplier or CAM system already compensates. Review corners, entry moves and narrow passages where engagement increases. A feed calculated for a straight light side cut does not automatically remain suitable when the tool encounters a corner." xml:space="preserve">
+    <value>ใช้ค่าชดเชยระยะกินงานจากผู้ผลิตหรือแบบจำลอง CAM ที่ตรวจสอบแล้ว อย่าคูณชดเชย chip thinning ซ้ำ หากข้อมูลผู้ผลิตหรือระบบ CAM ชดเชยไว้แล้ว ตรวจมุม ทางเข้าตัด และช่องแคบที่การกินงานเพิ่มขึ้น อัตราป้อนที่คำนวณสำหรับกัดข้างเบาเป็นเส้นตรงไม่ได้เหมาะกับช่วงเข้าโค้งมุมโดยอัตโนมัติ</value>
+  </data>
+  <data name="Harvey Performance: understanding chip thinning" xml:space="preserve">
+    <value>Harvey Performance: ทำความเข้าใจปรากฏการณ์เศษบางลง</value>
+  </data>
+  <data name="Drilling: feed per revolution" xml:space="preserve">
+    <value>งานเจาะ: ระยะป้อนต่อรอบ</value>
+  </data>
+  <data name="Drilling data commonly specifies fn in mm/rev. Calculate vf = fn × n; do not multiply the stated feed per revolution by the drill’s flute count. Confirm that the control or CAM output expects mm/min or mm/rev. Hole depth, entry angle, coolant delivery and chip evacuation still determine whether a proposed drilling cycle is suitable." xml:space="preserve">
+    <value>ข้อมูลการเจาะมักกำหนด fn เป็น mm/rev ให้คำนวณ vf = fn × n และอย่านำระยะป้อนต่อรอบที่ผู้ผลิตให้ไปคูณจำนวนร่องดอกสว่านซ้ำ ตรวจว่าเครื่องควบคุมหรือเอาต์พุต CAM ต้องการหน่วย mm/min หรือ mm/rev ความลึก มุมปากรู การส่งน้ำหล่อเย็น และการระบายเศษยังเป็นเงื่อนไขสำคัญในการเลือกวัฏจักรเจาะ</value>
+  </data>
+  <data name="Assume an 8 mm drill, Vc = 60 m/min and fn = 0.12 mm/rev. Then n = 2387.3 rpm and vf = 286.5 mm/min. At a 2000 rpm limit, maintaining fn gives vf = 240 mm/min and actual Vc = 50.3 m/min. These assumed inputs illustrate units; obtain real values from the drill supplier." xml:space="preserve">
+    <value>สมมติดอกสว่าน 8 mm, Vc = 60 m/min และ fn = 0.12 mm/rev จะได้ n = 2387.3 rpm และ vf = 286.5 mm/min หากจำกัดรอบที่ 2000 rpm การคง fn เดิมจะได้ vf = 240 mm/min และ Vc จริง = 50.3 m/min ค่าตั้งต้นนี้ใช้สาธิตหน่วยเท่านั้น ค่าที่ใช้ตัดจริงต้องขอจากผู้ผลิตดอกสว่าน</value>
+  </data>
+  <data name="Sandvik Coromant: drilling formulas and feed definitions" xml:space="preserve">
+    <value>Sandvik Coromant: สูตรงานเจาะและนิยามระยะป้อน</value>
+  </data>
+  <data name="Turning: workpiece diameter and constant surface speed" xml:space="preserve">
+    <value>งานกลึง: เส้นผ่านศูนย์กลางชิ้นงานและความเร็วผิวคงที่</value>
+  </data>
+  <data name="For turning, D is the workpiece diameter at the cutting location, not the insert nose radius. At Vc = 150 m/min and D = 50 mm, n is 954.9 rpm. At D = 20 mm, the same target requires 2387.3 rpm. A 2000 rpm clamp limits actual cutting speed at 20 mm to 125.7 m/min." xml:space="preserve">
+    <value>สำหรับงานกลึง D คือเส้นผ่านศูนย์กลางชิ้นงาน ณ ตำแหน่งตัด ไม่ใช่รัศมีปลายเม็ดมีด เมื่อ Vc = 150 m/min และ D = 50 mm จะได้ n = 954.9 rpm แต่ที่ D = 20 mm ต้องใช้ 2387.3 rpm เพื่อให้ได้ความเร็วตัดเดิม หากจำกัดที่ 2000 rpm ความเร็วตัดจริงที่ขนาด 20 mm จะอยู่ที่ 125.7 m/min</value>
+  </data>
+  <data name="Constant surface speed increases RPM as the cutting diameter shrinks. Set a verified maximum speed that respects the machine, chuck, jaws, workpiece balance and holding arrangement. Haas documents G96 for constant surface speed and G50 for its speed limit; other controls must be checked against their own manuals. Confirm feed mode independently: a distance per revolution is not a distance per minute." xml:space="preserve">
+    <value>โหมดความเร็วผิวคงที่จะเพิ่มรอบเมื่อเส้นผ่านศูนย์กลางตัดลดลง ต้องตั้งรอบสูงสุดที่ตรวจสอบแล้วว่าเหมาะกับเครื่อง หัวจับ ปากจับ สมดุลชิ้นงาน และวิธีจับยึด คู่มือ Haas อธิบาย G96 สำหรับความเร็วผิวคงที่และ G50 สำหรับจำกัดรอบ ส่วนเครื่องควบคุมอื่นต้องตรวจคู่มือของตนเอง และตรวจโหมดป้อนแยกด้วย เพราะระยะต่อรอบไม่ใช่ระยะต่อนาที</value>
+  </data>
+  <data name="Haas lathe manual: G96, speed limits and feed modes" xml:space="preserve">
+    <value>คู่มือเครื่องกลึง Haas: G96 การจำกัดรอบ และโหมดป้อน</value>
+  </data>
+  <data name="Verify the complete setup and record the result" xml:space="preserve">
+    <value>ตรวจสอบทั้งระบบและบันทึกผลทดลอง</value>
+  </data>
+  <data name="Check the available torque and power at the selected RPM, feed-axis capability, tool and holder speed ratings, overhang, runout, clearance and fixture support. Observe a controlled first cut for chip evacuation, vibration, spindle load and dimensional drift. Stop for an unstable condition. Change one variable at a time and retain the tool code, material condition, ap, ae, coolant method and wear observations so the next trial has a useful baseline." xml:space="preserve">
+    <value>ตรวจแรงบิดและกำลังที่มีจริง ณ รอบที่เลือก ความสามารถแกนป้อน พิกัดรอบของเครื่องมือและหัวจับ ระยะยื่น การส่าย ระยะหลบ และการรองรับชิ้นงาน ระหว่างตัดทดลองอย่างควบคุมให้สังเกตการระบายเศษ การสั่น โหลดสปินเดิล และขนาดที่เปลี่ยนไป หยุดเมื่อสภาวะไม่เสถียร ปรับครั้งละหนึ่งตัวแปร และเก็บรหัสเครื่องมือ สภาพวัสดุ ap, ae วิธีหล่อเย็น และลักษณะสึกหรอ เพื่อใช้เป็นฐานเปรียบเทียบครั้งต่อไป</value>
+  </data>
+  <data name="Sandvik Coromant: machine and setup considerations for milling" xml:space="preserve">
+    <value>Sandvik Coromant: ข้อพิจารณาเครื่องจักรและการตั้งงานกัด</value>
+  </data>
+  <data name="On this page" xml:space="preserve">
+    <value>เนื้อหาในหน้านี้</value>
+  </data>
+  <data name="In this guide" xml:space="preserve">
+    <value>หัวข้อในคู่มือนี้</value>
+  </data>
+  <data name="A short-overhang end mill cuts the side of an aluminium plate." xml:space="preserve"><value>ดอกเอ็นมิลที่ยื่นจากหัวจับระยะสั้นกำลังกัดด้านข้างแผ่นอะลูมิเนียม</value></data>
+  <data name="Speed and feed calculations belong to a specific cutter, engagement and setup. Illustrative image." xml:space="preserve"><value>การคำนวณความเร็วและอัตราป้อนต้องอ้างอิงเครื่องมือตัด ระยะกินงาน และการจัดงานจริง ภาพประกอบ</value></data>
+  <data name="Cutter rotation n and travel vf, with a milling example recalculated at a lower RPM." xml:space="preserve"><value>การหมุน n และการเคลื่อนที่ vf ของดอกกัด พร้อมตัวอย่างคำนวณอัตราป้อนใหม่เมื่อจำกัดรอบ</value></data>
+  <data name="1: rotation and linear travel are different quantities. 2: assumed inputs D = 10 mm, Vc = 120 m/min, fz = 0.04 mm/tooth and zc = 4 give 3819.7 rpm and 611.2 mm/min. At 3000 rpm, maintaining the same feed per tooth requires 480 mm/min. These are arithmetic examples, not recommended cutting settings." xml:space="preserve"><value>1: การหมุนและการเคลื่อนที่เชิงเส้นเป็นคนละปริมาณ 2: สมมติ D = 10 มม., Vc = 120 เมตร/นาที, fz = 0.04 มม./ฟัน และ zc = 4 จะได้ 3819.7 รอบ/นาที และ 611.2 มม./นาที เมื่อจำกัดที่ 3000 รอบ/นาที ต้องลดอัตราป้อนเป็น 480 มม./นาทีเพื่อคงอัตราป้อนต่อฟันเดิม ตัวเลขนี้ใช้แสดงวิธีคำนวณ ไม่ใช่คำแนะนำค่าตัด</value></data>
+  <data name="Open full-size diagram" xml:space="preserve"><value>เปิดแผนภาพขนาดเต็ม</value></data>
+</root>

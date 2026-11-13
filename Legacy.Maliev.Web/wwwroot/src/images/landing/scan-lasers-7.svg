@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" preserveAspectRatio="none">
+<defs>
+  <radialGradient id="fade"><stop offset="40%" stop-color="white"/><stop offset="100%" stop-color="black"/></radialGradient>
+  <mask id="beam"><rect width="1000" height="600" fill="url(#fade)"/></mask>
+  <g id="lines" fill="none">
+<line x1="100" y1="120" x2="900" y2="120"/>
+<line x1="100" y1="180" x2="900" y2="180"/>
+<line x1="100" y1="240" x2="900" y2="240"/>
+<line x1="100" y1="300" x2="900" y2="300"/>
+<line x1="100" y1="360" x2="900" y2="360"/>
+<line x1="100" y1="420" x2="900" y2="420"/>
+<line x1="100" y1="480" x2="900" y2="480"/>
+</g>
+</defs>
+<g mask="url(#beam)" fill="none">
+  <use href="#lines" stroke="#238fff" stroke-width="6" opacity=".12"/>
+  <use href="#lines" stroke="#249dff" stroke-width="2.4" opacity=".55"/>
+  <use href="#lines" stroke="#d7f5ff" stroke-width=".8" opacity=".9"/>
+</g>
+</svg>

@@ -1,5 +1,3 @@
-using System.Net;
-using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Text.Json;
 using Legacy.Maliev.Web.Application;
@@ -41,9 +39,13 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         await Assertions.Expect(legal).ToBeVisibleAsync();
         Assert.True(await legal.EvaluateAsync<bool>("element => !element.closest('details')"));
         await Assertions.Expect(consultation).ToBeVisibleAsync();
-        Assert.Equal("/contact#contact-us", await consultation.GetAttributeAsync("href"));
-        Assert.Equal("_blank", await consultation.GetAttributeAsync("target"));
-        Assert.Contains("noopener", await consultation.GetAttributeAsync("rel"), StringComparison.Ordinal);
+        Assert.Equal("button", await consultation.GetAttributeAsync("type"));
+        Assert.Equal("dropdown", await consultation.GetAttributeAsync("data-bs-toggle"));
+        await Assertions.Expect(consultation).ToHaveAttributeAsync("aria-expanded", "false");
+        var contact = fixture.Page.Locator("[data-summary-consultation-menu] a[href*='/contact']");
+        Assert.Equal(culture == "en" ? "/contact?culture=en#contact-us" : "/contact#contact-us", await contact.GetAttributeAsync("href"));
+        Assert.Equal("_blank", await contact.GetAttributeAsync("target"));
+        Assert.Equal("noopener noreferrer", await contact.GetAttributeAsync("rel"));
 
         await disclosure.FocusAsync();
         await fixture.Page.Keyboard.PressAsync("Enter");
@@ -63,6 +65,127 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         await Assertions.Expect(disclosure.Locator("[data-workflow-lead-time]")).ToBeVisibleAsync();
         Assert.True(await fixture.Page.EvaluateAsync<bool>("() => document.documentElement.scrollWidth <= innerWidth + 1"));
         await fixture.CaptureAsync("keyboard-disclosure");
+        await fixture.AssertHealthAsync();
+    }
+
+    [Theory]
+    [InlineData("en", 375)]
+    [InlineData("th", 320)]
+    [InlineData("en", 1280)]
+    [InlineData("th", 1280)]
+    public async Task ActualConsultationDropupKeepsQuoteAndOpensEveryChannelInANewTab(string culture, int width)
+    {
+        await using var fixture = await Fixture.CreateAsync(culture, width, output);
+        await fixture.AssertFinalAsync(2);
+        var originalUrl = fixture.Page.Url;
+        var origin = new Uri(originalUrl).GetLeftPart(UriPartial.Authority);
+        var before = await fixture.StoredAsync();
+        var expected = new[] { SocialNetworks.Line, SocialNetworks.WhatsApp, SocialNetworks.MessengerChat, origin + (culture == "en" ? "/contact?culture=en#contact-us" : "/contact#contact-us") };
+        var requestUrls = expected.Take(3).Select(value => new Uri(value).GetLeftPart(UriPartial.Path)).ToHashSet(StringComparer.Ordinal);
+        var visited = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        var blocked = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        var contactMethods = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        await fixture.Page.Context.RouteAsync("**/*", async route =>
+        {
+            if (requestUrls.Contains(route.Request.Url))
+            {
+                visited.Enqueue(route.Request.Url);
+                await route.FulfillAsync(new() { Status = 200, ContentType = "text/html", Body = "<!doctype html><title>Consultation destination</title>" });
+            }
+            else if (new Uri(route.Request.Url).GetLeftPart(UriPartial.Authority) != origin)
+            {
+                if (route.Request.IsNavigationRequest && route.Request.Frame.ParentFrame is null)
+                    blocked.Enqueue(new Uri(route.Request.Url).Host);
+                await route.AbortAsync();
+            }
+            else
+            {
+                if (new Uri(route.Request.Url).AbsolutePath.Equals("/contact", StringComparison.OrdinalIgnoreCase))
+                    contactMethods.Enqueue(route.Request.Method);
+                await route.ContinueAsync();
+            }
+        });
+        var toggle = fixture.Page.Locator("[data-summary-consultation]");
+        var menu = fixture.Page.Locator("[data-summary-consultation-menu] .dropdown-menu");
+        var links = menu.Locator("a.dropdown-item");
+        await Assertions.Expect(links).ToHaveCountAsync(4);
+        await toggle.FocusAsync();
+        await toggle.PressAsync("ArrowUp");
+        await Assertions.Expect(toggle).ToHaveAttributeAsync("aria-expanded", "true");
+        await Assertions.Expect(links.Last).ToBeFocusedAsync();
+        await fixture.Page.Keyboard.PressAsync("Escape");
+        await Assertions.Expect(toggle).ToHaveAttributeAsync("aria-expanded", "false");
+        await Assertions.Expect(toggle).ToBeFocusedAsync();
+        for (var index = 0; index < expected.Length; index++)
+        {
+            await toggle.PressAsync("Space");
+            await Assertions.Expect(toggle).ToHaveAttributeAsync("aria-expanded", "true");
+            await using var positioned = await fixture.Page.WaitForFunctionAsync("""
+                () => {
+                  const menu = document.querySelector('[data-summary-consultation-menu] .dropdown-menu');
+                  const m = menu.getBoundingClientRect();
+                  const toggle = menu.parentElement.querySelector('[data-summary-consultation]').getBoundingClientRect();
+                  return getComputedStyle(menu).position === 'fixed' && m.width > 0 && m.height > 0
+                    && m.left >= -1 && m.right <= innerWidth + 1 && m.top >= -1 && m.bottom <= toggle.top + 1;
+                }
+                """);
+            var link = links.Nth(index);
+            Assert.Equal(new Uri(expected[index]).AbsoluteUri, await link.EvaluateAsync<string>("element => element.href"));
+            Assert.Equal("_blank", await link.GetAttributeAsync("target"));
+            Assert.Equal("noopener noreferrer", await link.GetAttributeAsync("rel"));
+            Assert.True(await link.EvaluateAsync<bool>("""
+                element => {
+                  const r = element.getBoundingClientRect();
+                  return r.height >= 44 && r.left >= -1 && r.right <= innerWidth + 1
+                    && r.top >= -1 && r.bottom <= innerHeight + 1
+                    && element.contains(document.elementFromPoint((r.left+r.right)/2, (r.top+r.bottom)/2));
+                }
+                """));
+            await link.FocusAsync();
+            await using var popup = await fixture.Page.RunAndWaitForPopupAsync(() => link.PressAsync("Enter"));
+            await popup.WaitForLoadStateAsync(LoadState.DOMContentLoaded);
+            Assert.Equal(new Uri(expected[index]).AbsoluteUri, popup.Url);
+            if (index == 3)
+            {
+                await Assertions.Expect(popup.Locator("html")).ToHaveAttributeAsync("lang", culture);
+                await Assertions.Expect(popup.Locator("#contact-title")).ToHaveTextAsync(culture == "th" ? "เราช่วยอะไรคุณได้บ้าง?" : "How can we help?");
+            }
+            Assert.True(await popup.EvaluateAsync<bool>("() => window.opener === null && document.referrer === ''"));
+            Assert.Equal(originalUrl, fixture.Page.Url);
+            await Assertions.Expect(toggle).ToHaveAttributeAsync("aria-expanded", "false");
+            var after = await fixture.StoredAsync();
+            Assert.Equal(before.UpdatedAt, after.UpdatedAt);
+            Assert.Equal(Assert.Single(before.Parts).PartId, Assert.Single(after.Parts).PartId);
+            Assert.Equal(Assert.Single(before.Parts).Configuration, Assert.Single(after.Parts).Configuration);
+            Assert.True(after.QuoteAuthorization is not null
+                && string.Equals(before.QuoteAuthorization!.OrderTicket, after.QuoteAuthorization.OrderTicket, StringComparison.Ordinal)
+                && before.QuoteAuthorization.LineTickets.SequenceEqual(after.QuoteAuthorization.LineTickets, StringComparer.Ordinal),
+                "Consultation must preserve the accepted authorization; ticket values are redacted.");
+            await Assertions.Expect(fixture.Page.Locator("[data-workflow-review]")).ToHaveCountAsync(0);
+            await popup.CloseAsync();
+            await toggle.FocusAsync();
+        }
+        Assert.Equal(expected.Take(3).Select(value => new Uri(value).GetLeftPart(UriPartial.Path)).ToArray(), visited.ToArray());
+        Assert.Equal(new[] { "GET" }, contactMethods.ToArray());
+        Assert.Empty(blocked);
+        await using var oldToggle = await toggle.ElementHandleAsync()
+            ?? throw new InvalidOperationException("The mounted consultation toggle is missing.");
+        Assert.True(await oldToggle.EvaluateAsync<bool>("element => window.bootstrap.Dropdown.getInstance(element) !== null"));
+        await fixture.Review.ClickAsync();
+        await Assertions.Expect(fixture.Page.Locator("[data-workflow-review]")).ToBeVisibleAsync();
+        await using var released = await fixture.Page.WaitForFunctionAsync(
+            "element => window.bootstrap.Dropdown.getInstance(element) === null", oldToggle);
+        await fixture.Page.Locator("[data-review-back]").ClickAsync();
+        await Assertions.Expect(toggle).ToBeVisibleAsync();
+        await using var rebound = await fixture.Page.WaitForFunctionAsync(
+            "() => window.bootstrap.Dropdown.getInstance(document.querySelector('[data-summary-consultation]')) !== null");
+        await toggle.ClickAsync();
+        await Assertions.Expect(menu).ToBeVisibleAsync();
+        await fixture.AssertFinalAsync(2);
+        await fixture.CaptureAsync("consultation-four-channel");
+        await toggle.PressAsync("Escape");
+        await Assertions.Expect(menu).ToBeHiddenAsync();
+        Assert.True(await toggle.EvaluateAsync<bool>("element => window.bootstrap.Dropdown.getInstance(element) !== null"));
         await fixture.AssertHealthAsync();
     }
 
@@ -282,13 +405,18 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         }
     }
 
-    private sealed class AuthorizationBoundaryStore(IInstantQuotationSessionStore inner, Control control)
+    private sealed class AuthorizationBoundaryStore(IInstantQuotationSessionStore inner, Control control,
+        SummaryInitialRequestDiagnostics diagnostics, IHttpContextAccessor accessor)
         : IInstantQuotationSessionStore
     {
         public Task<InstantQuotationSessionState> CreateAsync(string? owner, InstantQuotationOrderState request,
-            CancellationToken token) => inner.CreateAsync(owner, request, token);
+            CancellationToken token) => diagnostics.ForwardAsync(accessor, SummaryInitialRequestDiagnostics.Stage.SessionCreateEntered,
+                SummaryInitialRequestDiagnostics.Stage.SessionCreateReturned, SummaryInitialRequestDiagnostics.Stage.SessionCreateFailed,
+                () => inner.CreateAsync(owner, request, token));
         public Task<InstantQuotationSessionState?> GetAsync(string id, string? owner, CancellationToken token)
-            => inner.GetAsync(id, owner, token);
+            => diagnostics.ForwardAsync(accessor, SummaryInitialRequestDiagnostics.Stage.SessionReadEntered,
+                SummaryInitialRequestDiagnostics.Stage.SessionReadReturned, SummaryInitialRequestDiagnostics.Stage.SessionReadFailed,
+                () => inner.GetAsync(id, owner, token));
         public Task<bool> RemoveAsync(string id, string? owner, CancellationToken token)
             => inner.RemoveAsync(id, owner, token);
         public async Task<bool> PutAsync(InstantQuotationSessionState session, string? owner, CancellationToken token)
@@ -313,19 +441,39 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         }
     }
 
-    private sealed class Host(Control control) : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
+    private sealed class ObservedCountryClient(ICountryClient inner, SummaryInitialRequestDiagnostics diagnostics,
+        IHttpContextAccessor accessor) : ICountryClient
+    {
+        public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken token) =>
+            diagnostics.ForwardAsync(accessor, SummaryInitialRequestDiagnostics.Stage.CountryEntered,
+                SummaryInitialRequestDiagnostics.Stage.CountryReturned, SummaryInitialRequestDiagnostics.Stage.CountryFailed,
+                () => inner.GetCountriesAsync(token));
+    }
+
+    private sealed class Host(Control control, SummaryInitialRequestDiagnostics diagnostics) : TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory())
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             base.ConfigureWebHost(builder);
             builder.ConfigureServices(services =>
             {
+                services.RemoveAll<ICountryClient>();
+                services.AddSingleton<ICountryClient, ConsultationCountryClient>();
+                services.AddSingleton<IStartupFilter>(diagnostics);
+                var originalCountry = services.Single(item => item.ServiceType == typeof(ICountryClient));
+                services.RemoveAll<ICountryClient>();
+                services.Add(new ServiceDescriptor(typeof(ICountryClient), provider =>
+                    new ObservedCountryClient((ICountryClient)(originalCountry.ImplementationInstance
+                        ?? originalCountry.ImplementationFactory?.Invoke(provider)
+                        ?? ActivatorUtilities.CreateInstance(provider, originalCountry.ImplementationType!)), diagnostics,
+                        provider.GetRequiredService<IHttpContextAccessor>()), originalCountry.Lifetime));
                 var originalStore = services.Single(item => item.ServiceType == typeof(IInstantQuotationSessionStore));
                 services.RemoveAll<IInstantQuotationSessionStore>();
                 services.Add(new ServiceDescriptor(typeof(IInstantQuotationSessionStore), provider =>
                     new AuthorizationBoundaryStore((IInstantQuotationSessionStore)(originalStore.ImplementationInstance
                         ?? originalStore.ImplementationFactory?.Invoke(provider)
-                        ?? ActivatorUtilities.CreateInstance(provider, originalStore.ImplementationType!)), control),
+                        ?? ActivatorUtilities.CreateInstance(provider, originalStore.ImplementationType!)), control, diagnostics,
+                        provider.GetRequiredService<IHttpContextAccessor>()),
                     originalStore.Lifetime));
                 var original = services.Single(item => item.ServiceType == typeof(IInstantQuotationAuthoritativePricingService));
                 services.RemoveAll<IInstantQuotationAuthoritativePricingService>();
@@ -334,6 +482,13 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                         original.ImplementationType!), provider.GetRequiredService<IInstantQuotationSessionStore>(), control));
             });
         }
+    }
+
+    private sealed class ConsultationCountryClient : ICountryClient
+    {
+        public Task<ServiceResponse<IReadOnlyList<Country>>> GetCountriesAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new ServiceResponse<IReadOnlyList<Country>>(
+                [new Country(764, "Thailand", "Asia", "TH", "TH", "THA", null, null)], true));
     }
 
     private sealed class Fixture : IAsyncDisposable
@@ -348,34 +503,39 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
         private string culture = "";
         private int pageErrors;
         private int consoleErrors;
+        private readonly SummaryInitialRequestDiagnostics initialRequest = new();
         private readonly TaskCompletionSource releaseNavigationControl = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly TaskCompletionSource navigationControlEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly List<Task> navigationControlCompletions = [];
         private int pendingNavigationControls;
         public bool HasPendingNavigationControl => Volatile.Read(ref pendingNavigationControls) > 0;
         public ILocator Quantity => Page.Locator("input[name='quantity']");
-        public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions button");
+        public ILocator Review => Page.Locator("[data-workflow-configuration] .instant-quote__configuration-actions > button");
         public ILocator Summary => Page.Locator("[data-workflow-summary-dock]");
         public ILocator Breakdown => Page.Locator("[data-workflow-order-summary]");
         public ILocator Duration => Page.Locator("[data-workflow-selected-print-time]");
         public ILocator PartPrice => Page.Locator("[data-workflow-part-price]");
-        private Fixture() => Factory = new(Control);
+        private Fixture() => Factory = new(Control, initialRequest);
+
+        private static int ReserveFreePort() => BrowserTestServerPort.Reserve();
 
         public static async Task<Fixture> CreateAsync(string culture, int width, ITestOutputHelper output, ReducedMotion motion = ReducedMotion.NoPreference, bool holdUnrelatedFetch = false)
         {
             var fixture = new Fixture { culture = culture };
             try
             {
-                var listener = new TcpListener(IPAddress.Loopback, 0);
-                listener.Start(); var port = ((IPEndPoint)listener.LocalEndpoint).Port; listener.Stop();
+                var port = ReserveFreePort();
                 var origin = new Uri($"http://127.0.0.1:{port}");
+                fixture.initialRequest.Observe(SummaryInitialRequestDiagnostics.Stage.HostStartInvoked);
                 fixture.Factory.UseKestrel(port);
                 using var client = fixture.Factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
+                fixture.initialRequest.Observe(SummaryInitialRequestDiagnostics.Stage.HostStartReturned);
                 fixture.playwright = await Playwright.CreateAsync();
                 fixture.browser = await fixture.playwright.Chromium.LaunchAsync(new() { Headless = true });
                 fixture.context = await fixture.browser.NewContextAsync(new()
                 { ViewportSize = new() { Width = width, Height = 800 }, ColorScheme = ColorScheme.Light, ReducedMotion = motion });
                 fixture.Page = await fixture.context.NewPageAsync();
+                await OptionalPrintingDriverFixture.UseUnavailableDriverAsync(fixture.Page);
                 fixture.Page.PageError += (_, _) => Interlocked.Increment(ref fixture.pageErrors);
                 fixture.Page.Console += (_, message) => { if (message.Type == "error") Interlocked.Increment(ref fixture.consoleErrors); };
                 var url = new Uri(origin, $"/instantquotation/3d-printing?culture={culture}").ToString();
@@ -446,6 +606,10 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
 
         private async Task ObserveNavigationAsync(string phase, Uri origin, ITestOutputHelper output, Func<Task<IResponse?>> navigate)
         {
+            using var responseProbe = Factory.Services.GetRequiredService<TestResponseProbeRegistry>()
+                .TryBeginNavigation(origin, TestResponseRequestLabel.BaseQuotation);
+            using var milestones = new MaterialInitialNavigationDiagnostics(
+                Page, origin, responseProbe?.Probe, phase, "domcontentloaded");
             var gate = new object();
             var pending = new Dictionary<IRequest, string>();
             int started = 0, finished = 0, failed = 0, omitted = 0;
@@ -477,14 +641,26 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
             Page.Response += onResponse;
             try
             {
-                var response = await navigate();
-                Assert.NotNull(response);
-                Assert.Equal(200, response.Status);
-                // InputFile.init runs through JS interop after the real Interactive Server circuit renders.
-                // SSR markup alone cannot set this binding; global network quiet is not session readiness.
-                await Page.WaitForFunctionAsync(
-                    "() => typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'number'",
-                    options: new() { Timeout = Math.Max(1, 30000 - timer.ElapsedMilliseconds) });
+                await milestones.RunAsync(async () =>
+                {
+                    if (phase == "initial") initialRequest.Observe(SummaryInitialRequestDiagnostics.Stage.NavigationInvoked);
+                    var response = await navigate();
+                    if (phase == "initial") initialRequest.Observe(SummaryInitialRequestDiagnostics.Stage.NavigationReturned);
+                    Assert.NotNull(response);
+                    Assert.Equal(200, response.Status);
+                    // InputFile.init runs through JS interop after the real Interactive Server circuit renders.
+                    // SSR markup alone cannot set this binding; global network quiet is not session readiness.
+                    await Page.WaitForFunctionAsync(
+                        "() => typeof document.querySelector('#instant-quote-files')?._blazorInputFileNextFileId === 'number'",
+                        options: new() { Timeout = Math.Max(1, 30000 - timer.ElapsedMilliseconds) });
+                    milestones.ObserveInputFileReady();
+                    return response;
+                }, output.WriteLine);
+            }
+            catch (Exception failure)
+            {
+                if (phase == "initial") initialRequest.Observe(SummaryInitialRequestDiagnostics.Stage.NavigationFailed, failure: failure);
+                throw;
             }
             finally
             {
@@ -495,18 +671,19 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
                 timer.Stop();
                 lock (gate)
                 {
-                    output.WriteLine("summary-navigation " + JsonSerializer.Serialize(new
+                    SummaryInitialRequestDiagnostics.TryWrite(() => output.WriteLine("summary-navigation " + JsonSerializer.Serialize(new
                     {
                         phase,
                         elapsedMilliseconds = timer.ElapsedMilliseconds,
                         documentStatus,
+                        initialServer = phase == "initial" ? initialRequest.StopAndSnapshot() : null,
                         started,
                         finished,
                         failed,
                         omitted,
                         pendingCategories = pending.Values.GroupBy(value => value)
                             .OrderBy(group => group.Key).ToDictionary(group => group.Key, group => group.Count()),
-                    }));
+                    })));
                     pending.Clear();
                 }
             }
@@ -582,6 +759,7 @@ public sealed class InstantQuotationSummaryTransitionBrowserTests(ITestOutputHel
 
         public async ValueTask DisposeAsync()
         {
+            SummaryInitialRequestDiagnostics.TryWrite(() => initialRequest.StopAndSnapshot());
             releaseNavigationControl.TrySetResult();
             Task[] pending;
             lock (navigationControlCompletions) pending = navigationControlCompletions.ToArray();

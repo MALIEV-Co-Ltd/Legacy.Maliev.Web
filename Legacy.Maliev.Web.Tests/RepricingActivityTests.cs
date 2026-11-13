@@ -113,4 +113,172 @@ public sealed class RepricingActivityTests
 
         Assert.Equal([true, false], transitions);
     }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SamePartSupersession_RetiresOnlyOldGateAndNeverLetsLateCompletionRestoreIt(bool failLate)
+    {
+        var activity = new RepricingActivity();
+        var part = Guid.NewGuid();
+        var oldWork = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var currentWork = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var unrelatedWork = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var obsoleteAfterUpdates = 0;
+        Task Notify() => Task.CompletedTask;
+        var old = activity.RunAsync(part, () => oldWork.Task, Notify,
+            _ => { obsoleteAfterUpdates++; return Task.CompletedTask; });
+        var unrelated = activity.RunAsync(Guid.NewGuid(), () => unrelatedWork.Task, Notify);
+        var current = activity.RunAsync(part, () => currentWork.Task, Notify);
+        try
+        {
+            Assert.True(activity.IsActive);
+            currentWork.TrySetResult();
+            await current.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.True(activity.IsActive);
+            unrelatedWork.TrySetResult();
+            await unrelated.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(activity.IsActive);
+            Assert.False(old.IsCompleted);
+            if (failLate) oldWork.TrySetException(new IOException("controlled obsolete failure"));
+            else oldWork.TrySetResult();
+            if (failLate) await Assert.ThrowsAsync<IOException>(() => old);
+            else await old;
+            Assert.False(activity.IsActive);
+            Assert.Equal(0, obsoleteAfterUpdates);
+        }
+        finally
+        {
+            oldWork.TrySetResult(); currentWork.TrySetResult(); unrelatedWork.TrySetResult();
+            try { await old.WaitAsync(TimeSpan.FromSeconds(5)); } catch (IOException) when (failLate) { }
+            await current.WaitAsync(TimeSpan.FromSeconds(5));
+            await unrelated.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    [Fact]
+    public async Task SamePartSupersession_InvalidatesAReachedAfterUpdateWithoutRestoringItsGate()
+    {
+        var activity = new RepricingActivity();
+        var part = Guid.NewGuid();
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var staleWrites = 0;
+        var old = activity.RunAsync(part, () => Task.CompletedTask, () => Task.CompletedTask, async current =>
+        {
+            entered.TrySetResult();
+            await release.Task;
+            if (current()) staleWrites++;
+        });
+        try
+        {
+            await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await activity.RunAsync(part, () => Task.CompletedTask, () => Task.CompletedTask);
+            Assert.False(activity.IsActive);
+            Assert.False(old.IsCompleted);
+            release.TrySetResult();
+            await old.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(0, staleWrites);
+            Assert.False(activity.IsActive);
+        }
+        finally { release.TrySetResult(); await old.WaitAsync(TimeSpan.FromSeconds(5)); }
+    }
+
+
+    [Fact]
+    public async Task ForgetAcknowledgedPart_CompletesOnlyItsGateAndLateFinallyCannotCompleteAnother()
+    {
+        var activity = new RepricingActivity();
+        var part = Guid.NewGuid();
+        var other = Guid.NewGuid();
+        var oldRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var otherRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var first = activity.RunAsync(part, () => oldRelease.Task, () => Task.CompletedTask);
+        var second = activity.RunAsync(other, () => otherRelease.Task, () => Task.CompletedTask);
+        var oldCurrent = activity.CaptureOwnership(part);
+        var otherCurrent = activity.CaptureOwnership(other);
+        Exception? primary = null;
+        try
+        {
+            activity.Forget(part);
+            Assert.False(oldCurrent());
+            Assert.True(otherCurrent());
+            Assert.True(activity.IsActive);
+            Assert.False(first.IsCompleted);
+            oldRelease.TrySetResult();
+            await first.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.True(activity.IsActive);
+            Assert.True(otherCurrent());
+            otherRelease.TrySetResult();
+            await second.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(activity.IsActive);
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            oldRelease.TrySetResult();
+            otherRelease.TrySetResult();
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                async () => await first.WaitAsync(TimeSpan.FromSeconds(5)),
+                async () => await second.WaitAsync(TimeSpan.FromSeconds(5)));
+        }
+    }
+
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SamePartLateCompletion_CannotRetireStillPendingNewerGate(bool failLate)
+    {
+        var activity = new RepricingActivity();
+        var part = Guid.NewGuid();
+        var oldRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var currentRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var failure = new IOException("controlled obsolete failure");
+        var transitions = new List<bool>();
+        Task Notify()
+        {
+            transitions.Add(activity.IsActive);
+            return Task.CompletedTask;
+        }
+        var old = activity.RunAsync(part, () => oldRelease.Task, Notify);
+        var oldCurrent = activity.CaptureOwnership(part);
+        var current = activity.RunAsync(part, () => currentRelease.Task, Notify);
+        var currentOwner = activity.CaptureOwnership(part);
+        Exception? primary = null;
+        try
+        {
+            Assert.False(oldCurrent());
+            Assert.True(currentOwner());
+            Assert.True(activity.IsActive);
+            if (failLate) oldRelease.TrySetException(failure);
+            else oldRelease.TrySetResult();
+            if (failLate)
+                Assert.Same(failure, await Assert.ThrowsAsync<IOException>(() => old.WaitAsync(TimeSpan.FromSeconds(5))));
+            else await old.WaitAsync(TimeSpan.FromSeconds(5));
+
+            Assert.False(current.IsCompleted);
+            Assert.True(activity.IsActive);
+            Assert.True(currentOwner());
+            Assert.All(transitions, value => Assert.True(value));
+
+            currentRelease.TrySetResult();
+            await current.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(activity.IsActive);
+            Assert.False(transitions[^1]);
+        }
+        catch (Exception exception) { primary = exception; throw; }
+        finally
+        {
+            oldRelease.TrySetResult();
+            currentRelease.TrySetResult();
+            await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
+                async () =>
+                {
+                    try { await old.WaitAsync(TimeSpan.FromSeconds(5)); }
+                    catch (IOException exception) when (failLate && ReferenceEquals(exception, failure)) { }
+                },
+                async () => await current.WaitAsync(TimeSpan.FromSeconds(5)));
+        }
+    }
+
 }

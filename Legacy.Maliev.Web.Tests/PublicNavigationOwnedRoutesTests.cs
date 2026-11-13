@@ -8,6 +8,7 @@ public sealed class PublicNavigationOwnedRoutesTests
         var web = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web");
         var navigation = File.ReadAllText(Path.Combine(web, "Components", "Layout", "PublicNavigation.razor"));
         var footer = File.ReadAllText(Path.Combine(web, "Components", "Layout", "PublicFooter.razor"));
+        Assert.Contains("href=\"/Knowledges\"", footer, StringComparison.Ordinal);
 
         foreach (var route in new[]
         {

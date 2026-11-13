@@ -150,6 +150,90 @@ public sealed class InstantQuotationNotificationPreparationTests
         await content.Disposed.Task.WaitAsync(TimeSpan.FromSeconds(5));
     }
 
+    internal static async Task AssertRecoveredQuoteMessagesAsync(
+        InstantQuotationSessionState session, InstantQuotationOrderQuote quote)
+    {
+        var previousCulture = System.Globalization.CultureInfo.CurrentCulture;
+        var previousUiCulture = System.Globalization.CultureInfo.CurrentUICulture;
+        try
+        {
+            var part = Assert.Single(session.Parts);
+            var line = Assert.Single(quote.Parts);
+            var receipt = Assert.IsType<InstantQuotationPhysicalAnalysisReceipt>(line.PhysicalReceipt);
+            Assert.NotNull(receipt.GeometryReconstruction);
+            Assert.True(receipt.GeometryReconstruction.IsValid());
+            var warning = FormattableString.Invariant(
+                $"Voxel-based pricing estimate ({receipt.GeometryReconstruction.VoxelSizeMm:0.0} mm). Original geometry requires engineering review before manufacture.");
+            var file = new InstantQuotationFinalizedFile(receipt.FileId, "private-fixture", "clean/recovered.stl",
+                part.DisplayFileName, "model/stl", part.PhysicalAnalysisUpload!.SizeBytes, receipt.UploadSha256);
+            foreach (var culture in new[] { "en", "th" })
+            {
+                System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+                System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+                using var boundary = new Boundary();
+                var result = await boundary.PrepareAsync(file, session: session, quote: quote);
+                Assert.True(result.ServiceAvailable);
+                Assert.True(result.Authorized);
+                Assert.NotNull(result.Payload);
+                Assert.Single(boundary.Paths);
+                foreach (var body in new[] { result.Payload.Customer.Body, result.Payload.Manufacturing.Body })
+                {
+                    Assert.Contains(WebUtility.HtmlEncode(warning), body, StringComparison.Ordinal);
+                    Assert.Contains("Non-watertight mesh", WebUtility.HtmlDecode(body), StringComparison.Ordinal);
+                    Assert.Contains(WebUtility.HtmlEncode(part.DisplayFileName), body, StringComparison.Ordinal);
+                    Assert.Contains(quote.FinalOrderPrice.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " THB",
+                        body, StringComparison.Ordinal);
+                    Assert.DoesNotContain("safe to manufacture", body, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = previousCulture;
+            System.Globalization.CultureInfo.CurrentUICulture = previousUiCulture;
+        }
+    }
+
+    [Theory]
+    [InlineData("browser-claim", 0.2)]
+    [InlineData("<script>claim</script>", 0.2)]
+    [InlineData("voxel-majority-v1", 0.1)]
+    [InlineData("voxel-majority-v1", double.NaN)]
+    [InlineData("voxel-majority-v1", double.PositiveInfinity)]
+    public async Task InvalidReconstructionProvenance_PreventsPayloadBeforeSignedLinkIo(string method, double pitch)
+    {
+        using var boundary = new Boundary();
+        var line = Assert.Single(boundary.Quote.Parts);
+        var receipt = Assert.IsType<InstantQuotationPhysicalAnalysisReceipt>(line.PhysicalReceipt);
+        var quote = boundary.Quote with
+        {
+            Parts = [line with { PhysicalReceipt = receipt with { GeometryReconstruction = new(method, pitch) } }],
+        };
+        var result = await boundary.PrepareAsync(quote: quote);
+        Assert.Null(result.Payload);
+        Assert.True(result.ServiceAvailable);
+        Assert.True(result.Authorized);
+        Assert.Empty(boundary.Paths);
+    }
+
+    [Fact]
+    public async Task AbsentLegacyPhysicalReceipt_PreservesBothExistingMessageBodies()
+    {
+        using var boundary = new Boundary();
+        var original = await boundary.PrepareAsync();
+        var line = Assert.Single(boundary.Quote.Parts);
+        var legacy = await boundary.PrepareAsync(quote: boundary.Quote with
+        {
+            Parts = [line with { PhysicalReceipt = null }],
+        });
+        Assert.NotNull(original.Payload);
+        Assert.NotNull(legacy.Payload);
+        Assert.Equal(original.Payload.Customer.Body, legacy.Payload.Customer.Body);
+        Assert.Equal(original.Payload.Manufacturing.Body, legacy.Payload.Manufacturing.Body);
+        Assert.DoesNotContain("Voxel-based pricing estimate", legacy.Payload.Customer.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("Voxel-based pricing estimate", legacy.Payload.Manufacturing.Body, StringComparison.Ordinal);
+    }
+
     private sealed class ControlledContent : HttpContent
     {
         private readonly bool blocked;
@@ -212,9 +296,10 @@ public sealed class InstantQuotationNotificationPreparationTests
             http = new(new Handler(this)) { BaseAddress = new("https://files.test/") };
         }
 
-        public Task<InstantQuotationNotificationPreparationResult> PrepareAsync(InstantQuotationFinalizedFile? file = null, CancellationToken cancellationToken = default) =>
+        public Task<InstantQuotationNotificationPreparationResult> PrepareAsync(InstantQuotationFinalizedFile? file = null,
+            CancellationToken cancellationToken = default, InstantQuotationSessionState? session = null, InstantQuotationOrderQuote? quote = null) =>
             new InstantQuotationNotificationPreparationClient(this, Tokens, TimeProvider.System) { OperationTimeout = Timeout }.PrepareAsync(
-                new("session", new string('a', 64), new([Part]), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), Quote,
+                session ?? new("session", new string('a', 64), new([Part]), DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), quote ?? Quote,
                 new("Thai", "Customer", "customer@example.test", null, "Thailand", null, null, "Review part"), 42, [file ?? File], cancellationToken);
 
         public HttpClient CreateClient(string name) { Assert.Equal("files", name); return http; }

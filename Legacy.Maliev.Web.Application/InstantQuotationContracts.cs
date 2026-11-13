@@ -31,6 +31,9 @@ public sealed record InstantQuotationGeometryClaim(
     double MinThicknessMm,
     IReadOnlyList<double>? UnsupportedAreaProfileMm2 = null)
 {
+    /// <summary>Gets the immutable unit choice captured before parsing this upload.</summary>
+    public InstantQuotationGltfUnitPolicy GltfUnitPolicy { get; init; } = InstantQuotationGltfUnitPolicy.Legacy;
+
     public bool IsValid()
     {
         var footprint = DimensionXmm * DimensionYmm;
@@ -55,7 +58,8 @@ public sealed record InstantQuotationGeometryClaim(
         var topologyValid = FacetCount <= 200_000
             ? TopologyChecked
             : !TopologyChecked && BodyCount == 1 && !NonWatertight && !NonManifold;
-        return Version == 1
+        return GltfUnitPolicy is { IsValid: true }
+            && Version == 1
             && IsLowerSha256(Sha256)
             && IsFinitePositive(DimensionXmm)
             && IsFinitePositive(DimensionYmm)
@@ -210,7 +214,8 @@ public sealed class AuthoritativeInstantQuotationGeometry
             || upload.ProblemCategory is not InstantQuotationProblemCategory.None
             || upload.UploadReference is null
             || !string.Equals(upload.ContentSha256, claim.Sha256, StringComparison.Ordinal)
-            || !claim.IsValid())
+            || !claim.IsValid()
+            || (claim.GltfUnitPolicy.Version != 0 && upload.PhysicalAnalysisUpload?.GltfUnitPolicy != claim.GltfUnitPolicy))
         {
             return null;
         }

@@ -38,7 +38,8 @@ internal sealed class InstantQuotationPhysicalAnalysisInputReader(
                     InstantQuotationPhysicalAnalysisInputFailure.UploadUnavailable);
             }
 
-            if (upload.FileId == Guid.Empty
+            if (upload.GltfUnitPolicy?.IsValidForFile(upload.FileName, newUpload: false) is not true
+                || upload.FileId == Guid.Empty
                 || !string.Equals(upload.FileId.ToString("D"), part.UploadReference.Value, StringComparison.Ordinal)
                 || !string.Equals(upload.Sha256, part.Geometry.Sha256, StringComparison.OrdinalIgnoreCase)
                 || string.IsNullOrWhiteSpace(upload.FileName)
@@ -82,6 +83,9 @@ internal sealed class InstantQuotationPhysicalAnalysisInputReader(
                     upload.FileId,
                     upload.FileName,
                     upload.Sha256)
+                {
+                    GltfUnitPolicy = upload.GltfUnitPolicy,
+                }
                 : InstantQuotationPhysicalAnalysisInputResult.Unavailable(
                     InstantQuotationPhysicalAnalysisInputFailure.ContentUnavailable);
         }

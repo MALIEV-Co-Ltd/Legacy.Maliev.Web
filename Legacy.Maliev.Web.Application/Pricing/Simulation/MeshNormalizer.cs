@@ -42,6 +42,14 @@ public static class MeshNormalizer
             throw new SimulationGeometryException("geometry_empty", "A mesh must contain at least one triangle.");
         }
 
+        int[]? groups = input.PositiveFillGroups?.ToArray();
+        if (groups is not null && (groups.Length != input.Triangles.Count
+            || groups.Any(group => group < 0) || groups.Distinct().Take(257).Count() > 256))
+        {
+            throw new SimulationGeometryException("geometry_groups_invalid", "Positive-fill grouping does not match bounded object occurrences.");
+        }
+
+        bool reflected = groups is not null && input.ComponentTransform.GetDeterminant() < 0;
         var transformed = new List<MeshTriangle>(input.Triangles.Count);
         Vector3 minimum = new(float.PositiveInfinity);
         int index = 0;
@@ -55,7 +63,7 @@ public static class MeshNormalizer
             Vector3 a = Transform(triangle.A, input.ComponentTransform, input.UnitsToMillimetres);
             Vector3 b = Transform(triangle.B, input.ComponentTransform, input.UnitsToMillimetres);
             Vector3 c = Transform(triangle.C, input.ComponentTransform, input.UnitsToMillimetres);
-            transformed.Add(new MeshTriangle(a, b, c));
+            transformed.Add(reflected ? new MeshTriangle(a, c, b) : new MeshTriangle(a, b, c));
             minimum = Vector3.Min(minimum, Vector3.Min(a, Vector3.Min(b, c)));
         }
 
@@ -72,8 +80,46 @@ public static class MeshNormalizer
                 triangle.A - minimum, triangle.B - minimum, triangle.C - minimum);
         }
 
-        var diagnostics = Diagnose(normalized, tolerance.CoordinateMm, cancellationToken);
-        return new NormalizedMesh(normalized, ComputeDigest(normalized, tolerance.CoordinateMm, cancellationToken), diagnostics);
+        if (groups is null)
+        {
+            var diagnostics = Diagnose(normalized, tolerance.CoordinateMm, cancellationToken);
+            return new NormalizedMesh(normalized, ComputeDigest(normalized, tolerance.CoordinateMm, cancellationToken), diagnostics);
+        }
+
+        var grouped = Enumerable.Range(0, normalized.Length).GroupBy(index => groups[index]).ToArray();
+        var groupDiagnostics = new SortedSet<string>(StringComparer.Ordinal);
+        var bodies = new List<string>();
+        foreach (var group in grouped)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            MeshTriangle[] triangles = group.Select(index => normalized[index]).ToArray();
+            groupDiagnostics.UnionWith(Diagnose(triangles, tolerance.CoordinateMm, cancellationToken));
+            bodies.Add(OrientedBody(triangles, tolerance.CoordinateMm, cancellationToken));
+        }
+
+        bodies.Sort(StringComparer.Ordinal);
+        string digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            "positive-object-union-v1\n" + string.Join("\n--object--\n", bodies))));
+        cancellationToken.ThrowIfCancellationRequested();
+        return new NormalizedMesh(normalized, digest, groupDiagnostics.ToArray()) { PositiveFillGroups = groups };
+    }
+
+    private static string OrientedBody(
+        IReadOnlyList<MeshTriangle> triangles, double precision, CancellationToken cancellationToken)
+    {
+        var records = new string[triangles.Count];
+        for (int index = 0; index < triangles.Count; index++)
+        {
+            if ((index & 1023) == 0) cancellationToken.ThrowIfCancellationRequested();
+            var triangle = triangles[index];
+            string[] vertices = [VertexKey.Create(triangle.A, precision).ToString(),
+                VertexKey.Create(triangle.B, precision).ToString(), VertexKey.Create(triangle.C, precision).ToString()];
+            records[index] = Enumerable.Range(0, 3)
+                .Select(start => string.Join(';', Enumerable.Range(0, 3).Select(offset => vertices[(start + offset) % 3])))
+                .Order(StringComparer.Ordinal).First();
+        }
+        Array.Sort(records, StringComparer.Ordinal);
+        return string.Join('\n', records);
     }
 
     private static IReadOnlyList<string> Diagnose(

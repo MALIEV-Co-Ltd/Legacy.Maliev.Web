@@ -178,14 +178,14 @@ def main():
             raise ValueError("CollectorSettingsChanged")
         project = root / "Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj"
         package = [row for row in ET.parse(project).findall(".//PackageReference") if row.get("Include") == "coverlet.collector"]
-        if len(package) != 1 or package[0].get("Version") != "6.0.4":
+        if len(package) != 1 or package[0].get("Version") != "10.1.0":
             raise ValueError("CollectorVersionChanged")
         evaluated = json.loads((destination / "evaluated-properties.private.json").read_text(encoding="utf-8"))["Properties"]
         expected = {"CI": "false", "VSTestCollect": "", "RunSettingsFilePath": ""} if mode == "focused" else {"CI": "true", "VSTestCollect": "XPlat Code Coverage", "RunSettingsFilePath": str(settings)}
         if evaluated != expected:
             raise ValueError("EvaluatedCollectorMismatch")
         report.update(configurationQualified=True, collector="none" if mode == "focused" else "XPlat Code Coverage",
-                      collectorVersion="6.0.4", settingsSource=SETTINGS, settingsCanonicalSha256=SETTINGS_SHA256, projectSha256=sha(project))
+                      collectorVersion="10.1.0", settingsSource=SETTINGS, settingsCanonicalSha256=SETTINGS_SHA256, projectSha256=sha(project))
     except (OSError, ValueError, KeyError, TypeError, ET.ParseError, subprocess.CalledProcessError):
         report["unavailable"].append("ConfigurationUnavailable")
     try:

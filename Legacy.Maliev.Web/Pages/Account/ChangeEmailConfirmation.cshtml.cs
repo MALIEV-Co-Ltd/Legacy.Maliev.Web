@@ -6,12 +6,16 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace Legacy.Maliev.Web.Pages.Account;
 
+/// <summary>Completes a single-use email-change challenge and redirects successful confirmations to sign-in.</summary>
+/// <param name="workflow">The workflow completing the pending identity email change.</param>
 [EnableRateLimiting("account")]
 public sealed class ChangeEmailConfirmation(ICustomerEmailChangeWorkflow workflow) : PageModel
 {
+    /// <summary>The one-time outcome message carried across this workflow's post/redirect/get boundary.</summary>
     [TempData]
     public string? Notification { get; set; }
 
+    /// <summary>The safe email-change confirmation errors for page rendering.</summary>
     public ChangeEmailConfirmationDisplayModel DisplayModel => new(
         ModelState.Values
             .SelectMany(value => value.Errors)
@@ -20,6 +24,11 @@ public sealed class ChangeEmailConfirmation(ICustomerEmailChangeWorkflow workflo
                 : error.ErrorMessage)
             .ToArray());
 
+    /// <summary>Completes the email-change challenge with non-cacheable, non-referring response headers.</summary>
+    /// <param name="email">The email address associated with this account request.</param>
+    /// <param name="token">The single-use identity challenge supplied by the account link.</param>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A sign-in redirect after success, a bad-request result for missing inputs, or the page with an invalid-link error.</returns>
     public async Task<IActionResult> OnGetAsync(
         string? email,
         string? token,
