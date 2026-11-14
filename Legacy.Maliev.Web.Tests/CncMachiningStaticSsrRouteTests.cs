@@ -2,16 +2,19 @@ using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Xunit.Abstractions;
 
 namespace Legacy.Maliev.Web.Tests;
 
 public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<TestingWebApplicationFactory>
 {
     private readonly WebApplicationFactory<Program> factory;
+    private readonly ITestOutputHelper output;
 
-    public CncMachiningStaticSsrRouteTests(TestingWebApplicationFactory factory)
+    public CncMachiningStaticSsrRouteTests(TestingWebApplicationFactory factory, ITestOutputHelper output)
     {
         this.factory = factory;
+        this.output = output;
     }
 
     [Theory]
@@ -217,6 +220,19 @@ public sealed partial class CncMachiningStaticSsrRouteTests : IClassFixture<Test
         Assert.DoesNotContain("ISO 9001", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("ISO 13485", source, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("AS9100", source, StringComparison.OrdinalIgnoreCase);
+        // Report only delimiter categories; never emit the rendered response or its contents.
+        var match = source.IndexOf("IATF", StringComparison.OrdinalIgnoreCase);
+        if (match >= 0)
+        {
+            var commentStart = source.LastIndexOf("<!--", match, StringComparison.Ordinal);
+            var commentEnd = source.LastIndexOf("-->", match, StringComparison.Ordinal);
+            var tagStart = source.LastIndexOf('<', match);
+            var tagEnd = source.LastIndexOf('>', match);
+            var commentOpen = commentStart >= 0 && commentStart > commentEnd;
+            var blazorMarker = commentOpen && source.AsSpan(commentStart).StartsWith("<!--Blazor", StringComparison.OrdinalIgnoreCase);
+            try { output.WriteLine("IATF fence diagnostic: comment-open={0}; blazor-marker={1}; tag-open={2}", commentOpen, blazorMarker, tagStart > tagEnd); }
+            catch (Exception) { /* Diagnostics must not replace the existing assertion. */ }
+        }
         Assert.DoesNotContain("IATF", source, StringComparison.OrdinalIgnoreCase);
     }
 
