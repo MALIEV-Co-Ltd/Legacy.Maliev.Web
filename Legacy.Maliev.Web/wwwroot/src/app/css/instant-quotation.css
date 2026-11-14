@@ -1445,6 +1445,13 @@ body.instant-quotation-shell .maliev-skip-link:not(:focus) {
     white-space: nowrap;
 }
 
+.instant-quote__workflow [data-workflow-review-part] dd[data-review-fdm-preference-detail],
+.instant-quote__workflow [data-workflow-review-part] dd[data-review-build-preference-detail] {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+}
+
 .instant-quote__workflow .instant-quote__pricing-summary,
 .instant-quote__workflow [data-workflow-customer-details-content] form {
     margin-top: .75rem;

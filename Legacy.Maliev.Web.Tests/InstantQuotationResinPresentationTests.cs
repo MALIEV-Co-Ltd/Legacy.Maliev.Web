@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
+using Microsoft.Playwright;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -176,6 +177,63 @@ public sealed class InstantQuotationResinPresentationTests
     }
 
     [Theory]
+    [InlineData("en", 320)]
+    [InlineData("th", 320)]
+    [InlineData("en", 1440)]
+    [InlineData("th", 1440)]
+    public async Task Review_PreferenceDetailsAreFullyReadable(string culture, int width)
+    {
+        using var cultures = new CultureScope(culture);
+        using var services = Services(new CapturingActivator(), new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root is not null && !File.Exists(Path.Combine(root.FullName, "Legacy.Maliev.Web.slnx")))
+            root = root.Parent;
+        Assert.NotNull(root);
+        var css = await File.ReadAllTextAsync(Path.Combine(root.FullName, "Legacy.Maliev.Web", "wwwroot", "dist", "route-instant-quotation.css"));
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
+        await using var context = await browser.NewContextAsync(new() { ViewportSize = new() { Width = width, Height = 1000 } });
+        await context.RouteAsync("**/*", route => route.AbortAsync());
+        var page = await context.NewPageAsync();
+
+        foreach (var (material, preference) in new[]
+        {
+            ("PLA", BuildPreference.Quality), ("PLA", BuildPreference.Standard),
+            ("PLA", BuildPreference.Strength), ("M68", BuildPreference.Standard),
+        })
+        {
+            var part = Part(material, preference);
+            var viewModel = new InstantQuotationWorkflowPartViewModel(
+                part.PartId, Guid.NewGuid(), part.DisplayFileName, part.Geometry, part.Configuration, null);
+            var html = await renderer.Dispatcher.InvokeAsync(async () =>
+                (await renderer.RenderComponentAsync<InstantQuotationReview>(ParameterView.FromDictionary(new Dictionary<string, object?>
+                {
+                    [nameof(InstantQuotationReview.Parts)] = new[] { viewModel },
+                    [nameof(InstantQuotationReview.Materials)] = new InstantQuotationWorkflowMaterialOption[] { new(material, material) },
+                }))).ToHtmlString());
+            await page.SetContentAsync("<!doctype html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><style>" + css +
+                "</style></head><body><main class=\"instant-quote\"><section class=\"instant-quote__workflow\">" + html + "</section></main></body></html>");
+            await page.Locator("[data-review-part-details] > summary").ClickAsync();
+            var detail = page.Locator(material == "M68" ? "[data-review-build-preference-detail]" : "[data-review-fdm-preference-detail]");
+            Assert.True(await detail.IsVisibleAsync());
+            Assert.True(await detail.EvaluateAsync<bool>("""
+                element => {
+                  const style = getComputedStyle(element);
+                  const range = document.createRange();
+                  range.selectNodeContents(element);
+                  const box = element.getBoundingClientRect();
+                  return element.textContent.trim().length > 0 && style.whiteSpace === 'normal'
+                    && style.textOverflow === 'clip' && style.overflowX === 'visible'
+                    && [...range.getClientRects()].every(rect => rect.left >= box.left - 1 && rect.right <= box.right + 1
+                      && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1)
+                    && document.documentElement.scrollWidth <= innerWidth + 1;
+                }
+                """), $"Preference detail must remain readable for {culture}, {width}px, {material}, {preference}.");
+        }
+    }
+
+    [Theory]
     [InlineData("en", "M68", "Smooth, highly detailed appearance for resin-suitable parts · suitability is confirmed during review")]
     [InlineData("th", "M68", "ผิวเรียบและรายละเอียดคมชัดสำหรับงานที่เหมาะกับเรซิน · วิศวกรจะตรวจสอบความเหมาะสม")]
     [InlineData("en", "PLA", null)]
@@ -231,6 +289,66 @@ public sealed class InstantQuotationResinPresentationTests
         foreach (var fdmTerm in new[] { "0.05", "full-layer", "post-cure", "walls", "infill", "ชั้นเรซิน", "ฉายแสง", "ผนัง", "อินฟิลล์" })
         {
             Assert.DoesNotContain(fdmTerm, detail, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Theory]
+    [InlineData("en", "PLA", BuildPreference.Quality, "Finer detail and a smoother appearance · takes longer and costs more")]
+    [InlineData("th", "PLA", BuildPreference.Quality, "เน้นรายละเอียดที่คมชัดและผิวที่เรียบขึ้น · ใช้เวลาผลิตและมีค่าใช้จ่ายมากขึ้น")]
+    [InlineData("en", "PLA", BuildPreference.Standard, "Balanced finish, durability, lead time, and price for everyday use")]
+    [InlineData("th", "PLA", BuildPreference.Standard, "สมดุลด้านผิวชิ้นงาน ความทนทาน ระยะเวลา และราคา สำหรับการใช้งานทั่วไป")]
+    [InlineData("en", "PLA", BuildPreference.Strength, "Greater structural strength · material and load direction still require engineering review")]
+    [InlineData("th", "PLA", BuildPreference.Strength, "เพิ่มความแข็งแรงของโครงสร้าง · วัสดุและทิศทางรับแรงยังต้องให้วิศวกรตรวจสอบ")]
+    [InlineData("en", "PLA", (BuildPreference)999, "Balanced finish, durability, lead time, and price for everyday use")]
+    [InlineData("th", "PLA", (BuildPreference)999, "สมดุลด้านผิวชิ้นงาน ความทนทาน ระยะเวลา และราคา สำหรับการใช้งานทั่วไป")]
+    [InlineData("en", "M68", BuildPreference.Standard, null)]
+    [InlineData("th", "M68", BuildPreference.Standard, null)]
+    [InlineData("en", "unknown-material", BuildPreference.Standard, null)]
+    [InlineData("th", "unknown-material", BuildPreference.Standard, null)]
+    public async Task Review_UsesFinalFdmPreferenceCopyWithoutTechnicalPromises(
+        string culture, string material, BuildPreference preference, string? expectedDetail)
+    {
+        using var cultures = new CultureScope(culture);
+        var part = Part(material, preference);
+        var viewModel = new InstantQuotationWorkflowPartViewModel(
+            part.PartId, Guid.NewGuid(), part.DisplayFileName, part.Geometry, part.Configuration, null);
+        using var services = Services(new CapturingActivator(), new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        var html = await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            var parameters = ParameterView.FromDictionary(new Dictionary<string, object?>
+            {
+                [nameof(InstantQuotationReview.Parts)] = new[] { viewModel },
+                [nameof(InstantQuotationReview.Materials)] = new InstantQuotationWorkflowMaterialOption[]
+                {
+                    new("M68", "M68 resin"), new("PLA", "PLA"),
+                },
+            });
+            return (await renderer.RenderComponentAsync<InstantQuotationReview>(parameters)).ToHtmlString();
+        });
+
+        var details = Regex.Matches(html,
+            "<dd\\b[^>]*data-review-fdm-preference-detail[^>]*>([\\s\\S]*?)</dd>");
+        var resinDetails = Regex.Matches(html,
+            "<dd\\b[^>]*data-review-build-preference-detail[^>]*>([\\s\\S]*?)</dd>");
+        if (expectedDetail is null)
+        {
+            Assert.Empty(details.Cast<Match>());
+            Assert.Equal(material == "M68" ? 1 : 0, resinDetails.Count);
+            return;
+        }
+
+        Assert.Empty(resinDetails.Cast<Match>());
+        var detail = WebUtility.HtmlDecode(Assert.Single(details.Cast<Match>()).Groups[1].Value);
+        Assert.Equal(expectedDetail, detail);
+        foreach (var obsoletePromise in new[]
+        {
+            "0.12 mm layers, reduced speed and acceleration, Gyroid sparse infill",
+            "0.20", "3 walls", "6 walls", "15%", "25%", "0.05", "full-layer", "post-cure",
+            "ผนัง", "อินฟิลล์", "ฉายแสง",
+        })
+        {
+            Assert.DoesNotContain(obsoletePromise, detail, StringComparison.OrdinalIgnoreCase);
         }
     }
 
