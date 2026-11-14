@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
+using Microsoft.Playwright;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -172,6 +173,63 @@ public sealed class InstantQuotationResinPresentationTests
             var quantityControl = Regex.Match(html, "<input\\b[^>]*id=\"quantity-" + part.PartId + "\"[^>]*>");
             Assert.True(quantityControl.Success);
             Assert.DoesNotMatch("\\sdisabled(?:\\s|=|>)", quantityControl.Value);
+        }
+    }
+
+    [Theory]
+    [InlineData("en", 320)]
+    [InlineData("th", 320)]
+    [InlineData("en", 1440)]
+    [InlineData("th", 1440)]
+    public async Task Review_PreferenceDetailsAreFullyReadable(string culture, int width)
+    {
+        using var cultures = new CultureScope(culture);
+        using var services = Services(new CapturingActivator(), new RecordingJavaScript());
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        var root = new DirectoryInfo(AppContext.BaseDirectory);
+        while (root is not null && !File.Exists(Path.Combine(root.FullName, "Legacy.Maliev.Web.slnx")))
+            root = root.Parent;
+        Assert.NotNull(root);
+        var css = await File.ReadAllTextAsync(Path.Combine(root.FullName, "Legacy.Maliev.Web", "wwwroot", "dist", "route-instant-quotation.css"));
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new() { Headless = true });
+        await using var context = await browser.NewContextAsync(new() { ViewportSize = new() { Width = width, Height = 1000 } });
+        await context.RouteAsync("**/*", route => route.AbortAsync());
+        var page = await context.NewPageAsync();
+
+        foreach (var (material, preference) in new[]
+        {
+            ("PLA", BuildPreference.Quality), ("PLA", BuildPreference.Standard),
+            ("PLA", BuildPreference.Strength), ("M68", BuildPreference.Standard),
+        })
+        {
+            var part = Part(material, preference);
+            var viewModel = new InstantQuotationWorkflowPartViewModel(
+                part.PartId, Guid.NewGuid(), part.DisplayFileName, part.Geometry, part.Configuration, null);
+            var html = await renderer.Dispatcher.InvokeAsync(async () =>
+                (await renderer.RenderComponentAsync<InstantQuotationReview>(ParameterView.FromDictionary(new Dictionary<string, object?>
+                {
+                    [nameof(InstantQuotationReview.Parts)] = new[] { viewModel },
+                    [nameof(InstantQuotationReview.Materials)] = new InstantQuotationWorkflowMaterialOption[] { new(material, material) },
+                }))).ToHtmlString());
+            await page.SetContentAsync("<!doctype html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><style>" + css +
+                "</style></head><body><main class=\"instant-quote\"><section class=\"instant-quote__workflow\">" + html + "</section></main></body></html>");
+            await page.Locator("[data-review-part-details] > summary").ClickAsync();
+            var detail = page.Locator(material == "M68" ? "[data-review-build-preference-detail]" : "[data-review-fdm-preference-detail]");
+            Assert.True(await detail.IsVisibleAsync());
+            Assert.True(await detail.EvaluateAsync<bool>("""
+                element => {
+                  const style = getComputedStyle(element);
+                  const range = document.createRange();
+                  range.selectNodeContents(element);
+                  const box = element.getBoundingClientRect();
+                  return element.textContent.trim().length > 0 && style.whiteSpace === 'normal'
+                    && style.textOverflow === 'clip' && style.overflowX === 'visible'
+                    && [...range.getClientRects()].every(rect => rect.left >= box.left - 1 && rect.right <= box.right + 1
+                      && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1)
+                    && document.documentElement.scrollWidth <= innerWidth + 1;
+                }
+                """), $"Preference detail must remain readable for {culture}, {width}px, {material}, {preference}.");
         }
     }
 
