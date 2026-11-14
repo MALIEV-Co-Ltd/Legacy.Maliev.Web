@@ -261,6 +261,44 @@ public sealed class LeadAnalyticsEventQueueParityTests
         Assert.Equal("request-48", payload!.TransactionId);
         Assert.Equal("service-3d", payload.Intent);
         Assert.Equal("printing", payload.FinderPath);
+
+        Assert.True(ServiceFinderAttribution.TryCreate(
+            "files-none",
+            "service-machining",
+            "material-metal",
+            "quantity-11-100",
+            "use-replacement",
+            "scanning,cnc",
+            "scanning,cnc",
+            out var scanningAttribution));
+
+        Assert.NotNull(scanningAttribution);
+        Assert.Contains("\"source\":\"service_finder\"", scanningAttribution.ToMetadataJson(), StringComparison.Ordinal);
+        Assert.Contains("\"recommended_service_ids\":[\"scanning\",\"cnc\"]", scanningAttribution.ToMetadataJson(), StringComparison.Ordinal);
+        var scanningTempData = CreateTempData();
+        Assert.True(LeadAnalyticsEventQueue.TryQueueManualQuotationWithFinder(
+            scanningTempData,
+            "request-45",
+            hasFiles: true,
+            requestedItem: string.Empty,
+            journeyId: "11111111-2222-3333-4444-555555555555",
+            scanningAttribution,
+            out var scanningFailure));
+        Assert.Null(scanningFailure);
+        Assert.True(LeadAnalyticsEventQueue.TryConsume(scanningTempData, out var scanningPayload));
+        Assert.NotNull(scanningPayload);
+
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(scanningPayload));
+        var root = document.RootElement;
+        Assert.Equal("service-machining", root.GetProperty("intent").GetString());
+        Assert.Equal("scanning>cnc", root.GetProperty("finder_path").GetString());
+        Assert.Equal("request-45", root.GetProperty("transaction_id").GetString());
+        Assert.Equal("11111111-2222-3333-4444-555555555555", root.GetProperty("journey_id").GetString());
+        var json = root.GetRawText();
+        Assert.DoesNotContain("email", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("phone", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("name", json, StringComparison.OrdinalIgnoreCase);
+        Assert.False(LeadAnalyticsEventQueue.TryConsume(scanningTempData, out _));
     }
 
     [Fact]
