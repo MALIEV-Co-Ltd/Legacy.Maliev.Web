@@ -1,0 +1,103 @@
+name: Web single corrected real-upload focus (Root permit required)
+
+on:
+  workflow_dispatch:
+    inputs:
+      root_permit_blob:
+        description: Independently issued Root permit exact Git blob (not authority issuance)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-single-corrected-real-upload-root-permit
+  cancel-in-progress: false
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Record finite whole-job lease start
+        run: echo "FOCUS_JOB_STARTED_UNIX=$(date +%s)" >> "$GITHUB_ENV"
+      - name: Check out independently reviewed route
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: .route
+          persist-credentials: false
+      - name: Set up exact observed Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.21.0
+      - name: Check out exact immutable SDK installer (do not execute action)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: actions/setup-dotnet
+          ref: a98b56852c35b8e3190ac28c8c2271da59106c68
+          path: tooling
+          persist-credentials: false
+      - name: Transport existing immutable Root permit (no grant creation)
+        env:
+          ROOT_PERMIT_BLOB: ${{ inputs.root_permit_blob }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          import base64, hashlib, json, os, pathlib, re, urllib.request
+          blob = os.environ['ROOT_PERMIT_BLOB']
+          if not re.fullmatch(r'[0-9a-f]{40}', blob):
+              raise ValueError('Exact Root-issued Git blob required')
+          request = urllib.request.Request('https://api.github.com/repos/' + os.environ['GITHUB_REPOSITORY'] + '/git/blobs/' + blob,
+              headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'], 'Accept': 'application/vnd.github+json'})
+          with urllib.request.urlopen(request, timeout=30) as response:
+              payload = response.read(65537)
+          if len(payload) > 65536:
+              raise ValueError('Permit transport exceeds bound')
+          body = json.loads(payload)
+          if body.get('encoding') != 'base64' or body.get('sha') != blob:
+              raise ValueError('Unexpected immutable blob response')
+          raw = base64.b64decode(body['content'])
+          if len(raw) > 32768 or hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest() != blob:
+              raise ValueError('Permit Git custody mismatch')
+          path = pathlib.Path('.route/runtime/root-permit.json')
+          with path.open('xb') as target:
+              target.write(raw)
+          PY
+      - name: Check out frozen Web source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: 66d220af825a6d4829d1b97512e21b6486a08c87
+          path: source
+          persist-credentials: false
+      - name: Check out exact ServiceDefaults
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
+          ref: 3c790ba6414b2a539f24aabb6948549ffd81a86b
+          path: source/.dependencies/Legacy.Maliev.ServiceDefaults
+          persist-credentials: false
+      - name: Check out exact Compatibility contracts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts
+          ref: 78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7
+          path: source/.dependencies/Legacy.Maliev.CompatibilityContracts
+          persist-credentials: false
+      - name: One capped corrected-source attempt (no fallback)
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: >-
+          python .route/runtime/run_focus.py
+          --policy .route/runtime/admission-policy.json
+          --permit .route/runtime/root-permit.json
+          --source source
+          --evidence '${{ github.workspace }}/real-upload-focus-evidence'
+      - name: Retain admission, raw diagnostics, both TRX sets and cleanup receipts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: web-corrected-real-upload-${{ github.run_id }}-${{ github.run_attempt }}
+          path: real-upload-focus-evidence/**
+          if-no-files-found: error
+          retention-days: 14
