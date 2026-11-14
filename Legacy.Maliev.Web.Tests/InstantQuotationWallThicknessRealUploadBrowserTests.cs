@@ -1020,11 +1020,52 @@ public sealed partial class InstantQuotationWallThicknessRealUploadBrowserTests(
                 {
                     Path = Path.Combine(evidenceDirectory, $"source-576-real-upload-viewer-{culture}-{width}.png"),
                 });
-                await page.ScreenshotAsync(new PageScreenshotOptions
+                var captureStarted = Stopwatch.GetTimestamp();
+                try
                 {
-                    Path = Path.Combine(evidenceDirectory, $"source-576-real-upload-{culture}-{width}.png"),
-                    FullPage = true,
-                });
+                    await page.ScreenshotAsync(new PageScreenshotOptions
+                    {
+                        Path = Path.Combine(evidenceDirectory, $"source-576-real-upload-{culture}-{width}.png"),
+                        FullPage = true,
+                    });
+                }
+                catch (Exception)
+                {
+                    try
+                    {
+                        using var process = Process.GetCurrentProcess();
+                        long? cgroupCurrent = null;
+                        long? cgroupMaximum = null;
+                        try
+                        {
+                            if (OperatingSystem.IsLinux())
+                            {
+                                static long? ReadCgroupNumber(string path)
+                                {
+                                    using var reader = File.OpenText(path);
+                                    Span<char> buffer = stackalloc char[32];
+                                    var length = reader.ReadBlock(buffer);
+                                    return length < buffer.Length && long.TryParse(buffer[..length], out var value) && value >= 0
+                                        ? value : null;
+                                }
+                                cgroupCurrent = ReadCgroupNumber("/sys/fs/cgroup/memory.current");
+                                cgroupMaximum = ReadCgroupNumber("/sys/fs/cgroup/memory.max");
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            // Cgroup memory is optional diagnostic evidence.
+                        }
+                        output.WriteLine("[full-page-capture-failure] elapsed_ms={0} viewport_width={1} viewport_height=700 process_working_set_bytes={2} cgroup_current_bytes={3} cgroup_max_bytes={4}",
+                            (long)Stopwatch.GetElapsedTime(captureStarted).TotalMilliseconds, width, process.WorkingSet64,
+                            cgroupCurrent, cgroupMaximum);
+                    }
+                    catch (Exception)
+                    {
+                        // Diagnostics must not hide the original failure.
+                    }
+                    throw;
+                }
             }
         }
         finally
