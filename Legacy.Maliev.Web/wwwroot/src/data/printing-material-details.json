@@ -91,14 +91,14 @@
     "alt": { "en": "Large structural 3D printed component being installed in industrial equipment", "th": "ชิ้นส่วนโครงสร้างที่พิมพ์ 3D กำลังติดตั้งกับอุปกรณ์อุตสาหกรรม" }
   },
   "PC-FR": {
-    "description": { "en": "Flame-retardant PC grades for electrical and industrial housings when the exact certification is specified.", "th": "PC เกรดหน่วงไฟสำหรับกล่องไฟฟ้าและงานอุตสาหกรรม โดยต้องระบุใบรับรองที่ต้องการให้ชัดเจน" },
+    "description": { "en": "Bambu PC FR for electrical and industrial housings when the required flame-retardant certification is specified.", "th": "Bambu PC FR สำหรับกล่องไฟฟ้าและงานอุตสาหกรรม โดยต้องระบุใบรับรองการหน่วงไฟที่ต้องการให้ชัดเจน" },
     "properties": [
       { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "45–65 MPa (grade dependent)", "th": "45–65 MPa (ขึ้นกับเกรด)" } },
       { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "100–120 °C (grade dependent)", "th": "100–120 °C (ขึ้นกับเกรด)" } },
       { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "PC-like resistance; verify the flame-retardant formulation and SDS.", "th": "พฤติกรรมใกล้เคียง PC ต้องตรวจสอบสูตรหน่วงไฟและ SDS ของวัสดุ" } }
     ],
     "colors": { "en": [], "th": [] },
-    "availability": { "en": "No fixed Thailand colour palette is published here. Certification, grade and stock are confirmed per project.", "th": "ไม่พบพาเลตสีตายตัวที่ยืนยันได้ในไทย จึงตรวจสอบใบรับรอง เกรด และสต็อกเป็นรายงาน" },
+    "availability": { "en": "MALIEV prices the Bambu PC FR profile; certification and current stock are confirmed per project.", "th": "MALIEV ประเมินราคาด้วยโปรไฟล์ Bambu PC FR และยืนยันใบรับรองกับสต็อกปัจจุบันเป็นรายโครงการ" },
     "application": { "en": "Representative electrical enclosure application", "th": "ตัวอย่างกล่องครอบอุปกรณ์ไฟฟ้า" },
     "image": "/src/images/services/printing/materials/material-pc-fr.webp",
     "alt": { "en": "3D printed electronics enclosure being checked for fit", "th": "กล่องครอบอุปกรณ์อิเล็กทรอนิกส์ที่พิมพ์ 3D กำลังตรวจสอบการประกอบ" }
@@ -117,14 +117,14 @@
     "alt": { "en": "3D printed mechanism being checked in a functional fixture", "th": "กลไกที่พิมพ์ 3D กำลังตรวจสอบในฟิกซ์เจอร์ใช้งาน" }
   },
   "PA12": {
-    "description": { "en": "Dimensionally steadier nylon for durable precision parts with lower moisture uptake than PA6.", "th": "ไนลอนสำหรับชิ้นส่วนแม่นยำทนทาน ดูดความชื้นน้อยกว่า PA6" },
+    "description": { "en": "eSUN ePA12 nylon for durable precision parts with lower moisture uptake than PA6.", "th": "ไนลอน eSUN ePA12 สำหรับชิ้นส่วนแม่นยำทนทาน ดูดความชื้นน้อยกว่า PA6" },
     "properties": [
       { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "45–65 MPa", "th": "45–65 MPa" } },
       { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "90–110 °C", "th": "90–110 °C" } },
       { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "Good resistance to oils, fuels and many dilute chemicals; still needs dry storage.", "th": "ทนน้ำมัน เชื้อเพลิง และสารเคมีเจือจางหลายชนิด แต่ยังต้องเก็บแบบควบคุมความชื้น" } }
     ],
     "colors": { "en": [], "th": [] },
-    "availability": { "en": "Specialty nylon colour is supplier dependent; confirm Thailand stock before quoting.", "th": "สีไนลอนเฉพาะทางขึ้นกับผู้จำหน่าย โปรดยืนยันสต็อกในไทยก่อนประเมินราคา" },
+    "availability": { "en": "MALIEV prices eSUN ePA12; colour and current Thailand stock are confirmed per quotation.", "th": "MALIEV ประเมินราคาด้วย eSUN ePA12 โดยยืนยันสีและสต็อกปัจจุบันในไทยตามใบประเมินราคา" },
     "application": { "en": "Representative durable precision component", "th": "ตัวอย่างชิ้นส่วนแม่นยำที่ต้องการความทนทาน" },
     "image": "/src/images/services/printing/materials/material-pa12.webp",
     "alt": { "en": "Large durable 3D printed component installed on a production machine", "th": "ชิ้นส่วนทนทานที่พิมพ์ 3D ติดตั้งบนเครื่องผลิต" }
@@ -143,27 +143,27 @@
     "alt": { "en": "Dark carbon-fibre 3D printed bracket fitted to industrial equipment", "th": "ขายึดพิมพ์ 3D สีเข้มเสริมคาร์บอนไฟเบอร์ติดตั้งกับอุปกรณ์อุตสาหกรรม" }
   },
   "PETG-CF": {
-    "description": { "en": "Stiffer PETG with carbon fibre for functional fixtures that still need useful toughness.", "th": "PETG เสริมคาร์บอนไฟเบอร์ที่แข็งขึ้น เหมาะกับฟิกซ์เจอร์ใช้งานที่ยังต้องการความเหนียว" },
+    "description": { "en": "Fiberon PETG-rCF08 uses 8% recycled carbon fibre for functional fixtures that need stiffness and useful toughness.", "th": "Fiberon PETG-rCF08 ใช้คาร์บอนไฟเบอร์รีไซเคิล 8% สำหรับฟิกซ์เจอร์ใช้งานที่ต้องการทั้งความแข็งและความเหนียว" },
     "properties": [
       { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "45–65 MPa (orientation and brand dependent)", "th": "45–65 MPa (ขึ้นกับทิศทางพิมพ์และแบรนด์)" } },
       { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "70–90 °C", "th": "70–90 °C" } },
       { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "PETG-like chemical behaviour; carbon fibre adds stiffness and abrasion to the nozzle.", "th": "พฤติกรรมต่อสารเคมีใกล้เคียง PETG และคาร์บอนไฟเบอร์เพิ่มความแข็งพร้อมทำให้หัวฉีดสึก" } }
     ],
     "colors": { "en": [], "th": [] },
-    "availability": { "en": "The Thailand listing confirms the carbon-fibre grade, but not a fixed colour variant; confirm the exact spool and stock before quoting.", "th": "รายการในไทยยืนยันเกรดเสริมคาร์บอน แต่ไม่ได้ยืนยันสีตายตัว โปรดยืนยันม้วนวัสดุและสต็อกก่อนประเมินราคา" },
+    "availability": { "en": "MALIEV's stocked printing profile is Fiberon PETG-rCF08; current spool and stock are confirmed per quotation.", "th": "โปรไฟล์ที่ MALIEV ใช้พิมพ์คือ Fiberon PETG-rCF08 โดยยืนยันม้วนวัสดุและสต็อกปัจจุบันตามใบประเมินราคา" },
     "application": { "en": "Representative stiff functional fixture", "th": "ตัวอย่างฟิกซ์เจอร์ใช้งานที่ต้องการความแข็ง" },
     "image": "/src/images/services/printing/materials/material-petg-cf.webp",
     "alt": { "en": "Carbon-fibre reinforced 3D printed fixture being checked on a workbench", "th": "ฟิกซ์เจอร์พิมพ์ 3D เสริมคาร์บอนไฟเบอร์กำลังตรวจสอบบนโต๊ะทำงาน" }
   },
   "PET-CF": {
-    "description": { "en": "Carbon-fibre PET for stiff, dimensionally stable jigs and tooling.", "th": "PET เสริมคาร์บอนไฟเบอร์สำหรับจิ๊กและเครื่องมือที่ต้องการความแข็งและคงรูป" },
+    "description": { "en": "Fiberon PET-CF17 uses 17% carbon fibre for stiff, dimensionally stable jigs and tooling.", "th": "Fiberon PET-CF17 ใช้คาร์บอนไฟเบอร์ 17% สำหรับจิ๊กและเครื่องมือที่ต้องการความแข็งและคงรูป" },
     "properties": [
       { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "50–75 MPa (orientation and brand dependent)", "th": "50–75 MPa (ขึ้นกับทิศทางพิมพ์และแบรนด์)" } },
       { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "80–105 °C", "th": "80–105 °C" } },
       { "label": { "en": "Chemical behaviour", "th": "พฤติกรรมต่อสารเคมี" }, "value": { "en": "PET-like resistance; verify the exact resin and fibre loading.", "th": "พฤติกรรมใกล้เคียง PET ต้องตรวจสอบสูตรเรซิ่นและสัดส่วนเส้นใย" } }
     ],
     "colors": { "en": [], "th": [] },
-    "availability": { "en": "No fixed Thailand colour variant is published for this carbon-fibre grade; ask us to verify the supplier batch and stock.", "th": "ไม่พบสีตายตัวที่ยืนยันได้ในไทยสำหรับเกรดเสริมคาร์บอนนี้ สอบถามเพื่อให้เราตรวจสอบล็อตและสต็อกของผู้จำหน่าย" },
+    "availability": { "en": "MALIEV sources Fiberon PET-CF17 to order; supplier batch and current Thailand stock are confirmed per quotation.", "th": "MALIEV จัดหา Fiberon PET-CF17 ตามคำสั่งซื้อ โดยยืนยันล็อตผู้จำหน่ายและสต็อกปัจจุบันในไทยตามใบประเมินราคา" },
     "application": { "en": "Representative tooling and jig application", "th": "ตัวอย่างเครื่องมือและจิ๊กใช้งาน" },
     "image": "/src/images/services/printing/materials/material-pet-cf.webp",
     "alt": { "en": "Dark 3D printed tooling component mounted in an industrial cell", "th": "ชิ้นส่วนเครื่องมือพิมพ์ 3D สีเข้มติดตั้งในเซลล์อุตสาหกรรม" }
@@ -182,7 +182,7 @@
     "alt": { "en": "Large black carbon-fibre nylon component being fitted to equipment", "th": "ชิ้นส่วนไนลอนเสริมคาร์บอนสีดำกำลังติดตั้งกับอุปกรณ์" }
   },
   "ASA-CF": {
-    "description": { "en": "Stiff, UV-stable ASA reinforced with carbon fibre for outdoor tooling and housings.", "th": "ASA เสริมคาร์บอนไฟเบอร์ที่แข็งและทน UV สำหรับเครื่องมือและกล่องครอบกลางแจ้ง" },
+    "description": { "en": "Bambu ASA-CF is stiff, UV-stable carbon-fibre ASA for outdoor tooling and housings.", "th": "Bambu ASA-CF เป็น ASA เสริมคาร์บอนไฟเบอร์ที่แข็งและทน UV สำหรับเครื่องมือและกล่องครอบกลางแจ้ง" },
     "properties": [
       { "label": { "en": "Tensile strength", "th": "ความต้านแรงดึง" }, "value": { "en": "45–70 MPa (orientation and brand dependent)", "th": "45–70 MPa (ขึ้นกับทิศทางพิมพ์และแบรนด์)" } },
       { "label": { "en": "Heat deflection", "th": "อุณหภูมิที่เริ่มเสียรูป" }, "value": { "en": "85–105 °C", "th": "85–105 °C" } },

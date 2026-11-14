@@ -278,8 +278,34 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
         await AssertCompactDescriptionAsync();
         var counter = form.Locator("[data-customer-description-count]");
         await Assertions.Expect(counter).ToHaveTextAsync("0");
-        await description.FillAsync(culture == "th" ? "งานทดสอบ" : "Test project");
-        await Assertions.Expect(counter).ToHaveTextAsync(culture == "th" ? "8" : "12");
+        var observedInputEvents = 0;
+        var lastObservedLength = -1;
+        const string observationPrefix = "customer-description-input-length:";
+        void ObserveDescriptionInput(object? _, IConsoleMessage message)
+        {
+            if (message.Type != "debug" || !message.Text.StartsWith(observationPrefix, StringComparison.Ordinal)
+                || !int.TryParse(message.Text.AsSpan(observationPrefix.Length), out var length)
+                || length is < 0 or > 512) return;
+            Interlocked.Increment(ref observedInputEvents);
+            Volatile.Write(ref lastObservedLength, length);
+        }
+        page.Console += ObserveDescriptionInput;
+        try
+        {
+            await description.EvaluateAsync("field => field.addEventListener('input', () => console.debug('customer-description-input-length:' + field.value.length), { once: true })");
+            await description.FillAsync(culture == "th" ? "งานทดสอบ" : "Test project");
+            await Assertions.Expect(counter).ToHaveTextAsync(culture == "th" ? "8" : "12");
+        }
+        catch
+        {
+            try { output.WriteLine($"customer-description browser-input-events={Volatile.Read(ref observedInputEvents)} last-length={Volatile.Read(ref lastObservedLength)}"); }
+            catch { /* Diagnostic output must not replace the original failure. */ }
+            throw;
+        }
+        finally
+        {
+            page.Console -= ObserveDescriptionInput;
+        }
         await description.FillAsync(new string('x', 512));
         await Assertions.Expect(counter).ToHaveTextAsync("512");
         Assert.Equal(512, await form.EvaluateAsync<int>("form => new FormData(form).get('Description').length"));
