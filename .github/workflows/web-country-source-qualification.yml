@@ -35,7 +35,7 @@ jobs:
           python3 -B scripts/launch_web_capped_kernel_proof.py --evidence "$RUNNER_TEMP/web-kernel-evidence"
       - name: Retain actual kernel and cleanup receipts
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: web-kernel-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/web-kernel-evidence/
@@ -102,7 +102,7 @@ jobs:
           python3 -B "$WEB_TRANSPORT_ROOT/materialize_web_candidate.py" --policy "$WEB_TRANSPORT_ROOT/web-country-policy.json" --candidate . --verify-only
       - name: Retain build and exact ownership evidence
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: country-build-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/web-country-evidence/
