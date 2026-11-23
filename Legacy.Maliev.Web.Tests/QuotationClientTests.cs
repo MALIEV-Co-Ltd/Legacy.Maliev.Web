@@ -116,13 +116,21 @@ public sealed class QuotationClientTests
         Assert.Null(result.ReferenceNumber);
     }
 
-    [Fact]
-    public async Task UploadAndLink_StreamsMultipartThroughFileServiceAndLinksObjectMetadata()
+    [Theory]
+    [InlineData(null, "application/octet-stream")]
+    [InlineData("", "application/octet-stream")]
+    [InlineData("not a media type", "application/octet-stream")]
+    [InlineData("simplify3d_stl", "simplify3d_stl/stl")]
+    [InlineData("application/pdf", "application/pdf")]
+    [InlineData("model/stl", "model/stl")]
+    public async Task UploadAndLink_StreamsMultipartThroughFileServiceAndLinksObjectMetadata(
+        string? contentType, string expectedMediaType)
     {
         var fileHandler = new RecordingHandler(async request =>
         {
             Assert.Equal(new AuthenticationHeaderValue("Bearer", "service-token"), request.Headers.Authorization);
             Assert.IsType<MultipartFormDataContent>(request.Content);
+            Assert.Equal(expectedMediaType, Assert.Single((MultipartFormDataContent)request.Content!).Headers.ContentType?.MediaType);
             var body = await request.Content!.ReadAsStringAsync();
             Assert.Contains("model.stl", body, StringComparison.Ordinal);
             Assert.Contains("solid test", body, StringComparison.Ordinal);
@@ -147,7 +155,7 @@ public sealed class QuotationClientTests
         var result = await client.UploadAndLinkAsync(
             417,
             Guid.Parse("11111111-2222-3333-4444-555555555555"),
-            [Upload("model.stl", "model/stl", "solid test")],
+            [Upload("model.stl", contentType!, "solid test")],
             CancellationToken.None);
 
         Assert.True(result.Completed);

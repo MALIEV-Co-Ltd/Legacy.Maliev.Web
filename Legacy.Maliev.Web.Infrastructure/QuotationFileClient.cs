@@ -135,9 +135,7 @@ internal sealed class QuotationFileClient(
         foreach (var file in files)
         {
             var content = new StreamContent(file.OpenReadStream());
-            content.Headers.ContentType = MediaTypeHeaderValue.TryParse(file.ContentType, out var mediaType)
-                ? mediaType
-                : new MediaTypeHeaderValue("application/octet-stream");
+            content.Headers.ContentType = UploadContentTypeResolver.Resolve(file.ContentType);
             form.Add(content, "files", file.FileName);
         }
 
