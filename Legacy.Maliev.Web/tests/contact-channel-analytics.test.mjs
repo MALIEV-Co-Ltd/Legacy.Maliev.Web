@@ -9,6 +9,9 @@ const contactComponentSource = await readFile(
 const analyticsHeadSource = await readFile(
     new URL('../Components/Analytics/PublicGoogleTagManagerHead.razor', import.meta.url),
     'utf8');
+const cookieConsentSource = await readFile(
+    new URL('../Components/Layout/PublicCookieConsent.razor', import.meta.url),
+    'utf8');
 
 test('LINE and Messenger clicks emit one exact four-field event on English and Thai routes', () => {
     const cases = [
@@ -91,6 +94,159 @@ test('reject clears a denied-consent queue so a later grant cannot flush it', ()
     context.malievAnalytics.setConsent('granted');
 
     assert.equal(findEvents(context.dataLayer, 'line_click').length, 0);
+});
+
+test('cross-tab denial revokes the bridge and cannot flush or emit events', () => {
+    const context = createConsentContext('granted', { user_id: 'customer:1' });
+    context.document.cookie = 'other=value; maliev_tracking_consent=denied; preference=yes';
+    context.dispatchWindow('focus');
+    assert.equal(context.malievAnalytics.isConsentGranted(), false);
+    context.malievAnalytics.emit({ event: 'after_cross_tab_denial' });
+    assert.equal(findEvents(context.dataLayer, 'after_cross_tab_denial').length, 0);
+    assert.ok(context.dataLayer.some(value => value && value[0] === 'consent'
+        && value[1] === 'update' && value[2].analytics_storage === 'denied'));
+    assert.ok(context.dataLayer.some(value => value && value[0] === 'set' && value[1].user_id === null));
+    context.document.cookie = '';
+    assert.equal(context.malievAnalytics.isConsentGranted(), false);
+});
+
+test('denial present before initialization blocks stale identity and loader', () => {
+    const context = createConsentContext('granted', { user_id: 'customer:1' }, [], true,
+        'maliev_tracking_consent=denied');
+    assert.equal(context.malievAnalytics.isConsentGranted(), false);
+    assert.equal(context.insertedScripts.length, 0);
+    assert.equal(context.dataLayer[0][2].analytics_storage, 'denied');
+    assert.equal(context.dataLayer.some(value => value && value[0] === 'set'
+        && value[1] && value[1].user_id === 'customer:1'), false);
+});
+
+test('a throwing analytics provider cannot keep local consent granted', () => {
+    const context = createConsentContext('granted');
+    context.document.cookie = 'maliev_tracking_consent=denied';
+    context.gtag = () => { throw new Error('unavailable'); };
+    assert.equal(context.malievAnalytics.isConsentGranted(), false);
+    context.malievAnalytics.emit({ event: 'after_throwing_provider' });
+    assert.equal(findEvents(context.dataLayer, 'after_throwing_provider').length, 0);
+});
+
+test('a refused grant does not send granted consent or load the tag manager', () => {
+    const handlers = {}, updates = [];
+    let closed = 0;
+    const accept = { dataset: { cookieString: 'consent=yes' }, addEventListener: (_, callback) => { handlers.accept = callback; } };
+    const reject = { addEventListener: (_, callback) => { handlers.reject = callback; } };
+    const dialog = { querySelector: selector => selector.includes('accept') ? accept : reject,
+        addEventListener() {}, showModal() {}, close() { closed++; }, remove() {} };
+    let loads = 0;
+    const document = { querySelector: () => dialog, documentElement: { classList: { add() {}, remove() {} } } };
+    Object.defineProperty(document, 'cookie', { get: () => 'maliev_tracking_consent=denied', set() {} });
+    const window = { dataLayer: [], gtag: (...args) => updates.push(args),
+        malievAnalytics: { canGrant: () => false, setConsent() { throw new Error('must not grant'); } },
+        malievLoadGoogleTagManager: () => { loads++; } };
+    const script = cookieConsentSource.match(/<script>([\s\S]*?)<\/script>/)[1];
+    vm.runInNewContext(script, { document, window });
+    handlers.accept();
+    handlers.accept();
+    assert.equal(updates.length, 0);
+    assert.equal(loads, 0);
+    assert.equal(closed, 0);
+});
+
+test('a silently refused consent cookie does not grant tracking or dismiss the dialog', () => {
+    const handlers = {}, updates = [];
+    let closed = 0, loads = 0;
+    const accept = { dataset: { cookieString: 'consent=yes; path=/' }, addEventListener: (_, callback) => { handlers.accept = callback; } };
+    const reject = { addEventListener() {} };
+    const dialog = { querySelector: selector => selector.includes('accept') ? accept : reject,
+        addEventListener() {}, showModal() {}, close() { closed++; }, remove() {} };
+    const document = { querySelector: () => dialog, documentElement: { classList: { add() {}, remove() {} } } };
+    Object.defineProperty(document, 'cookie', { get: () => '', set() {} });
+    const window = { dataLayer: [], gtag: (...args) => updates.push(args),
+        malievAnalytics: { canGrant: () => true, setConsent() {}, isConsentGranted: () => true },
+        malievLoadGoogleTagManager: () => { loads++; } };
+    vm.runInNewContext(cookieConsentSource.match(/<script>([\s\S]*?)<\/script>/)[1], { document, window });
+    handlers.accept();
+    assert.equal(updates.length, 0);
+    assert.equal(loads, 0);
+    assert.equal(closed, 0);
+});
+
+test('direct tag manager loading refuses a recorded denial', () => {
+    const context = createConsentContext('denied', null, [], true, 'maliev_tracking_consent=denied');
+    context.malievLoadGoogleTagManager();
+    assert.equal(context.insertedScripts.length, 0);
+});
+
+test('a rejected cookie write still revokes current consent and keeps the dialog open', () => {
+    const handlers = {}, updates = [];
+    let closed = 0;
+    const accept = { dataset: {}, addEventListener() {} };
+    const reject = { addEventListener: (_, callback) => { handlers.reject = callback; } };
+    const dialog = { querySelector: selector => selector.includes('accept') ? accept : reject,
+        addEventListener() {}, showModal() {}, close() { closed++; }, remove() {} };
+    const document = { querySelector: () => dialog, documentElement: { classList: { add() {}, remove() {} } } };
+    Object.defineProperty(document, 'cookie', { get: () => '', set() { throw new Error('blocked'); } });
+    const window = { dataLayer: [], gtag: (...args) => updates.push(args),
+        malievAnalytics: { setConsent: state => updates.push(['bridge', state]) } };
+    const script = cookieConsentSource.match(/<script>([\s\S]*?)<\/script>/)[1];
+    vm.runInNewContext(script, { document, window });
+    handlers.reject();
+    handlers.reject();
+    assert.equal(updates.filter(value => value[0] === 'bridge' && value[1] === 'denied').length, 2);
+    assert.equal(updates.filter(value => value[0] === 'consent' && value[2].analytics_storage === 'denied').length, 2);
+    assert.equal(closed, 0);
+});
+
+test('an explicit valid grant updates consent before loading the tag manager', () => {
+    const handlers = {}, order = [];
+    const accept = { dataset: { cookieString: 'consent=yes' }, addEventListener: (_, callback) => { handlers.accept = callback; } };
+    const reject = { addEventListener() {} };
+    const dialog = { querySelector: selector => selector.includes('accept') ? accept : reject,
+        addEventListener() {}, showModal() {}, close() {}, remove() {} };
+    const document = { querySelector: () => dialog, cookie: '', documentElement: { classList: { add() {}, remove() {} } } };
+    const window = { dataLayer: [], gtag: () => order.push('update'),
+        malievAnalytics: { canGrant: () => true, setConsent: () => order.push('bridge'), isConsentGranted: () => true },
+        malievLoadGoogleTagManager: () => order.push('loader') };
+    const script = cookieConsentSource.match(/<script>([\s\S]*?)<\/script>/)[1];
+    vm.runInNewContext(script, { document, window });
+    handlers.accept();
+    assert.deepEqual(order, ['update', 'bridge', 'loader']);
+});
+
+test('denial arriving during grant compensates and never loads the tag manager', () => {
+    const context = createConsentContext('denied');
+    context.malievAnalytics.setConsent('denied');
+    const handlers = {};
+    const accept = { dataset: { cookieString: 'consent=yes' }, addEventListener: (_, callback) => { handlers.accept = callback; } };
+    const reject = { addEventListener() {} };
+    const dialog = { querySelector: selector => selector.includes('accept') ? accept : reject,
+        addEventListener() {}, showModal() {}, close() {}, remove() {} };
+    context.document.querySelector = () => dialog;
+    context.document.documentElement = { classList: { add() {}, remove() {} } };
+    let loads = 0;
+    context.malievLoadGoogleTagManager = () => { loads++; };
+    const originalGtag = context.gtag;
+    context.gtag = function (...args) {
+        originalGtag(...args);
+        if (args[0] === 'consent' && args[1] === 'update' && args[2].analytics_storage === 'granted')
+            context.document.cookie = 'maliev_tracking_consent=denied';
+    };
+    vm.runInContext(cookieConsentSource.match(/<script>([\s\S]*?)<\/script>/)[1], context);
+    handlers.accept();
+    const updates = context.dataLayer.filter(value => value && value[0] === 'consent' && value[1] === 'update');
+    assert.equal(updates.at(-1)[2].analytics_storage, 'denied');
+    assert.equal(context.malievAnalytics.isConsentGranted(), false);
+    assert.equal(loads, 0);
+});
+
+test('recorded denial rejects a pending queue and cannot be overridden by a stale grant', () => {
+    const context = createConsentContext('denied');
+    context.malievAnalytics.emit({ event: 'pending_before_denial' });
+    context.document.cookie = 'maliev_tracking_consent=denied';
+    context.malievAnalytics.setConsent('granted');
+    assert.equal(context.malievAnalytics.isConsentGranted(), false);
+    context.document.cookie = '';
+    context.malievAnalytics.setConsent('granted');
+    assert.equal(findEvents(context.dataLayer, 'pending_before_denial').length, 0);
 });
 
 test('events emitted after an explicit rejection are dropped instead of retained', () => {
@@ -249,7 +405,7 @@ function createContactHarness(pathname) {
     };
 }
 
-function createConsentContext(initialConsent, userIdConfiguration = null, queuedEvents = [], withLoader = false) {
+function createConsentContext(initialConsent, userIdConfiguration = null, queuedEvents = [], withLoader = false, initialCookie = '') {
     const identityBlock = analyticsHeadSource.match(/    @if \(Model\.CanTrack && !string\.IsNullOrEmpty\(Model\.UserIdConfigurationJson\)\)\n    \{([\s\S]*?)\n    \}/);
     assert.ok(identityBlock, 'Expected the server-gated identity block in the actual head component.');
     const identityScript = initialConsent === 'granted' && userIdConfiguration
@@ -261,14 +417,18 @@ function createConsentContext(initialConsent, userIdConfiguration = null, queued
         .replace(identityBlock[0], identityScript)
         .replace("var consentState = '@Model.ConsentState';", "var consentState = '" + initialConsent + "';")
         .replace(/\s*@\(\(MarkupString\)Model\.QueuedEventScript\)\s*/, '\n' + queuedScript + '\n');
-    const insertedScripts = [];
+    const insertedScripts = [], windowEvents = {};
     const document = {
+        cookie: initialCookie,
+        addEventListener: () => {},
         querySelector: () => insertedScripts[0] ?? null,
         getElementsByTagName: () => [{ parentNode: { insertBefore: loader => insertedScripts.push(loader) } }],
         createElement: () => ({ setAttribute() {} }),
     };
     const context = vm.createContext({ console, document, insertedScripts });
     context.window = context;
+    context.addEventListener = (name, callback) => { windowEvents[name] = callback; };
+    context.dispatchWindow = name => windowEvents[name]();
     vm.runInContext(script, context, { timeout: 1000 });
     if (withLoader) {
         const scripts = [...analyticsHeadSource.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)];

@@ -57,7 +57,8 @@ namespace Legacy.Maliev.Web.Middleware
                 return Task.CompletedTask;
             });
 
-            if (!remaining.HasValue)
+            if (!remaining.HasValue
+                || (HttpMethods.IsGet(context.Request.Method) && remaining.Equals("/index", StringComparison.OrdinalIgnoreCase)))
             {
                 await this.next(context);
                 return;

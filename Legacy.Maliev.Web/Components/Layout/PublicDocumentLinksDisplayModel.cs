@@ -32,10 +32,11 @@ public sealed record PublicDocumentLinksDisplayModel(
             ? context.Request.Query["culture"].ToString()
             : CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
 
+        var documentPath = CanonicalUrlPolicy.GetDocumentMetadataPath(path);
         return new PublicDocumentLinksDisplayModel(
-            CanonicalUrlPolicy.GetLocalizedUrl(path, culture),
-            CanonicalUrlPolicy.GetLocalizedUrl(path, "en"),
-            CanonicalUrlPolicy.GetLocalizedUrl(path, "th"))
+            CanonicalUrlPolicy.GetLocalizedUrl(documentPath, culture),
+            CanonicalUrlPolicy.GetLocalizedUrl(documentPath, "en"),
+            CanonicalUrlPolicy.GetLocalizedUrl(documentPath, "th"))
         {
             IsKnowledgeDocument = path.StartsWithSegments("/knowledges", StringComparison.OrdinalIgnoreCase)
         };

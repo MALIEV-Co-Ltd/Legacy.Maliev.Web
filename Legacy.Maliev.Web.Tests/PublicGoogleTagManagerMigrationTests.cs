@@ -275,6 +275,21 @@ public sealed partial class PublicGoogleTagManagerMigrationTests : IClassFixture
         Assert.Empty(model.UserIdConfigurationJson);
     }
 
+    [Fact]
+    public void SharedModel_RecordedDenialOverridesGrantedTrackingFeature()
+    {
+        var context = new DefaultHttpContext();
+        context.Features.Set<Microsoft.AspNetCore.Http.Features.ITrackingConsentFeature>(new ConsentFeature(true));
+        context.Request.Headers.Cookie = "maliev_tracking_consent=denied";
+        context.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+            [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "customer:1")], "test"));
+        var model = PublicGoogleTagManagerDisplayModel.Create(
+            context, new TempDataDictionaryFactory(new PreloadedTempDataProvider(new Dictionary<string, object>())));
+        Assert.False(model.CanTrack);
+        Assert.Equal("denied", model.ConsentState);
+        Assert.Empty(model.UserIdConfigurationJson);
+    }
+
     private sealed class ConsentFeature(bool granted) : Microsoft.AspNetCore.Http.Features.ITrackingConsentFeature
     {
         public bool IsConsentNeeded => true;

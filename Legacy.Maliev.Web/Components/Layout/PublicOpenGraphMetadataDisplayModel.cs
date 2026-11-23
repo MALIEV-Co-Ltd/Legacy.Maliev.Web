@@ -46,7 +46,7 @@ public sealed record PublicOpenGraphMetadataDisplayModel(
             GetText(title),
             GetText(description),
             string.Equals(culture, "th", StringComparison.OrdinalIgnoreCase) ? "th_TH" : "en_US",
-            CanonicalUrlPolicy.GetLocalizedUrl(context.Request.Path, culture));
+            CanonicalUrlPolicy.GetLocalizedUrl(CanonicalUrlPolicy.GetDocumentMetadataPath(context.Request.Path), culture));
     }
 
     private static string? GetText(object? value) => value switch

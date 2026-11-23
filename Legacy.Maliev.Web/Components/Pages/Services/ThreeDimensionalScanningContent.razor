@@ -9,7 +9,7 @@
         <div class="service-container service-hero-copy">
             <p class="service-eyebrow">@T("In-House & Onsite 3D Scanning", "บริการสแกน 3D ในสถานที่และนอกสถานที่")</p>
             <h1 id="scanning-title">@T("Reverse Engineering Services in Thailand from 3D Scan to Editable CAD", "รับสแกน 3D, Reverse Engineering และ Deviation Analysis")</h1>
-            <p class="service-hero-lead">@T("MALIEV provides reverse engineering in Thailand: capture real objects as digital geometry, rebuild editable CAD when needed, or compare a manufactured part with nominal CAD. We help define the correct deliverable before scanning begins.", "MALIEV รับสแกน 3D ทั้งในสถานที่และนอกสถานที่ เพื่อแปลงวัตถุจริงเป็นข้อมูลดิจิทัล สร้าง CAD ที่แก้ไขได้ หรือเปรียบเทียบชิ้นงานกับ CAD ต้นแบบ โดยช่วยกำหนดผลส่งมอบก่อนเริ่มงาน")</p>
+            <p class="service-hero-lead">@T("MALIEV provides reverse engineering in Thailand. Scan an existing part, build editable CAD or compare it with your original design.", "สแกนชิ้นงานจริงเพื่อเก็บข้อมูล 3 มิติ สร้าง CAD ที่แก้ไขได้ หรือเปรียบเทียบกับแบบต้นฉบับ")</p>
             <div class="service-actions">
                 <a class="service-button service-button-primary" href="/Quotation?item=3D-Scanning">@T("Request a Scanning Quote", "ขอใบเสนอราคาสแกน 3D") <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
                 <a class="service-button service-button-secondary" href="/Contact">@T("Plan an Onsite Scan", "วางแผนสแกนนอกสถานที่")</a>
@@ -120,7 +120,7 @@
                 </div>
                 <p class="scanning-applications"><strong>@T("Typical uses", "ตัวอย่างการใช้งาน")</strong> @T("Captured surface color can support digital archiving, digital art, visual presentations, and reference assets for animation. Animation-ready topology or rigging is separate work, not an automatic scan output.", "สีพื้นผิวที่เก็บได้ใช้สำหรับเก็บข้อมูลดิจิทัล งานศิลปะดิจิทัล การนำเสนอภาพ และเป็นข้อมูลอ้างอิงสำหรับงานแอนิเมชันได้ การจัดโครงสร้าง mesh หรือทำ rig เพื่อใช้แอนิเมชันเป็นงานแยก ไม่ใช่ผลลัพธ์จากการสแกนโดยอัตโนมัติ")</p>
                 <p class="scanning-comparison-note">@T("A color scan adds true surface color to the captured geometry. It is different from a deviation color map, which encodes measured differences from reference CAD. Neither view alone establishes dimensional accuracy.", "สแกนสีเพิ่มสีพื้นผิวจริงลงบนรูปทรงที่เก็บได้ ซึ่งต่างจากแผนที่สีความคลาดเคลื่อนที่ใช้สีแสดงค่าความต่างจาก CAD อ้างอิง ภาพทั้งสองแบบเพียงอย่างเดียวไม่ได้ยืนยันความแม่นยำด้านขนาด")</p>
-                <p class="scanning-comparison-note">@T("For color-scanning projects, we can also deliver a Gaussian splat point cloud (.PLY) when agreed in scope. This is a separate visualization output, not editable CAD or a dimensional inspection report.", "สำหรับงานสแกนสี เรายังสามารถส่งมอบพอยต์คลาวด์แบบ Gaussian splat (.PLY) ได้เมื่อระบุไว้ในขอบเขตงาน โดยเป็นไฟล์สำหรับแสดงภาพอีกประเภทหนึ่ง ไม่ใช่โมเดล CAD ที่แก้ไขได้หรือรายงานตรวจสอบขนาด")</p>
+                <p class="scanning-comparison-note">@T("For color-scanning projects, we can also deliver a Gaussian splat point cloud (.PLY) when agreed in scope. This is a separate visualization output, not editable CAD or a dimensional inspection report.", "สำหรับงานสแกนสี เรายังสามารถส่งมอบ point cloud แบบ Gaussian splat (.PLY) ได้เมื่อระบุไว้ในขอบเขตงาน โดยเป็นไฟล์สำหรับแสดงภาพอีกประเภทหนึ่ง ไม่ใช่โมเดล CAD ที่แก้ไขได้หรือรายงานตรวจสอบขนาด")</p>
             </section>
         </div>
     </section>
@@ -158,7 +158,7 @@
                             <div class="scanning-workflow-card-body">
                                 <p class="scanning-workflow-kicker">@T("Stage 1", "ขั้นที่ 1")</p>
                                 <h3>@T("Raw Scan / Raw Data", "Raw Scan / ข้อมูลดิบ")</h3>
-                                <p>@T("A mesh or point cloud for visualization, digital preservation, rendering, or your own downstream processing.", "เมชหรือพอยต์คลาวด์สำหรับแสดงผล เก็บรักษาดิจิทัล เรนเดอร์ หรือประมวลผลต่อด้วยตัวเอง")</p>
+                                <p>@T("A mesh or point cloud for visualization, digital preservation, rendering, or your own downstream processing.", "mesh หรือ point cloud สำหรับแสดงผล เก็บรักษาดิจิทัล เรนเดอร์ หรือประมวลผลต่อด้วยตัวเอง")</p>
                                 <div class="scanning-workflow-output"><span>STL</span><span>OBJ / PLY</span></div>
                                 <p class="scanning-workflow-caveat"><i class="fas fa-circle-info" aria-hidden="true"></i>@T("May still contain holes, noise, separate shells, or non-manifold edges.", "อาจยังมีรู สัญญาณรบกวน mesh แยก หรือขอบที่ไม่ปิด")</p>
                             </div>
