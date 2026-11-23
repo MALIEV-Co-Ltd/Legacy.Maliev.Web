@@ -5,6 +5,8 @@ using System.Text.Encodings.Web;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -26,7 +28,7 @@ public sealed class MemberOrderUploadBrowserTests(CncNativeBrowserFixture fixtur
         await host.StartAsync();
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
-            ExtraHTTPHeaders = new Dictionary<string, string> { ["Authorization"] = BrowserAuthenticationHandler.SchemeName },
+            ExtraHTTPHeaders = new Dictionary<string, string> { ["Authorization"] = MemberOrderBrowserHost.AuthenticationScheme },
         });
         await using var page = await context.NewPageAsync();
         page.SetDefaultTimeout(120_000);
@@ -49,7 +51,7 @@ public sealed class MemberOrderUploadBrowserTests(CncNativeBrowserFixture fixtur
         await host.StartAsync();
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions
         {
-            ExtraHTTPHeaders = new Dictionary<string, string> { ["Authorization"] = BrowserAuthenticationHandler.SchemeName },
+            ExtraHTTPHeaders = new Dictionary<string, string> { ["Authorization"] = MemberOrderBrowserHost.AuthenticationScheme },
         });
         await using var page = await context.NewPageAsync();
         page.SetDefaultTimeout(120_000);
@@ -73,7 +75,7 @@ public sealed class MemberOrderUploadBrowserTests(CncNativeBrowserFixture fixtur
             Assert.True(body.Contains(rejectionText, StringComparison.Ordinal),
                 $"Expected localized size rejection at {page.Url}; body: {body[..Math.Min(body.Length, 1500)]}");
             Assert.Contains("/member/orders/3d-scanning", page.Url, StringComparison.OrdinalIgnoreCase);
-            Assert.Equal(0, host.Submission.CallCount);
+            Assert.Equal(0, host.SubmissionCalls);
         }
         finally
         {
@@ -81,12 +83,16 @@ public sealed class MemberOrderUploadBrowserTests(CncNativeBrowserFixture fixtur
         }
     }
 
-    private sealed class MemberOrderBrowserHost : IAsyncDisposable
+    internal sealed class MemberOrderBrowserHost(bool formOnly = false) : IAsyncDisposable
     {
         private WebApplicationFactory<Program>? factory;
         private HttpClient? client;
         public string Origin { get; private set; } = string.Empty;
-        public BrowserSubmissionStub Submission { get; } = new();
+        private readonly BrowserSubmissionStub submission = new();
+        private readonly RejectFormPosts postGuard = new();
+        internal const string AuthenticationScheme = BrowserAuthenticationHandler.SchemeName;
+        internal int SubmissionCalls => submission.CallCount;
+        internal int RequestsBlockedAtHost => postGuard.BlockedCount;
 
         public async Task StartAsync()
         {
@@ -95,14 +101,17 @@ public sealed class MemberOrderUploadBrowserTests(CncNativeBrowserFixture fixtur
             var port = ((IPEndPoint)listener.LocalEndpoint).Port;
             listener.Stop();
             Origin = $"http://127.0.0.1:{port}";
-            factory = new MemberTestingFactory(BrowserHostIdentityVerifier.SourceProjectDirectory(), Submission);
+            factory = new MemberTestingFactory(BrowserHostIdentityVerifier.SourceProjectDirectory(), submission, formOnly ? postGuard : null);
             factory.UseKestrel(port);
             client = factory.CreateClient(new WebApplicationFactoryClientOptions
             {
                 AllowAutoRedirect = false,
                 BaseAddress = new Uri(Origin),
             });
-            using var ready = await client.GetAsync("/health");
+            if (!formOnly)
+            {
+                using var ready = await client.GetAsync("/health");
+            }
         }
 
         public async ValueTask DisposeAsync()
@@ -112,7 +121,7 @@ public sealed class MemberOrderUploadBrowserTests(CncNativeBrowserFixture fixtur
         }
     }
 
-    private sealed class MemberTestingFactory(string contentRoot, BrowserSubmissionStub submission)
+    private sealed class MemberTestingFactory(string contentRoot, BrowserSubmissionStub submission, RejectFormPosts? postGuard)
         : TestingWebApplicationFactory(contentRoot)
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -120,6 +129,7 @@ public sealed class MemberOrderUploadBrowserTests(CncNativeBrowserFixture fixtur
             base.ConfigureWebHost(builder);
             builder.ConfigureServices(services =>
                 {
+                    if (postGuard is not null) services.AddSingleton<IStartupFilter>(postGuard);
                     services.RemoveAll<ICustomerOrderCatalogClient>();
                     services.RemoveAll<ICustomerOrderSubmissionService>();
                     services.AddSingleton<ICustomerOrderCatalogClient, BrowserCatalogStub>();
@@ -131,15 +141,41 @@ public sealed class MemberOrderUploadBrowserTests(CncNativeBrowserFixture fixtur
         }
     }
 
+    private sealed class RejectFormPosts : IStartupFilter
+    {
+        private int blockedCount;
+        internal int BlockedCount => Volatile.Read(ref blockedCount);
+
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use(async (context, proceed) =>
+            {
+                if (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method))
+                {
+                    await proceed(context);
+                    return;
+                }
+
+                Interlocked.Increment(ref blockedCount);
+                context.Abort();
+            });
+            next(app);
+        };
+    }
+
     private sealed class BrowserCatalogStub : ICustomerOrderCatalogClient
     {
         public Task<CustomerOrderCatalogResult> GetAsync(CustomerOrderKind kind, CancellationToken cancellationToken) =>
             Task.FromResult(new CustomerOrderCatalogResult(new CustomerOrderCatalog(
-                [new CustomerOrderCatalogProcess(11, 2, "Structured light")], [], [],
-                [new CustomerOrderFileFormat(1, "STEP", ".step")]), true, true));
+                [new CustomerOrderCatalogProcess(11, 2, "Synthetic process")],
+                [new CustomerOrderCatalogMaterialGroup(12, "Synthetic group")],
+                [new CustomerOrderCatalogMaterial(13, 12, "Synthetic material")],
+                [new CustomerOrderFileFormat(1, "STEP", ".step"), new CustomerOrderFileFormat(2, "STL", ".stl")]), true, true));
 
         public Task<CustomerOrderMaterialOptionsResult> GetMaterialOptionsAsync(int materialId, CancellationToken cancellationToken) =>
-            Task.FromResult(new CustomerOrderMaterialOptionsResult(null, true, false));
+            Task.FromResult(new CustomerOrderMaterialOptionsResult(new CustomerOrderMaterialOptions(
+                [new CustomerOrderCatalogOption(14, "Synthetic color")],
+                [new CustomerOrderCatalogOption(15, "Synthetic finish")]), true, true));
     }
 
     private sealed class BrowserSubmissionStub : ICustomerOrderSubmissionService
@@ -150,7 +186,7 @@ public sealed class MemberOrderUploadBrowserTests(CncNativeBrowserFixture fixtur
             CustomerOrderDraft draft, Guid operationId, CancellationToken cancellationToken)
         {
             CallCount++;
-            throw new InvalidOperationException("Oversized browser upload must be rejected before submission.");
+            throw new InvalidOperationException("Browser fixture must not reach order submission.");
         }
     }
 

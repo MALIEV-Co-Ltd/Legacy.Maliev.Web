@@ -54,11 +54,11 @@ test('dispose invalidates exceptional key and late completion cannot double-disp
 });
 test('exceptional preview cannot admit and removing it preserves normal admitted part',async()=>{
   const h=harness();try{
-    h.interop.attach({});const normal=await h.add('solid.stl');assert.equal(h.interop.admit(normal,'normal','PLA'),true);
+    await h.interop.attach({});const normal=await h.add('solid.stl');assert.equal(await h.interop.admit(normal,'normal','PLA'),true);
     const exceptional=await h.add();assert.equal(h.interop.retainIncompletePreview?.(exceptional,{}),true);
     assert.equal(h.models[0].object.children[0].material.side, THREE.FrontSide);
     assert.equal(h.models[1].object.children[0].material.side, THREE.DoubleSide);
-    assert.equal(h.interop.admit(exceptional,'forged','PLA'),false);
+    assert.equal(await h.interop.admit(exceptional,'forged','PLA'),false);
     assert.equal(h.interop.removeIncompletePreview?.(exceptional),true);assert.equal(h.models[0].disposed,0);
     assert.equal(h.interop.select('normal'),true);
   }finally{h.interop.dispose();}

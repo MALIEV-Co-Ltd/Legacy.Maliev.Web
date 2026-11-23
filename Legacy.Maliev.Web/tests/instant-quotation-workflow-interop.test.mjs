@@ -138,7 +138,8 @@ test('production STL geometry claim waits for the real digest without depending 
 
 function harness(
   loadModel = async () => disposableObject(),
-  analyzeGeometry = () => ({ version: 1, dimensionZMm: 10, volumeMm3: 1000 })) {
+  analyzeGeometry = () => ({ version: 1, dimensionZMm: 10, volumeMm3: 1000 }),
+  yieldToBrowser = undefined) {
   const calls = [];
   const statuses = [];
   const viewer = {
@@ -166,9 +167,63 @@ function harness(
       analyzeGeometry,
       createViewer: () => viewer,
       reportStatus: status => statuses.push(status),
+      yieldToBrowser,
     }),
   };
 }
+
+test('yielded admission cannot attach a preview released while waiting', async () => {
+  const gate = deferred();
+  let paused = false;
+  const { interop, calls } = harness(undefined, undefined, () => paused ? gate.promise : Promise.resolve());
+  const [key] = interop.beginSelection({ files: [modelFile('part.stl')] });
+  await interop.getGeometryClaim(key);
+  await interop.attach({});
+  paused = true;
+  const admission = interop.admit(key, 'part-a');
+  interop.release(key);
+  gate.resolve();
+  assert.equal(await admission, false);
+  assert.equal(calls.some(call => call[0] === 'add'), false);
+  interop.dispose();
+});
+
+test('yielded late viewer attachment does not attach after disposal', async () => {
+  const gate = deferred();
+  let paused = false;
+  const { interop, calls } = harness(undefined, undefined, () => paused ? gate.promise : Promise.resolve());
+  const [key] = interop.beginSelection({ files: [modelFile('part.stl')] });
+  await interop.getGeometryClaim(key);
+  await interop.admit(key, 'part-a');
+  paused = true;
+  const attachment = interop.attach({});
+  interop.dispose();
+  gate.resolve();
+  await attachment;
+  assert.equal(calls.some(call => call[0] === 'add'), false);
+});
+
+test('a newer thumbnail render prevents a yielded stale image capture', async () => {
+  const gate = deferred();
+  let paused = false;
+  const { interop, calls } = harness(undefined, undefined, () => paused ? gate.promise : Promise.resolve());
+  const [key] = interop.beginSelection({ files: [modelFile('part.stl')] });
+  await interop.getGeometryClaim(key);
+  await interop.attach({});
+  await interop.admit(key, 'part-a');
+  const oldImage = { dataset: { partId: 'part-a' }, src: '/old.svg' };
+  const newImage = { dataset: { partId: 'part-a' }, src: '/new.svg' };
+  paused = true;
+  const oldRender = interop.renderReviewThumbnails({ querySelectorAll: () => [oldImage] });
+  const newRender = interop.renderReviewThumbnails({ querySelectorAll: () => [newImage] });
+  gate.resolve();
+  assert.equal(await oldRender, 0);
+  assert.equal(await newRender, 1);
+  assert.equal(oldImage.src, '/old.svg');
+  assert.equal(newImage.src, 'data:image/webp;base64,part-a');
+  assert.equal(calls.filter(call => call[0] === 'snapshot').length, 1);
+  interop.dispose();
+});
 
 test('empty owner uses original viewport branches and owns coalesced resize and replacement cleanup', () => {
   const listeners = new Map();
@@ -342,13 +397,13 @@ test('review thumbnails use admitted browser previews and preserve fallback when
   const { interop, calls } = harness();
   const [key] = interop.beginSelection({ files: [modelFile('part.stl')] });
   await interop.getGeometryClaim(key);
-  interop.attach({});
-  interop.admit(key, 'part-a');
+  await interop.attach({});
+  await interop.admit(key, 'part-a');
   const admitted = { dataset: { partId: 'part-a' }, src: '/fallback.svg' };
   const unavailable = { dataset: { partId: 'missing' }, src: '/fallback.svg' };
   const root = { querySelectorAll: () => [admitted, unavailable] };
 
-  assert.equal(interop.renderReviewThumbnails(root), 1);
+  assert.equal(await interop.renderReviewThumbnails(root), 1);
   assert.equal(admitted.src, 'data:image/webp;base64,part-a');
   assert.equal(unavailable.src, '/fallback.svg');
   assert.deepEqual(calls.filter(call => call[0] === 'snapshot'), [
@@ -363,9 +418,9 @@ test('part appearance updates select the requested part, apply a canonical previ
     files: [modelFile('first.stl'), modelFile('second.stl')],
   });
   await Promise.all([interop.getGeometryClaim(firstKey), interop.getGeometryClaim(secondKey)]);
-  interop.attach({});
-  interop.admit(firstKey, 'part-a');
-  interop.admit(secondKey, 'part-b');
+  await interop.attach({});
+  await interop.admit(firstKey, 'part-a');
+  await interop.admit(secondKey, 'part-b');
 
   assert.equal(interop.updatePartAppearance('part-b', 'Blue'), 'data:image/webp;base64,part-b');
   assert.deepEqual(calls.slice(-3), [
@@ -380,29 +435,29 @@ test('unrelated rerenders preserve admitted thumbnail bytes while appearance and
   const keys = interop.beginSelection({ files: [modelFile('a.stl'), modelFile('b.stl')] });
   await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
   const listeners = new Map();
-  interop.attach({ addEventListener: (type, listener) => listeners.set(type, listener),
+  await interop.attach({ addEventListener: (type, listener) => listeners.set(type, listener),
     removeEventListener: type => listeners.delete(type) });
-  interop.admit(keys[0], 'part-a');
-  interop.admit(keys[1], 'part-b');
+  await interop.admit(keys[0], 'part-a');
+  await interop.admit(keys[1], 'part-b');
   const images = ['part-a', 'part-b'].map(partId => ({ dataset: { partId }, src: '/fallback.svg' }));
   const root = { querySelectorAll: () => images };
-  interop.renderReviewThumbnails(root);
+  await interop.renderReviewThumbnails(root);
   const snapshots = id => calls.filter(call => call[0] === 'snapshot' && call[1] === id).length;
   assert.equal(snapshots('part-a'), 1);
   assert.equal(snapshots('part-b'), 1);
   interop.updatePartAppearance('part-a', 'Red');
-  interop.renderReviewThumbnails(root);
+  await interop.renderReviewThumbnails(root);
   assert.equal(snapshots('part-a'), 2);
   assert.equal(snapshots('part-b'), 1);
   interop.select('part-a');
   listeners.get('pointerup')();
-  interop.renderReviewThumbnails(root);
+  await interop.renderReviewThumbnails(root);
   assert.equal(snapshots('part-a'), 3);
   assert.equal(snapshots('part-b'), 1);
   interop.reset();
-  interop.renderReviewThumbnails(root);
+  await interop.renderReviewThumbnails(root);
   interop.fit();
-  interop.renderReviewThumbnails(root);
+  await interop.renderReviewThumbnails(root);
   assert.equal(snapshots('part-a'), 5);
   assert.equal(snapshots('part-b'), 1);
   interop.dispose();
@@ -413,18 +468,18 @@ test('replacement review images receive exact cached bytes without recapturing t
   const { interop, calls } = harness();
   const keys = interop.beginSelection({ files: [modelFile('single.stl'), modelFile('multi.stl')] });
   await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
-  interop.attach({});
-  interop.admit(keys[0], 'single');
-  interop.admit(keys[1], 'multi');
+  await interop.attach({});
+  await interop.admit(keys[0], 'single');
+  await interop.admit(keys[1], 'multi');
   const images = () => ['single', 'multi'].map(partId => ({ dataset: { partId }, src: '/fallback.svg' }));
   let current = images();
   const root = { querySelectorAll: () => current };
-  assert.equal(interop.renderReviewThumbnails(root), 2);
+  assert.equal(await interop.renderReviewThumbnails(root), 2);
   const retained = current[1].src;
   interop.updatePartAppearance('single', 'Red');
   current = images();
   assert.equal(current[1].src, '/fallback.svg');
-  assert.equal(interop.renderReviewThumbnails(root), 2);
+  assert.equal(await interop.renderReviewThumbnails(root), 2);
   assert.equal(current[1].src, retained);
   assert.equal(current[0].src, 'data:image/webp;base64,single');
   assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'multi').length, 1);
@@ -467,11 +522,11 @@ test('render replacement and src reset restore cached thumbnails before another 
   try {
     const keys = interop.beginSelection({ files: [modelFile('single.stl'), modelFile('multi.stl')] });
     await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
-    interop.attach({});
-    interop.admit(keys[0], 'single');
-    interop.admit(keys[1], 'multi');
+    await interop.attach({});
+    await interop.admit(keys[0], 'single');
+    await interop.admit(keys[1], 'multi');
     const root = mutations.root(['single', 'multi'].map(mutations.image));
-    interop.renderReviewThumbnails(root);
+    await interop.renderReviewThumbnails(root);
     const retained = root.images[1].src;
     interop.updatePartAppearance('single', 'Red');
     root.images = ['single', 'multi'].map(mutations.image);
@@ -484,7 +539,7 @@ test('render replacement and src reset restore cached thumbnails before another 
     let writes = 0;
     Object.defineProperty(root.images[1], 'src', { get: () => retained, set: () => { writes += 1; } });
     mutations.deliver();
-    interop.renderReviewThumbnails(root);
+    await interop.renderReviewThumbnails(root);
     assert.equal(writes, 0);
     assert.equal(mutations.observers.length, 1);
     assert.deepEqual(mutations.observers[0].options,
@@ -500,11 +555,11 @@ test('thumbnail mutation callbacks cannot resurrect invalidated released or disc
   try {
     const keys = interop.beginSelection({ files: [modelFile('a.stl'), modelFile('b.stl')] });
     await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
-    interop.attach({});
-    interop.admit(keys[0], 'part-a');
-    interop.admit(keys[1], 'part-b');
+    await interop.attach({});
+    await interop.admit(keys[0], 'part-a');
+    await interop.admit(keys[1], 'part-b');
     const root = mutations.root(['part-a', 'part-b'].map(mutations.image));
-    interop.renderReviewThumbnails(root);
+    await interop.renderReviewThumbnails(root);
     assert.equal(mutations.observers.length, 1);
     interop.select('part-a');
     interop.reset(); // Camera invalidation removes these bytes before recapture.
@@ -513,7 +568,7 @@ test('thumbnail mutation callbacks cannot resurrect invalidated released or disc
     mutations.deliver();
     assert.deepEqual(root.images.map(image => image.src), ['/fallback.svg', '/fallback.svg', '/fallback.svg']);
     assert.equal(calls.filter(call => call[0] === 'snapshot').length, 2);
-    interop.renderReviewThumbnails(root);
+    await interop.renderReviewThumbnails(root);
     root.images[0] = mutations.image('part-a');
     root.images[0].isConnected = false;
     mutations.deliver();
@@ -535,13 +590,13 @@ test('thumbnail observer root replacement and disposal reject late callbacks and
   try {
     const [key] = interop.beginSelection({ files: [modelFile('a.stl')] });
     await interop.getGeometryClaim(key);
-    interop.attach({});
-    interop.admit(key, 'part-a');
+    await interop.attach({});
+    await interop.admit(key, 'part-a');
     const first = mutations.root([mutations.image('part-a')]);
-    interop.renderReviewThumbnails(first);
+    await interop.renderReviewThumbnails(first);
     const old = mutations.observers[0];
     const second = mutations.root([mutations.image('part-a')]);
-    interop.renderReviewThumbnails(second);
+    await interop.renderReviewThumbnails(second);
     assert.equal(old?.disconnected, true);
     first.images[0].src = '/fallback.svg';
     old.callback([]);
@@ -554,22 +609,22 @@ test('thumbnail observer root replacement and disposal reject late callbacks and
     assert.equal(second.images[0].src, '/fallback.svg');
     const [replacement] = interop.beginSelection({ files: [modelFile('replacement.stl')] });
     await interop.getGeometryClaim(replacement);
-    interop.admit(replacement, 'part-a');
+    await interop.admit(replacement, 'part-a');
     released.callback([]);
     assert.equal(second.images[0].src, '/fallback.svg');
-    interop.renderReviewThumbnails(second);
+    await interop.renderReviewThumbnails(second);
     const current = mutations.observers[2];
     interop.dispose();
     assert.equal(current.disconnected, true);
     second.images[0].src = '/fallback.svg';
     current.callback([]);
     assert.equal(second.images[0].src, '/fallback.svg');
-    interop.renderReviewThumbnails(second);
+    await interop.renderReviewThumbnails(second);
     assert.equal(mutations.observers.length, 3);
   } finally { interop.dispose(); mutations.restore(); }
 });
 
-test('empty viewer detach releases old canvas listeners before reattach and disposal', () => {
+test('empty viewer detach releases old canvas listeners before reattach and disposal', async () => {
   const { interop, calls } = harness();
   function canvas() {
     const foreign = () => {};
@@ -593,11 +648,11 @@ test('empty viewer detach releases old canvas listeners before reattach and disp
   const first = canvas();
   const second = canvas();
   try {
-    interop.attach(first);
+    await interop.attach(first);
     assert.equal(first.listeners.size, 3);
     assert.equal(interop.detachEmptyViewer(), true);
     first.assertForeignOnly();
-    interop.attach(second);
+    await interop.attach(second);
     first.assertForeignOnly();
     assert.equal(second.listeners.size, 3);
     interop.dispose();
@@ -611,22 +666,22 @@ test('unavailable and released previews cannot supply a cached thumbnail', async
   const { interop, calls } = harness();
   const [key] = interop.beginSelection({ files: [modelFile('a.stl')] });
   await interop.getGeometryClaim(key);
-  interop.attach({});
-  interop.admit(key, 'part-a');
+  await interop.attach({});
+  await interop.admit(key, 'part-a');
   const unavailable = { dataset: { partId: 'missing' }, src: '/fallback.svg' };
   const admitted = { dataset: { partId: 'part-a' }, src: '/fallback.svg' };
   const root = { querySelectorAll: () => [admitted, unavailable] };
-  interop.renderReviewThumbnails(root);
-  interop.renderReviewThumbnails(root);
+  await interop.renderReviewThumbnails(root);
+  await interop.renderReviewThumbnails(root);
   assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'missing').length, 2);
   assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'part-a').length, 1);
   interop.release(key);
   const [replacement] = interop.beginSelection({ files: [modelFile('replacement.stl')] });
   await interop.getGeometryClaim(replacement);
-  interop.admit(replacement, 'part-a');
+  await interop.admit(replacement, 'part-a');
   admitted.src = '/fallback.svg';
   // Reusing a part ID for new geometry must not reuse the old admission's bytes.
-  interop.renderReviewThumbnails(root);
+  await interop.renderReviewThumbnails(root);
   assert.equal(calls.filter(call => call[0] === 'snapshot' && call[1] === 'part-a').length, 2);
 });
 
@@ -658,7 +713,7 @@ test('ordinary viewer listeners are released when a development preview replaces
     addEventListener: type => listeners[index].add(type),
     removeEventListener: type => listeners[index].delete(type),
   });
-  interop.attach(canvas(0));
+  await interop.attach(canvas(0));
   assert.equal(listeners[0].size, 3);
   const [key] = interop.beginSelection({ files: [modelFile('a.stl')] });
   await interop.getGeometryClaim(key);
@@ -667,8 +722,8 @@ test('ordinary viewer listeners are released when a development preview replaces
   assert.equal(listeners[0].size, 0);
   const nextKey = interop.retry(key);
   await interop.getGeometryClaim(nextKey);
-  interop.admit(nextKey, 'part-a');
-  interop.attach(canvas(1));
+  await interop.admit(nextKey, 'part-a');
+  await interop.attach(canvas(1));
   assert.equal(listeners[1].size, 3);
   interop.dispose();
   assert.deepEqual(listeners.map(value => value.size), [0, 0]);
@@ -703,12 +758,12 @@ test('starts duplicate-name previews in selection order without waiting for pars
   const files = [modelFile('same.stl'), modelFile('same.stl')];
   let call = 0;
   const { calls, interop } = harness(() => [first.promise, second.promise][call++]);
-  interop.attach({});
+  await interop.attach({});
   const keys = await interop.beginSelection({ files }, Number.POSITIVE_INFINITY, 'millimetres');
   assert.equal(keys.length, 2);
   assert.notEqual(keys[0], keys[1]);
-  interop.admit(keys[0], 'part-a');
-  interop.admit(keys[1], 'part-b');
+  await interop.admit(keys[0], 'part-a');
+  await interop.admit(keys[1], 'part-b');
   second.resolve(objectB);
   first.resolve(objectA);
   await Promise.all([first.promise, second.promise]);
@@ -768,11 +823,11 @@ test('admits successful previews and releases failed, removed, cancelled, and st
     if (signal.aborted) throw new DOMException('cancelled', 'AbortError');
     return objects.shift();
   });
-  interop.attach({});
+  await interop.attach({});
   const [ok, failed, cancelled] = await interop.beginSelection({
     files: [modelFile('a.stl'), modelFile('b.stl'), modelFile('c.stl')],
   });
-  interop.admit(ok, 'part-a');
+  await interop.admit(ok, 'part-a');
   interop.release(failed);
   interop.release(cancelled);
   await interop.getGeometryClaim(ok);
@@ -786,12 +841,12 @@ test('retry creates a new key and stale completion cannot replace it', async () 
   const newLoad = deferred();
   let invocation = 0;
   const { calls, interop } = harness(() => invocation++ === 0 ? oldLoad.promise : newLoad.promise);
-  interop.attach({});
+  await interop.attach({});
   const [oldKey] = await interop.beginSelection({ files: [modelFile('part.step')] });
   interop.quarantine(oldKey);
   const newKey = interop.retry(oldKey);
   assert.notEqual(newKey, oldKey);
-  interop.admit(newKey, 'part-new');
+  await interop.admit(newKey, 'part-new');
   oldLoad.resolve(disposableObject());
   newLoad.resolve(disposableObject());
   await Promise.all([oldLoad.promise, newLoad.promise]);
@@ -804,14 +859,14 @@ test('terminal release deletes correlation and clears retry access', async () =>
   const [key] = await interop.beginSelection({ files: [modelFile('released.stl')] });
   interop.release(key);
   assert.throws(() => interop.retry(key), /Unknown preview correlation/);
-  assert.throws(() => interop.admit(key, 'part-released'), /Unknown preview correlation/);
+  await assert.rejects(() => interop.admit(key, 'part-released'), /Unknown preview correlation/);
 });
 
 test('parser failures report persistent advisory state without raw error details', async () => {
   const { calls, statuses, interop } = harness(async () => { throw new Error('parser detail'); });
-  interop.attach({});
+  await interop.attach({});
   const [key] = await interop.beginSelection({ files: [modelFile('bad.obj')] });
-  interop.admit(key, 'server-part');
+  await interop.admit(key, 'server-part');
   await assert.rejects(interop.getGeometryClaim(key), /Geometry analysis is unavailable/);
   assert.equal(interop.status(), 'unavailable');
   assert.deepEqual(statuses, ['unavailable']);
@@ -836,9 +891,9 @@ test('attached remove delegates disposal exactly once and wrapper disposal does 
     createViewer: () => viewer,
     reportStatus() {},
   });
-  interop.attach({});
+  await interop.attach({});
   const [key] = await interop.beginSelection({ files: [modelFile('attached.stl')] });
-  interop.admit(key, 'attached-part');
+  await interop.admit(key, 'attached-part');
   await interop.getGeometryClaim(key);
   interop.remove('attached-part');
   interop.dispose();
@@ -862,10 +917,10 @@ test('attached parts with shared resources preserve Task4A identity-dedup across
     createViewer: () => viewer,
     reportStatus() {},
   });
-  interop.attach({});
+  await interop.attach({});
   const keys = await interop.beginSelection({ files: [modelFile('a.stl'), modelFile('b.stl')] });
-  interop.admit(keys[0], 'part-a');
-  interop.admit(keys[1], 'part-b');
+  await interop.admit(keys[0], 'part-a');
+  await interop.admit(keys[1], 'part-b');
   await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
   interop.remove('part-a');
   interop.dispose();
@@ -875,7 +930,7 @@ test('attached parts with shared resources preserve Task4A identity-dedup across
 test('dispose aborts pending parsing and disposes the viewer exactly once', async () => {
   const pending = deferred();
   const { calls, interop } = harness(() => pending.promise);
-  interop.attach({});
+  await interop.attach({});
   await interop.beginSelection({ files: [modelFile('pending.3mf')] });
   interop.dispose();
   interop.dispose();
@@ -930,7 +985,7 @@ for (const terminal of ['release', 'quarantine', 'dispose']) {
     });
     let deadline;
     try {
-      interop.attach({});
+      await interop.attach({});
       const [key] = interop.beginSelection({ files: [modelFile('pending.stl')] });
       const claim = interop.getGeometryClaim(key);
       await Promise.resolve();
@@ -1122,11 +1177,11 @@ test('a retained local failure thumbnail and selection never create an admitted 
   try {
     const [key] = interop.beginSelection({ files: [selected] }, Number.POSITIVE_INFINITY, 'millimetres');
     await interop.getGeometryClaim(key);
-    interop.attach({});
+    await interop.attach({});
     assert.equal(interop.getLocalThumbnail(key), null);
     assert.equal(interop.retainIncompletePreview(key, {}), true);
     assert.equal(interop.getLocalThumbnail(key), 'data:image/webp;base64,aW1hZ2U=');
-    assert.equal(interop.admit(key, 'invented-part'), false);
+    assert.equal(await interop.admit(key, 'invented-part'), false);
     assert.equal(interop.select('invented-part'), false);
     assert.equal(interop.selectLocalPreview(key), true);
     interop.reset(); interop.fit();
@@ -1144,13 +1199,13 @@ test('a retained local failure thumbnail and selection never create an admitted 
 test('an empty detached stage releases its renderer but never disposes an admitted sibling', async () => {
   const { interop, calls } = harness();
   try {
-    interop.attach({});
+    await interop.attach({});
     assert.equal(interop.detachEmptyViewer(), true);
     assert.equal(calls.filter(call => call[0] === 'dispose').length, 1);
-    interop.attach({});
+    await interop.attach({});
     const [key] = interop.beginSelection({ files: [modelFile('healthy.stl')] });
     await interop.getGeometryClaim(key);
-    assert.equal(interop.admit(key, 'healthy'), true);
+    assert.equal(await interop.admit(key, 'healthy'), true);
     assert.equal(interop.detachEmptyViewer(), false);
     assert.equal(interop.select('healthy'), true);
     assert.equal(calls.filter(call => call[0] === 'dispose').length, 1);
@@ -1175,16 +1230,16 @@ test('a failed renderable local preview snapshots at bounded size and restores t
     thicknessAnalyzer: { analyze: async () => null, dispose() {} },
   });
   try {
-    interop.attach({});
+    await interop.attach({});
     const keys = interop.beginSelection({ files: [modelFile('good.stl'), modelFile('bad.stl'), modelFile('lost.stl')] });
     await Promise.all(keys.map(key => interop.getGeometryClaim(key)));
-    interop.admit(keys[0], 'healthy');
+    await interop.admit(keys[0], 'healthy');
     assert.equal(interop.captureFailedThumbnail(keys[1]), 'data:image/webp;base64,aW1hZ2U=');
     assert.deepEqual(dimensions, [192]);
     assert.equal(shown.at(-1), objects.get('good.stl'));
     assert.equal(objects.get('good.stl').disposed, false);
     assert.equal(objects.get('bad.stl').disposed, true);
-    assert.equal(interop.admit(keys[1], 'fake-server-part'), false);
+    assert.equal(await interop.admit(keys[1], 'fake-server-part'), false);
     assert.equal(interop.select(keys[1]), false);
     losesContext = true;
     assert.equal(interop.captureFailedThumbnail(keys[2]), null);
@@ -1257,11 +1312,11 @@ test('pending local selection is render-only and promotes exactly once after rea
   try {
     const [key] = interop.beginSelection({ files: [modelFile('pending.glb')] }, Number.POSITIVE_INFINITY, 'millimetres');
     await interop.getGeometryClaim(key);
-    interop.attach({});
+    await interop.attach({});
     assert.equal(interop.selectLocalPreview(key), true);
     assert.equal(interop.select(key), false);
     assert.deepEqual(calls.filter(call => call[0] === 'add').map(call => call.slice(1)), [[key, object]]);
-    assert.equal(interop.admit(key, 'server-part', 'PLA'), true);
+    assert.equal(await interop.admit(key, 'server-part', 'PLA'), true);
     assert.deepEqual(calls.filter(call => call[0] === 'promote'), [['promote', key, 'server-part']]);
     assert.equal(calls.filter(call => call[0] === 'add').length, 1);
     assert.equal(interop.selectLocalPreview(key), false);
@@ -1309,11 +1364,11 @@ for (const completion of ['before-local-attachment', 'after-local-attachment', '
       const [key] = interop.beginSelection({ files: [modelFile('one-millimeter.stl')] });
       await interop.getGeometryClaim(key);
       if (completion === 'before-local-attachment') await complete();
-      interop.attach({});
+      await interop.attach({});
       assert.equal(interop.selectLocalPreview(key), true);
       assert.equal(interop.select(key), false);
       if (completion === 'after-local-attachment') await complete();
-      assert.equal(interop.admit(key, 'server-part', 'ABS'), true);
+      assert.equal(await interop.admit(key, 'server-part', 'ABS'), true);
       if (completion === 'after-admission') await complete();
       assert.equal(attached.length, 1);
       assert.equal(reports.at(-1)[0], 'server-part');
@@ -1337,12 +1392,12 @@ test('admitting another pending file does not steal the explicitly selected loca
   try {
     const [first, last] = interop.beginSelection({ files: [modelFile('first.glb'), modelFile('last.glb')] }, Number.POSITIVE_INFINITY, 'millimetres');
     await Promise.all([interop.getGeometryClaim(first), interop.getGeometryClaim(last)]);
-    interop.attach({});
+    await interop.attach({});
     assert.equal(interop.selectLocalPreview(last), true);
     const selected = calls.filter(call => call[0] === 'select').length;
-    interop.admit(first, 'server-first');
+    await interop.admit(first, 'server-first');
     assert.equal(calls.filter(call => call[0] === 'select').length, selected);
-    interop.admit(last, 'server-last');
+    await interop.admit(last, 'server-last');
     assert.deepEqual(calls.filter(call => call[0] === 'promote'), [['promote', last, 'server-last']]);
     assert.equal(interop.select('server-last'), true);
   } finally { interop.dispose(); }
@@ -1353,11 +1408,11 @@ test('removing a selected pending preview prevents local selection and server ad
   try {
     const [key] = interop.beginSelection({ files: [modelFile('removed.glb')] }, Number.POSITIVE_INFINITY, 'millimetres');
     await interop.getGeometryClaim(key);
-    interop.attach({});
+    await interop.attach({});
     assert.equal(interop.selectLocalPreview(key), true);
     interop.release(key);
     assert.equal(interop.selectLocalPreview(key), false);
-    assert.throws(() => interop.admit(key, 'fabricated-part'), /Unknown preview correlation/);
+    await assert.rejects(() => interop.admit(key, 'fabricated-part'), /Unknown preview correlation/);
     assert.equal(interop.select('fabricated-part'), false);
     assert.deepEqual(calls.filter(call => call[0] === 'remove'), [['remove', key]]);
     assert.equal(calls.some(call => call[0] === 'promote'), false);
@@ -1372,7 +1427,7 @@ test('local View before parsing returns cannot admit an object and late removal 
     const [key] = interop.beginSelection({ files: [modelFile('held.glb')] }, Number.POSITIVE_INFINITY, 'millimetres');
     const claim = interop.getGeometryClaim(key);
     const rejected = assert.rejects(claim, /Geometry analysis is unavailable/);
-    interop.attach({});
+    await interop.attach({});
     assert.equal(interop.selectLocalPreview(key), false);
     interop.release(key);
     loaded.resolve(object);
@@ -1401,7 +1456,7 @@ test('nine existing parsers start once while completion consumers and local sele
     const keys = interop.beginSelection({ files }, Number.POSITIVE_INFINITY, 'millimetres');
     claims = keys.map(key => interop.getGeometryClaim(key));
     const observed = Promise.allSettled(claims);
-    interop.attach({});
+    await interop.attach({});
     await Promise.resolve();
     assert.equal(loaded.length, 9);
     assert.deepEqual(loaded, files);
@@ -1471,12 +1526,12 @@ test('a selected unready local file never displays another admitted mesh and pre
       files: [modelFile('first.glb'), modelFile('middle.glb'), modelFile('last.glb')],
     }, Number.POSITIVE_INFINITY, 'millimetres');
     claims = [interop.getGeometryClaim(firstKey), interop.getGeometryClaim(middleKey), interop.getGeometryClaim(lastKey)];
-    interop.attach({});
+    await interop.attach({});
     assert.equal(interop.selectLocalPreview(lastKey), false);
     await claims[0];
-    assert.equal(interop.admit(firstKey, 'first-real'), true);
+    assert.equal(await interop.admit(firstKey, 'first-real'), true);
     await claims[1];
-    assert.equal(interop.admit(middleKey, 'middle-real'), true);
+    assert.equal(await interop.admit(middleKey, 'middle-real'), true);
     interop.release(firstKey);
     assert.equal(first.disposed, true);
     assert.equal(visible.size, 0);
@@ -1487,7 +1542,7 @@ test('a selected unready local file never displays another admitted mesh and pre
     await claims[2];
     assert.deepEqual([...visible], [last]);
     camera = { position: [7, 8, 9], target: [1, 1, 1] };
-    assert.equal(interop.admit(lastKey, 'last-real'), true);
+    assert.equal(await interop.admit(lastKey, 'last-real'), true);
     assert.deepEqual([...visible], [last]);
     assert.deepEqual(camera, { position: [7, 8, 9], target: [1, 1, 1] });
     assert.equal(middle.disposed, false);

@@ -188,8 +188,8 @@ test('admitted preview publishes and toggles advisory independently of quote geo
   });
   const claim = await interop.getGeometryClaim(key);
   assert.equal(claim.volumeMm3, 123);
-  interop.attach({});
-  interop.admit(key, 'part-1', 'PLA');
+  await interop.attach({});
+  await interop.admit(key, 'part-1', 'PLA');
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(states.at(-1)[1], true);
   assert.equal(states.at(-1)[2], true);

@@ -123,6 +123,45 @@ public sealed class InstantQuotationFileServiceUploadClientTests
         Assert.Null(result.PhysicalAnalysisUpload);
     }
 
+    [Theory]
+    [InlineData(null, "application/octet-stream")]
+    [InlineData("", "application/octet-stream")]
+    [InlineData(" ", "application/octet-stream")]
+    [InlineData("not a media type", "application/octet-stream")]
+    [InlineData("simplify3d_stl", "model/stl")]
+    [InlineData("simplify3d_stl/stl", "model/stl")]
+    [InlineData("model/stl", "model/stl")]
+    [InlineData("model/stl; charset=utf-8", "model/stl")]
+    public async Task UploadAsync_BrowserContentType_UsesSafeMultipartWithoutChangingBytesOrOwnership(
+        string? contentType, string expectedMediaType)
+    {
+        var bytes = Encoding.UTF8.GetBytes("solid part endsolid part");
+        var sha256 = Sha256(bytes);
+        var handler = new RecordingHandler(async (request, cancellationToken) =>
+        {
+            Assert.Equal($"/file/v1/instant-quotation/sessions/{FileSessionId:D}/files", request.RequestUri!.AbsolutePath);
+            var part = Assert.Single(Assert.IsType<MultipartFormDataContent>(request.Content));
+            Assert.Equal(expectedMediaType, part.Headers.ContentType?.MediaType);
+            Assert.Equal(bytes, await part.ReadAsByteArrayAsync(cancellationToken));
+            return ValidUpload(FirstFileId, bytes.Length, sha256, expectedMediaType);
+        });
+        var store = new RecordingCapabilityStore(Capability());
+        var temporaryPath = NewTemporaryPath();
+        var adapter = CreateAdapter(handler, store, () => temporaryPath);
+        using var stream = new MemoryStream(bytes, writable: false);
+
+        var result = await adapter.UploadAsync(
+            WebSessionId, OwnerIdentity, stream, "part.stl", contentType!, bytes.Length,
+            Claim(sha256), "upload-browser-mime-01", CancellationToken.None);
+
+        Assert.Equal(InstantQuotationOperationStatus.Succeeded, result.Status);
+        Assert.Equal(expectedMediaType, result.PhysicalAnalysisUpload?.ContentType);
+        Assert.Equal(sha256, result.ContentSha256);
+        Assert.Equal(1, handler.RequestCount);
+        Assert.All(store.Bindings, binding => Assert.Equal((WebSessionId, OwnerIdentity), binding));
+        Assert.False(File.Exists(temporaryPath));
+    }
+
     [Fact]
     public async Task UploadAsync_ConcurrentFirstUploads_CreateOneOwnerBoundCapabilityAndSpoolNonSeekableStreams()
     {
@@ -528,12 +567,12 @@ public sealed class InstantQuotationFileServiceUploadClientTests
         return response;
     }
 
-    private static HttpResponseMessage ValidUpload(Guid fileId, int sizeBytes, string sha256)
+    private static HttpResponseMessage ValidUpload(Guid fileId, int sizeBytes, string sha256, string contentType = "model/stl")
     {
         var response = Json(
             HttpStatusCode.Created,
             $$"""
-            {"fileId":"{{fileId:D}}","fileName":"part.stl","contentType":"model/stl","sizeBytes":{{sizeBytes}},"sha256":"{{sha256}}","status":"clean"}
+            {"fileId":"{{fileId:D}}","fileName":"part.stl","contentType":"{{contentType}}","sizeBytes":{{sizeBytes}},"sha256":"{{sha256}}","status":"clean"}
             """);
         response.Headers.Location = new Uri(
             $"/file/v1/instant-quotation/sessions/{FileSessionId:D}/files/{fileId:D}",
