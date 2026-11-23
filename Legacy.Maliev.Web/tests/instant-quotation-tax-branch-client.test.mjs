@@ -11,8 +11,15 @@ function create(tax = '', branch = 'branch', code = 'invalid') {
     const form = new EventTarget();
     form.elements = { namedItem: name => fields[name] };
     form.querySelector = selector => ({ '#instant-quote-tax-branch': fields.TaxBranch, '[data-instant-tax-branch-field]': branchWrapper, '[data-instant-tax-branch-code-field]': codeWrapper })[selector];
+    for (const [name, field] of Object.entries(fields)) field.name = name;
     return { fields, form, branchWrapper, codeWrapper, submit: new EventTarget() };
 }
+function bubble(form, type, target) {
+    const event = new Event(type, { bubbles: true });
+    Object.defineProperty(event, 'target', { value: target });
+    form.dispatchEvent(event);
+}
+
 test('absent tax clears optional malformed branch code and excludes irrelevant constraints', () => {
     const x=create();normalize(x.form);
     assert.equal(x.fields.TaxBranchCode.value,'');assert.equal(x.fields.TaxBranchCode.disabled,true);
@@ -28,7 +35,7 @@ test('head office hides and clears unlocked branch code', () => {
     const x=create('0105559123456','head-office');normalize(x.form);assert.equal(x.branchWrapper.hidden,false);assert.equal(x.codeWrapper.hidden,true);assert.equal(x.fields.TaxBranchCode.value,'');
 });
 test('tax input restores fields disabled only by optional visibility', () => {
-    const x=create();wire(x.form,x.submit);x.fields.TaxNumber.value='0105559123456';x.fields.TaxNumber.dispatchEvent(new Event('input'));assert.equal(x.fields.TaxBranch.disabled,false);assert.equal(x.fields.TaxBranchCode.disabled,false);
+    const x=create();wire(x.form,x.submit);x.fields.TaxNumber.value='0105559123456';bubble(x.form, 'input', x.fields.TaxNumber);assert.equal(x.fields.TaxBranch.disabled,false);assert.equal(x.fields.TaxBranchCode.disabled,false);
 });
 test('external submit normalizes before later validation listener', () => {
     const x=create('0105559123456');wire(x.form,x.submit);x.fields.TaxNumber.value='--';
@@ -56,13 +63,13 @@ test('optional normalization refreshes actual address-validation submit state', 
     const dispatch=x.fields.TaxNumber.dispatchEvent.bind(x.fields.TaxNumber);
     x.fields.TaxNumber.dispatchEvent=event=>{
         const result=dispatch(event);
-        if(event.bubbles)x.form.dispatchEvent(new Event(event.type));
+        if(event.bubbles)bubble(x.form, event.type, x.fields.TaxNumber);
         return result;
     };
     wire(x.form,x.submit);
     wireInstantQuotationAddressValidation(x.form,x.submit);
     x.fields.TaxNumber.value='--';x.fields.TaxNumber.dispatchEvent(new Event('input',{bubbles:true}));
     assert.equal(x.submit.disabled,true);
-    x.fields.TaxNumber.dispatchEvent(new Event('blur'));
+    bubble(x.form, 'focusout', x.fields.TaxNumber);
     assert.equal(x.fields.TaxNumber.value,'');assert.equal(x.submit.disabled,false);
 });
