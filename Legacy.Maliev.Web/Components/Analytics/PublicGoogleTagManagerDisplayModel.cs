@@ -32,7 +32,8 @@ public sealed record PublicGoogleTagManagerDisplayModel(
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(tempDataDictionaryFactory);
 
-        var canTrack = context.Features.Get<ITrackingConsentFeature>()?.CanTrack == true;
+        var canTrack = context.Features.Get<ITrackingConsentFeature>()?.CanTrack == true
+            && !string.Equals(context.Request.Cookies["maliev_tracking_consent"], "denied", StringComparison.Ordinal);
         var tempData = tempDataDictionaryFactory.GetTempData(context);
         var queuedEventScript = BuildQueuedEventScript(tempData);
         try

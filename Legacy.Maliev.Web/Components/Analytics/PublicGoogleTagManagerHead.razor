@@ -3,6 +3,9 @@
     window.dataLayer = window.dataLayer || [];
     window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
     var consentState = '@Model.ConsentState';
+    try {
+        if (/(?:^|;\s*)maliev_tracking_consent=denied(?:;|$)/.test(document.cookie)) consentState = 'denied';
+    } catch (_) { consentState = 'denied'; }
     window.gtag('consent', 'default', {
         'ad_storage': consentState,
         'analytics_storage': consentState,
@@ -12,12 +15,39 @@
     });
     @if (Model.CanTrack && !string.IsNullOrEmpty(Model.UserIdConfigurationJson))
     {
-        <text>window.gtag('set', @((MarkupString)Model.UserIdConfigurationJson));</text>
+        <text>if (consentState === 'granted') window.gtag('set', @((MarkupString)Model.UserIdConfigurationJson));</text>
     }
     window.malievAnalytics = window.malievAnalytics || (function (initialConsentGranted) {
         var consentGranted = initialConsentGranted;
         var consentDecisionMade = initialConsentGranted;
         var pendingEvents = [];
+
+        function enforceRecordedDenial(forceNotify) {
+            var denied;
+            try {
+                denied = /(?:^|;\s*)maliev_tracking_consent=denied(?:;|$)/.test(document.cookie);
+            } catch (_) { denied = true; }
+            if (!denied) return false;
+            var notify = forceNotify === true || consentGranted || !consentDecisionMade;
+            consentGranted = false;
+            consentDecisionMade = true;
+            pendingEvents.length = 0;
+            if (notify) {
+                try { window.gtag('consent', 'update', {
+                    ad_storage: 'denied', analytics_storage: 'denied',
+                    ad_user_data: 'denied', ad_personalization: 'denied'
+                }); } catch (_) { }
+                try { window.gtag('set', { user_id: null }); } catch (_) { }
+            }
+            return true;
+        }
+
+        window.addEventListener('focus', enforceRecordedDenial);
+        window.addEventListener('pageshow', enforceRecordedDenial);
+        document.addEventListener('visibilitychange', enforceRecordedDenial);
+        if (window.cookieStore && typeof window.cookieStore.addEventListener === 'function') {
+            window.cookieStore.addEventListener('change', enforceRecordedDenial);
+        }
 
         function push(eventData) {
             if (!eventData || typeof eventData.event !== 'string') {
@@ -28,7 +58,10 @@
         }
 
         return {
+            canGrant: function () { return !enforceRecordedDenial(true); },
+            isConsentGranted: function () { return !enforceRecordedDenial() && consentGranted; },
             emit: function (eventData) {
+                if (enforceRecordedDenial()) return;
                 if (consentGranted) {
                     push(eventData);
                     return;
@@ -39,6 +72,7 @@
                 }
             },
             setConsent: function (state) {
+                if (state === 'granted' && enforceRecordedDenial(true)) return;
                 consentDecisionMade = true;
                 consentGranted = state === 'granted';
                 if (!consentGranted) {
@@ -58,6 +92,8 @@
 <!-- Google Tag Manager: network loading is deferred until optional tracking is allowed. -->
 <script>
     window.malievLoadGoogleTagManager = window.malievLoadGoogleTagManager || function () {
+        if (!window.malievAnalytics || typeof window.malievAnalytics.isConsentGranted !== 'function'
+            || !window.malievAnalytics.isConsentGranted()) return;
         if (document.querySelector('script[data-maliev-gtm-loader]')) {
             return;
         }
@@ -76,7 +112,7 @@
         firstScript.parentNode.insertBefore(loader, firstScript);
     };
 
-    if (consentState === 'granted') {
+    if (consentState === 'granted' && window.malievAnalytics.isConsentGranted()) {
         window.malievLoadGoogleTagManager();
     }
 </script>

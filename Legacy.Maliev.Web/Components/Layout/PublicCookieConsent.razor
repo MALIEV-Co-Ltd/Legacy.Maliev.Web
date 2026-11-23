@@ -45,26 +45,38 @@
             function updateGoogleConsent(state) {
                 window.dataLayer = window.dataLayer || [];
                 window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
-                window.gtag('consent', 'update', {
-                    ad_storage: state,
-                    analytics_storage: state,
-                    ad_user_data: state,
-                    ad_personalization: state
-                });
-                if (window.malievAnalytics && typeof window.malievAnalytics.setConsent === 'function') {
-                    window.malievAnalytics.setConsent(state);
+                var bridge = window.malievAnalytics;
+                if (state === 'granted' && (!bridge || typeof bridge.canGrant !== 'function' || !bridge.canGrant())) return false;
+                if (state !== 'granted' && bridge && typeof bridge.setConsent === 'function') {
+                    try { bridge.setConsent(state); } catch (_) { }
                 }
+                try {
+                    window.gtag('consent', 'update', {
+                        ad_storage: state,
+                        analytics_storage: state,
+                        ad_user_data: state,
+                        ad_personalization: state
+                    });
+                    if (state === 'granted' && bridge && typeof bridge.setConsent === 'function') bridge.setConsent(state);
+                    return state === 'granted' && bridge && typeof bridge.isConsentGranted === 'function'
+                        && bridge.isConsentGranted();
+                } catch (_) { return false; }
             }
 
             button.addEventListener('click', function () {
                 if (decisionMade) return;
                 decisionMade = true;
-                if (button.dataset.cookieString) {
-                    document.cookie = button.dataset.cookieString;
-                }
-
-                document.cookie = 'maliev_tracking_consent=; Path=/; Max-Age=0; SameSite=Lax; Secure';
-                updateGoogleConsent('granted');
+                try {
+                    var consentCookie = button.dataset.cookieString;
+                    var consentPair = consentCookie && consentCookie.split(';', 1)[0];
+                    if (!consentPair || consentPair.indexOf('=') <= 0) { decisionMade = false; return; }
+                    document.cookie = consentCookie;
+                    if (!document.cookie.split(';').some(function (item) { return item.trim() === consentPair; })) {
+                        decisionMade = false; return;
+                    }
+                    document.cookie = 'maliev_tracking_consent=; Path=/; Max-Age=0; SameSite=Lax; Secure';
+                } catch (_) { decisionMade = false; return; }
+                if (!updateGoogleConsent('granted')) { decisionMade = false; return; }
                 if (typeof window.malievLoadGoogleTagManager === 'function') {
                     window.malievLoadGoogleTagManager();
                 }
@@ -74,8 +86,14 @@
             rejectButton.addEventListener('click', function () {
                 if (decisionMade) return;
                 decisionMade = true;
-                document.cookie = 'maliev_tracking_consent=denied; Path=/; Max-Age=31536000; SameSite=Lax; Secure';
                 updateGoogleConsent('denied');
+                try {
+                    document.cookie = 'maliev_tracking_consent=denied; Path=/; Max-Age=31536000; SameSite=Lax; Secure';
+                    if (!/(?:^|;\s*)maliev_tracking_consent=denied(?:;|$)/.test(document.cookie)) {
+                        decisionMade = false;
+                        return;
+                    }
+                } catch (_) { decisionMade = false; return; }
                 dismissConsent();
             }, false);
         })();
