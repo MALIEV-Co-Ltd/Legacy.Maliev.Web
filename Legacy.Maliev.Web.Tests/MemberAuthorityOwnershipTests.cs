@@ -225,6 +225,18 @@ public sealed class MemberAuthorityOwnershipTests
         Assert.All(children, child => Assert.False(MemberAuthorityChild.RetainedCustody.ContainsKey(child.CreationToken)));
     }
 
+    /// <summary>Native executable observation refuses missing or relative image paths.</summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("dotnet")]
+    public void ExecutableObservation_RejectsUnprovenNativeImage(string? image)
+    {
+        if (OperatingSystem.IsLinux()) return;
+        using var process = Process.GetCurrentProcess();
+        Assert.Throws<InvalidOperationException>(() => MemberAuthorityChild.ReadExecutableIdentity(process, _ => image));
+    }
+
     /// <summary>Linux executable observation refuses foreign PID namespaces and nonabsolute executable links.</summary>
     /// <param name="mutation">The controlled namespace or executable-link mismatch.</param>
     [Theory]

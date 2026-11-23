@@ -126,7 +126,23 @@ internal sealed class MemberAuthorityChild : IAsyncDisposable
     internal static string ReadExecutableIdentity(Process process, Func<Process, string?>? readModule = null)
         => OperatingSystem.IsLinux()
             ? ReadLinuxExecutableIdentity(process.Id, path => new FileInfo(path).LinkTarget)
-            : RequireAbsoluteExecutable((readModule ?? (child => child.MainModule?.FileName))(process));
+            : RequireAbsoluteExecutable((readModule ?? ReadNativeExecutableIdentity)(process));
+
+    private static string? ReadNativeExecutableIdentity(Process process)
+    {
+        if (!OperatingSystem.IsWindows()) return process.MainModule?.FileName;
+        var image = new System.Text.StringBuilder(32768);
+        var length = image.Capacity;
+        if (!QueryFullProcessImageName(process.SafeHandle, 0, image, ref length))
+            throw new InvalidOperationException("Executable identity unavailable.",
+                new Win32Exception(Marshal.GetLastPInvokeError()));
+        return image.ToString();
+    }
+
+    [DllImport("kernel32.dll", EntryPoint = "QueryFullProcessImageNameW", CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool QueryFullProcessImageName(SafeProcessHandle process,
+        int flags, System.Text.StringBuilder image, ref int length);
 
     internal static string ReadLinuxExecutableIdentity(int processId, Func<string, string?> readLink)
     {
