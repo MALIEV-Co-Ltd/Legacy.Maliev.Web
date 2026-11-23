@@ -110,6 +110,11 @@ public sealed record InstantQuotationSubmissionResult(
 
 public interface IInstantQuotationSubmissionService
 {
+    Task<InstantQuotationSessionState?> StartAnotherAsync(
+        string sessionId,
+        string? ownerIdentity,
+        CancellationToken cancellationToken);
+
     Task<InstantQuotationSubmissionResult> SubmitAsync(
         string sessionId,
         string? ownerIdentity,

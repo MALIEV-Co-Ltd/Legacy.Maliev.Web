@@ -297,6 +297,29 @@ public sealed class ThreeDimensionalPrinting : PageModel
         return new JsonResult(result.Payload) { StatusCode = result.StatusCode };
     }
 
+    /// <summary>Starts a fresh quotation after a persisted submission.</summary>
+    /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
+    /// <returns>A local redirect or controlled failure.</returns>
+    public async Task<IActionResult> OnPostStartAnotherAsync(CancellationToken cancellationToken)
+    {
+        var identityCookie = HttpContext.RequestServices.GetRequiredService<InstantQuotationSessionIdentityCookie>();
+        var sessionId = identityCookie.TryRead(HttpContext);
+        var owner = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!IsValidSessionIdentity(sessionId)
+            || (User.Identity?.IsAuthenticated is true && string.IsNullOrWhiteSpace(owner)))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
+
+        var next = submissionService is null ? null : await submissionService.StartAnotherAsync(
+            sessionId!, User.Identity?.IsAuthenticated is true ? owner : null, cancellationToken);
+        if (next is null) return StatusCode(StatusCodes.Status409Conflict);
+
+        identityCookie.Write(HttpContext, next.SessionId, next.CreatedAt.Add(InstantQuotationSessionIdentityCookie.Lifetime));
+        var culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName is "th" ? "th" : "en";
+        return LocalRedirect($"/InstantQuotation/3D-Printing?culture={culture}");
+    }
+
     /// <summary>Validates trusted customer details and session ownership before submitting the quotation with controlled retry and terminal outcomes.</summary>
     /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
     /// <returns>A controlled JSON result or local redirect carrying the submission outcome.</returns>

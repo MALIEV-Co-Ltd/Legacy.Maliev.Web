@@ -767,4 +767,7 @@
   <data name="May be difficult to print or handle reliably" xml:space="preserve"><value>อาจพิมพ์ได้ยากหรือหยิบจับลำบาก</value></data>
   <data name="Unusually large dimensions" xml:space="preserve"><value>ขนาดชิ้นงานใหญ่ผิดปกติ</value></data>
   <data name="May exceed our standard build volume and require splitting" xml:space="preserve"><value>อาจเกินพื้นที่พิมพ์มาตรฐาน และต้องแบ่งชิ้นงาน</value></data>
+  <data name="Start another quotation" xml:space="preserve">
+    <value>เริ่มขอใบเสนอราคาใหม่</value>
+  </data>
 </root>

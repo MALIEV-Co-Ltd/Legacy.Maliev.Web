@@ -22,6 +22,47 @@ internal sealed class InstantQuotationSubmissionService(
     private const int SubmissionIdLength = 64;
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
 
+    public async Task<InstantQuotationSessionState?> StartAnotherAsync(
+        string sessionId,
+        string? ownerIdentity,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId)
+            || (ownerIdentity is not null && string.IsNullOrWhiteSpace(ownerIdentity)))
+        {
+            return null;
+        }
+
+        try
+        {
+            var session = await sessionStore.GetAsync(sessionId, ownerIdentity, cancellationToken);
+            if (session is null || !IsValidSubmissionId(session.SubmissionId)) return null;
+
+            await using var lease = await submissionStore.TryAcquireAsync(session.SubmissionId,
+                ownerIdentity ?? CreateAnonymousCheckpointOwnerIdentity(sessionId), cancellationToken);
+            if (lease is null) return null;
+            var read = await lease.ReadAsync(cancellationToken);
+            if (!read.LeaseValid || read.Checkpoint is not { RequestReference: > 0 } checkpoint
+                || !string.Equals(checkpoint.SubmissionId, session.SubmissionId, StringComparison.Ordinal)
+                || !Enum.IsDefined(checkpoint.Status)
+                || !await RenewLeaseAsync(lease, cancellationToken))
+            {
+                return null;
+            }
+
+            // Keep the old session and durable checkpoint available for recovery and retries.
+            return await sessionStore.CreateAsync(ownerIdentity, new InstantQuotationOrderState([]), cancellationToken);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+        catch (TimeoutException)
+        {
+            return null;
+        }
+    }
+
     public async Task<InstantQuotationSubmissionResult> SubmitAsync(
         string sessionId,
         string? ownerIdentity,

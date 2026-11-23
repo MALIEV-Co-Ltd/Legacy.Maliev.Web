@@ -357,6 +357,9 @@ public sealed class InstantQuotationCustomerLayoutBrowserTests(CncNativeBrowserF
 
     private sealed class RejectingSubmissionService : IInstantQuotationSubmissionService
     {
+        public Task<InstantQuotationSessionState?> StartAnotherAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Invalid customer input must not restart a quotation.");
+
         private int calls;
         internal int Calls => Volatile.Read(ref calls);
 

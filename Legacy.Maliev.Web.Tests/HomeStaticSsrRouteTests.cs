@@ -401,6 +401,9 @@ public sealed partial class HomeStaticSsrRouteTests : IClassFixture<TestingWebAp
 
     private sealed class HomeNavigationUnusedSubmissionService : IInstantQuotationSubmissionService
     {
+        public Task<InstantQuotationSessionState?> StartAnotherAsync(string sessionId, string? ownerIdentity, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Following a Home navigation GET must not restart an instant quotation.");
+
         public Task<InstantQuotationSubmissionResult> SubmitAsync(
             string sessionId,
             string? ownerIdentity,
