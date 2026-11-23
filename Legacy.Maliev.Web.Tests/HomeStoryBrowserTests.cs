@@ -80,6 +80,36 @@ public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture)
     [Theory]
     [InlineData("en")]
     [InlineData("th")]
+    public async Task HomeSecondaryAction_PreservesHoverAndKeyboardFocusContrast(string culture)
+    {
+        await using var context = await fixture.Browser.NewContextAsync(new() { ReducedMotion = ReducedMotion.Reduce });
+        await context.RouteAsync("**/*", route => route.Request.Method == "GET" && new Uri(route.Request.Url).GetLeftPart(UriPartial.Authority)
+            == fixture.Origin.GetLeftPart(UriPartial.Authority) ? route.ContinueAsync() : route.AbortAsync());
+        await using var page = await context.NewPageAsync();
+        var response = await page.GotoAsync(new Uri(fixture.Origin, $"/?culture={culture}").ToString());
+        Assert.NotNull(response);
+        Assert.True(response.Ok);
+        var consent = page.Locator("#cookieConsent [data-consent-action='reject']");
+        if (await consent.IsVisibleAsync()) await consent.ClickAsync();
+
+        var button = page.Locator(".landing-cta-section .landing-button-light");
+        await button.HoverAsync();
+        await Assertions.Expect(button).ToHaveCSSAsync("background-color", "rgb(255, 255, 255)");
+        await Assertions.Expect(button).ToHaveCSSAsync("border-top-color", "rgb(255, 255, 255)");
+        await Assertions.Expect(button).ToHaveCSSAsync("color", "rgb(7, 24, 45)");
+        await page.Mouse.MoveAsync(0, 0);
+        await page.Locator(".landing-cta-section .landing-button-yellow").FocusAsync();
+        await page.Keyboard.PressAsync("Tab");
+        await Assertions.Expect(button).ToBeFocusedAsync();
+        Assert.True(await button.EvaluateAsync<bool>("element => element.matches(':focus-visible')"));
+        await Assertions.Expect(button).ToHaveCSSAsync("background-color", "rgb(255, 255, 255)");
+        await Assertions.Expect(button).ToHaveCSSAsync("border-top-color", "rgb(255, 255, 255)");
+        await Assertions.Expect(button).ToHaveCSSAsync("color", "rgb(7, 24, 45)");
+    }
+
+    [Theory]
+    [InlineData("en")]
+    [InlineData("th")]
     public async Task WithoutJavascript_AssemblyAndOrderedProcessRemainUsable(string culture)
     {
         await using var context = await fixture.Browser.NewContextAsync(new() { JavaScriptEnabled = false });
