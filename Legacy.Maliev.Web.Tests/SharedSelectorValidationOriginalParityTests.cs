@@ -260,6 +260,23 @@ public sealed class SharedSelectorValidationOriginalParityTests(TestingWebApplic
         return token.Groups["value"].Value;
     }
 
+    [Fact]
+    public void Footer_CurrentLayoutCallerGraphIsRetainedWithoutInventingRetirement()
+    {
+        var root = factory.Services.GetRequiredService<IWebHostEnvironment>().ContentRootPath;
+        Assert.Contains("Layout = \"_Layout\"", File.ReadAllText(Path.Combine(root, "Pages", "_ViewStart.cshtml")), StringComparison.Ordinal);
+        Assert.Contains("typeof(PublicFooter)", File.ReadAllText(Path.Combine(root, "Pages", "Shared", "_Layout.cshtml")), StringComparison.Ordinal);
+        Assert.DoesNotContain("<select", File.ReadAllText(Path.Combine(root, "Components", "Layout", "PublicFooter.razor")), StringComparison.OrdinalIgnoreCase);
+        var partial = Path.Combine(root, "Pages", "Shared", "_SelectLanguageFooterPartial.cshtml");
+        Assert.True(File.Exists(partial));
+        var sourceFiles = Directory.EnumerateFiles(Path.Combine(root, "Pages"), "*.cshtml", SearchOption.AllDirectories)
+            .Concat(Directory.EnumerateFiles(Path.Combine(root, "Areas"), "*.cshtml", SearchOption.AllDirectories))
+            .Concat(Directory.EnumerateFiles(Path.Combine(root, "Components"), "*.razor", SearchOption.AllDirectories));
+        foreach (var path in sourceFiles.Where(path => !string.Equals(path, partial, StringComparison.Ordinal)))
+            Assert.DoesNotContain("_SelectLanguageFooterPartial", File.ReadAllText(path), StringComparison.Ordinal);
+        // This records the present source graph. It does not retire the retained partial.
+    }
+
     private sealed class UpperCulture(string name) : CultureInfo(name)
     {
         public override string Name => base.Name.ToUpperInvariant();
