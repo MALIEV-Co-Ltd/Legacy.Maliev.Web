@@ -149,7 +149,7 @@ public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<Test
         var identity = new string('A', 64);
         var principal = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
             new[] { new System.Security.Claims.Claim(InstantQuotationSessionIdentityClaim.Type, identity) }));
-        var accessor = new AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor(
+        using var accessor = new AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor(
             new StaticAuthenticationStateProvider(principal));
 
         Assert.Equal(identity, await accessor.GetProtectedSessionIdentityAsync(default));
@@ -172,6 +172,53 @@ public sealed class InstantQuotationRuntimeIntegrationTests : IClassFixture<Test
             NullLogger<InstantQuotationSessionIdentityCookie>.Instance);
 
         Assert.Null(cookie.TryRead(context));
+    }
+
+    [Fact]
+    public async Task CircuitAccessor_RechecksIdentityWhenAuthenticationChangesDuringRead()
+    {
+        var provider = new ChangingAuthenticationStateProvider();
+        using var accessor = new AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor(provider);
+        var pending = accessor.GetProtectedSessionIdentityAsync(default).AsTask();
+        var identity = new string('B', 64);
+        provider.Change(identity);
+        provider.CompletePrevious();
+        Assert.Equal(identity, await pending);
+    }
+
+    [Fact]
+    public async Task CircuitAccessor_CancelsWhileAuthenticationStateIsPending()
+    {
+        var provider = new ChangingAuthenticationStateProvider();
+        using var accessor = new AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor(provider);
+        using var cancellation = new CancellationTokenSource();
+        var pending = accessor.GetProtectedSessionIdentityAsync(cancellation.Token).AsTask();
+        cancellation.Cancel();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+    }
+
+    [Fact]
+    public async Task CircuitAccessor_UsesNotificationBeforeFirstRead()
+    {
+        var provider = new ChangingAuthenticationStateProvider();
+        using var accessor = new AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor(provider);
+        var identity = new string('C', 64);
+        provider.Change(identity);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        Assert.Equal(identity, await accessor.GetProtectedSessionIdentityAsync(cancellation.Token));
+    }
+
+    private sealed class ChangingAuthenticationStateProvider : AuthenticationStateProvider
+    {
+        private readonly TaskCompletionSource<AuthenticationState> previous = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public override Task<AuthenticationState> GetAuthenticationStateAsync() => previous.Task;
+        public void Change(string identity)
+        {
+            var principal = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+                [new System.Security.Claims.Claim(InstantQuotationSessionIdentityClaim.Type, identity)]));
+            NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(principal)));
+        }
+        public void CompletePrevious() => previous.SetResult(new AuthenticationState(new System.Security.Claims.ClaimsPrincipal()));
     }
 
     private sealed class StaticAuthenticationStateProvider(System.Security.Claims.ClaimsPrincipal principal)

@@ -1,17 +1,46 @@
 using System.Net;
 using System.Net.Http.Json;
 using Legacy.Maliev.Web.Application;
+using Legacy.Maliev.Web.Components.Lookups;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.JSInterop;
+using System.Reflection;
 
 namespace Legacy.Maliev.Web.Tests;
 
 public sealed class ThaiLookupBoundaryTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ModuleImport_HandlesOnlyCircuitDisconnection(bool disconnected)
+    {
+        using var services = new ServiceCollection()
+            .AddSingleton<IJSRuntime>(new FailingImport(disconnected))
+            .BuildServiceProvider();
+        var component = new ThaiLookup();
+        typeof(ThaiLookup).GetProperty("Services", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .SetValue(component, services);
+        var render = typeof(ThaiLookup).GetMethod("OnAfterRenderAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var operation = (Task)render.Invoke(component, [true])!;
+        if (disconnected) await operation;
+        else await Assert.ThrowsAsync<JSException>(() => operation);
+        await component.DisposeAsync();
+    }
+
+    private sealed class FailingImport(bool disconnected) : IJSRuntime
+    {
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
+            ValueTask.FromException<TValue>(disconnected ? new JSDisconnectedException("closed") : new JSException("failed"));
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args) =>
+            ValueTask.FromException<TValue>(disconnected ? new JSDisconnectedException("closed") : new JSException("failed"));
+    }
+
     [Theory]
     [InlineData("/lookups/addresses/search")]
     [InlineData("/lookups/addresses/resolve")]

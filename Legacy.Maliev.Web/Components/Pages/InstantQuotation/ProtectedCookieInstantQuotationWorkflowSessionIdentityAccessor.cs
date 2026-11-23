@@ -18,18 +18,51 @@ public static class InstantQuotationSessionIdentityClaim
 /// <summary>
 /// Reads the request-established identity from Blazor's circuit-safe authentication state.
 /// </summary>
-/// <param name="authenticationStateProvider">The circuit-safe authentication state supplying the request-established quotation identity.</param>
-public sealed class AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor(
-    AuthenticationStateProvider authenticationStateProvider)
-    : IInstantQuotationWorkflowSessionIdentityAccessor
+public sealed class AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor
+    : IInstantQuotationWorkflowSessionIdentityAccessor, IDisposable
 {
+    private readonly AuthenticationStateProvider authenticationStateProvider;
+    private readonly Lock stateLock = new();
+    private Task<AuthenticationState>? currentState;
+
+    /// <summary>Creates a circuit-scoped identity reader.</summary>
+    /// <param name="authenticationStateProvider">The circuit-safe authentication state supplying the request-established quotation identity.</param>
+    public AuthenticationStateInstantQuotationWorkflowSessionIdentityAccessor(AuthenticationStateProvider authenticationStateProvider)
+    {
+        this.authenticationStateProvider = authenticationStateProvider;
+        authenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+    }
+
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> state)
+    {
+        lock (stateLock) currentState = state;
+    }
+
+    /// <inheritdoc />
+    public void Dispose() => authenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+
     /// <inheritdoc />
     public async ValueTask<string?> GetProtectedSessionIdentityAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var state = await authenticationStateProvider.GetAuthenticationStateAsync();
-        var identity = state.User.FindFirstValue(InstantQuotationSessionIdentityClaim.Type);
-        return InstantQuotationSessionIdentityCookie.IsValidIdentity(identity) ? identity : null;
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Task<AuthenticationState>? pending;
+            lock (stateLock) pending = currentState;
+            if (pending is null)
+            {
+                var initial = authenticationStateProvider.GetAuthenticationStateAsync();
+                lock (stateLock) pending = currentState ??= initial;
+            }
+            var state = await pending.WaitAsync(cancellationToken);
+            lock (stateLock)
+            {
+                if (!ReferenceEquals(pending, currentState)) continue;
+                var identity = state.User.FindFirstValue(InstantQuotationSessionIdentityClaim.Type);
+                return InstantQuotationSessionIdentityCookie.IsValidIdentity(identity) ? identity : null;
+            }
+        }
     }
 
     /// <inheritdoc />

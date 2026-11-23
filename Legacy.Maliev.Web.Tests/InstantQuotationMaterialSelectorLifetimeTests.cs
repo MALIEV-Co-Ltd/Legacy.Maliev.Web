@@ -106,7 +106,11 @@ public sealed class InstantQuotationMaterialSelectorLifetimeTests
 
     private sealed class Runtime(Func<Task<IJSObjectReference>> import) : IJSRuntime
     {
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) => InvokeAsync<TValue>(identifier, default, args);
+        public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            Assert.Equal("import", identifier);
+            return (TValue)await import();
+        }
         public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
             Assert.Equal("import", identifier);
@@ -119,7 +123,13 @@ public sealed class InstantQuotationMaterialSelectorLifetimeTests
         public int InvokeCalls { get; private set; }
         public int DisposeCalls { get; private set; }
         public int ReleaseCalls { get; private set; }
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) => InvokeAsync<TValue>(identifier, default, args);
+        public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            InvokeCalls++;
+            if (identifier == "dispose") ReleaseCalls++;
+            var result = await invoke(identifier, args);
+            return result is null ? default! : (TValue)result;
+        }
         public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
             InvokeCalls++;

@@ -432,6 +432,44 @@ public sealed class InstantQuotationResinPresentationTests
 
 
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task PreliminaryQuotation_HandlesOnlyCircuitDisconnection(bool disconnected)
+    {
+        var part = Part("PLA", BuildPreference.Standard);
+        var line = new InstantQuotationPartQuote(part.PartId, "PLA", "Black", 1, PrintProcess.Fdm,
+            1, 1, 1, 1, 1, 1, 1, false, 0, 0, [], BuildPreference.Standard, []);
+        var quote = new InstantQuotationOrderQuote([line], 1, 1, 0, 0, 0, 1, 0, 1, 1, 1);
+        var view = new InstantQuotationWorkflowPartViewModel(part.PartId, Guid.NewGuid(), part.DisplayFileName,
+            part.Geometry, part.Configuration, line);
+        var activator = new CapturingActivator();
+        using var services = Services(activator, new FailingPreliminaryJavaScript(disconnected));
+        await using var renderer = new HtmlRenderer(services, services.GetRequiredService<ILoggerFactory>());
+        await renderer.Dispatcher.InvokeAsync(async () =>
+        {
+            await renderer.RenderComponentAsync<InstantQuotationPreliminaryQuotation>(ParameterView.FromDictionary(new Dictionary<string, object?>
+            {
+                [nameof(InstantQuotationPreliminaryQuotation.Parts)] = new[] { view },
+                [nameof(InstantQuotationPreliminaryQuotation.Quote)] = quote,
+                [nameof(InstantQuotationPreliminaryQuotation.DfmWarnings)] = (Func<InstantQuotationWorkflowPartViewModel, IReadOnlyList<string>>)(_ => []),
+            }));
+            var component = Assert.IsType<InstantQuotationPreliminaryQuotation>(activator.Preliminary);
+            var open = typeof(InstantQuotationPreliminaryQuotation).GetMethod("OpenPreliminaryQuotationAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            var operation = (Task)open.Invoke(component, [])!;
+            if (disconnected) await operation;
+            else await Assert.ThrowsAsync<JSException>(() => operation);
+        });
+    }
+
+    private sealed class FailingPreliminaryJavaScript(bool disconnected) : IJSRuntime
+    {
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
+            ValueTask.FromException<TValue>(disconnected ? new JSDisconnectedException("closed") : new JSException("failed"));
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args) =>
+            ValueTask.FromException<TValue>(disconnected ? new JSDisconnectedException("closed") : new JSException("failed"));
+    }
+
+    [Theory]
     [InlineData("en", "PETG", "Select all", "Any")]
     [InlineData("th", "PETG", "เลือกทั้งหมด", "Any")]
     [InlineData("en", "M68", "Select all", "Gray")]
@@ -472,16 +510,20 @@ public sealed class InstantQuotationResinPresentationTests
             Assert.Equal(culture == "th" ? $"ใช้ {material} กับชิ้นงานที่เลือก" : $"Apply {material} to selected parts",
                 Regex.Replace(applyButton.Groups[1].Value, "\\s+", " ").Trim());
 
-            void InvokeSelection(string method, params object[] arguments) =>
-                typeof(InstantQuotationWorkflow).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!
+            Task InvokeSelectionAsync(string method, params object[] arguments)
+            {
+                Action callback = () => typeof(InstantQuotationWorkflow)
+                    .GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!
                     .Invoke(component, arguments);
+                return ((IHandleEvent)component).HandleEventAsync(new EventCallbackWorkItem(callback), null);
+            }
 
-            InvokeSelection("SelectAllParts", new ChangeEventArgs { Value = true });
+            await InvokeSelectionAsync("SelectAllParts", new ChangeEventArgs { Value = true });
             Assert.Equal(4, Regex.Matches(root.ToHtmlString(), "<input\\b[^>]*data-workflow-(?:part-select|select-all)[^>]*\\schecked(?:[\\s=>])").Count);
-            InvokeSelection("SelectAllParts", new ChangeEventArgs { Value = false });
-            InvokeSelection("SetPartSelected", selected.PartId, new ChangeEventArgs { Value = true });
+            await InvokeSelectionAsync("SelectAllParts", new ChangeEventArgs { Value = false });
+            await InvokeSelectionAsync("SetPartSelected", selected.PartId, new ChangeEventArgs { Value = true });
             Assert.Contains("aria-checked=\"mixed\"", root.ToHtmlString(), StringComparison.Ordinal);
-            InvokeSelection("OnQuantityInput", selected.PartId, new ChangeEventArgs { Value = "9" });
+            await InvokeSelectionAsync("OnQuantityInput", selected.PartId, new ChangeEventArgs { Value = "9" });
             await (Task)typeof(InstantQuotationWorkflow)
                 .GetMethod("ApplyMaterialToSelectedAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
                 .Invoke(component, null)!;
@@ -1572,7 +1614,7 @@ public sealed class InstantQuotationResinPresentationTests
             {
                 await MaterialPricingTestCleanup.ReleaseAllAsync(primary,
                     async () => await MaterialPricingTestCleanup.DrainQuoteAsync(
-                        uploading, () => lease.Cancel(), () => preview.Release(), lease.Token, null,
+                        uploading, () => lease.Cancel(), () => { try { preview.Release(); } catch (JSException) { throw; } }, lease.Token, null,
                         receipt => Assert.True(receipt.ActualTaskSettled), TimeSpan.FromSeconds(5),
                         expectedTerminalFailure: false, taskKind: "removed-pending-parse-consumer"),
                     async () =>
@@ -1737,19 +1779,24 @@ public sealed class InstantQuotationResinPresentationTests
         internal Task ActualParser { get; private set; } = Task.CompletedTask;
         internal void Release() => completion.TrySetException(new JSException("Controlled removed parse."));
 
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
-            InvokeAsync<TValue>(identifier, default, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            try { return InvokeAsync<TValue>(identifier, default, args); }
+            catch (JSException) { throw; }
+        }
 
         public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
             if (identifier == "beginSelection") return (TValue)(object)new[] { "pending-preview" };
             if (identifier == "getGeometryClaim")
             {
-                ActualParser = ParseAsync();
+                try { ActualParser = ParseAsync(); }
+                catch (JSException) { throw; }
                 Entered.TrySetResult();
                 return (TValue)(object)await completion.Task.WaitAsync(cancellationToken);
             }
-            if (identifier == "release") Release();
+            try { if (identifier == "release") Release(); }
+            catch (JSException) { throw; }
             return default!;
         }
 
@@ -1761,7 +1808,11 @@ public sealed class InstantQuotationResinPresentationTests
                 Enumerable.Repeat(40d, 64).ToArray(), 100, 1, true, false, false, 0.8));
         }
 
-        public ValueTask DisposeAsync() { Release(); return ValueTask.CompletedTask; }
+        public ValueTask DisposeAsync()
+        {
+            try { Release(); return ValueTask.CompletedTask; }
+            catch (JSException) { throw; }
+        }
     }
 
     [Fact]
@@ -1908,8 +1959,11 @@ public sealed class InstantQuotationResinPresentationTests
         internal TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal List<string> Attempts { get; } = [];
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
-            InvokeAsync<TValue>(identifier, default, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            try { return InvokeAsync<TValue>(identifier, default, args); }
+            catch (JSException) { throw; }
+        }
         public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
             if (identifier == "release")
@@ -2705,10 +2759,14 @@ public sealed class InstantQuotationResinPresentationTests
         internal void FailAt(int index) => completions[index].TrySetException(new JSException("Controlled invalid model."));
         internal void CompleteAll()
         {
-            for (var index = 0; index < completions.Length; index++) CompleteAt(index);
+            try { for (var index = 0; index < completions.Length; index++) CompleteAt(index); }
+            catch (JSException) { throw; }
         }
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
-            InvokeAsync<TValue>(identifier, default, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            try { return InvokeAsync<TValue>(identifier, default, args); }
+            catch (JSException) { throw; }
+        }
         public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
             if (identifier == "beginSelection") return (TValue)(object)Keys;
@@ -2727,13 +2785,20 @@ public sealed class InstantQuotationResinPresentationTests
             }
             return default!;
         }
-        public ValueTask DisposeAsync() { CompleteAll(); return ValueTask.CompletedTask; }
+        public ValueTask DisposeAsync()
+        {
+            try { CompleteAll(); return ValueTask.CompletedTask; }
+            catch (JSException) { throw; }
+        }
     }
 
     private sealed class ControlledPreviewReference(Func<string, object?[]?, Task<object?>> invoke) : IJSObjectReference
     {
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
-            InvokeAsync<TValue>(identifier, default, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            try { return InvokeAsync<TValue>(identifier, default, args); }
+            catch (JSException) { throw; }
+        }
         public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
             var result = await invoke(identifier, args);
@@ -2882,8 +2947,11 @@ public sealed class InstantQuotationResinPresentationTests
 
     private sealed class BulkAppearancePreviewReference(Func<string, object?[]?, Task<object?>> invoke) : IJSObjectReference
     {
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
-            InvokeAsync<TValue>(identifier, default, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            try { return InvokeAsync<TValue>(identifier, default, args); }
+            catch (JSException) { throw; }
+        }
         public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
             var result = await invoke(identifier, args);
@@ -3212,7 +3280,11 @@ public sealed class InstantQuotationResinPresentationTests
         internal bool ElementConnected = true;
         internal Exception? MembershipFailure;
         internal int MembershipChecks;
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) => InvokeAsync<TValue>(identifier, default, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            try { return InvokeAsync<TValue>(identifier, default, args); }
+            catch (JSException) { throw; }
+        }
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken token, object?[]? args)
         {
             if (identifier == "document.contains")
@@ -3228,7 +3300,8 @@ public sealed class InstantQuotationResinPresentationTests
             BindCalls++;
             if (BindCalls > 1) return ValueTask.FromResult((TValue)(object)Second);
             Entered.TrySetResult();
-            return new(CompleteAsync<TValue>());
+            try { return new(CompleteAsync<TValue>()); }
+            catch (JSException) { throw; }
         }
         private async Task<TValue> CompleteAsync<TValue>() => (TValue)(object)await Release.Task.WaitAsync(lease);
     }
@@ -3237,7 +3310,11 @@ public sealed class InstantQuotationResinPresentationTests
     {
         internal int ControllerDisposals;
         internal int ReferenceDisposals;
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) => InvokeAsync<TValue>(identifier, default, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            try { return InvokeAsync<TValue>(identifier, default, args); }
+            catch (JSException) { throw; }
+        }
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken token, object?[]? args)
         {
             Assert.Equal("dispose", identifier);
@@ -3561,8 +3638,11 @@ public sealed class InstantQuotationResinPresentationTests
         internal TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal List<(string Key, string Canvas, long Generation)> Attachments { get; } = [];
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
-            InvokeAsync<TValue>(identifier, default, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            try { return InvokeAsync<TValue>(identifier, default, args); }
+            catch (JSException) { throw; }
+        }
         public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
             if (identifier == "bindInput")
@@ -3660,8 +3740,11 @@ public sealed class InstantQuotationResinPresentationTests
     private sealed class RecordingJavaScript : IJSRuntime
     {
         internal List<JsonElement> Snapshots { get; } = [];
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
-            InvokeAsync<TValue>(identifier, default, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            try { return InvokeAsync<TValue>(identifier, default, args); }
+            catch (JSException) { throw; }
+        }
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
             if (identifier == "malievPreliminaryQuotation.open")

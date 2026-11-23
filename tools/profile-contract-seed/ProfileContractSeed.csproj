@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>Maliev.ProfileContractSeed</AssemblyName>
   </PropertyGroup>
   <!-- Standalone disposable test tool. Never referenced by Web or its application/infrastructure projects. -->

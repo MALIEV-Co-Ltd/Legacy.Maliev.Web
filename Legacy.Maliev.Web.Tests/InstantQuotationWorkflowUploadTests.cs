@@ -2328,8 +2328,11 @@ public sealed class InstantQuotationWorkflowUploadTests
     {
         public int Calls { get; private set; }
 
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
-            InvokeAsync<TValue>(identifier, default, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            Calls++;
+            return ValueTask.FromException<TValue>(new InvalidOperationException("Static caller fixture must not execute browser JavaScript."));
+        }
 
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {

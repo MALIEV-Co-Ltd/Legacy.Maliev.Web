@@ -338,7 +338,6 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         if (disposed || InputDisabled || IsRepricing) return;
         selectedBulkParts.Clear();
         if (args.Value is true) selectedBulkParts.UnionWith(BulkParts.Select(part => part.PartId));
-        StateHasChanged();
     }
 
     private async Task ApplyMaterialToSelectedAsync()
@@ -942,8 +941,18 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
     }
 
 
-    private async Task<InstantQuotationGeometryClaim> ReadGeometryClaimAsync(string key) =>
-        await previewInterop!.InvokeAsync<InstantQuotationGeometryClaim>("getGeometryClaim", key);
+    private async Task<InstantQuotationGeometryClaim> ReadGeometryClaimAsync(string key)
+    {
+        try
+        {
+            return await previewInterop!.InvokeAsync<InstantQuotationGeometryClaim>("getGeometryClaim", key);
+        }
+        catch (JSException)
+        {
+            // The batch consumer classifies this particular file's preview failure.
+            throw;
+        }
+    }
 
     private string? BrowserPreviewKey(Guid localId) => previewKeys.GetValueOrDefault(localId);
 
@@ -1000,8 +1009,16 @@ public partial class InstantQuotationWorkflow : ComponentBase, IAsyncDisposable
         var intent = pendingConfigurations[key];
         var part = intent.LocalId is { } localId
             ? Parts.SingleOrDefault(item => item.PreviewCorrelationId == localId) : null;
-        var selected = part is not null && previewInterop is not null
-            && await previewInterop.InvokeAsync<bool>("select", ViewerPartKey(part.PartId));
+        bool selected;
+        try
+        {
+            selected = part is not null && previewInterop is not null
+                && await previewInterop.InvokeAsync<bool>("select", ViewerPartKey(part.PartId));
+        }
+        catch (JSDisconnectedException)
+        {
+            return;
+        }
         if (disposed || selectedPendingPreviewKey != key || previewSelectionGeneration != generation) return;
         if (!selected) await InvokePreviewAsync("selectLocalPreview", key);
     }

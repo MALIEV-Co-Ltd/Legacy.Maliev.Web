@@ -63,7 +63,12 @@ public sealed class InstantQuotationJsAnalyticsSinkTests
         public ValueTask<TValue> InvokeAsync<TValue>(
             string identifier,
             CancellationToken cancellationToken,
-            object?[]? args) => InvokeAsync<TValue>(identifier, args);
+            object?[]? args)
+        {
+            Identifier = identifier;
+            Arguments = args;
+            return ValueTask.FromResult(default(TValue)!);
+        }
     }
 
     private sealed class ThrowingJsRuntime : IJSRuntime
@@ -74,6 +79,6 @@ public sealed class InstantQuotationJsAnalyticsSinkTests
         public ValueTask<TValue> InvokeAsync<TValue>(
             string identifier,
             CancellationToken cancellationToken,
-            object?[]? args) => InvokeAsync<TValue>(identifier, args);
+            object?[]? args) => ValueTask.FromException<TValue>(new JSException("Analytics bridge unavailable."));
     }
 }

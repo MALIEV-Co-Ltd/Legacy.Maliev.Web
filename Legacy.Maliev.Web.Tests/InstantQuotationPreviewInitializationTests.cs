@@ -113,6 +113,7 @@ public sealed class InstantQuotationPreviewInitializationTests
         (T)typeof(InstantQuotationWorkflow).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(component, args)!;
 
+    // These doubles deliberately propagate simulated JS failures to the component under test.
     private sealed class HeldInitialization(string phase, CancellationToken token) : IJSRuntime
     {
         internal TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -120,14 +121,22 @@ public sealed class InstantQuotationPreviewInitializationTests
         internal List<Module> Modules { get; } = [];
         internal int ImportCalls { get; private set; }
         private string Phase { get; } = phase;
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) => InvokeAsync<TValue>(identifier, default, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            try { return InvokeAsync<TValue>(identifier, default, args); }
+            catch (JSException) { throw; }
+        }
         public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
             Assert.Equal("import", identifier);
             int ordinal = ++ImportCalls;
             var module = new Module(this, ordinal);
             Modules.Add(module);
-            if (ordinal == 1 && Phase == "import") await HoldAsync();
+            try
+            {
+                if (ordinal == 1 && Phase == "import") await HoldAsync();
+            }
+            catch (JSException) { throw; }
             return (TValue)(object)module;
         }
         internal async Task HoldAsync()
@@ -142,13 +151,21 @@ public sealed class InstantQuotationPreviewInitializationTests
             internal DotNetObjectReference<InstantQuotationWorkflow>? Callback { get; private set; }
             internal int CreateCalls { get; private set; }
             internal int DisposeCalls { get; private set; }
-            public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) => InvokeAsync<TValue>(identifier, default, args);
+            public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+            {
+                try { return InvokeAsync<TValue>(identifier, default, args); }
+                catch (JSException) { throw; }
+            }
             public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
             {
                 Assert.Equal("createInstantQuotationWorkflowInterop", identifier);
                 CreateCalls++;
                 Callback = Assert.IsType<DotNetObjectReference<InstantQuotationWorkflow>>(args![0]);
-                if (Ordinal == 1 && owner.Phase.StartsWith("create", StringComparison.Ordinal)) await owner.HoldAsync();
+                try
+                {
+                    if (Ordinal == 1 && owner.Phase.StartsWith("create", StringComparison.Ordinal)) await owner.HoldAsync();
+                }
+                catch (JSException) { throw; }
                 if (owner.Phase == "create-failure") throw new JSException("controlled-detached-initialization");
                 return (TValue)(object)Controller;
             }
@@ -162,7 +179,11 @@ public sealed class InstantQuotationPreviewInitializationTests
         internal int DisposeCalls { get; private set; }
         internal int ReleaseCalls { get; private set; }
         internal int OperationalCalls { get; private set; }
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) => InvokeAsync<TValue>(identifier, default, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            try { return InvokeAsync<TValue>(identifier, default, args); }
+            catch (JSException) { throw; }
+        }
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
         {
             object? result = null;
