@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Components.Endpoints;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Routing;
 using StackExchange.Redis;
@@ -455,6 +456,20 @@ await Program.RunHostAsync(async () =>
                 "Knowledges",
                 "/Materials/Selection",
                 model => model.Selectors.Clear());
+        }
+        else
+        {
+            foreach (var page in new[] { "/Contact/Index", "/Quotation/Index" })
+            {
+                options.Conventions.AddPageRouteModelConvention(page, model =>
+                {
+                    var selector = new SelectorModel(model.Selectors.Single());
+                    selector.AttributeRouteModel!.Template = page.TrimStart('/');
+                    selector.AttributeRouteModel.SuppressLinkGeneration = true;
+                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["GET"]));
+                    model.Selectors.Add(selector);
+                });
+            }
         }
     })
         .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)

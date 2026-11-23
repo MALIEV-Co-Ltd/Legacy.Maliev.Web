@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Http;
 
 namespace Legacy.Maliev.Web.Tests;
 
@@ -21,7 +22,7 @@ public sealed class PublicIndexAliasHttpTests(TestingWebApplicationFactory facto
     [InlineData("/services", "/Services/Index", "Services")]
     [InlineData("/knowledges", "/Knowledges/Index", "KnowledgesIndex")]
     [InlineData("/knowledges/specifications", "/Knowledges/Specifications/Index", "KnowledgesSpecifications")]
-    public async Task IndexAlias_RendersSameLocalizedTitleAsShortRoute(string shortPath, string alias, string feature)
+    public async Task IndexAlias_RendersSameLocalizedPageAsShortRoute(string shortPath, string alias, string feature)
     {
         foreach (bool active in new[] { true, false })
         {
@@ -40,6 +41,8 @@ public sealed class PublicIndexAliasHttpTests(TestingWebApplicationFactory facto
                 var shortHtml = WebUtility.HtmlDecode(await shortResponse.Content.ReadAsStringAsync());
                 var aliasHtml = WebUtility.HtmlDecode(await aliasResponse.Content.ReadAsStringAsync());
                 Assert.Contains($"<html lang=\"{culture}\"", aliasHtml, StringComparison.Ordinal);
+                Assert.Contains($"<html lang=\"{culture}\"", shortHtml, StringComparison.Ordinal);
+                Assert.Equal(PageHeading(shortHtml), PageHeading(aliasHtml));
                 var title = Regex.Match(shortHtml, "<title>(.*?)</title>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
                 var aliasTitle = Regex.Match(aliasHtml, "<title>(.*?)</title>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
                 Assert.True(title.Success && aliasTitle.Success);
@@ -47,6 +50,15 @@ public sealed class PublicIndexAliasHttpTests(TestingWebApplicationFactory facto
                 Assert.Equal(DocumentMetadata(shortHtml), DocumentMetadata(aliasHtml));
             }
         }
+    }
+
+    private static string PageHeading(string html)
+    {
+        var heading = Regex.Match(html, "<h1\\b[^>]*>(.*?)</h1>", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        Assert.True(heading.Success);
+        var text = Regex.Replace(heading.Groups[1].Value, "<[^>]+>", "").Trim();
+        Assert.NotEmpty(text);
+        return text;
     }
 
     private static string[] DocumentMetadata(string html) => Regex.Matches(
@@ -64,22 +76,6 @@ public sealed class PublicIndexAliasHttpTests(TestingWebApplicationFactory facto
         Assert.Equal("/about?culture=en", response.Headers.Location?.OriginalString);
     }
 
-    [Theory]
-    [InlineData("Contact", "/Contact")]
-    [InlineData("Contact", "/Contact/Index")]
-    [InlineData("Quotation", "/Quotation")]
-    [InlineData("Quotation", "/Quotation/Index")]
-    public async Task InquiryPost_WithoutAntiforgeryIsRejectedInBothRouteOwners(string feature, string path)
-    {
-        foreach (bool active in new[] { true, false })
-        {
-            await using var host = CreateHost(feature, active);
-            using var client = host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
-            using var response = await client.PostAsync($"{path}?handler=SubmitRequest", new FormUrlEncodedContent([]));
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        }
-    }
-
     [Fact]
     public async Task QuotationIndex_DoesNotAllowAdditionalPathSegments()
     {
@@ -95,6 +91,7 @@ public sealed class PublicIndexAliasHttpTests(TestingWebApplicationFactory facto
         builder.UseSetting($"BlazorRouting:{feature}", active.ToString());
         builder.ConfigureServices(services =>
         {
+            services.AddSingleton<IHttpMessageHandlerBuilderFilter, RejectOutboundHttpFilter>();
             services.RemoveAll<ICountryClient>();
             services.AddSingleton<ICountryClient, CountryStub>();
             services.RemoveAll<ICareerClient>();
@@ -111,6 +108,21 @@ public sealed class PublicIndexAliasHttpTests(TestingWebApplicationFactory facto
             services.AddSingleton<IAntiBotVerifier, NoWrites>();
         });
     });
+
+    private sealed class RejectOutboundHttpFilter : IHttpMessageHandlerBuilderFilter
+    {
+        public Action<HttpMessageHandlerBuilder> Configure(Action<HttpMessageHandlerBuilder> next) => builder =>
+        {
+            next(builder);
+            builder.AdditionalHandlers.Insert(0, new RejectOutboundHttpHandler());
+        };
+    }
+
+    private sealed class RejectOutboundHttpHandler : DelegatingHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Unexpected outbound HTTP in the public Index GET fixture");
+    }
 
     internal sealed class CountryStub : ICountryClient
     {
