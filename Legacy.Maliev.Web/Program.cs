@@ -55,6 +55,7 @@ await Program.RunHostAsync(async () =>
     var useBlazorSignupRoute = builder.Configuration.GetValue("BlazorRouting:Signup", true);
     var useBlazorForgotPasswordRoute = builder.Configuration.GetValue("BlazorRouting:ForgotPassword", true);
     var useBlazorResetPasswordRoute = builder.Configuration.GetValue("BlazorRouting:ResetPassword", true);
+    var useBlazorInitialPasswordRoute = builder.Configuration.GetValue("BlazorRouting:InitialPassword", true);
     var useBlazorLogoutRoute = builder.Configuration.GetValue("BlazorRouting:Logout", true);
     var useBlazorEmailConfirmationRoute = builder.Configuration.GetValue("BlazorRouting:EmailConfirmation", true);
     var useBlazorChangeEmailConfirmationRoute = builder.Configuration.GetValue("BlazorRouting:ChangeEmailConfirmation", true);
@@ -97,6 +98,7 @@ await Program.RunHostAsync(async () =>
         && useBlazorSignupRoute
         && useBlazorForgotPasswordRoute
         && useBlazorResetPasswordRoute
+        && useBlazorInitialPasswordRoute
         && useBlazorLogoutRoute
         && useBlazorEmailConfirmationRoute
         && useBlazorChangeEmailConfirmationRoute
@@ -217,6 +219,15 @@ await Program.RunHostAsync(async () =>
                 });
             options.Conventions.AddPageRouteModelConvention(
                 "/Account/ResetPassword",
+                model =>
+                {
+                    foreach (var selector in model.Selectors)
+                    {
+                        selector.EndpointMetadata.Add(new HttpMethodMetadata(["POST"]));
+                    }
+                });
+            options.Conventions.AddPageRouteModelConvention(
+                "/Account/SetInitialPassword",
                 model =>
                 {
                     foreach (var selector in model.Selectors)
@@ -367,6 +378,7 @@ await Program.RunHostAsync(async () =>
                 "/Account/Manage/Address",
                 "/Account/Manage/ChangeEmail",
                 "/Account/Manage/ChangePassword",
+                "/Account/Manage/CreatePassword",
             })
             {
                 options.Conventions.AddAreaPageRouteModelConvention(

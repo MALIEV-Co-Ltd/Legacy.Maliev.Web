@@ -2,6 +2,7 @@
 @using Legacy.Maliev.Web.Application
 @using Legacy.Maliev.Web.Infrastructure
 @using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Mvc.ViewFeatures
 @attribute [Authorize]
@@ -12,18 +13,25 @@
 @inject ITempDataDictionaryFactory TempDataDictionaryFactory
 @inject IStringLocalizer<MemberProfileContent> Localizer
 
+@if (hasOwnedSession)
+{
 <PageTitle>@Localizer["Profile | MALIEV"]</PageTitle><HeadContent><meta name="robots" content="noindex,follow" /></HeadContent>
 <div data-migration-route-owner="blazor-static-ssr"><MemberWorkspaceShell><section class="maliev-section" aria-labelledby="member-profile-title"><form method="post" action="/member/account/manage/profile?handler=UpdateProfile" class="maliev-panel maliev-form">@if (tokens is not null) { <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" /> }<MemberProfileContent Model="model" /></form></section></MemberWorkspaceShell></div>
+}
 
 @code {
     private MemberProfileDisplayModel model = MemberProfileDisplayModel.Empty;
     private AntiforgeryTokenSet? tokens;
+    private bool hasOwnedSession;
     protected override async Task OnInitializedAsync()
     {
         var context = HttpContextAccessor.HttpContext ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
         var tempData = TempDataDictionaryFactory.GetTempData(context);
         var notification = tempData.TryGetValue("Notification", out var value) ? value?.ToString() : null;
-        model = await MemberAccountLoaders.LoadProfileAsync(context, SessionManager, CustomerClient, notification, context.RequestAborted);
+        var loaded = await MemberAccountLoaders.LoadProfileAsync(context, SessionManager, CustomerClient, notification, context.RequestAborted);
+        if (loaded is null) { await context.ChallengeAsync(); return; }
+        model = loaded;
+        hasOwnedSession = true;
         tokens = Antiforgery.GetAndStoreTokens(context);
     }
 }
