@@ -124,6 +124,11 @@ public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture)
         Assert.Equal(4, await page.Locator("#landing-process ol > li").CountAsync());
         Assert.Equal($"/Contact?culture={culture}", await page.Locator(".hero-assembly a").First.GetAttributeAsync("href"));
         var directoryLink = page.Locator(".landing-service-card--directory-link");
+        var preview = directoryLink.Locator(".landing-service-directory-preview");
+        Assert.Equal("true", await preview.GetAttributeAsync("aria-hidden"));
+        Assert.Equal(5, await preview.Locator(".landing-service-directory-progress > li").CountAsync());
+        Assert.Equal(1, await preview.Locator(".landing-service-directory-progress > li.is-active").CountAsync());
+        Assert.Equal(0, await preview.Locator("a, button, input, [data-service-finder]").CountAsync());
         var directoryHref = culture == "en" ? "/services?culture=en" : "/services";
         Assert.Equal(directoryHref, await directoryLink.GetAttributeAsync("href"));
         await directoryLink.ClickAsync();
