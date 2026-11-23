@@ -704,6 +704,56 @@ public sealed class WebSurfaceTests : IDisposable
         Assert.Equal($"Approximate dimensions: 0.001 W x 1.234 L x 2.345 H {unit}. Handle recess.", invocation.Draft.Description);
     }
 
+    [Theory]
+    [InlineData("3d-printing", CustomerOrderKind.Additive)]
+    [InlineData("3d-scanning", CustomerOrderKind.Scanning)]
+    [InlineData("cnc-machining", CustomerOrderKind.Machining)]
+    public async Task MemberOrderCreation_CadPartWithoutContentTypeReachesOwnedSubmission(
+        string orderRoute, CustomerOrderKind kind)
+    {
+        await SignInAsync();
+        var route = $"/member/orders/{orderRoute}";
+        var form = await GetAntiforgeryFormAsync($"{route}?culture=en");
+        var submission = Assert.IsType<StubCustomerOrderSubmissionService>(
+            configuredFactory.Services.GetRequiredService<ICustomerOrderSubmissionService>());
+        submission.Reset();
+
+        var operationId = Guid.NewGuid();
+        using var content = new MultipartFormDataContent();
+        foreach (var field in new Dictionary<string, string>
+        {
+            ["__RequestVerificationToken"] = form["__RequestVerificationToken"],
+            ["Name"] = "Synthetic CAD attachment",
+            ["Quantity"] = "1",
+            ["ProcessId"] = "10",
+            ["MaterialId"] = "20",
+            ["ColorId"] = "30",
+            ["SurfaceFinishId"] = "40",
+            ["Width"] = "1",
+            ["Length"] = "2",
+            ["Height"] = "3",
+            ["AcceptTermsAndConditions"] = "true",
+            ["OperationId"] = operationId.ToString("D")
+        })
+            content.Add(new StringContent(field.Value), field.Key);
+
+        byte[] cadBytes = [1, 2, 3, 4];
+        using var part = new ByteArrayContent(cadBytes);
+        Assert.Null(part.Headers.ContentType);
+        content.Add(part, "Files", "part.step");
+
+        using var response = await client.PostAsync($"{route}?handler=Submit&culture=en", content);
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Equal("/Member/Orders/View?itemID=81", response.Headers.Location?.OriginalString);
+        var invocation = Assert.IsType<OrderSubmissionInvocation>(submission.LastInvocation);
+        Assert.Equal(kind, invocation.Draft.Kind);
+        Assert.Equal(operationId, invocation.OperationId);
+        var upload = Assert.Single(invocation.Draft.Files);
+        Assert.Equal("part.step", upload.FileName);
+        Assert.Equal("application/octet-stream", upload.ContentType);
+        Assert.Equal(cadBytes.LongLength, upload.Length);
+    }
+
     [Fact]
     public async Task MemberOrderCreation_RejectsMissingAntiforgeryBeforeSubmission()
     {
