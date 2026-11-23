@@ -25,7 +25,7 @@ public sealed class LocalPerformanceContractTests
         Assert.Contains("b28193fb5d0477215eb964c41b1d9dd71f18cba9", evidence, StringComparison.Ordinal);
         Assert.Contains("Razor Pages/jQuery", evidence, StringComparison.Ordinal);
         Assert.Contains("Blazor static SSR", evidence, StringComparison.Ordinal);
-        Assert.Contains(".NET 10 Blazor Web App", readme, StringComparison.Ordinal);
+        Assert.Contains(".NET 11 Blazor Web App", readme, StringComparison.Ordinal);
         Assert.Contains("docs/blazor-migration-performance.md", readme, StringComparison.Ordinal);
         Assert.DoesNotContain(".NET 10 Razor Pages frontend", readme, StringComparison.Ordinal);
     }
