@@ -31,6 +31,7 @@ export function previewColorForSelection(value) {
 
 const supportedExtensions = new Set(supportedPreviewExtensions);
 const STALL_TIMEOUT_MS = 120_000;
+const yieldBrowserTask = () => new Promise(resolve => setTimeout(resolve, 0));
 
 // Advisory-only classification. Never relax the server's positive-volume claim.
 export function classifyIncompletePreview(file, claim) {
@@ -86,6 +87,7 @@ export function createWorkflowPreviewInterop({
   reportThickness = () => {},
   reportIncomplete = () => {},
   thicknessAnalyzer = createWallThicknessAnalyzer(),
+  yieldToBrowser = yieldBrowserTask,
 }) {
   if (typeof loadModel !== 'function'
       || typeof analyzeGeometry !== 'function'
@@ -100,6 +102,7 @@ export function createWorkflowPreviewInterop({
   let thumbnailObserver = null;
   let selectedPartId = null;
   let thumbnailCanvas = null;
+  let thumbnailRenderRevision = 0;
   const invalidateCameraThumbnail = () => thumbnails.delete(selectedPartId);
   const disposedResources = {
     geometries: new WeakSet(),
@@ -325,7 +328,7 @@ export function createWorkflowPreviewInterop({
         return object;
       }),
       sha256(file, controller.signal),
-    ]).then(([object, hash]) => {
+    ]).then(async ([object, hash]) => {
       if (!isCurrent(entry)) {
         disposeModel(object, disposedResources);
         return null;
@@ -340,6 +343,11 @@ export function createWorkflowPreviewInterop({
       } catch (error) {
         disposeModel(object, disposedResources);
         failPreview(entry, error);
+        return null;
+      }
+      await yieldToBrowser();
+      if (!isCurrent(entry)) {
+        disposeModel(object, disposedResources);
         return null;
       }
       completePreview(entry, object);
@@ -447,13 +455,18 @@ export function createWorkflowPreviewInterop({
     return previews.get(key)?.failureCategory ?? null;
   }
 
-  function attach(canvas) {
+  async function attach(canvas) {
     assertActive();
     if (!viewer) {
       unbindThumbnailCanvas();
       viewer = createViewer(canvas);
       thumbnailCanvas = canvas;
       for (const type of ['pointerup', 'wheel', 'keydown']) canvas?.addEventListener?.(type, invalidateCameraThumbnail);
+    }
+    const currentViewer = viewer;
+    if ([...previews.values()].some(entry => entry.object && entry.partId && !entry.attached)) {
+      await yieldToBrowser();
+      if (disposed || viewer !== currentViewer) return;
     }
     for (const entry of previews.values()) attachAdmittedPreview(entry);
     if (activeLocalPreviewKey) selectLocalPreview(activeLocalPreviewKey);
@@ -467,10 +480,13 @@ export function createWorkflowPreviewInterop({
     return true;
   }
 
-  function admit(key, partId, material = '') {
+  async function admit(key, partId, material = '') {
     assertActive();
     const entry = requirePreview(key);
     if (entry.released || entry.quarantined || entry.previewOnly || developmentKeys.has(key) || !partId) return false;
+    const revision = entry.admissionRevision = (entry.admissionRevision ?? 0) + 1;
+    await yieldToBrowser();
+    if (!isCurrent(entry) || entry.admissionRevision !== revision || entry.previewOnly || developmentKeys.has(key)) return false;
     if (entry.attached && !entry.partId) viewer.promotePart(entry.key, partId);
     entry.partId = partId;
     if (activeLocalPreviewKey === key) activeLocalPreviewKey = null;
@@ -742,19 +758,30 @@ export function createWorkflowPreviewInterop({
   function reset() { thumbnails.delete(selectedPartId); selectedViewer()?.reset(); }
   function fit() { thumbnails.delete(selectedPartId); selectedViewer()?.fit(); }
   function fullscreen() { return selectedViewer()?.fullscreen(); }
-  function renderReviewThumbnails(root) {
+  async function renderReviewThumbnails(root) {
     if (disposed || !viewer || !root?.querySelectorAll) return 0;
     observeThumbnailRoot(root);
+    const revision = ++thumbnailRenderRevision;
+    const currentViewer = viewer;
     let rendered = 0;
     for (const image of root.querySelectorAll('[data-review-thumbnail][data-part-id], [data-workflow-thumbnail][data-part-id]')) {
       let source = null;
+      const partId = image.dataset.partId;
+      const key = partKeys.get(partId);
       try {
-        source = thumbnails.get(image.dataset.partId) ?? viewer.snapshot?.(image.dataset.partId);
+        source = thumbnails.get(partId);
+        if (!source) {
+          await yieldToBrowser();
+          if (disposed || revision !== thumbnailRenderRevision || viewer !== currentViewer
+              || root.isConnected === false || image.isConnected === false
+              || image.dataset.partId !== partId || partKeys.get(partId) !== key) return rendered;
+          source = viewer.snapshot?.(partId);
+        }
       } catch {
         continue;
       }
       if (typeof source !== 'string' || !source.startsWith('data:image/')) continue;
-      thumbnails.set(image.dataset.partId, source);
+      thumbnails.set(partId, source);
       setThumbnailSource(image, source);
       rendered += 1;
     }
