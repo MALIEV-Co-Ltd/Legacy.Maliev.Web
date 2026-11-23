@@ -30,7 +30,11 @@ public sealed record CustomerActionChallenge(
     bool Accepted,
     string? Token,
     bool ServiceAvailable,
-    bool Authorized);
+    bool Authorized)
+{
+    // Set only when service credentials fail before any account request is sent.
+    internal bool ServiceCredentialUnavailable { get; init; }
+}
 
 public sealed record CustomerCredentialOperationResult(
     bool Succeeded,
@@ -83,6 +87,48 @@ public interface ICustomerEmailChangeWorkflow
         string email,
         string token,
         CancellationToken cancellationToken);
+}
+
+/// <summary>Reset-only observations; never serialized as a public Auth response.</summary>
+internal enum PasswordResetCompletionOutcome
+{
+    Completed,
+    UnclassifiedFailure,
+    CredentialsUnavailable,
+    TransportUnavailable,
+    AuthenticationRejected,
+    RateLimited,
+    ServiceUnavailable,
+    UnexpectedResponse,
+}
+
+internal interface IPasswordResetCompletionClient
+{
+    Task<PasswordResetCompletionOutcome> CompletePasswordResetOutcomeAsync(
+        string email,
+        string token,
+        string password,
+        CancellationToken cancellationToken);
+}
+
+internal static class PasswordResetCompletionExtensions
+{
+    internal static async Task<PasswordResetCompletionOutcome> CompletePasswordResetOutcomeAsync(
+        this ICustomerAuthenticationClient client,
+        string email,
+        string token,
+        string password,
+        CancellationToken cancellationToken)
+    {
+        if (client is IPasswordResetCompletionClient completion)
+        {
+            return await completion.CompletePasswordResetOutcomeAsync(email, token, password, cancellationToken);
+        }
+
+        return await client.CompletePasswordResetAsync(email, token, password, cancellationToken)
+            ? PasswordResetCompletionOutcome.Completed
+            : PasswordResetCompletionOutcome.UnclassifiedFailure;
+    }
 }
 
 public interface ICustomerAuthenticationClient
