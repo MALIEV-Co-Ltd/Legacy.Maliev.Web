@@ -469,19 +469,17 @@ await Program.RunHostAsync(async () =>
                 "/Materials/Selection",
                 model => model.Selectors.Clear());
         }
-        else
+
+        foreach (var page in new[] { "/Contact/Index", "/Quotation/Index" })
         {
-            foreach (var page in new[] { "/Contact/Index", "/Quotation/Index" })
+            options.Conventions.AddPageRouteModelConvention(page, model =>
             {
-                options.Conventions.AddPageRouteModelConvention(page, model =>
-                {
-                    var selector = new SelectorModel(model.Selectors.Single());
-                    selector.AttributeRouteModel!.Template = page.TrimStart('/');
-                    selector.AttributeRouteModel.SuppressLinkGeneration = true;
-                    selector.EndpointMetadata.Add(new HttpMethodMetadata(["GET"]));
-                    model.Selectors.Add(selector);
-                });
-            }
+                var selector = new SelectorModel(model.Selectors.Single());
+                selector.AttributeRouteModel!.Template = page.TrimStart('/');
+                selector.AttributeRouteModel.SuppressLinkGeneration = true;
+                selector.EndpointMetadata.Add(new HttpMethodMetadata(useBlazorRouteHost ? ["POST"] : ["GET", "POST"]));
+                model.Selectors.Add(selector);
+            });
         }
     })
         .AddViewLocalization(LanguageViewLocationExpanderFormat.Suffix)

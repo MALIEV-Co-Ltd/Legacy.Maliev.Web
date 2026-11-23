@@ -2,7 +2,9 @@ using System.Net;
 using System.Text.RegularExpressions;
 using Legacy.Maliev.Web.Application;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http;
@@ -84,6 +86,27 @@ public sealed class PublicIndexAliasHttpTests(TestingWebApplicationFactory facto
         using var response = await client.GetAsync("/quotation/index/extra");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal("noindex, follow", Assert.Single(response.Headers.GetValues("X-Robots-Tag")));
+    }
+
+    [Theory]
+    [InlineData("/Contact/Index", "Contact", true)]
+    [InlineData("/Contact/Index", "Contact", false)]
+    [InlineData("/Quotation/Index", "Quotation", true)]
+    [InlineData("/Quotation/Index", "Quotation", false)]
+    public async Task IndexAlias_PostSelectsRazorPageAndRejectsMissingAntiforgeryToken(string alias, string feature, bool active)
+    {
+        await using var host = CreateHost(feature, active);
+        using var client = host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        var endpoints = host.Services.GetRequiredService<EndpointDataSource>();
+        var endpoint = Assert.Single(endpoints.Endpoints.OfType<RouteEndpoint>(), candidate =>
+            string.Equals(candidate.RoutePattern.RawText?.Trim('/'), alias.Trim('/'), StringComparison.OrdinalIgnoreCase)
+            && candidate.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods.Contains("POST", StringComparer.OrdinalIgnoreCase) == true);
+        Assert.Equal(alias, endpoint.Metadata.GetMetadata<PageActionDescriptor>()?.ViewEnginePath);
+
+        using var content = new FormUrlEncodedContent([]);
+        using var response = await client.PostAsync($"{alias}?handler=SubmitRequest&culture=en", content);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(response.Headers.Location);
     }
 
     private WebApplicationFactory<Program> CreateHost(string feature, bool active) => factory.WithWebHostBuilder(builder =>

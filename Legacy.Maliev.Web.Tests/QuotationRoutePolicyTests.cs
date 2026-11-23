@@ -92,6 +92,33 @@ public sealed class QuotationRoutePolicyTests : IClassFixture<TestingWebApplicat
         Assert.False(nextCalled);
     }
 
+    [Theory]
+    [InlineData("GET", "/Quotation/Index", true)]
+    [InlineData("POST", "/quotation/INDEX", true)]
+    [InlineData("HEAD", "/Quotation/Index", false)]
+    [InlineData("PUT", "/Quotation/Index", false)]
+    [InlineData("POST", "/Quotation/Index/Other", false)]
+    public async Task IndexAlias_OnlyForwardsGetAndPost(string method, string path, bool forwarded)
+    {
+        DefaultHttpContext context = new();
+        context.Request.Method = method;
+        context.Request.Path = path;
+        context.Request.QueryString = new QueryString("?handler=SubmitRequest&culture=th");
+        QuotationRouteRedirectMiddleware middleware = new(request =>
+        {
+            Assert.Equal(method, request.Request.Method);
+            Assert.Equal(path, request.Request.Path.Value);
+            Assert.Equal("?handler=SubmitRequest&culture=th", request.Request.QueryString.Value);
+            request.Response.StatusCode = StatusCodes.Status204NoContent;
+            return Task.CompletedTask;
+        });
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal(forwarded ? StatusCodes.Status204NoContent : StatusCodes.Status404NotFound, context.Response.StatusCode);
+        Assert.False(context.Response.Headers.ContainsKey("Location"));
+    }
+
     [Fact]
     public async Task BaseQuotation_IsNoindexAndExcludedFromSitemap()
     {
