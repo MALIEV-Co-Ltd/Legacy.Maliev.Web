@@ -2,7 +2,7 @@ import {
     requestInstantEstimate,
     wireInstantEstimate,
 } from './instant-quotation-controller.mjs';
-import { wireOptionalQuotationFields } from './instant-quotation-optional-fields.mjs';
+import { syncOptionalFieldsAfterMutations, wireOptionalQuotationFields } from './instant-quotation-optional-fields.mjs';
 import {
     navigateInstantQuotationValidationField,
     wireInstantQuotationAddressValidation,
@@ -137,8 +137,10 @@ function wireCustomerForms(root) {
 }
 
 wireCustomerForms(document);
-new MutationObserver((records) => records.forEach((record) =>
-    record.addedNodes.forEach((node) => wireCustomerForms(node))))
+new MutationObserver((records) => {
+    records.forEach((record) => record.addedNodes.forEach((node) => wireCustomerForms(node)));
+    syncOptionalFieldsAfterMutations(records);
+})
     .observe(document.documentElement, { childList: true, subtree: true });
 
 function value(values, key) {

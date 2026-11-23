@@ -115,7 +115,7 @@
                     <Legacy.Maliev.Web.Components.Lookups.ThaiLookupSurface Id="instant-company-lookup" Surface="instant-company" AntiforgeryFieldName="@Model.AntiforgeryFieldName" />
                     <div data-instant-tax-branch-field>
                         <label for="instant-quote-tax-branch">@Localizer["Tax invoice issued to"]</label>
-                        <select id="instant-quote-tax-branch" name="TaxBranch" disabled="@Model.IsLocked("TaxBranch")">
+                        <select id="instant-quote-tax-branch" name="TaxBranch" disabled="@Model.IsLocked("TaxBranch")" data-server-locked="@(Model.IsLocked("TaxBranch") ? "true" : "false")">
                             <option value="head-office" selected="@(Model.TaxBranch == "head-office")">@Localizer["Head office"]</option>
                             <option value="branch" selected="@(Model.TaxBranch == "branch")">@Localizer["Branch"]</option>
                         </select>

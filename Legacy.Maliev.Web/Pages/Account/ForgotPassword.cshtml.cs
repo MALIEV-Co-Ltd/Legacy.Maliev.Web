@@ -71,16 +71,32 @@ public sealed class ForgotPassword(
         var challenge = await authenticationClient.RequestPasswordResetAsync(
             Email.Trim(),
             cancellationToken);
-        if (challenge.Token is not null)
+        if (challenge.ServiceCredentialUnavailable)
         {
-            _ = await SendResetAsync(challenge.Token, cancellationToken);
+            Notification = localizer["Password reset is temporarily unavailable. Please try again later."];
+            return RedirectToPage(new { culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName });
+        }
+        if (challenge.Accepted && challenge.ServiceAvailable && challenge.Authorized
+            && !string.IsNullOrWhiteSpace(challenge.Token))
+        {
+            var delivery = await SendResetAsync(challenge.Token, cancellationToken);
+            if (delivery is not null)
+            {
+                logger.Log(
+                    delivery.Sent && delivery.ServiceAvailable && delivery.Authorized
+                        ? LogLevel.Information : LogLevel.Warning,
+                    "Password reset notification result. Sent={Sent}; ServiceAvailable={ServiceAvailable}; Authorized={Authorized}.",
+                    delivery.Sent,
+                    delivery.ServiceAvailable,
+                    delivery.Authorized);
+            }
         }
 
         Notification = localizer["If an eligible account exists, a password reset link has been sent."];
         return RedirectToPage(new { culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName });
     }
 
-    private async Task<bool> SendResetAsync(string token, CancellationToken cancellationToken)
+    private async Task<NotificationResult?> SendResetAsync(string token, CancellationToken cancellationToken)
     {
         var callback = QueryHelpers.AddQueryString(
             $"{CanonicalUrlPolicy.CanonicalOrigin}/Account/ResetPassword",
@@ -104,21 +120,16 @@ public sealed class ForgotPassword(
                     null,
                     ["mail-tracking@maliev.com"]),
                 cancellationToken);
-            if (!result.Sent)
-            {
-                logger.LogWarning("Password reset notification delivery failed.");
-            }
-
-            return result.Sent;
+            return result;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
         }
-        catch (Exception exception)
+        catch (Exception)
         {
-            logger.LogWarning(exception, "Password reset notification delivery failed.");
-            return false;
+            logger.LogWarning("Password reset notification delivery failed.");
+            return null;
         }
     }
 }

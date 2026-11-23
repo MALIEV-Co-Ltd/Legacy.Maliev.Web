@@ -12,7 +12,7 @@ namespace Legacy.Maliev.Web.Infrastructure;
 internal sealed class CustomerAuthenticationClient(
     IHttpClientFactory clientFactory,
     IServiceAccessTokenProvider serviceTokenProvider,
-    ILogger<CustomerAuthenticationClient> logger) : ICustomerAuthenticationClient
+    ILogger<CustomerAuthenticationClient> logger) : ICustomerAuthenticationClient, IPasswordResetCompletionClient
 {
     public async Task<CustomerSelfIdentityResult> GetSelfIdentityAsync(string accessToken, int expectedCustomerId, CancellationToken cancellationToken)
     {
@@ -351,10 +351,19 @@ internal sealed class CustomerAuthenticationClient(
         return new(response.IsSuccessStatusCode, (int)response.StatusCode < 500, authorized);
     }
 
-    public Task<CustomerActionChallenge> RequestPasswordResetAsync(
+    public async Task<CustomerActionChallenge> RequestPasswordResetAsync(
         string email,
-        CancellationToken cancellationToken) =>
-        RequestChallengeAsync("password-reset/request", email, cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        var token = await serviceTokenProvider.GetAccessTokenAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            logger.LogWarning("Customer identity request was rejected because service authentication was unavailable.");
+            return new(false, null, false, false) { ServiceCredentialUnavailable = true };
+        }
+
+        return await RequestChallengeAsync("password-reset/request", email, cancellationToken, token);
+    }
 
     public Task<bool> CompletePasswordResetAsync(
         string email,
@@ -364,7 +373,87 @@ internal sealed class CustomerAuthenticationClient(
         CompleteActionAsync(
             "password-reset/complete",
             new CompletePasswordResetRequest(email, token, password),
-            cancellationToken);
+            cancellationToken,
+            HttpStatusCode.NoContent);
+
+    async Task<PasswordResetCompletionOutcome> IPasswordResetCompletionClient.CompletePasswordResetOutcomeAsync(
+        string email,
+        string token,
+        string password,
+        CancellationToken cancellationToken)
+    {
+        // Acquisition failure is not an observed HTTP status or missing-token result.
+        var serviceToken = await serviceTokenProvider.GetAccessTokenAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(serviceToken))
+            return PasswordResetCompletionOutcome.CredentialsUnavailable;
+
+        HttpRequestMessage? request = null;
+        HttpResponseMessage? response = null;
+        HttpClient? client = null;
+        Exception? failure = null;
+        var sending = false;
+        var cleanupFailures = 0;
+        var outcome = PasswordResetCompletionOutcome.UnclassifiedFailure;
+        try
+        {
+            request = new HttpRequestMessage(HttpMethod.Post, "auth/v1/customer-self-service/password-reset/complete");
+            request.Content = JsonContent.Create(new CompletePasswordResetRequest(email, token, password));
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", serviceToken);
+            client = clientFactory.CreateClient("auth");
+            sending = true;
+            response = await client.SendAsync(request, cancellationToken);
+            sending = false;
+            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+                serviceTokenProvider.Invalidate(serviceToken);
+
+            outcome = (int)response.StatusCode switch
+            {
+                204 => PasswordResetCompletionOutcome.Completed,
+                401 or 403 => PasswordResetCompletionOutcome.AuthenticationRejected,
+                429 => PasswordResetCompletionOutcome.RateLimited,
+                >= 500 and <= 599 => PasswordResetCompletionOutcome.ServiceUnavailable,
+                >= 400 and <= 499 => PasswordResetCompletionOutcome.UnclassifiedFailure,
+                _ => PasswordResetCompletionOutcome.UnexpectedResponse,
+            };
+        }
+        catch (Exception exception)
+        {
+            failure = exception;
+        }
+        finally
+        {
+            DisposeResetResource(response, ref failure, ref cleanupFailures);
+            DisposeResetResource(request, ref failure, ref cleanupFailures);
+            DisposeResetResource(client, ref failure, ref cleanupFailures);
+        }
+
+        if (cleanupFailures != 0)
+        {
+            // A diagnostic failure cannot replace the original cancellation/send/cleanup failure.
+            try { logger.LogWarning("Password reset completion cleanup encountered a failure."); }
+            catch (Exception) { }
+        }
+        if (failure is not null)
+        {
+            if (sending && !cancellationToken.IsCancellationRequested
+                && (failure is HttpRequestException or Polly.Timeout.TimeoutRejectedException
+                    || failure is TaskCanceledException { InnerException: TimeoutException }))
+                return PasswordResetCompletionOutcome.TransportUnavailable;
+
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+        }
+        return outcome;
+    }
+
+    private static void DisposeResetResource(IDisposable? resource, ref Exception? primary, ref int cleanupFailures)
+    {
+        try { resource?.Dispose(); }
+        catch (Exception exception)
+        {
+            cleanupFailures++;
+            primary ??= exception;
+        }
+    }
 
     public Task<bool> CompleteInitialPasswordAsync(
         string email,
@@ -480,13 +569,14 @@ internal sealed class CustomerAuthenticationClient(
     private async Task<CustomerActionChallenge> RequestChallengeAsync(
         string action,
         string email,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? serviceToken = null)
     {
-        using var response = await SendServiceRequestAsync(
-            HttpMethod.Post,
-            $"auth/v1/customer-self-service/{action}",
-            new ActionRequest(email),
-            cancellationToken);
+        using var response = serviceToken is null
+            ? await SendServiceRequestAsync(HttpMethod.Post, $"auth/v1/customer-self-service/{action}",
+                new ActionRequest(email), cancellationToken)
+            : await SendServiceRequestWithTokenAsync(HttpMethod.Post, $"auth/v1/customer-self-service/{action}",
+                new ActionRequest(email), serviceToken, cancellationToken);
         if (response is null)
         {
             return new(false, null, false, false);
@@ -548,14 +638,17 @@ internal sealed class CustomerAuthenticationClient(
     private async Task<bool> CompleteActionAsync(
         string action,
         object content,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        HttpStatusCode? requiredSuccessStatus = null)
     {
         using var response = await SendServiceRequestAsync(
             HttpMethod.Post,
             $"auth/v1/customer-self-service/{action}",
             content,
             cancellationToken);
-        return response?.IsSuccessStatusCode == true;
+        return requiredSuccessStatus is { } status
+            ? response?.StatusCode == status
+            : response?.IsSuccessStatusCode == true;
     }
 
     private async Task<HttpResponseMessage?> SendServiceRequestAsync(
@@ -571,6 +664,16 @@ internal sealed class CustomerAuthenticationClient(
             return null;
         }
 
+        return await SendServiceRequestWithTokenAsync(method, path, content, token, cancellationToken);
+    }
+
+    private async Task<HttpResponseMessage?> SendServiceRequestWithTokenAsync(
+        HttpMethod method,
+        string path,
+        object content,
+        string token,
+        CancellationToken cancellationToken)
+    {
         try
         {
             using var request = new HttpRequestMessage(method, path)
