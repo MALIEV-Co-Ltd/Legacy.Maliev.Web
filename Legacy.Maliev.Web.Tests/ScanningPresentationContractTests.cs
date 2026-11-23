@@ -15,6 +15,25 @@ public sealed partial class ScanningPresentationContractTests : IClassFixture<Te
         this.factory = factory;
     }
 
+    [Fact]
+    public void ScanningSources_UseQualifiedAccuracyClaimsOnly()
+    {
+        var web = Path.Combine(FindRepositoryRoot(), "Legacy.Maliev.Web");
+        var page = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Services", "ThreeDimensionalScanningContent.razor"));
+        var routePage = File.ReadAllText(Path.Combine(web, "Components", "Pages", "Services", "ThreeDimensionalScanningPage.razor"));
+        var retainedPage = File.ReadAllText(Path.Combine(web, "Pages", "Services", "3D-Scanning.cshtml"));
+        var thaiResources = File.ReadAllText(Path.Combine(web, "Resources", "Pages", "Services", "3D-Scanning.th.resx"));
+        var combined = string.Join(Environment.NewLine, page, routePage, retainedPage, thaiResources);
+
+        Assert.Contains("0.02 mm + 0.06 mm/m", page, StringComparison.Ordinal);
+        Assert.Contains("Actual project results also depend on object size and surface", page, StringComparison.Ordinal);
+        Assert.DoesNotContain("0.04 mm", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("0.04mm", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("up to 0.10mm accuracy", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("upto 0.10mm precision", combined, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("ความละเอียดสูงสุดถึง 0.10mm", combined, StringComparison.Ordinal);
+        Assert.DoesNotContain("ความแม่นยำสูงสุดถึง 0.10mm", combined, StringComparison.Ordinal);
+    }
     [Theory]
     [InlineData("en", "What do the outputs of 3D scanning look like?", "Scan mesh", "Before your scan", "Show us the part")]
     [InlineData("th", "ผลลัพธ์จากการสแกน 3D มีหน้าตาอย่างไร?", "mesh สแกน", "เตรียมตัวก่อนสแกน", "ส่งรูปชิ้นงานให้เราดู")]
@@ -53,6 +72,33 @@ public sealed partial class ScanningPresentationContractTests : IClassFixture<Te
         Assert.Contains($"<h3>{firstPreparationNote}</h3>", preparation, StringComparison.Ordinal);
         Assert.Contains("<details class=\"scanning-preparation-details\">", preparation, StringComparison.Ordinal);
         Assert.Contains("onclick=\"window.print()\"", preparation, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ScanningRoute_ThaiOutputUsesSourceMeshAndPointCloudTerms(bool active)
+    {
+        await using var host = factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:Services", active.ToString()));
+        using var client = host.CreateClient();
+        var html = WebUtility.HtmlDecode(await client.GetStringAsync("/services/3d-scanning?culture=th"));
+
+        Assert.Contains("สำหรับงานสแกนสี เรายังสามารถส่งมอบ point cloud แบบ Gaussian splat (.PLY) ได้เมื่อระบุไว้ในขอบเขตงาน โดยเป็นไฟล์สำหรับแสดงภาพอีกประเภทหนึ่ง ไม่ใช่โมเดล CAD ที่แก้ไขได้หรือรายงานตรวจสอบขนาด", html, StringComparison.Ordinal);
+        Assert.Contains("mesh หรือ point cloud สำหรับแสดงผล เก็บรักษาดิจิทัล เรนเดอร์ หรือประมวลผลต่อด้วยตัวเอง", html, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("en", "0.02 mm + 0.06 mm/m", "Actual project results also depend on object size and surface")]
+    [InlineData("th", "0.02 มม. + 0.06 มม./ม.", "ผลลัพธ์จริงของแต่ละโปรเจ็คยังขึ้นกับขนาดและผิวชิ้นงาน")]
+    public async Task ScanningRoute_RendersAccuracySpecificationWithProjectQualification(
+        string culture, string specification, string qualification)
+    {
+        using var client = factory.CreateClient();
+        var html = WebUtility.HtmlDecode(await client.GetStringAsync($"/services/3d-scanning?culture={culture}"));
+
+        Assert.Contains(specification, html, StringComparison.Ordinal);
+        Assert.Contains(qualification, html, StringComparison.Ordinal);
     }
 
     [Fact]
