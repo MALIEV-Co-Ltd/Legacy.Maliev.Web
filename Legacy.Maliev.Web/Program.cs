@@ -366,6 +366,7 @@ await Program.RunHostAsync(async () =>
                 "/Account/Manage/Address",
                 "/Account/Manage/ChangeEmail",
                 "/Account/Manage/ChangePassword",
+                "/Account/Manage/CreatePassword",
             })
             {
                 options.Conventions.AddAreaPageRouteModelConvention(

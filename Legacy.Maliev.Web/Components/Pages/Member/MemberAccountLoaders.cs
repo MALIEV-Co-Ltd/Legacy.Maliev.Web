@@ -17,8 +17,8 @@ public static class MemberAccountLoaders
     /// <param name="customerClient">The customer account client used to retrieve the profile.</param>
     /// <param name="notification">The optional profile-operation outcome message retained for display.</param>
     /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
-    /// <returns>The profile view, including errors or an empty model when profile data cannot be loaded.</returns>
-    public static async Task<MemberProfileDisplayModel> LoadProfileAsync(
+    /// <returns>The profile view with errors, or null when the owned session is missing.</returns>
+    public static async Task<MemberProfileDisplayModel?> LoadProfileAsync(
         HttpContext context,
         IAccountSessionManager sessionManager,
         ICustomerAccountClient customerClient,
@@ -26,7 +26,7 @@ public static class MemberAccountLoaders
         CancellationToken cancellationToken)
     {
         var customerId = await sessionManager.GetCustomerDatabaseIdAsync(context, cancellationToken);
-        if (customerId is null) return MemberProfileDisplayModel.Empty;
+        if (customerId is null) return null;
         var result = await customerClient.GetProfileAsync(customerId.Value, cancellationToken);
         if (result.Profile is null)
         {
@@ -62,8 +62,8 @@ public static class MemberAccountLoaders
     /// <param name="countryClient">The country lookup client used to populate address choices.</param>
     /// <param name="notification">The optional address-operation outcome message retained for display.</param>
     /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
-    /// <returns>The address view with available fields, countries, and service-failure messages.</returns>
-    public static async Task<MemberAddressDisplayModel> LoadAddressAsync(
+    /// <returns>The address view with service-failure messages, or null when the owned session is missing.</returns>
+    public static async Task<MemberAddressDisplayModel?> LoadAddressAsync(
         HttpContext context,
         IAccountSessionManager sessionManager,
         ICustomerAccountClient customerClient,
@@ -72,7 +72,7 @@ public static class MemberAccountLoaders
         CancellationToken cancellationToken)
     {
         var customerId = await sessionManager.GetCustomerDatabaseIdAsync(context, cancellationToken);
-        if (customerId is null) return MemberAddressDisplayModel.Empty;
+        if (customerId is null) return null;
         var countriesTask = countryClient.GetCountriesAsync(cancellationToken);
         var profileTask = customerClient.GetAddressProfileAsync(customerId.Value, cancellationToken);
         await Task.WhenAll(countriesTask, profileTask);
@@ -105,8 +105,8 @@ public static class MemberAccountLoaders
     /// <param name="sessionManager">The server-side session accessor used to resolve the token and customer identifier.</param>
     /// <param name="customerClient">The account client used to verify that the existing email can be loaded.</param>
     /// <param name="cancellationToken">Token to cancel the asynchronous operation.</param>
-    /// <returns>A blank email-change view, with account-service errors when the current email is unavailable.</returns>
-    public static async Task<MemberChangeEmailDisplayModel> LoadChangeEmailAsync(
+    /// <returns>A blank email-change view with account-service errors, or null when the owned session is missing.</returns>
+    public static async Task<MemberChangeEmailDisplayModel?> LoadChangeEmailAsync(
         HttpContext context,
         IAccountSessionManager sessionManager,
         ICustomerAccountClient customerClient,
@@ -117,7 +117,7 @@ public static class MemberAccountLoaders
         await Task.WhenAll(accessTokenTask, customerIdTask);
         if (string.IsNullOrWhiteSpace(await accessTokenTask) || await customerIdTask is not { } customerId)
         {
-            return MemberChangeEmailDisplayModel.Empty;
+            return null;
         }
 
         var profile = await customerClient.GetProfileAsync(customerId, cancellationToken);

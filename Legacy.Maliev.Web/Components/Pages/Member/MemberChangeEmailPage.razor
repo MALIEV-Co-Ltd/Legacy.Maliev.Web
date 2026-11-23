@@ -2,6 +2,7 @@
 @using Legacy.Maliev.Web.Application
 @using Legacy.Maliev.Web.Infrastructure
 @using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.RateLimiting
 @attribute [Authorize]
@@ -12,16 +13,27 @@
 @inject IAntiforgery Antiforgery
 @inject IStringLocalizer<MemberChangeEmailContent> Localizer
 
+@if (hasOwnedSession)
+{
 <PageTitle>@Localizer["Change email | MALIEV"]</PageTitle><HeadContent><meta name="robots" content="noindex,follow" /></HeadContent>
 <div data-migration-route-owner="blazor-static-ssr"><MemberWorkspaceShell><section class="maliev-section" aria-labelledby="member-change-email-title"><form method="post" action="/member/account/manage/changeemail?handler=ChangeEmail" class="maliev-panel maliev-form">@if (tokens is not null) { <input type="hidden" name="@tokens.FormFieldName" value="@tokens.RequestToken" /> }<MemberChangeEmailContent Model="model" /></form></section></MemberWorkspaceShell></div>
+}
 
 @code {
     private MemberChangeEmailDisplayModel model = MemberChangeEmailDisplayModel.Empty;
     private AntiforgeryTokenSet? tokens;
+    private bool hasOwnedSession;
     protected override async Task OnInitializedAsync()
     {
         var context = HttpContextAccessor.HttpContext ?? throw new InvalidOperationException("Static SSR requires an active HTTP context.");
-        model = await MemberAccountLoaders.LoadChangeEmailAsync(context, SessionManager, CustomerClient, context.RequestAborted);
+        var loaded = await MemberAccountLoaders.LoadChangeEmailAsync(context, SessionManager, CustomerClient, context.RequestAborted);
+        if (loaded is null)
+        {
+            await context.ChallengeAsync();
+            return;
+        }
+        model = loaded;
+        hasOwnedSession = true;
         tokens = Antiforgery.GetAndStoreTokens(context);
     }
 }
