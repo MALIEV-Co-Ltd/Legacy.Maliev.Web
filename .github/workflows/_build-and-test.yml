@@ -35,14 +35,14 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
-          ref: c9f21151639f1911c780f2084dd2d757b4fb3e73
+          ref: 173d63218d9142b34075bca87f5c6d933bcbdfb6
           path: .dependencies/Legacy.Maliev.ServiceDefaults
           persist-credentials: false
       - name: Check out Legacy.Maliev.CompatibilityContracts
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts
-          ref: 78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7
+          ref: fe17b8cea8ace3eef5434f8b29c9038f5c975613
           path: .dependencies/Legacy.Maliev.CompatibilityContracts
           persist-credentials: false
       - name: Verify offline Search Console cohort reporter
@@ -76,11 +76,13 @@ jobs:
           python3 -B scripts/verify-career-focused-trx.py
           --directory ./career-original-materialization-test-results --suite original
           --assembly acceptance/CareerOriginalMaterialization/bin/Release/net8.0/CareerOriginalMaterialization.Tests.dll
-      - name: Select .NET 10 for migration builds and tests
+      - name: Select .NET 10 and 11 for migration builds and tests
         timeout-minutes: 5
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: |
+            10.0.x
+            11.0.100
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
@@ -181,7 +183,7 @@ jobs:
             --logger trx --results-directory ./migration-consumer-test-results
           python3 -B scripts/verify-focused-web-trx.py \
             --directory migration-consumer-test-results --suite migration-consumers \
-            --assembly Legacy.Maliev.Web.Tests/bin/Release/net10.0/Legacy.Maliev.Web.Tests.dll
+            --assembly Legacy.Maliev.Web.Tests/bin/Release/net11.0/Legacy.Maliev.Web.Tests.dll
       - name: Verify controlled currency failure boundaries and stage diagnostics
         timeout-minutes: 5
         run: >-
@@ -233,7 +235,7 @@ jobs:
           test -s /etc/apt/apt-mirrors.txt
           python3 -c 'from pathlib import Path; s=Path("/etc/apt/sources.list.d/ubuntu.sources").read_text(); assert "mirror+file:/etc/apt/apt-mirrors.txt" in s and "Signed-By:" in s, "Unexpected hosted Ubuntu source policy"'
           printf '%s\n' 'https://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          pwsh -NoProfile -File ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+          pwsh -NoProfile -File ./Legacy.Maliev.Web.Tests/bin/Release/net11.0/playwright.ps1 install --with-deps chromium
       - name: Verify retained quantity and terminal upload browser boundaries
         timeout-minutes: 10
         shell: bash
@@ -260,7 +262,7 @@ jobs:
           roster = {**{name: 8 for name in quantity_methods}, **{name: 2 for name in viewport_methods}, recovered: 2, removing: 2, sheet: 1}
           gate['ROSTERS']['wall-thickness-terminal'] = {cls: roster}
           trx = Path('wall-thickness-terminal-test-results/wall-thickness-terminal.trx')
-          gate['verify'](trx, 'wall-thickness-terminal', Path('Legacy.Maliev.Web.Tests/bin/Release/net10.0/Legacy.Maliev.Web.Tests.dll'))
+          gate['verify'](trx, 'wall-thickness-terminal', Path('Legacy.Maliev.Web.Tests/bin/Release/net11.0/Legacy.Maliev.Web.Tests.dll'))
           expected = {f'{cls}.{method}(quantity: {quantity})' for method in quantity_methods for quantity in quantities}
           expected.update(f'{cls}.{method}(width: {width}, culture: "{culture}")' for method in viewport_methods for width, culture in ((375, 'th'), (1280, 'en')))
           expected.update(f'{cls}.{recovered}(culture: "{culture}", width: {width})' for culture, width in (('en', 1440), ('th', 390)))
@@ -330,7 +332,7 @@ jobs:
         run: >-
           python3 -B scripts/verify-focused-web-trx.py
           --directory ./sidebar-focused-test-results --suite sidebar
-          --assembly ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/Legacy.Maliev.Web.Tests.dll
+          --assembly ./Legacy.Maliev.Web.Tests/bin/Release/net11.0/Legacy.Maliev.Web.Tests.dll
       - name: Verify source material card catalogue and actual localized interactions
         timeout-minutes: 5
         run: >-
@@ -447,7 +449,7 @@ jobs:
         run: >-
           python3 -B scripts/verify-career-focused-trx.py
           --directory ./career-consumer-test-results --suite consumer
-          --assembly Legacy.Maliev.Web.Tests/bin/Release/net10.0/Legacy.Maliev.Web.Tests.dll
+          --assembly Legacy.Maliev.Web.Tests/bin/Release/net11.0/Legacy.Maliev.Web.Tests.dll
       - name: Preserve successful Career focus and original oracle before the full suite
         timeout-minutes: 3
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -592,6 +594,7 @@ jobs:
           BASH_ENV: ${{ github.workspace }}/scripts/web-full-test-observer.bash
         with:
           solution: Legacy.Maliev.Web.slnx
+          dotnet-version: '11.0.100'
           use-local-maliev-dependencies: 'true'
       - name: Verify full-test observer activation and cleanup
         if: always()
@@ -608,7 +611,7 @@ jobs:
         shell: bash
         run: >-
           "$WEB_PRELIMINARY_PDF_VENV/bin/python" scripts/verify-preliminary-pdf-proof.py
-          --root ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/preliminary-pdf-proof
+          --root ./Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/preliminary-pdf-proof
           --receipt ./preliminary-pdf-full-proof/parser-receipt.json
       - name: Remove only the owned preliminary PDF verification runtime
         if: always()
@@ -692,10 +695,10 @@ jobs:
             fx-handler-test-results/**/*.trx
             material-card-test-results/**/*.trx
             source-integration-regression-test-results/**/*.trx
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/source-integration-browser/*.png
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-controls/*.png
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-controls/*.json
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/material-display-browser-diagnostics/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/source-integration-browser/*.png
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/material-display-browser-controls/*.png
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/material-display-browser-controls/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/material-display-browser-diagnostics/*.json
             signed-link-test-results/**/*.trx
             career-original-materialization-test-results/**/*.trx
             career-consumer-test-results/**/*.trx
@@ -703,7 +706,7 @@ jobs:
             startup-image-acquisition/dockerhub-quota.json
             scanning-comparison-test-results/**/*.trx
             preliminary-duration-test-results/**/*.trx
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/scanning-comparison-screenshots/*.png
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/scanning-comparison-screenshots/*.png
             localized-account-seo-test-results/**/*.trx
             localized-inquiry-test-results/**/*.trx
             preliminary-dfm-test-results/**/*.trx
@@ -711,16 +714,16 @@ jobs:
             preliminary-pdf-test-results/pdf/*.pdf
             preliminary-pdf-test-results/pdf/*.json
             preliminary-pdf-test-results/parser-receipt.json
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/preliminary-pdf-proof/*.pdf
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/preliminary-pdf-proof/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/preliminary-pdf-proof/*.pdf
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/preliminary-pdf-proof/*.json
             preliminary-pdf-full-proof/parser-receipt.json
             thai-lookup-test-results/**/*.trx
             billing-persistence-test-results/**/*.trx
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.png
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.json
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/initial-readiness/*.json
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/attempts/*.json
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/attempts/*.png
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/billing-persistence/*.png
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/billing-persistence/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/billing-persistence/initial-readiness/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/billing-persistence/attempts/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/billing-persistence/attempts/*.png
             Legacy.Maliev.Web.Tests/TestResults/thai-lookup-browser/*.png
             Legacy.Maliev.Web.Tests/TestResults/knowledge-center-guides/*.png
             Legacy.Maliev.Web.Tests/TestResults/knowledge-navigation-browser/*.png

@@ -58,7 +58,7 @@ Invoke-Checked dotnet @('build', (Join-Path $root 'tools/profile-auth-seed/Profi
 Invoke-Checked dotnet @('build', (Join-Path $root 'tools/cnc-lease-probe/CncLeaseProbe.csproj'), '-c', 'Release', '--nologo', '-warnaserror')
 
 $outputs = @{
-    MALIEV_CNC_LEASE_PROBE_DLL = Join-Path $root 'tools/cnc-lease-probe/bin/Release/net10.0/CncLeaseProbe.dll'
+    MALIEV_CNC_LEASE_PROBE_DLL = Join-Path $root 'tools/cnc-lease-probe/bin/Release/net11.0/CncLeaseProbe.dll'
     MALIEV_PROFILE_PRODUCER_DLL = Join-Path $customer 'Legacy.Maliev.CustomerService.Api/bin/Release/net10.0/Legacy.Maliev.CustomerService.Api.dll'
     MALIEV_PROFILE_SEED_DLL = Join-Path $root 'tools/profile-contract-seed/bin/Release/net10.0/Maliev.ProfileContractSeed.dll'
     MALIEV_PROFILE_AUTH_DLL = Join-Path $auth 'Legacy.Maliev.AuthService.Api/bin/Release/net10.0/Legacy.Maliev.AuthService.Api.dll'
