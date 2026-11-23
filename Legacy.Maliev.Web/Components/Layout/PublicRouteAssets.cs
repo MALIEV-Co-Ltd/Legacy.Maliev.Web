@@ -128,6 +128,14 @@ public static class PublicRouteAssets
     private static string Normalize(PathString requestPath)
     {
         var path = requestPath.Value?.TrimEnd('/');
-        return string.IsNullOrEmpty(path) ? "/" : path.ToLowerInvariant();
+        var normalized = string.IsNullOrEmpty(path) ? "/" : path.ToLowerInvariant();
+        return normalized switch
+        {
+            "/index" => "/",
+            "/about/index" => "/about",
+            "/contact/index" => "/contact",
+            "/services/index" => "/services",
+            _ => normalized,
+        };
     }
 }

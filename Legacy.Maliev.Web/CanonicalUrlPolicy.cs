@@ -50,6 +50,26 @@ namespace Legacy.Maliev.Web
                 ["/cnc-machining"] = "/services/cnc-machining",
             };
 
+        // Metadata aliases must not alter the request redirect or POST policies.
+        internal static PathString GetDocumentMetadataPath(PathString requestPath)
+        {
+            var alias = requestPath.Value?.TrimEnd('/').ToLowerInvariant();
+            return alias switch
+            {
+                "/index" => new PathString("/"),
+                "/about/index" => new PathString("/about"),
+                "/legal/index" => new PathString("/legal"),
+                "/account/index" => new PathString("/account"),
+                "/contact/index" => new PathString("/contact"),
+                "/quotation/index" => new PathString("/quotation"),
+                "/career/index" => new PathString("/career"),
+                "/services/index" => new PathString("/services"),
+                "/knowledges/index" => new PathString("/knowledges"),
+                "/knowledges/specifications/index" => new PathString("/knowledges/specifications"),
+                _ => requestPath,
+            };
+        }
+
         /// <summary>
         /// Gets the canonical path for an incoming public path.
         /// </summary>
