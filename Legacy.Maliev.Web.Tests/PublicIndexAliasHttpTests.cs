@@ -93,18 +93,29 @@ public sealed class PublicIndexAliasHttpTests(TestingWebApplicationFactory facto
     [InlineData("/Contact/Index", "Contact", false)]
     [InlineData("/Quotation/Index", "Quotation", true)]
     [InlineData("/Quotation/Index", "Quotation", false)]
-    public async Task IndexAlias_PostSelectsRazorPageAndRejectsMissingAntiforgeryToken(string alias, string feature, bool active)
+    [InlineData("/Contact", "Contact", true)]
+    [InlineData("/Contact", "Contact", false)]
+    [InlineData("/Quotation", "Quotation", true)]
+    [InlineData("/Quotation", "Quotation", false)]
+    public async Task IndexAlias_PostSelectsRazorPageAndRejectsMissingAntiforgeryToken(string path, string feature, bool active)
     {
         await using var host = CreateHost(feature, active);
         using var client = host.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
         var endpoints = host.Services.GetRequiredService<EndpointDataSource>();
         var endpoint = Assert.Single(endpoints.Endpoints.OfType<RouteEndpoint>(), candidate =>
-            string.Equals(candidate.RoutePattern.RawText?.Trim('/'), alias.Trim('/'), StringComparison.OrdinalIgnoreCase)
-            && candidate.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods.Contains("POST", StringComparer.OrdinalIgnoreCase) == true);
-        Assert.Equal(alias, endpoint.Metadata.GetMetadata<PageActionDescriptor>()?.ViewEnginePath);
+            string.Equals(candidate.RoutePattern.RawText?.Trim('/'), path.Trim('/'), StringComparison.OrdinalIgnoreCase)
+            && candidate.Metadata.GetMetadata<PageActionDescriptor>() is not null);
+        Assert.Equal($"/{feature}/Index", endpoint.Metadata.GetMetadata<PageActionDescriptor>()?.ViewEnginePath);
+
+        var methods = endpoint.Metadata.GetMetadata<HttpMethodMetadata>();
+        if (active || path.EndsWith("/Index", StringComparison.Ordinal) || methods is not null)
+        {
+            Assert.NotNull(methods);
+            Assert.Contains("POST", methods.HttpMethods, StringComparer.OrdinalIgnoreCase);
+        }
 
         using var content = new FormUrlEncodedContent([]);
-        using var response = await client.PostAsync($"{alias}?handler=SubmitRequest&culture=en", content);
+        using var response = await client.PostAsync($"{path}?handler=SubmitRequest&culture=en", content);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Null(response.Headers.Location);
     }
