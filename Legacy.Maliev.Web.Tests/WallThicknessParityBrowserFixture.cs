@@ -1,12 +1,15 @@
 using System.Net;
 using System.Reflection;
+using Legacy.Maliev.Web.Application;
 using Legacy.Maliev.Web.Components.Pages.InstantQuotation;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Microsoft.Playwright;
@@ -19,6 +22,8 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
     private TestingWebApplicationFactory? factory;
     private HttpClient? client;
     private IPlaywright? playwright;
+    private readonly ForbiddenQuotationWork forbiddenQuotationWork = new();
+    internal int ForbiddenQuotationAttempts => forbiddenQuotationWork.Attempts;
     public IBrowser Browser { get; private set; } = null!;
     public string Url { get; private set; } = "";
     internal Uri Origin { get; private set; } = null!;
@@ -31,7 +36,7 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
         var port = ReserveFreePort();
         var origin = new Uri($"http://127.0.0.1:{port}");
         Origin = origin;
-        factory = new TestingWebApplicationFactory(BrowserHostIdentityVerifier.SourceProjectDirectory());
+        factory = new PreviewOnlyWebFactory(BrowserHostIdentityVerifier.SourceProjectDirectory(), forbiddenQuotationWork);
         factory.UseKestrel(port);
         client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = origin });
         Url = new Uri(origin, "/instantquotation/3d-printing").ToString();
@@ -53,6 +58,74 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
         playwright?.Dispose();
         client?.Dispose();
         if (factory is not null) await factory.DisposeAsync();
+    }
+
+    private sealed class PreviewOnlyWebFactory(string contentRoot, ForbiddenQuotationWork guard) : TestingWebApplicationFactory(contentRoot)
+    {
+        protected override void ConfigureWebHost(IWebHostBuilder builder)
+        {
+            base.ConfigureWebHost(builder);
+            builder.ConfigureServices(services =>
+            {
+                services.AddSingleton<IHttpMessageHandlerBuilderFilter>(guard);
+                services.RemoveAll<IInstantQuotationPricingService>();
+                services.RemoveAll<IInstantQuotationAuthoritativePricingService>();
+                services.RemoveAll<IInstantQuotationSubmissionService>();
+                services.AddSingleton<IInstantQuotationPricingService>(guard);
+                services.AddSingleton<IInstantQuotationAuthoritativePricingService>(guard);
+                services.AddSingleton<IInstantQuotationSubmissionService>(guard);
+            });
+        }
+    }
+
+    private sealed class ForbiddenQuotationWork :
+        IInstantQuotationPricingService, IInstantQuotationAuthoritativePricingService, IInstantQuotationSubmissionService,
+        IHttpMessageHandlerBuilderFilter
+    {
+        private int attempts;
+        internal int Attempts => Volatile.Read(ref attempts);
+
+        private InvalidOperationException Reject()
+        {
+            Interlocked.Increment(ref attempts);
+            return new InvalidOperationException("Pricing, submission, and upstream HTTP are outside the preview fixture.");
+        }
+
+        public Action<HttpMessageHandlerBuilder> Configure(Action<HttpMessageHandlerBuilder> next) => builder =>
+        {
+            next(builder);
+            builder.PrimaryHandler = new PreviewTransport(this, builder.Name);
+        };
+
+        private sealed class PreviewTransport(ForbiddenQuotationWork guard, string? clientName) : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                if (clientName == "countries" && request.Method == HttpMethod.Get &&
+                    request.RequestUri is { AbsolutePath: "/Countries", Query.Length: 0 })
+                {
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+                }
+
+                throw guard.Reject();
+            }
+        }
+
+        public InstantQuotationOrderQuote Quote(InstantQuotationOrderState state) =>
+            throw Reject();
+
+        public Task<InstantQuotationOrderQuote?> QuoteAsync(InstantQuotationSessionState session, string? owner,
+            bool comparisons, CancellationToken token) =>
+            throw Reject();
+
+        public Task<InstantQuotationOrderQuote?> QuoteAsync(InstantQuotationSessionState session, string? owner,
+            bool comparisons, Func<InstantQuotationMaterialPricingProgress, CancellationToken, ValueTask> observer,
+            CancellationToken token) =>
+            throw Reject();
+
+        public Task<InstantQuotationSubmissionResult> SubmitAsync(string sessionId, string? ownerIdentity,
+            InstantQuotationCustomerSubmission customer, CancellationToken cancellationToken) =>
+            throw Reject();
     }
 
     internal static byte[] Box(float height)

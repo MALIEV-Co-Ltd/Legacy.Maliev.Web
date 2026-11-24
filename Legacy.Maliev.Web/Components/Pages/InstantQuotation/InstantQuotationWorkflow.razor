@@ -240,6 +240,10 @@
             <h3>@Localizer["3D preview"]</h3>
             <p role="status">@(incompletePreviewMeasured ? Localizer["Thickness analysis is incomplete"] : Localizer["Checking physical build…"])</p>
             <p>@Localizer["Preview only. No physical price is available. Repair the mesh and upload it again."]</p>
+            @if (incompletePreviewMeasured)
+            {
+                <p data-workflow-incomplete-thickness>@Localizer["Wall thickness"]: <span>@Localizer["Estimated"]</span></p>
+            }
             <canvas @ref="incompletePreviewCanvas" tabindex="0"
                     style="display:block;width:100%;max-width:600px;height:300px"
                     aria-label="@Localizer["Interactive 3D part preview"]"></canvas>
@@ -260,6 +264,10 @@
                     <h3 class="instant-quote__sr-only">@Localizer["3D preview"]</h3>
                     <p class="instant-quote__sr-only" role="status">@(incompletePreviewMeasured ? Localizer["Thickness analysis is incomplete"] : Localizer["Checking physical build…"])</p>
                     <p class="instant-quote__sr-only">@Localizer["Preview only. No physical price is available. Repair the mesh and upload it again."]</p>
+                    @if (incompletePreviewMeasured)
+                    {
+                        <p data-workflow-incomplete-thickness style="position:absolute;top:.75rem;left:1rem;z-index:2;padding:.25rem .5rem;background:var(--bs-body-bg, #fff);border-radius:.25rem">@Localizer["Wall thickness"]: <span>@Localizer["Estimated"]</span></p>
+                    }
                     <canvas @ref="incompletePreviewCanvas" tabindex="0"
                             aria-label="@Localizer["Interactive 3D part preview"]"></canvas>
                     <button type="button" @onclick="RemoveIncompletePreviewSelectionAsync">@Localizer["Remove"]</button>

@@ -42,13 +42,27 @@ public sealed class InstantQuotationWallThicknessParityBrowserTests(
     }
 
     [Theory]
-    [InlineData("en", "Thickness analysis is incomplete", 1280)]
-    [InlineData("th", "ตรวจวัดความหนาได้ไม่ครบทุกบริเวณ", 1280)]
-    [InlineData("en", "Thickness analysis is incomplete", 375)]
-    [InlineData("th", "ตรวจวัดความหนาได้ไม่ครบทุกบริเวณ", 375)]
-    public async Task ZeroVolumeSheetRetainsIncompletePreviewWithoutIssuingPhysicalPrice(string culture, string incomplete, int width)
+    [InlineData("en", "Thickness analysis is incomplete", "Estimated", 1280)]
+    [InlineData("th", "ตรวจวัดความหนาได้ไม่ครบทุกบริเวณ", "โดยประมาณ", 1280)]
+    [InlineData("en", "Thickness analysis is incomplete", "Estimated", 375)]
+    [InlineData("th", "ตรวจวัดความหนาได้ไม่ครบทุกบริเวณ", "โดยประมาณ", 375)]
+    public async Task ZeroVolumeSheetRetainsIncompletePreviewWithoutIssuingPhysicalPrice(string culture, string incomplete, string estimated, int width)
     {
         await using var page = await fixture.Browser.NewPageAsync();
+        await page.RouteAsync("**/*", route =>
+        {
+            var url = new Uri(route.Request.Url);
+            var method = route.Request.Method;
+            return url.GetLeftPart(UriPartial.Authority) == fixture.Origin.GetLeftPart(UriPartial.Authority)
+                && (method is "GET" or "HEAD" || method == "POST" && url.AbsolutePath is "/_blazor/negotiate")
+                ? route.ContinueAsync()
+                : route.AbortAsync();
+        });
+        await page.RouteWebSocketAsync(url =>
+        {
+            var target = new Uri(url);
+            return target.Host != fixture.Origin.Host || target.Port != fixture.Origin.Port || target.AbsolutePath != "/_blazor";
+        }, route => _ = route.CloseAsync());
         var pageErrors = new List<string>();
         await page.SetViewportSizeAsync(width, 800);
         page.PageError += (_, error) => pageErrors.Add(error);
@@ -107,7 +121,13 @@ public sealed class InstantQuotationWallThicknessParityBrowserTests(
                 FullPage = true,
             });
         }
-        Assert.Contains(incomplete, await page.Locator("main").InnerTextAsync(), StringComparison.Ordinal);
+        var preview = page.Locator("[data-workflow-incomplete-preview]");
+        await Assertions.Expect(preview.Locator("[data-workflow-incomplete-thickness]").GetByText(estimated, new LocatorGetByTextOptions { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(page.GetByText(culture == "th" ? "ไม่พบปัญหา" : "No issues detected", new PageGetByTextOptions { Exact = true })).ToHaveCountAsync(0);
+        var mainText = await page.Locator("main").InnerTextAsync();
+        Assert.Contains(incomplete, mainText, StringComparison.Ordinal);
+        Assert.DoesNotContain("No issues detected", mainText, StringComparison.Ordinal);
+        Assert.DoesNotContain("ไม่พบปัญหา", mainText, StringComparison.Ordinal);
         Assert.True(await page.Locator("[data-workflow-incomplete-preview]").IsVisibleAsync());
         Assert.True(await page.Locator("[data-workflow-incomplete-preview] canvas").IsVisibleAsync());
         Assert.True(await page.EvaluateAsync<bool>("""
@@ -127,6 +147,7 @@ public sealed class InstantQuotationWallThicknessParityBrowserTests(
         await page.Locator("[data-workflow-incomplete-preview]").WaitForAsync(
             new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
         Assert.Equal(0, await page.Locator("[data-workflow-incomplete-preview]").CountAsync());
+        Assert.Equal(0, fixture.ForbiddenQuotationAttempts);
     }
 
     [Theory]
