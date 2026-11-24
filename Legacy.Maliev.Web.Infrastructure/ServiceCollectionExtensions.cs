@@ -170,6 +170,10 @@ public static class ServiceCollectionExtensions
         {
             builder.AddPrivateFailureSourceObservation("CountryService");
         }
+        else if (name == "careers")
+        {
+            builder.AddPrivateFailureOperationObservation("CareerService");
+        }
         else if (name == "orders")
         {
             builder.AddPrivateFailureOperationObservation("OrderService");

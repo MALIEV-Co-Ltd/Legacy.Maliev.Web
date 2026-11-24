@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Legacy.Maliev.Web.Application;
+using Maliev.Aspire.ServiceDefaults.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Legacy.Maliev.Web.Infrastructure;
@@ -37,9 +38,12 @@ internal sealed class CareerClient(
             return new ServiceResponse<CareerOffer>(null, true);
         }
 
+        var observation = new PrivateDependencyFailureObservation();
         try
         {
-            using var response = await CreateClient().GetAsync($"Jobs/{offerId}", cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"Jobs/{offerId}");
+            using var response = await CreateClient().SendWithPrivateFailureObservationAsync(
+                request, cancellationToken, observation, HttpCompletionOption.ResponseContentRead);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 return new ServiceResponse<CareerOffer>(null, true);
@@ -51,7 +55,10 @@ internal sealed class CareerClient(
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
-            logger.LogWarning(exception, "Career service was unavailable while loading offer {OfferId}.", offerId);
+            if (!observation.WasObserved)
+            {
+                logger.LogWarning("Career service was unavailable while loading a job offer.");
+            }
             return new ServiceResponse<CareerOffer>(null, false);
         }
     }
@@ -70,9 +77,12 @@ internal sealed class CareerClient(
             $"index={pageIndex}",
             $"size={pageSize}");
 
+        var observation = new PrivateDependencyFailureObservation();
         try
         {
-            using var response = await CreateClient().GetAsync($"Jobs?{query}", cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"Jobs?{query}");
+            using var response = await CreateClient().SendWithPrivateFailureObservationAsync(
+                request, cancellationToken, observation, HttpCompletionOption.ResponseContentRead);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 return new ServiceResponse<CareerOfferPage>(CareerOfferPage.Empty(pageIndex), true);
@@ -84,7 +94,10 @@ internal sealed class CareerClient(
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
-            logger.LogWarning(exception, "Career service was unavailable while loading the public job listing.");
+            if (!observation.WasObserved)
+            {
+                logger.LogWarning("Career service was unavailable while loading the public job listing.");
+            }
             return new ServiceResponse<CareerOfferPage>(CareerOfferPage.Empty(pageIndex), false);
         }
     }
@@ -92,9 +105,12 @@ internal sealed class CareerClient(
     public async Task<ServiceResponse<IReadOnlyList<CareerLevel>>> GetLevelsAsync(
         CancellationToken cancellationToken)
     {
+        var observation = new PrivateDependencyFailureObservation();
         try
         {
-            using var response = await CreateClient().GetAsync("jobs/levels", cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Get, "jobs/levels");
+            using var response = await CreateClient().SendWithPrivateFailureObservationAsync(
+                request, cancellationToken, observation, HttpCompletionOption.ResponseContentRead);
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
                 return new ServiceResponse<IReadOnlyList<CareerLevel>>([], true);
@@ -106,7 +122,10 @@ internal sealed class CareerClient(
         }
         catch (Exception exception) when (IsTransient(exception, cancellationToken))
         {
-            logger.LogWarning(exception, "Career service was unavailable while loading job levels.");
+            if (!observation.WasObserved)
+            {
+                logger.LogWarning("Career service was unavailable while loading job levels.");
+            }
             return new ServiceResponse<IReadOnlyList<CareerLevel>>([], false);
         }
     }

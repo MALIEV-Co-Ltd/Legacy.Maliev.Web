@@ -203,6 +203,92 @@ public sealed class CountrySourceFailureObservationTests
     }
 
     [Theory]
+    [InlineData("offer", 503)]
+    [InlineData("listing", 503)]
+    [InlineData("levels", 503)]
+    [InlineData("offer", 400)]
+    [InlineData("listing", 400)]
+    [InlineData("levels", 400)]
+    public async Task CareerFallbackPreservesOutageShapeAndLogsOneSafeFailure(string operation, int status)
+    {
+        using var fixture = new Fixture((request, _) =>
+        {
+            Assert.Equal(HttpMethod.Get, request.Method);
+            Assert.Equal(operation switch
+            {
+                "offer" => "/Jobs/123456789",
+                "listing" => "/Jobs",
+                _ => "/jobs/levels",
+            }, request.RequestUri!.AbsolutePath);
+            return Task.FromResult(Response(status));
+        }, probeNamedPipeline: true);
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var career = fixture.Scope.ServiceProvider.GetRequiredService<ICareerClient>();
+        if (operation == "offer")
+        {
+            var result = await career.GetOfferAsync(123456789, deadline.Token);
+            Assert.False(result.ServiceAvailable);
+            Assert.Null(result.Value);
+        }
+        else if (operation == "listing")
+        {
+            var result = await career.GetOffersAsync(CareerSort.JobId_Ascending, "private-search", 3, 25, deadline.Token);
+            Assert.False(result.ServiceAvailable);
+            Assert.Equal(3, result.Value!.PageIndex);
+            Assert.Empty(result.Value.Items);
+        }
+        else
+        {
+            var result = await career.GetLevelsAsync(deadline.Token);
+            Assert.False(result.ServiceAvailable);
+            Assert.Empty(Assert.IsAssignableFrom<IReadOnlyList<CareerLevel>>(result.Value));
+        }
+
+        if (status == 503)
+        {
+            Assert.Equal(2, fixture.Transport.Calls);
+            fixture.AssertFailure(503, "CareerService", "Jobs.Get");
+            Assert.Empty(fixture.Events.CareerWarnings);
+        }
+        else
+        {
+            Assert.Equal(1, fixture.Transport.Calls);
+            fixture.AssertQuiet();
+            var warning = Assert.Single(fixture.Events.CareerWarnings);
+            Assert.Null(warning.Exception);
+            Assert.Equal(operation switch
+            {
+                "offer" => "Career service was unavailable while loading a job offer.",
+                "listing" => "Career service was unavailable while loading the public job listing.",
+                _ => "Career service was unavailable while loading job levels.",
+            }, warning.Message);
+        }
+    }
+
+    [Fact]
+    public async Task CareerCallerCancellationDoesNotLogAFailure()
+    {
+        using var fixture = new Fixture(Block);
+        using var caller = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        var career = fixture.Scope.ServiceProvider.GetRequiredService<ICareerClient>();
+        var pending = career.GetOfferAsync(123, caller.Token);
+        try
+        {
+            await fixture.Transport.Entered.Task.WaitAsync(TimeSpan.FromSeconds(2));
+            caller.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending.WaitAsync(TimeSpan.FromSeconds(2)));
+            Assert.Equal(1, fixture.Transport.Calls);
+            fixture.AssertQuiet();
+            Assert.Empty(fixture.Events.CareerWarnings);
+        }
+        finally
+        {
+            caller.Cancel();
+            await SettleAsync(pending);
+        }
+    }
+
+    [Theory]
     [InlineData("orders", "orders/private-customer-name/123456789/file.step?email=private@example.com", "OrderService", "Orders.Get")]
     [InlineData("customers", "customers/private-customer-name/123456789/file.step?email=private@example.com", "CustomerService", "Customers.Get")]
     [InlineData("orders", "private-customer-name/orders/123456789?email=private@example.com", "OrderService", "UnknownOperation")]
@@ -480,6 +566,7 @@ public sealed class CountrySourceFailureObservationTests
         internal ConcurrentQueue<Entry> Failures { get; } = new();
         internal ConcurrentQueue<Entry> ResourceNotFound { get; } = new();
         internal ConcurrentQueue<string> CountryWarnings { get; } = new();
+        internal ConcurrentQueue<(string Message, Exception? Exception)> CareerWarnings { get; } = new();
         internal ConcurrentQueue<Exception?> CountryWarningExceptions { get; } = new();
         public ILogger CreateLogger(string categoryName) => new Logger(categoryName, this);
         public void Dispose() { }
@@ -493,6 +580,10 @@ public sealed class CountrySourceFailureObservationTests
                 {
                     owner.CountryWarnings.Enqueue(formatter(state, exception));
                     owner.CountryWarningExceptions.Enqueue(exception);
+                }
+                if (category == typeof(CareerClient).FullName && level == LogLevel.Warning)
+                {
+                    owner.CareerWarnings.Enqueue((formatter(state, exception), exception));
                 }
                 if (id.Id != 5101 || id.Name is not ("DependencyRequestFailure" or "DependencyResourceNotFound")) return;
                 var fields = Assert.IsAssignableFrom<IEnumerable<KeyValuePair<string, object?>>>(state)
