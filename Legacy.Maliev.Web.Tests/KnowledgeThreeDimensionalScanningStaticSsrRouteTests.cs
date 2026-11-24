@@ -312,6 +312,28 @@ public sealed partial class KnowledgeThreeDimensionalScanningStaticSsrRouteTests
         Assert.Contains("rel=\"canonical\"", source, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(true, "en")]
+    [InlineData(true, "th")]
+    [InlineData(false, "en")]
+    [InlineData(false, "th")]
+    public async Task ScanningSpecification_RenderersKeepMeasurementCitationsInSiblingParagraphs(
+        bool useBlazor,
+        string culture)
+    {
+        await using var routeFactory = factory.WithWebHostBuilder(builder =>
+            builder.UseSetting("BlazorRouting:KnowledgesSpecifications3DScanning", useBlazor.ToString()));
+        using var client = CreateClient(routeFactory);
+        using var response = await client.GetAsync($"/knowledges/specifications/3d-scanning?culture={culture}");
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(useBlazor, html.Contains("data-migration-route-owner=\"blazor-static-ssr\"", StringComparison.Ordinal));
+        Assert.Matches(
+            """<p>\s*<a href="https://www\.artec3d\.com/learning-center/accuracy-precision-resolution">[^<]+</a>\s*</p>\s*<p class="docs-source"><a href="https://jcgm\.bipm\.org/vim/en/2\.13\.html">[^<]+</a>[^<]+<a href="https://jcgm\.bipm\.org/vim/en/2\.20\.html">[^<]+</a></p>\s*</section>""",
+            html);
+    }
+
     private static HttpClient CreateClient(WebApplicationFactory<Program> sourceFactory) =>
         sourceFactory.CreateClient(new WebApplicationFactoryClientOptions
         {
