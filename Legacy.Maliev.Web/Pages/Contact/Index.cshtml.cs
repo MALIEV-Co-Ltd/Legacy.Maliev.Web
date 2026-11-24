@@ -161,16 +161,15 @@ public sealed class Index(
             return Page();
         }
 
-        var result = await contactClient.SubmitAsync(
-            new ContactSubmission(
-                FirstName.Trim(),
-                LastName.Trim(),
-                NormalizeOptional(Company),
-                Email.Trim(),
-                NormalizeOptional(Phone),
-                Country.Trim(),
-                Message.Trim()),
-            cancellationToken);
+        var submission = new ContactSubmission(
+            FirstName.Trim(),
+            LastName.Trim(),
+            NormalizeOptional(Company),
+            Email.Trim(),
+            NormalizeOptional(Phone),
+            Country.Trim(),
+            Message.Trim());
+        var result = await contactClient.SubmitAsync(submission, cancellationToken);
         if (result.ReferenceNumber is not int referenceNumber)
         {
             ModelState.AddModelError(
@@ -191,7 +190,7 @@ public sealed class Index(
         var notificationsSent = false;
         try
         {
-            notificationsSent = await SendNotificationsAsync(referenceNumber, cancellationToken);
+            notificationsSent = await SendNotificationsAsync(referenceNumber, submission, cancellationToken);
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
@@ -206,6 +205,7 @@ public sealed class Index(
 
     private async Task<bool> SendNotificationsAsync(
         int referenceNumber,
+        ContactSubmission submission,
         CancellationToken cancellationToken)
     {
         var customer = SendCustomerAsync();
@@ -217,10 +217,9 @@ public sealed class Index(
             await SendAsync(
                 "customer_notification",
                 () => new EmailNotification(
-                    Email.Trim(),
+                    submission.Email,
                     localizer["Contact request #{0}", referenceNumber].Value,
-                    "<p>" + Encode(localizer["Thank you for contacting MALIEV. Your reference number is #{0}.", referenceNumber].Value)
-                        + "</p><p>" + Encode(localizer["We will reply as soon as possible."].Value) + "</p>",
+                    BuildCustomerMessage(referenceNumber, submission),
                     null,
                     null,
                     null));
@@ -251,6 +250,34 @@ public sealed class Index(
                     exception.GetType().Name);
                 throw;
             }
+        }
+    }
+
+    private string BuildCustomerMessage(int referenceNumber, ContactSubmission submission)
+    {
+        var body = new System.Text.StringBuilder()
+            .Append("<p>").Append(Encode(localizer["Thank you for contacting MALIEV. Your reference number is #{0}.", referenceNumber].Value))
+            .Append("</p><p>").Append(Encode(localizer["We will reply as soon as possible."].Value)).Append("</p>");
+
+        AppendDetail("First name", submission.FirstName);
+        AppendDetail("Last name", submission.LastName);
+        AppendDetail("Email", submission.Email);
+        AppendDetail("Telephone number", submission.Telephone);
+        AppendDetail("Company", submission.Company);
+        AppendDetail("Country", submission.Country);
+        AppendDetail("Your message", submission.MessageContent);
+        return body.ToString();
+
+        void AppendDetail(string label, string? value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return;
+            }
+
+            body.Append("<p><strong>").Append(Encode(localizer[label].Value)).Append(":</strong> ")
+                .Append(Encode(value.ReplaceLineEndings("\n")).Replace("\n", "<br />", StringComparison.Ordinal))
+                .Append("</p>");
         }
     }
 

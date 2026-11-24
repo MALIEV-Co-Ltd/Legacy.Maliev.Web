@@ -121,6 +121,87 @@ public sealed class ContactPageTests
     }
 
     [Theory]
+    [InlineData("en", true)]
+    [InlineData("en", false)]
+    [InlineData("th", true)]
+    [InlineData("th", false)]
+    public async Task Post_CustomerReceiptRendersPersistedContactDetails(string culture, bool includeOptional)
+    {
+        var previousCulture = System.Globalization.CultureInfo.CurrentUICulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo(culture);
+            var contactClient = new RecordingContactClient(new ContactSubmissionResult(913, true, true));
+            var notifications = new RecordingNotificationClient((_, _) =>
+            {
+                Assert.Single(contactClient.Submissions);
+                return Task.FromResult(new NotificationResult(true, true, true));
+            });
+            var page = CreatePage(contactClient, new StubAntiBotVerifier(true), notifications);
+            page.FirstName = " <Mali> ";
+            page.LastName = " & Co ";
+            page.Email = " contact@example.test ";
+            page.Phone = includeOptional ? " +66001 " : " ";
+            page.Company = includeOptional ? " Example & Co " : null;
+            page.Message = " one<two\r\nthree&four\rfive\nsix ";
+
+            Assert.IsType<RedirectToPageResult>(await page.OnPostSubmitRequestAsync(CancellationToken.None));
+
+            var submission = Assert.Single(contactClient.Submissions);
+            Assert.Equal(new ContactSubmission("<Mali>", "& Co", includeOptional ? "Example & Co" : null,
+                "contact@example.test", includeOptional ? "+66001" : null, "Thailand", "one<two\r\nthree&four\rfive\nsix"), submission);
+            Assert.Equal(2, notifications.Messages.Count);
+            var receipt = Assert.Single(notifications.Messages, message => message.To == submission.Email);
+            Assert.Null(receipt.ReplyTo);
+            Assert.Null(receipt.Cc);
+            Assert.Null(receipt.Bcc);
+            Assert.Contains("#913", receipt.Subject, StringComparison.Ordinal);
+            Assert.Contains("#913", receipt.Body, StringComparison.Ordinal);
+            Assert.Contains("&lt;Mali&gt;", receipt.Body, StringComparison.Ordinal);
+            Assert.Contains("&amp; Co", receipt.Body, StringComparison.Ordinal);
+            Assert.DoesNotContain("<Mali>", receipt.Body, StringComparison.Ordinal);
+            Assert.Contains("one&lt;two<br />three&amp;four<br />five<br />six", receipt.Body, StringComparison.Ordinal);
+
+            var rendered = System.Net.WebUtility.HtmlDecode(receipt.Body);
+            var thai = culture == "th";
+            Assert.Contains($"<strong>{(thai ? "ชื่อ" : "First name")}:</strong> <Mali>", rendered, StringComparison.Ordinal);
+            Assert.Contains($"<strong>{(thai ? "นามสกุล" : "Last name")}:</strong> & Co", rendered, StringComparison.Ordinal);
+            Assert.Contains($"<strong>{(thai ? "อีเมล" : "Email")}:</strong> contact@example.test", rendered, StringComparison.Ordinal);
+            Assert.Contains($"<strong>{(thai ? "ประเทศ" : "Country")}:</strong> Thailand", rendered, StringComparison.Ordinal);
+            Assert.Contains($"<strong>{(thai ? "ข้อความ" : "Your message")}:</strong>", rendered, StringComparison.Ordinal);
+            var telephoneLabel = $"<strong>{(thai ? "เบอร์โทรศัพท์" : "Telephone number")}:</strong>";
+            var companyLabel = $"<strong>{(thai ? "บริษัท" : "Company")}:</strong>";
+            if (includeOptional)
+            {
+                Assert.Contains(telephoneLabel + " +66001", rendered, StringComparison.Ordinal);
+                Assert.Contains(companyLabel + " Example & Co", rendered, StringComparison.Ordinal);
+            }
+            else
+            {
+                Assert.DoesNotContain(telephoneLabel, rendered, StringComparison.Ordinal);
+                Assert.DoesNotContain(companyLabel, rendered, StringComparison.Ordinal);
+            }
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentUICulture = previousCulture;
+        }
+    }
+
+    [Fact]
+    public async Task Post_RefusedContactDoesNotSendAnyNotification()
+    {
+        var contactClient = new RecordingContactClient(new ContactSubmissionResult(null, true, true));
+        var notifications = new RecordingNotificationClient((_, _) =>
+            throw new InvalidOperationException("A refused save cannot send a notification."));
+        var page = CreatePage(contactClient, new StubAntiBotVerifier(true), notifications);
+
+        Assert.IsType<PageResult>(await page.OnPostSubmitRequestAsync(CancellationToken.None));
+        Assert.Single(contactClient.Submissions);
+        Assert.Empty(notifications.Messages);
+    }
+
+    [Theory]
     [InlineData(true, 1, false)]
     [InlineData(true, 2, false)]
     [InlineData(false, 1, false)]
@@ -239,9 +320,11 @@ public sealed class ContactPageTests
             "+66810000000",
             "Trusted Company",
             "Thailand");
+        var notifications = new RecordingNotificationClient();
         var page = CreatePage(
             contactClient,
             new StubAntiBotVerifier(true),
+            notifications,
             trustedCustomerLoader: new StubTrustedCustomerLoader(new(trustedCustomer, true, true)));
         page.FirstName = "Spoofed";
         page.LastName = "Browser";
@@ -260,6 +343,11 @@ public sealed class ContactPageTests
         Assert.Equal("+66810000000", submission.Telephone);
         Assert.Equal("Trusted Company", submission.Company);
         Assert.Equal("Thailand", submission.Country);
+        var receipt = Assert.Single(notifications.Messages, message => message.To == submission.Email);
+        Assert.Contains("Trusted Company", receipt.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("Attacker Company", receipt.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("attacker@example.com", receipt.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain(notifications.Messages, message => message.To == "attacker@example.com");
     }
 
     [Fact]
