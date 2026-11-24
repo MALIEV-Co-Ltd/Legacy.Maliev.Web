@@ -116,6 +116,8 @@ public sealed class CncProfilePersistenceClientTests
         Assert.True(result.HasConfirmedChanges);
         Assert.Equal(["POST /customers/companies", "GET /countries/", "POST /customers/7/addresses", "PUT /customers/7"],
             handler.Calls.Select(call => $"{call.Method} {call.Path}"));
+        Assert.All(handler.Calls.Where(call => call.Method != "GET"),
+            call => Assert.Equal("Bearer test-token", call.Authorization));
         using var company = JsonDocument.Parse(handler.Calls[0].Body!);
         Assert.Equal(name, company.RootElement.GetProperty("Name").GetString());
         Assert.Equal("010", company.RootElement.GetProperty("TaxNumber").GetString());
@@ -159,6 +161,7 @@ public sealed class CncProfilePersistenceClientTests
         Assert.False(result.HasConfirmedChanges);
         var call = Assert.Single(handler.Calls);
         Assert.Equal("POST /customers/companies", $"{call.Method} {call.Path}");
+        Assert.Equal("Bearer test-token", call.Authorization);
         using var company = JsonDocument.Parse(call.Body!);
         Assert.Equal(name, company.RootElement.GetProperty("Name").GetString());
     }
@@ -389,7 +392,7 @@ public sealed class CncProfilePersistenceClientTests
         Content = new StringContent(JsonSerializer.Serialize(value), Encoding.UTF8, "application/json"),
     };
 
-    private sealed record Call(string Method, string Path, string? Body);
+    private sealed record Call(string Method, string Path, string? Body, string? Authorization);
 
     private sealed class RecordingHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
     {
@@ -398,7 +401,8 @@ public sealed class CncProfilePersistenceClientTests
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Calls.Add(new(request.Method.Method, request.RequestUri!.AbsolutePath,
-                request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken)));
+                request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken),
+                request.Headers.Authorization?.ToString()));
             return respond(request);
         }
     }
