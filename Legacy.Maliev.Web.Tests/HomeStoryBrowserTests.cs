@@ -113,7 +113,7 @@ public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture)
     public async Task WithoutJavascript_AssemblyAndOrderedProcessRemainUsable(string culture)
     {
         await using var context = await fixture.Browser.NewContextAsync(new() { JavaScriptEnabled = false });
-        await context.RouteAsync("**/*", route => new Uri(route.Request.Url).GetLeftPart(UriPartial.Authority)
+        await context.RouteAsync("**/*", route => route.Request.Method == "GET" && new Uri(route.Request.Url).GetLeftPart(UriPartial.Authority)
             == fixture.Origin.GetLeftPart(UriPartial.Authority) ? route.ContinueAsync() : route.AbortAsync());
         await using var page = await context.NewPageAsync();
         var response = await page.GotoAsync(new Uri(fixture.Origin, $"/?culture={culture}").ToString());
@@ -128,6 +128,30 @@ public sealed class HomeStoryBrowserTests(PublicContactBrowserFixture fixture)
         Assert.Equal("true", await preview.GetAttributeAsync("aria-hidden"));
         Assert.Equal(5, await preview.Locator(".landing-service-directory-progress > li").CountAsync());
         Assert.Equal(1, await preview.Locator(".landing-service-directory-progress > li.is-active").CountAsync());
+        var progress = preview.Locator(".landing-service-directory-progress");
+        await Assertions.Expect(progress).ToBeVisibleAsync();
+        Assert.True(await progress.EvaluateAsync<bool>("""
+            list => {
+                const listBox = list.getBoundingClientRect();
+                const style = getComputedStyle(list);
+                const track = getComputedStyle(list, "::before");
+                const steps = Array.from(list.children);
+                const centers = steps.map(step => {
+                    const box = step.getBoundingClientRect();
+                    return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+                });
+                const close = (a, b) => Math.abs(a - b) < 1;
+                return listBox.width > 0 && style.display === "grid"
+                    && style.gridTemplateColumns.split(/\s+/).length === 5
+                    && track.content === '""' && track.position === "absolute" && parseFloat(track.height) === 1
+                    && close(listBox.left + parseFloat(track.left), centers[0].x)
+                    && close(listBox.right - parseFloat(track.right), centers[4].x)
+                    && centers.every((center, i) => close(center.y, centers[0].y)
+                        && close(center.x - centers[0].x, i * listBox.width / 5))
+                    && steps.every(step =>
+                        ["::before", "::after"].every(pseudo => getComputedStyle(step, pseudo).content === "none"));
+            }
+            """), "The rendered preview must have five aligned steps and a single track connecting their centers.");
         Assert.Equal(0, await preview.Locator("a, button, input, [data-service-finder]").CountAsync());
         var directoryHref = culture == "en" ? "/services?culture=en" : "/services";
         Assert.Equal(directoryHref, await directoryLink.GetAttributeAsync("href"));
