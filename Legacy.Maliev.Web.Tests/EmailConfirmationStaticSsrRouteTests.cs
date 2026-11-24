@@ -86,6 +86,16 @@ public sealed class EmailConfirmationStaticSsrRouteTests : IClassFixture<Testing
     [InlineData(true, "th", "blank-input")]
     [InlineData(false, "en", "blank-input")]
     [InlineData(false, "th", "blank-input")]
+    [InlineData(true, "th", "no-query")]
+    [InlineData(false, "th", "no-query")]
+    [InlineData(true, "en", "blank-email")]
+    [InlineData(true, "th", "blank-email")]
+    [InlineData(false, "en", "blank-email")]
+    [InlineData(false, "th", "blank-email")]
+    [InlineData(true, "en", "blank-token")]
+    [InlineData(true, "th", "blank-token")]
+    [InlineData(false, "en", "blank-token")]
+    [InlineData(false, "th", "blank-token")]
     public async Task IncompleteLinks_RenderLocalizedInvalidStateWithoutAuthentication(
         bool useBlazor, string culture, string inputCase)
     {
@@ -105,10 +115,15 @@ public sealed class EmailConfirmationStaticSsrRouteTests : IClassFixture<Testing
         {
             "missing-email" => "token=private-confirmation-token-73",
             "missing-token" => "email=private-confirmation-email%40example.test",
-            _ => "email=%20&token=%20",
+            "blank-input" => "email=%20&token=%20",
+            "blank-email" => "email=%20&token=private-confirmation-token-73",
+            "blank-token" => "email=private-confirmation-email%40example.test&token=%20",
+            "no-query" => null,
+            _ => throw new ArgumentOutOfRangeException(nameof(inputCase)),
         };
 
-        using var response = await client.GetAsync($"/account/emailconfirmation?culture={culture}&{query}");
+        var url = query is null ? "/account/emailconfirmation" : $"/account/emailconfirmation?culture={culture}&{query}";
+        using var response = await client.GetAsync(url);
         var html = await response.Content.ReadAsStringAsync();
         var decoded = WebUtility.HtmlDecode(html);
 
@@ -128,6 +143,8 @@ public sealed class EmailConfirmationStaticSsrRouteTests : IClassFixture<Testing
         Assert.DoesNotContain("private-confirmation-token-73", decoded, StringComparison.Ordinal);
         Assert.DoesNotContain("private-confirmation-email", decoded, StringComparison.Ordinal);
         Assert.DoesNotContain("name=\"token\"", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("name=\"email\"", html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("name=\"challenge\"", html, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, authentication.Calls);
     }
 
