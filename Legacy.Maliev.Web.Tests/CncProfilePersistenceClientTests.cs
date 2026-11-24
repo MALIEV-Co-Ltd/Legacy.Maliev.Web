@@ -116,7 +116,7 @@ public sealed class CncProfilePersistenceClientTests
         Assert.True(result.HasConfirmedChanges);
         Assert.Equal(["POST /customers/companies", "GET /countries/", "POST /customers/7/addresses", "PUT /customers/7"],
             handler.Calls.Select(call => $"{call.Method} {call.Path}"));
-        Assert.All(handler.Calls.Where(call => call.Method != "GET"),
+        Assert.All(handler.Calls,
             call => Assert.Equal("Bearer test-token", call.Authorization));
         using var company = JsonDocument.Parse(handler.Calls[0].Body!);
         Assert.Equal(name, company.RootElement.GetProperty("Name").GetString());
