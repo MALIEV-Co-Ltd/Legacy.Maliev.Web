@@ -37,7 +37,7 @@ for culture, width in (("en", 1280), ("th", 375)):
     case_runs[culture] = markers[0].split(" ")[1]
 if len(set(case_runs.values())) != 2:
     raise SystemExit("Billing case attempts must be distinct")
-directory = Path("Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence")
+directory = Path("Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/billing-persistence")
 if sorted(path.name for path in directory.glob("*.json")) != ["en.json", "th.json"]:
     raise SystemExit("Exactly English and Thai billing receipts required")
 for culture, width in (("en", 1280), ("th", 375)):

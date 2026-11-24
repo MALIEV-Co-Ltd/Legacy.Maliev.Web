@@ -107,7 +107,7 @@ def main():
     files = list(Path("shipping-persistence-test-results").glob("*.trx"))
     require(len(files) == 1, "Exactly one focused shipping TRX required")
     validate_rows(ET.parse(files[0]).getroot())
-    directory = Path("Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/shipping-persistence")
+    directory = Path("Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/shipping-persistence")
     require(sorted(path.name for path in directory.glob("*.json")) == ["en.json", "th.json"],
             "Exactly English and Thai shipping receipts required")
     identities = []
