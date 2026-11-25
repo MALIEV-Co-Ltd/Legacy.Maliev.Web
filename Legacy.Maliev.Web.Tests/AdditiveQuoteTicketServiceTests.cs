@@ -343,6 +343,33 @@ namespace Legacy.Maliev.Web.Tests
             Assert.False(service.Validate(changed, quote, authorization, Now));
         }
 
+        [Theory]
+        [InlineData(214.90, 21490)]
+        [InlineData(44.80, 4480)]
+        [InlineData(219.10, 21910)]
+        [InlineData(144.20, 14420)]
+        public void WorkflowAuthorization_ProtectsExactSatangAcrossTheDisplayDoubleBoundary(double displayVat, int satang)
+        {
+            var service = CreateService();
+            var session = Session();
+            var quote = new InstantQuotationPricingService().Quote(session.RequestState) with
+            {
+                Vat = displayVat,
+                FinalOrderPrice = 3214.90,
+                AllocatedLineTotals = [3214.90],
+            };
+
+            var authorization = service.Issue(session, quote, Now);
+            var protectedOrder = service.UnprotectOrder(authorization.OrderTicket, Now);
+
+            Assert.Equal(satang / 100m, protectedOrder.VatThb);
+            Assert.Equal(3214.90m, protectedOrder.FinalOrderPriceThb);
+            Assert.Equal(3214.90m, Assert.Single(protectedOrder.AllocatedLineTotalsThb));
+            Assert.True(service.Validate(session, quote, authorization, Now));
+            Assert.False(service.Validate(session, quote with { FinalOrderPrice = 3214.91 }, authorization, Now));
+            Assert.Throws<ArgumentException>(() => service.Issue(session, quote with { Vat = displayVat + 0.001 }, Now));
+        }
+
         [Fact]
         public void WorkflowAuthorization_RejectsOrderSubtotalDifferentFromRoundedLinePrices()
         {

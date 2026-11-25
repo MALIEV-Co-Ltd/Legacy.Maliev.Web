@@ -131,7 +131,7 @@ namespace Legacy.Maliev.Web.Application.Pricing
                     ExpiresAtUtc = expiresAt,
                 });
             }).ToArray();
-            var allocations = quote.AllocatedLineTotals?.Select(Convert.ToDecimal).ToList()
+            var allocations = quote.AllocatedLineTotals?.Select(FromDisplayMoney).ToList()
                 ?? throw new ArgumentException("The authoritative quotation requires deterministic line allocations.", nameof(quote));
             var orderTicket = this.ProtectOrder(new AdditiveOrderQuotePayload
             {
@@ -140,18 +140,18 @@ namespace Legacy.Maliev.Web.Application.Pricing
                 SessionId = session.SessionId,
                 LineTicketDigests = lineTickets.Select(DigestTicket).ToList(),
                 AllocatedLineTotalsThb = allocations,
-                ItemsSubtotalThb = Convert.ToDecimal(quote.ItemsSubtotal),
-                PrintingThb = Convert.ToDecimal(quote.Printing),
-                MinimumOrderPriceThb = Convert.ToDecimal(quote.MinimumOrderPrice),
-                MinimumOrderSurchargeThb = Convert.ToDecimal(quote.MinimumOrderSurcharge),
-                SetupThb = Convert.ToDecimal(quote.Setup),
-                ReserveThb = Convert.ToDecimal(quote.Reserve),
-                PackagingThb = Convert.ToDecimal(quote.Packaging),
-                PaymentFeeThb = Convert.ToDecimal(quote.PaymentFee),
-                RoundingAdjustmentThb = Convert.ToDecimal(quote.RoundingAdjustment),
-                ShippingThb = Convert.ToDecimal(quote.ShippingCost),
-                VatThb = Convert.ToDecimal(quote.Vat),
-                FinalOrderPriceThb = Convert.ToDecimal(quote.FinalOrderPrice),
+                ItemsSubtotalThb = FromDisplayMoney(quote.ItemsSubtotal),
+                PrintingThb = FromDisplayMoney(quote.Printing),
+                MinimumOrderPriceThb = FromDisplayMoney(quote.MinimumOrderPrice),
+                MinimumOrderSurchargeThb = FromDisplayMoney(quote.MinimumOrderSurcharge),
+                SetupThb = FromDisplayMoney(quote.Setup),
+                ReserveThb = FromDisplayMoney(quote.Reserve),
+                PackagingThb = FromDisplayMoney(quote.Packaging),
+                PaymentFeeThb = FromDisplayMoney(quote.PaymentFee),
+                RoundingAdjustmentThb = FromDisplayMoney(quote.RoundingAdjustment),
+                ShippingThb = FromDisplayMoney(quote.ShippingCost),
+                VatThb = FromDisplayMoney(quote.Vat),
+                FinalOrderPriceThb = FromDisplayMoney(quote.FinalOrderPrice),
                 LeadTimeMinimumDays = quote.LeadTimeMinimumDays,
                 LeadTimeMaximumDays = quote.LeadTimeMaximumDays,
                 EffectiveCurrency = "THB",
@@ -185,9 +185,9 @@ namespace Legacy.Maliev.Web.Application.Pricing
                 var order = this.UnprotectOrder(authorization.OrderTicket, now);
                 if (!string.Equals(order.SessionId, session.SessionId, StringComparison.Ordinal)
                     || !this.MatchesLineTickets(order, authorization.LineTickets)
-                    || order.FinalOrderPriceThb != Convert.ToDecimal(quote.FinalOrderPrice)
-                    || order.ItemsSubtotalThb != Convert.ToDecimal(quote.ItemsSubtotal)
-                    || order.ShippingThb != Convert.ToDecimal(quote.ShippingCost)
+                    || order.FinalOrderPriceThb != FromDisplayMoney(quote.FinalOrderPrice)
+                    || order.ItemsSubtotalThb != FromDisplayMoney(quote.ItemsSubtotal)
+                    || order.ShippingThb != FromDisplayMoney(quote.ShippingCost)
                     || order.LeadTimeMinimumDays != quote.LeadTimeMinimumDays
                     || order.LeadTimeMaximumDays != quote.LeadTimeMaximumDays)
                 {
@@ -340,6 +340,18 @@ namespace Legacy.Maliev.Web.Application.Pricing
             }
 
             return payload;
+        }
+
+        // The quote DTO carries an already rounded THB amount as a double.
+        // Recover its satang value, not the exact binary expansion .NET 11 returns.
+        private static decimal FromDisplayMoney(double amount)
+        {
+            if (!double.IsFinite(amount) || Math.Abs(amount) >= (double)decimal.MaxValue)
+                throw new ArgumentException("The quotation amount is out of range.", nameof(amount));
+            var canonical = decimal.Round(Convert.ToDecimal(amount), 2, MidpointRounding.AwayFromZero);
+            if (Convert.ToDouble(canonical) != amount)
+                throw new ArgumentException("The quotation amount must already be in whole satang.", nameof(amount));
+            return canonical;
         }
 
         private static bool ResinIdentityMatchesCurrent(ResinQuoteProfileIdentity? identity)
