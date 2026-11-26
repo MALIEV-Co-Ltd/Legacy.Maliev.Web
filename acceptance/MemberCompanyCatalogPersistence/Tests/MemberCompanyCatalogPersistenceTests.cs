@@ -171,7 +171,7 @@ public sealed class MemberCompanyCatalogPersistenceTests(MemberAuthorityFixture 
                     await page.Locator("#Email").FillAsync("member-crawl@example.test");
                     try { await page.Locator("#Password").FillAsync(authority.Password); }
                     catch (PlaywrightException) { throw new InvalidOperationException("Synthetic credential entry failed; credential-bearing browser diagnostics suppressed."); }
-                    await page.Locator("button[type=submit]").First.ClickAsync();
+                    await page.Locator("form#customer-login:has(#Password) button[type=submit]").ClickAsync();
                     await page.Locator("#profile-company-name").WaitForAsync();
                     Assert.Equal("Stored company", await page.Locator("#profile-company-name").InputValueAsync());
                     var cookie = Assert.Single(await context.CookiesAsync(), value => value.Name == "__Host-Maliev.Legacy.Session");

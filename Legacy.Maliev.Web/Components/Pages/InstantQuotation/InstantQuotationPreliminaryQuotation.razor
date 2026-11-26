@@ -103,7 +103,14 @@
                 Quote.LeadTimeMinimumDays,
                 Quote.LeadTimeMaximumDays));
 
-        await JavaScript.InvokeVoidAsync("malievPreliminaryQuotation.open", snapshot);
+        try
+        {
+            await JavaScript.InvokeVoidAsync("malievPreliminaryQuotation.open", snapshot);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit closed before the browser could open the preview.
+        }
     }
 
     private PreliminaryQuotationPart CreatePartSnapshot(InstantQuotationWorkflowPartViewModel part, int partNumber)

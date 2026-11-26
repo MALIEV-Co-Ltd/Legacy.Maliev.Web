@@ -119,7 +119,7 @@ def coverage_from_original(trx, results, mode):
     agent = collector.get("agentName", "")
     if any(not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,119}", value) or value in {".", ".."} for value in (deployment, agent)):
         raise ValueError("CoverageAttachmentComponent")
-    if trx.name != deployment + "_net10.0.trx" or collector.get("uri") != "datacollector://microsoft/CoverletCodeCoverage/1.0" or collector.get("collectorDisplayName") != "XPlat code coverage":
+    if trx.name != deployment + "_net11.0.trx" or collector.get("uri") != "datacollector://microsoft/CoverletCodeCoverage/1.0" or collector.get("collectorDisplayName") != "XPlat code coverage":
         raise ValueError("CoverageAttachmentIdentity")
     attachments = collector.findall(NS + "UriAttachments/" + NS + "UriAttachment")
     hrefs = []

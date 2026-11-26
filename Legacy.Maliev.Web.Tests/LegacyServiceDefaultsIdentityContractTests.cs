@@ -2,9 +2,13 @@ namespace Legacy.Maliev.Web.Tests;
 
 public sealed class LegacyServiceDefaultsIdentityContractTests
 {
-    private const string ServiceDefaultsCommit = "c9f21151639f1911c780f2084dd2d757b4fb3e73";
+    // The joined financial proof is deliberately a frozen, independently pinned graph.
+    private const string JoinedProofServiceDefaultsCommit = "c9f21151639f1911c780f2084dd2d757b4fb3e73";
 
-    private const string DotNetPatchVersion = "10.0.12";
+    private const string RuntimeServiceDefaultsCommit = "173d63218d9142b34075bca87f5c6d933bcbdfb6";
+
+    private const string SharedWebPackageVersion = "10.0.14";
+    private const string EfPackageVersion = "10.0.15";
 
     [Fact]
     public void WebProject_UsesLegacyServiceDefaultsOnly()
@@ -32,7 +36,7 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
 
         Assert.Contains("github.com/MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults.git", dockerfile, StringComparison.Ordinal);
         Assert.Contains("/dependencies/Legacy.Maliev.ServiceDefaults", dockerfile, StringComparison.Ordinal);
-        Assert.Contains($"checkout {ServiceDefaultsCommit}", dockerfile, StringComparison.Ordinal);
+        Assert.Contains($"checkout {RuntimeServiceDefaultsCommit}", dockerfile, StringComparison.Ordinal);
         Assert.Contains("github.com/MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts.git", dockerfile, StringComparison.Ordinal);
         Assert.Contains("/dependencies/Legacy.Maliev.CompatibilityContracts", dockerfile, StringComparison.Ordinal);
         Assert.DoesNotContain("Maliev.Aspire", dockerfile, StringComparison.OrdinalIgnoreCase);
@@ -47,7 +51,7 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
 
         Assert.Contains("repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults", workflow, StringComparison.Ordinal);
         Assert.Contains("path: .dependencies/Legacy.Maliev.ServiceDefaults", workflow, StringComparison.Ordinal);
-        Assert.Contains($"ref: {ServiceDefaultsCommit}", workflow, StringComparison.Ordinal);
+        Assert.Contains($"ref: {RuntimeServiceDefaultsCommit}", workflow, StringComparison.Ordinal);
         Assert.Contains("repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts", workflow, StringComparison.Ordinal);
         Assert.Contains("path: .dependencies/Legacy.Maliev.CompatibilityContracts", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("MALIEV-Co-Ltd/Maliev.Aspire", workflow, StringComparison.OrdinalIgnoreCase);
@@ -55,7 +59,7 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
     }
 
     [Fact]
-    public void WebProjects_AlignDirectFrameworkPackagesWithServiceDefaults()
+    public void WebProjects_RetainApprovedDirectFrameworkPackageVersions()
     {
         var root = FindRepositoryRoot();
         var webProject = File.ReadAllText(Path.Combine(root, "Legacy.Maliev.Web", "Legacy.Maliev.Web.csproj"));
@@ -65,22 +69,30 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
         {
             "Microsoft.AspNetCore.Authentication.JwtBearer",
             "Microsoft.AspNetCore.OpenApi",
+            "Microsoft.Extensions.Caching.StackExchangeRedis",
+        })
+        {
+            Assert.Contains($"Include=\"{package}\" Version=\"{SharedWebPackageVersion}\"", webProject, StringComparison.Ordinal);
+        }
+
+        // Web aligns the EF runtime and EF health check with its explicit servicing patch.
+        foreach (var package in new[]
+        {
             "Microsoft.EntityFrameworkCore",
             "Microsoft.EntityFrameworkCore.Relational",
-            "Microsoft.Extensions.Caching.StackExchangeRedis",
             "Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore",
         })
         {
-            Assert.Contains($"Include=\"{package}\" Version=\"{DotNetPatchVersion}\"", webProject, StringComparison.Ordinal);
+            Assert.Contains($"Include=\"{package}\" Version=\"{EfPackageVersion}\"", webProject, StringComparison.Ordinal);
         }
 
         // Issue #572: only the owning DataProtection package uses the reviewed security servicing patch.
         Assert.Contains("Include=\"Microsoft.AspNetCore.DataProtection.StackExchangeRedis\" Version=\"10.0.13\"", webProject, StringComparison.Ordinal);
 
-        Assert.Contains($"Include=\"Microsoft.AspNetCore.Mvc.Testing\" Version=\"{DotNetPatchVersion}\"", testProject, StringComparison.Ordinal);
-        Assert.Contains("Include=\"MassTransit.RabbitMQ\" Version=\"9.2.3\"", webProject, StringComparison.Ordinal);
-        Assert.Contains("Include=\"MassTransit.Abstractions\" Version=\"9.2.3\"", webProject, StringComparison.Ordinal);
-        Assert.Contains("Include=\"Scalar.AspNetCore\" Version=\"2.17.13\"", webProject, StringComparison.Ordinal);
+        Assert.Contains("Include=\"Microsoft.AspNetCore.Mvc.Testing\" Version=\"11.0.0\"", testProject, StringComparison.Ordinal);
+        Assert.Contains("Include=\"MassTransit.RabbitMQ\" Version=\"9.2.5\"", webProject, StringComparison.Ordinal);
+        Assert.Contains("Include=\"MassTransit.Abstractions\" Version=\"9.2.5\"", webProject, StringComparison.Ordinal);
+        Assert.Contains("Include=\"Scalar.AspNetCore\" Version=\"2.19.0\"", webProject, StringComparison.Ordinal);
         Assert.DoesNotMatch("Microsoft\\.[^\"]+\" Version=\"10\\.0\\.(?:[0-9]|1[01])\"", webProject + testProject);
     }
 
@@ -90,11 +102,11 @@ public sealed class LegacyServiceDefaultsIdentityContractTests
         var root = FindRepositoryRoot();
         using var graph = System.Text.Json.JsonDocument.Parse(File.ReadAllText(
             Path.Combine(root, "tests", "fx-joined", "candidate-graph.json")));
-        Assert.Equal(ServiceDefaultsCommit, graph.RootElement.GetProperty("webDefaultsCommit").GetString());
+        Assert.Equal(JoinedProofServiceDefaultsCommit, graph.RootElement.GetProperty("webDefaultsCommit").GetString());
         Assert.Equal("78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7",
             graph.RootElement.GetProperty("contractsCommit").GetString());
         var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "fx-joined.yml"));
-        Assert.Contains($"ref: {ServiceDefaultsCommit}\n          path: .dependencies/Legacy.Maliev.ServiceDefaults",
+        Assert.Contains($"ref: {JoinedProofServiceDefaultsCommit}\n          path: .dependencies/Legacy.Maliev.ServiceDefaults",
             workflow.Replace("\r\n", "\n", StringComparison.Ordinal), StringComparison.Ordinal);
     }
 

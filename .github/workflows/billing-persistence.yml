@@ -69,18 +69,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: MALIEV-Co-Ltd/Legacy.Maliev.ServiceDefaults
-          ref: c9f21151639f1911c780f2084dd2d757b4fb3e73
+          ref: 173d63218d9142b34075bca87f5c6d933bcbdfb6
           path: .dependencies/Legacy.Maliev.ServiceDefaults
           persist-credentials: false
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: MALIEV-Co-Ltd/Legacy.Maliev.CompatibilityContracts
-          ref: 78e48ffc4ee000df0510cba5e7c7a3c4c4d539d7
+          ref: fe17b8cea8ace3eef5434f8b29c9038f5c975613
           path: .dependencies/Legacy.Maliev.CompatibilityContracts
           persist-credentials: false
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: |
+            10.0.404
+            11.0.100
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 24
@@ -111,7 +113,7 @@ jobs:
         run: GITHUB_ACTIONS=false dotnet build Legacy.Maliev.Web.Tests/Legacy.Maliev.Web.Tests.csproj -c Release --nologo
       - name: Install pinned Chromium
         shell: pwsh
-        run: ./Legacy.Maliev.Web.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+        run: ./Legacy.Maliev.Web.Tests/bin/Release/net11.0/playwright.ps1 install --with-deps chromium
       - name: Qualify PostgreSQL18 Alpine forced watchdog on disposable owned container
         run: |
           python3 -B - <<'PY'
@@ -295,7 +297,7 @@ jobs:
           candidate = os.environ['MALIEV_BILLING_CANDIDATE_HEAD']
           if not re.fullmatch('[0-9a-f]{40}', candidate):
               raise SystemExit('Exact billing candidate required')
-          directory = Path('Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence')
+          directory = Path('Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/billing-persistence')
           watchdog = json.loads(Path('billing-watchdog-results/watchdog.json').read_text())
           if watchdog.get('initEnabled') is not True or any(watchdog.get(key) != value for key, value in {'image': 'postgres:18-alpine', 'identityPolicyVerified': True,
               'initEnabled': True, 'forcedKillVerified': True, 'absenceVerified': True, 'termObserved': True, 'exitCode': 137}.items()):
@@ -400,10 +402,10 @@ jobs:
             billing-comparison-results/comparison.json
             billing-persistence-test-results/**/coverage.json
             billing-persistence-test-results/**/coverage.cobertura.xml
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.png
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/*.json
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/initial-readiness/*.json
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/attempts/*.json
-            Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence/attempts/*.png
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/billing-persistence/*.png
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/billing-persistence/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/billing-persistence/initial-readiness/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/billing-persistence/attempts/*.json
+            Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/billing-persistence/attempts/*.png
           if-no-files-found: error
           retention-days: 7

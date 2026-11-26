@@ -13,7 +13,7 @@ RUNS={'en':'1'*32,'th':'2'*32}
 DATASET='thailand-geography-json:b8b3fb91c7df1129ff5b43cb46f7fcffadd2156b'
 class CustodyControls(unittest.TestCase):
  def build(self,root):
-  d=root/'Legacy.Maliev.Web.Tests/bin/Release/net10.0/TestResults/billing-persistence';(d/'attempts').mkdir(parents=True)
+  d=root/'Legacy.Maliev.Web.Tests/bin/Release/net11.0/TestResults/billing-persistence';(d/'attempts').mkdir(parents=True)
   t=root/'billing-persistence-test-results';t.mkdir()
   rows=[]
   for culture,width in (('en',1280),('th',375)):

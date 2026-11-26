@@ -268,7 +268,7 @@ public sealed class InstantQuotationPhysicalResultRendererTests
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
             ValueTask.FromException<TValue>(new InvalidOperationException("No browser interop expected in static receipt presentation."));
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args) =>
-            InvokeAsync<TValue>(identifier, args);
+            ValueTask.FromException<TValue>(new InvalidOperationException("No browser interop expected in static receipt presentation."));
     }
 
     private sealed class ComponentEnvironment : IWebHostEnvironment

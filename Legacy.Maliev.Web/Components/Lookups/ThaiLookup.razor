@@ -53,7 +53,14 @@
     {
         if (firstRender && Services.GetService(typeof(IJSRuntime)) is IJSRuntime runtime)
         {
-            module = await runtime.InvokeAsync<IJSObjectReference>("import", "/src/app/js/lookups/thai-lookup.js");
+            try
+            {
+                module = await runtime.InvokeAsync<IJSObjectReference>("import", "/src/app/js/lookups/thai-lookup.js");
+            }
+            catch (JSDisconnectedException)
+            {
+                // The circuit ended before the optional lookup module could load.
+            }
         }
     }
     public async ValueTask DisposeAsync()

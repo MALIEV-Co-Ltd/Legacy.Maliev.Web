@@ -468,7 +468,7 @@ public sealed class MaterialPricingDisplayRendererContractTests
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
             ValueTask.FromException<TValue>(new InvalidOperationException("Static rendering must not invoke browser JavaScript."));
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken token, object?[]? args) =>
-            InvokeAsync<TValue>(identifier, args);
+            ValueTask.FromException<TValue>(new InvalidOperationException("Static rendering must not invoke browser JavaScript."));
     }
 
     private sealed class PreviewBoundary : IJSObjectReference
@@ -478,8 +478,11 @@ public sealed class MaterialPricingDisplayRendererContractTests
         public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
-            InvokeAsync<TValue>(identifier, default, args);
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args)
+        {
+            try { return InvokeAsync<TValue>(identifier, default, args); }
+            catch (JSException) { throw; }
+        }
 
         public async ValueTask<TValue> InvokeAsync<TValue>(
             string identifier, CancellationToken token, object?[]? args)

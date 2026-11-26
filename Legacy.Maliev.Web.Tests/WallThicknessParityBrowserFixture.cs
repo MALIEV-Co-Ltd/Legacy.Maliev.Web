@@ -179,6 +179,8 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
         }
     }
 
+    private static async Task<TValue> AwaitJsFixtureResultAsync<TValue>(Task<bool> pending) => (TValue)(object)await pending;
+
     private sealed class RecordingJsReference : IJSObjectReference
     {
         internal List<string> Calls { get; } = [];
@@ -198,22 +200,24 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
                 RetainedKeys.Add(key);
                 var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
                 PendingAttachments.Add(key, pending);
-                return new ValueTask<TValue>(AwaitResultAsync<TValue>(pending.Task));
+                return new ValueTask<TValue>(AwaitJsFixtureResultAsync<TValue>(pending.Task));
             }
             if (identifier == "isIncompletePreview")
             {
                 if (ControlEligibility && (string)args![0]! == "local-only-preview")
                 {
                     EligibilityStarted.TrySetResult(true);
-                    return new ValueTask<TValue>(AwaitResultAsync<TValue>(PendingEligibility.Task));
+                    return new ValueTask<TValue>(AwaitJsFixtureResultAsync<TValue>(PendingEligibility.Task));
                 }
                 return ValueTask.FromResult((TValue)(object)Eligible);
             }
             return ValueTask.FromResult(default(TValue)!);
         }
-        private static async Task<TValue> AwaitResultAsync<TValue>(Task<bool> pending) => (TValue)(object)await pending;
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
-            => InvokeAsync<TValue>(identifier, args);
+        {
+            try { return InvokeAsync<TValue>(identifier, args); }
+            catch (JSException) { throw; }
+        }
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
@@ -221,7 +225,7 @@ public sealed class WallThicknessParityBrowserFixture : IAsyncLifetime
     {
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) => ValueTask.FromResult(default(TValue)!);
         public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
-            => InvokeAsync<TValue>(identifier, args);
+            => ValueTask.FromResult(default(TValue)!);
     }
 
     private sealed class ComponentEnvironment : IWebHostEnvironment
