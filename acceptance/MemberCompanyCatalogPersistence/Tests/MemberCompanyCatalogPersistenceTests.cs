@@ -230,6 +230,7 @@ public sealed class MemberCompanyCatalogPersistenceTests(MemberAuthorityFixture 
                     var evidence = Path.Combine(AppContext.BaseDirectory, "TestResults", "member-company");
                     Directory.CreateDirectory(evidence);
                     await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, culture + ".png"), FullPage = true });
+                    var observations = upstream.Observations.ToArray();
                     await File.WriteAllTextAsync(Path.Combine(evidence, culture + ".json"), JsonSerializer.Serialize(new
                     {
                         surface = "member-company-update",
@@ -256,8 +257,8 @@ public sealed class MemberCompanyCatalogPersistenceTests(MemberAuthorityFixture 
                         rateLimitedStatus = 429,
                         manualFallbackEditable = true,
                         syntheticUpstreamOnly = true,
-                        observations = upstream.Observations.ToArray(),
-                        runtimeRetryPolicy = retryObserver.Receipt(),
+                        observations,
+                        runtimeRetryPolicy = retryObserver.Receipt(JsonSerializer.SerializeToElement(observations)),
                         browserRequests = requestCounter.Receipt(),
                     }));
                 }
@@ -348,7 +349,7 @@ internal sealed class CatalogRetryObservation : IHttpMessageHandlerBuilderFilter
         var packageRevision = version?.Split('+').ElementAtOrDefault(1) ?? string.Empty;
         lock (gate) samples.Add((builder.Name, count, outerMaxRetries, innerMaxRetries, packageRevision));
     };
-    internal object Receipt()
+    internal object Receipt(JsonElement physicalObservations)
     {
         lock (gate)
         {
@@ -357,7 +358,18 @@ internal sealed class CatalogRetryObservation : IHttpMessageHandlerBuilderFilter
             Assert.All(samples, sample => Assert.Equal(first, sample));
             var confirmed = first.Name == "catalog" && first.Count == 2 && first.OuterMaxRetries == 3 && first.InnerMaxRetries == 3
                 && first.PackageRevision == "02107c65bab30aad9e35b5133ed643eaa77bccd8";
-            Assert.True(confirmed, "Actual named retry chain/options/source differ from reviewed bound; no receipt accepted.");
+            if (!confirmed)
+            {
+                // Emit only package source identity, counts and fixed option keys. Never log raw provider observations.
+                var revision = first.PackageRevision.Length == 40 && first.PackageRevision.All(Uri.IsHexDigit)
+                    ? first.PackageRevision
+                    : "unavailable";
+                var statusCounts = physicalObservations.EnumerateArray()
+                    .GroupBy(observation => observation.GetProperty("status").GetInt32())
+                    .ToDictionary(group => group.Key, group => group.Count());
+                Assert.True(confirmed, FormattableString.Invariant(
+                    $"Actual named retry chain/options/source differ from reviewed bound; no receipt accepted. Catalog samples={samples.Count}; handlers={first.Count}; -standard={first.OuterMaxRetries}; catalog-standard={first.InnerMaxRetries}; packageSource={revision}; physical200={statusCounts.GetValueOrDefault(200)}; physical503={statusCounts.GetValueOrDefault(503)}; physical429={statusCounts.GetValueOrDefault(429)}."));
+            }
             return new
             {
                 clientName = first.Name,
